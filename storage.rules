@@ -1,0 +1,40 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Imágenes de stores: lectura pública
+    // Path: storeImages/{ownerId}/{storeId}/{fileName}
+    match /storeImages/{ownerId}/{storeId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        request.auth.uid == ownerId &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    // Imágenes de productos
+    // Path: productImages/{ownerId}/{storeId}/{productId}/{fileName}
+    match /productImages/{ownerId}/{storeId}/{productId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        request.auth.uid == ownerId &&
+        request.resource.size < 5 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    // Avatares de usuarios
+    // Path: avatars/{userId}/{fileName}
+    match /avatars/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.resource.size < 2 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    // Denegar todo lo demás
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

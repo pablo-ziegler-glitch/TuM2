@@ -1,0 +1,77 @@
+name: tum2
+description: TuM2 - Tu metro cuadrado. La capa digital del comercio de cercanía.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^3.3.0
+  firebase_auth: ^5.1.4
+  cloud_firestore: ^5.2.1
+  firebase_storage: ^12.1.3
+  firebase_messaging: ^15.1.3
+  firebase_analytics: ^11.2.1
+  firebase_crashlytics: ^4.0.4
+
+  # State management & navigation
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+  go_router: ^14.2.7
+
+  # Maps & location
+  google_maps_flutter: ^2.7.0
+  geolocator: ^13.0.1
+  geocoding: ^3.0.0
+  geoflutterfire_plus: ^0.0.27
+
+  # Images
+  image_picker: ^1.1.2
+  cached_network_image: ^3.3.1
+
+  # Utilities
+  intl: ^0.19.0
+  equatable: ^2.0.5
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  uuid: ^4.4.2
+  share_plus: ^10.0.0
+  url_launcher: ^6.3.0
+
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.12
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.3
+  custom_lint: ^0.6.7
+  riverpod_lint: ^2.3.13
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/lottie/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700

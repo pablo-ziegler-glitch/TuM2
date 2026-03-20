@@ -9,6 +9,21 @@ El usuario pasa las tarjetas de a una. Estado actual:
 |--------|--------------------------------------|------------------------|-------------|
 | 0001   | Definir propuesta de valor final     | Dirección del producto | ✅ Entregada |
 | 0007   | Mantener actualizado ARCHITECTURE.md | Documentación maestra  | ✅ Entregada |
+| 0019   | Diseñar modelo de usuarios           | Modelo de datos        | ✅ Entregada |
+| 0020   | Diseñar modelo de comercios          | Modelo de datos        | ✅ Entregada |
+| 0021   | Diseñar modelo de productos          | Modelo de datos        | ✅ Entregada |
+| 0022   | Diseñar modelo de horarios           | Modelo de datos        | ✅ Entregada |
+| 0023   | Diseñar modelo de señales operativas | Modelo de datos        | ✅ Entregada |
+| 0024   | Diseñar modelo de turnos/guardias    | Modelo de datos        | ✅ Entregada |
+| 0042   | Crear proyecto base Firebase         | Backend / Firebase     | ✅ Entregada |
+| 0043   | Configurar ambientes dev/staging/prod| Backend / Firebase     | ✅ Entregada |
+| 0044   | Configurar Authentication            | Backend / Firebase     | ✅ Entregada |
+| 0045   | Configurar Firestore base            | Backend / Firebase     | ✅ Entregada |
+| 0046   | Definir Firestore Rules iniciales    | Backend / Firebase     | ✅ Entregada |
+| 0048   | Implementar Cloud Functions base     | Backend / Firebase     | ✅ Entregada |
+| 0049   | Implementar campos derivados operativos | Backend / Firebase  | ✅ Entregada |
+| 0050   | Implementar agregados públicos       | Backend / Firebase     | ✅ Entregada |
+| 0121   | Estrategia cobertura inicial y bootstrap | Cobertura / Data   | ✅ Entregada |
 
 ---
 
@@ -44,12 +59,12 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0018] **Relevar flujo real del dueño** — P1 — `Producto, UX/UI, Operaciones, Fundacional`
 
 ### ÉPICA 5: Modelo de datos
-- [0019] **Diseñar modelo de usuarios** — P0 — `Data, Backend, Seguridad, Fundacional`
-- [0020] **Diseñar modelo de comercios** — P0 — `Data, Backend, Fundacional`
-- [0021] **Diseñar modelo de productos** — P0 — `Data, Backend, Fundacional`
-- [0022] **Diseñar modelo de horarios** — P0 — `Data, Backend, Fundacional`
-- [0023] **Diseñar modelo de señales operativas** — P0 — `Data, Backend, Fundacional`
-- [0024] **Diseñar modelo de turnos/guardias** — P0 — `Data, Backend, Operaciones, Fundacional`
+- [0019] **Diseñar modelo de usuarios** — P0 — `Data, Backend, Seguridad, Fundacional` ✅
+- [0020] **Diseñar modelo de comercios** — P0 — `Data, Backend, Fundacional` ✅
+- [0021] **Diseñar modelo de productos** — P0 — `Data, Backend, Fundacional` ✅
+- [0022] **Diseñar modelo de horarios** — P0 — `Data, Backend, Fundacional` ✅
+- [0023] **Diseñar modelo de señales operativas** — P0 — `Data, Backend, Fundacional` ✅
+- [0024] **Diseñar modelo de turnos/guardias** — P0 — `Data, Backend, Operaciones, Fundacional` ✅
 - [0025] **Diseñar modelo de propuestas y votos** — P1 — `Data, Backend, Growth, Admin, MVP`
 - [0026] **Diseñar modelo de badges y branding snippets** — P2 — `Data, Branding, Post-MVP`
 
@@ -71,16 +86,16 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0041] **Diseñar board de propuestas y votos** — P1 — `UX/UI, Growth, Admin, MVP`
 
 ### ÉPICA 7: Backend / Firebase / Infraestructura
-- [0042] **Crear proyecto base Firebase** — P0 — `Backend, Fundacional`
-- [0043] **Configurar ambientes dev / staging / prod** — P0 — `Backend, Seguridad, Operaciones, Fundacional`
-- [0044] **Configurar Authentication** — P0 — `Backend, Seguridad, Fundacional`
-- [0045] **Configurar Firestore base** — P0 — `Backend, Data, Fundacional`
-- [0046] **Definir Firestore Rules iniciales** — P0 — `Seguridad, Backend, Fundacional`
+- [0042] **Crear proyecto base Firebase** — P0 — `Backend, Fundacional` ✅
+- [0043] **Configurar ambientes dev / staging / prod** — P0 — `Backend, Seguridad, Operaciones, Fundacional` ✅
+- [0044] **Configurar Authentication** — P0 — `Backend, Seguridad, Fundacional` ✅
+- [0045] **Configurar Firestore base** — P0 — `Backend, Data, Fundacional` ✅
+- [0046] **Definir Firestore Rules iniciales** — P0 — `Seguridad, Backend, Fundacional` ✅
 - [0047] **Configurar Storage** — P1 — `Backend, Seguridad, MVP`
-- [0048] **Implementar Cloud Functions base** — P1 — `Backend, MVP`
-- [0049] **Implementar campos derivados operativos** — P0 — `Backend, Data, Operaciones, MVP`
+- [0048] **Implementar Cloud Functions base** — P1 — `Backend, MVP` ✅
+- [0049] **Implementar campos derivados operativos** — P0 — `Backend, Data, Operaciones, MVP` ✅
   - isOpenNow, isOnDutyToday, etc.
-- [0050] **Implementar agregados públicos** — P1 — `Backend, Data, Web, Mobile, MVP`
+- [0050] **Implementar agregados públicos** — P1 — `Backend, Data, Web, Mobile, MVP` ✅
 - [0051] **Configurar CI/CD técnico mínimo** — P1 — `Backend, Mobile, Web, Operaciones, Lanzamiento`
 
 ### ÉPICA 8: Mobile app
@@ -173,7 +188,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0120] **Más automatización operativa** — P2 — `Operaciones, Backend, Post-MVP`
 
 ### ÉPICA TRANSVERSAL: Cobertura y bootstrap de datos
-- [0121] **Diseñar estrategia de cobertura inicial de comercios por zona y bootstrap con fuentes externas** — P0 — `Producto, Data, Backend, Operaciones, Fundacional`
+- [0121] **Diseñar estrategia de cobertura inicial de comercios por zona y bootstrap con fuentes externas** — P0 — `Producto, Data, Backend, Operaciones, Fundacional` ✅
   - TUM-138 / Parent: TuM2-9004 / TUM-18
   - Dependencias: TuM2-0001, TuM2-0003, TuM2-0015, TuM2-0017, TuM2-0020
   - Fuente semilla: Google Places (controlada, con guardrails de costo y atribución)

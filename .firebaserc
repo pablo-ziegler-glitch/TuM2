@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "dev": "tum2-dev",
+    "staging": "tum2-staging",
+    "prod": "tum2-prod"
+  }
+}

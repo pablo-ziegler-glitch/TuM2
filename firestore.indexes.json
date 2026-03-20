@@ -1,12 +1,14 @@
 {
   "indexes": [
+
+    // ── merchant_public ──────────────────────────────────────────────────────
+
     {
       "collectionGroup": "merchant_public",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "zoneId", "order": "ASCENDING" },
-        { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
-        { "fieldPath": "sortBoost", "order": "DESCENDING" }
+        { "fieldPath": "visibilityStatus", "order": "ASCENDING" }
       ]
     },
     {
@@ -15,8 +17,7 @@
       "fields": [
         { "fieldPath": "zoneId", "order": "ASCENDING" },
         { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
-        { "fieldPath": "categoryId", "order": "ASCENDING" },
-        { "fieldPath": "sortBoost", "order": "DESCENDING" }
+        { "fieldPath": "isOpenNow", "order": "ASCENDING" }
       ]
     },
     {
@@ -25,8 +26,16 @@
       "fields": [
         { "fieldPath": "zoneId", "order": "ASCENDING" },
         { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
-        { "fieldPath": "isOpenNow", "order": "ASCENDING" },
-        { "fieldPath": "sortBoost", "order": "DESCENDING" }
+        { "fieldPath": "categoryId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "merchant_public",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cityId", "order": "ASCENDING" },
+        { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
+        { "fieldPath": "categoryId", "order": "ASCENDING" }
       ]
     },
     {
@@ -34,28 +43,48 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "zoneId", "order": "ASCENDING" },
-        { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
         { "fieldPath": "hasPharmacyDutyToday", "order": "ASCENDING" },
-        { "fieldPath": "sortBoost", "order": "DESCENDING" }
+        { "fieldPath": "visibilityStatus", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "merchants",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "ownerUserId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "merchants",
+      "collectionGroup": "merchant_public",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "zoneId", "order": "ASCENDING" },
         { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
-        { "fieldPath": "verificationStatus", "order": "ASCENDING" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+        { "fieldPath": "sortBoost", "order": "DESCENDING" }
+      ]
+    },
+
+    // ── pharmacy_duties ──────────────────────────────────────────────────────
+
+    {
+      "collectionGroup": "pharmacy_duties",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "zoneId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pharmacy_duties",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "merchantId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+
+    // ── merchant_products ────────────────────────────────────────────────────
+
+    {
+      "collectionGroup": "merchant_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "merchantId", "order": "ASCENDING" },
+        { "fieldPath": "visibilityStatus", "order": "ASCENDING" }
       ]
     },
     {
@@ -63,40 +92,71 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "merchantId", "order": "ASCENDING" },
-        { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+        { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
+
+    // ── external_places ──────────────────────────────────────────────────────
+
     {
-      "collectionGroup": "pharmacy_duties",
+      "collectionGroup": "external_places",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "zoneId", "order": "ASCENDING" },
-        { "fieldPath": "date", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "verificationStatus", "order": "ASCENDING" }
+        { "fieldPath": "importStatus", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "external_places",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "batchId", "order": "ASCENDING" },
+        { "fieldPath": "importStatus", "order": "ASCENDING" }
+      ]
+    },
+
+    // ── merchants ────────────────────────────────────────────────────────────
+
+    {
+      "collectionGroup": "merchants",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "zoneId", "order": "ASCENDING" },
-        { "fieldPath": "source", "order": "ASCENDING" },
-        { "fieldPath": "importStatus", "order": "ASCENDING" },
-        { "fieldPath": "fetchedAt", "order": "DESCENDING" }
+        { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "merchants",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "zoneId", "order": "ASCENDING" },
+        { "fieldPath": "categoryId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+
+    // ── merchant_claims ──────────────────────────────────────────────────────
+
+    {
+      "collectionGroup": "merchant_claims",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "merchantId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "merchant_claims",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "merchantId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
+
+    // ── reports ──────────────────────────────────────────────────────────────
+
     {
       "collectionGroup": "reports",
       "queryScope": "COLLECTION",
@@ -107,29 +167,14 @@
       ]
     },
     {
-      "collectionGroup": "zones",
+      "collectionGroup": "reports",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "priorityLevel", "order": "ASCENDING" }
+        { "fieldPath": "targetId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
       ]
     }
+
   ],
-  "fieldOverrides": [
-    {
-      "collectionGroup": "merchant_public",
-      "fieldPath": "searchKeywords",
-      "indexes": []
-    },
-    {
-      "collectionGroup": "merchant_products",
-      "fieldPath": "searchKeywords",
-      "indexes": []
-    },
-    {
-      "collectionGroup": "external_places",
-      "fieldPath": "rawPayloadHash",
-      "indexes": []
-    }
-  ]
+  "fieldOverrides": []
 }

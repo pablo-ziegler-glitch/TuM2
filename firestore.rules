@@ -1,0 +1,246 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+    function requesterUid() {
+      return request.auth.uid;
+    }
+    function requesterUserDoc() {
+      return get(/databases/$(database)/documents/users/$(requesterUid()));
+    }
+    function requesterExists() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(requesterUid()));
+    }
+    function requesterData() {
+      return requesterUserDoc().data;
+    }
+    function requesterRole() {
+      return requesterExists() && requesterData().role is string ? requesterData().role : '';
+    }
+    function requesterStatus() {
+      return requesterExists() && requesterData().status is string ? requesterData().status : '';
+    }
+    function isActiveUser() {
+      return requesterExists() && requesterStatus() == 'active';
+    }
+    function isAdmin() {
+      return isActiveUser() && (requesterRole() == 'admin' || requesterRole() == 'super_admin');
+    }
+    function isOwner() {
+      return isActiveUser() && requesterRole() == 'owner';
+    }
+    function isCustomer() {
+      return isActiveUser() && requesterRole() == 'customer';
+    }
+    function isValidVisibilityStatus(v) {
+      return v in ['hidden', 'review_pending', 'visible', 'suppressed'];
+    }
+    function isValidVerificationStatus(v) {
+      return v in ['unverified', 'referential', 'community_submitted', 'claimed', 'validated', 'verified'];
+    }
+    function isValidMerchantStatus(v) {
+      return v in ['draft', 'active', 'inactive', 'archived'];
+    }
+    function isValidSourceType(v) {
+      return v in ['external_seed', 'user_submitted', 'owner_created', 'admin_created', 'manual_owner', 'manual_admin', 'community_suggested'];
+    }
+    function isValidUserRole(v) {
+      return v in ['customer', 'owner', 'admin', 'super_admin'];
+    }
+    function isValidUserStatus(v) {
+      return v in ['active', 'pending', 'blocked'];
+    }
+    function hasBasicMerchantFields(data) {
+      return data.id is string
+        && data.name is string
+        && data.normalizedName is string
+        && data.categoryId is string
+        && data.zoneId is string
+        && data.provinceId is string
+        && data.cityId is string
+        && data.status is string
+        && data.visibilityStatus is string
+        && data.verificationStatus is string
+        && data.sourceType is string
+        && data.isClaimable is bool
+        && data.createdAt != null
+        && data.updatedAt != null;
+    }
+    function hasBasicMerchantLocation(data) {
+      return data.primaryLocation is map
+        && data.primaryLocation.address is string
+        && data.primaryLocation.lat is number
+        && data.primaryLocation.lng is number;
+    }
+    function isValidMerchantPayload(data) {
+      return hasBasicMerchantFields(data)
+        && hasBasicMerchantLocation(data)
+        && isValidMerchantStatus(data.status)
+        && isValidVisibilityStatus(data.visibilityStatus)
+        && isValidVerificationStatus(data.verificationStatus)
+        && isValidSourceType(data.sourceType);
+    }
+    function isRequesterMerchantOwner(merchantId) {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/merchants/$(merchantId))
+        && get(/databases/$(database)/documents/merchants/$(merchantId)).data.ownerUserId == requesterUid();
+    }
+    function merchantIsPublic(data) {
+      return data.visibilityStatus == 'visible' || data.visibilityStatus == 'review_pending';
+    }
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (requesterUid() == userId || isAdmin());
+      allow create: if isAuthenticated()
+        && requesterUid() == userId
+        && request.resource.data.id == userId
+        && request.resource.data.email is string
+        && request.resource.data.displayName is string
+        && isValidUserRole(request.resource.data.role)
+        && isValidUserStatus(request.resource.data.status);
+      allow update: if isAuthenticated() && (
+          (requesterUid() == userId
+            && request.resource.data.id == resource.data.id
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.status == resource.data.status)
+          || isAdmin()
+        );
+      allow delete: if isAdmin();
+    }
+    match /zones/{zoneId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /merchants/{merchantId} {
+      allow read: if isAdmin() || (resource != null && merchantIsPublic(resource.data)) || isRequesterMerchantOwner(merchantId);
+      allow create: if isActiveUser() && isValidMerchantPayload(request.resource.data) && (
+          isAdmin()
+          || (
+            request.resource.data.sourceType == 'user_submitted'
+            && request.resource.data.verificationStatus == 'community_submitted'
+            && request.resource.data.visibilityStatus in ['hidden', 'review_pending']
+            && request.resource.data.createdByUserId == requesterUid()
+          )
+          || (
+            isOwner()
+            && request.resource.data.sourceType in ['owner_created', 'manual_owner']
+            && request.resource.data.ownerUserId == requesterUid()
+            && request.resource.data.verificationStatus in ['claimed', 'validated']
+            && request.resource.data.visibilityStatus in ['hidden', 'review_pending', 'visible']
+          )
+        );
+      allow update: if isActiveUser() && isValidMerchantPayload(request.resource.data) && (
+          isAdmin()
+          || (
+            isRequesterMerchantOwner(merchantId)
+            && request.resource.data.ownerUserId == requesterUid()
+            && request.resource.data.sourceType in ['owner_created', 'manual_owner']
+            && request.resource.data.verificationStatus in ['claimed', 'validated', 'verified']
+          )
+        );
+      allow delete: if isAdmin();
+    }
+    match /merchant_public/{merchantId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /merchant_schedules/{merchantId} {
+      allow read: if true;
+      allow create, update: if isActiveUser() && (
+          isAdmin()
+          || isRequesterMerchantOwner(merchantId)
+        )
+        && request.resource.data.merchantId == merchantId
+        && request.resource.data.timezone is string
+        && request.resource.data.weeklySchedule is map
+        && request.resource.data.sourceType is string
+        && request.resource.data.verificationStatus is string;
+      allow delete: if isAdmin();
+    }
+    match /merchant_operational_signals/{merchantId} {
+      allow read: if true;
+      allow create, update: if isActiveUser() && (
+          isAdmin()
+          || isRequesterMerchantOwner(merchantId)
+        )
+        && request.resource.data.merchantId == merchantId
+        && request.resource.data.signals is map
+        && request.resource.data.derivedSignals is map
+        && request.resource.data.sourceType is string;
+      allow delete: if isAdmin();
+    }
+    match /merchant_products/{productId} {
+      allow read: if resource != null && resource.data.visibilityStatus == 'visible' || isAdmin();
+      allow create, update: if isActiveUser()
+        && request.resource.data.merchantId is string
+        && (
+          isAdmin() || isRequesterMerchantOwner(request.resource.data.merchantId)
+        )
+        && request.resource.data.id is string
+        && request.resource.data.name is string
+        && request.resource.data.normalizedName is string
+        && request.resource.data.categoryId is string
+        && request.resource.data.status in ['active', 'inactive']
+        && request.resource.data.visibilityStatus in ['hidden', 'visible'];
+      allow delete: if isAdmin()
+        || (resource != null && resource.data.merchantId is string && isRequesterMerchantOwner(resource.data.merchantId));
+    }
+    match /pharmacy_duties/{dutyId} {
+      allow read: if true;
+      allow create, update: if isActiveUser() && (
+          isAdmin()
+          || (
+            request.resource.data.merchantId is string
+            && isRequesterMerchantOwner(request.resource.data.merchantId)
+          )
+        )
+        && request.resource.data.id is string
+        && request.resource.data.zoneId is string
+        && request.resource.data.cityId is string
+        && request.resource.data.provinceId is string
+        && request.resource.data.date is string
+        && request.resource.data.status in ['draft', 'published', 'cancelled']
+        && request.resource.data.verificationStatus in ['referential', 'validated', 'claimed']
+        && request.resource.data.sourceType is string;
+      allow delete: if isAdmin();
+    }
+    match /external_places/{externalPlaceDocId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    match /import_batches/{batchId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    match /merchant_claims/{claimId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == requesterUid());
+      allow create: if isActiveUser()
+        && request.resource.data.id is string
+        && request.resource.data.merchantId is string
+        && request.resource.data.userId == requesterUid()
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    match /reports/{reportId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.createdBy == requesterUid());
+      allow create: if isActiveUser()
+        && request.resource.data.id is string
+        && request.resource.data.targetType in ['merchant', 'proposal', 'signal']
+        && request.resource.data.targetId is string
+        && request.resource.data.reportType in ['wrong_schedule', 'wrong_location', 'closed_permanently', 'duplicate', 'other']
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdBy == requesterUid();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+    match /admin_configs/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

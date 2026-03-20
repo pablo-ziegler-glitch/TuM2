@@ -1,0 +1,62 @@
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { computeMerchantPublicProjection } from "../lib/projection";
+import { MerchantDoc, OperationalSignals } from "../lib/types";
+
+const db = () => getFirestore();
+
+/**
+ * onMerchantWriteSyncPublic
+ *
+ * Triggered on any write to merchants/{merchantId}.
+ * Creates or updates merchant_public/{merchantId} with a computed projection.
+ * Suppressed merchants are hidden from public view.
+ */
+export const onMerchantWriteSyncPublic = onDocumentWritten(
+  "merchants/{merchantId}",
+  async (event) => {
+    const merchantId = event.params.merchantId;
+    const afterSnap = event.data?.after;
+
+    // Document was deleted
+    if (!afterSnap?.exists) {
+      await db()
+        .doc(`merchant_public/${merchantId}`)
+        .delete();
+      return;
+    }
+
+    const merchant = afterSnap.data() as MerchantDoc;
+
+    // Suppressed merchants should not appear in public listings
+    if (merchant.visibilityStatus === "suppressed") {
+      await db()
+        .doc(`merchant_public/${merchantId}`)
+        .set({ visibilityStatus: "suppressed", merchantId }, { merge: true });
+      return;
+    }
+
+    // Fetch current signals (best-effort)
+    const [signalsSnap] = await Promise.all([
+      db().doc(`merchant_operational_signals/${merchantId}`).get(),
+    ]);
+
+    const signals = signalsSnap.exists
+      ? (signalsSnap.data() as OperationalSignals)
+      : undefined;
+
+    const projection = computeMerchantPublicProjection(merchant, signals);
+
+    await db()
+      .doc(`merchant_public/${merchantId}`)
+      .set(
+        {
+          ...projection,
+          syncedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: false }
+      );
+
+    console.log(`[onMerchantWriteSyncPublic] Synced ${merchantId}`);
+  }
+);

@@ -1,0 +1,192 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper functions ───────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() in ['admin', 'super_admin'];
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'super_admin';
+    }
+
+    function isOwnerRole() {
+      return isAuthenticated() && getUserRole() == 'owner';
+    }
+
+    function merchantBelongsToUser(merchantId) {
+      return get(/databases/$(database)/documents/merchants/$(merchantId)).data.ownerUserId == request.auth.uid;
+    }
+
+    // ─── users/{userId} ─────────────────────────────────────────────────────
+    // Users can read/write their own document (except role field).
+    // Admins can read all users.
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
+        && !('role' in request.resource.data)
+            || request.resource.data.role == 'customer';
+      allow update: if isOwner(userId)
+        && !('role' in request.resource.data.diff(resource.data).affectedKeys());
+      allow update: if isAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // ─── zones/{zoneId} ─────────────────────────────────────────────────────
+    // Zones are publicly readable. Only admins can write.
+
+    match /zones/{zoneId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── merchants/{merchantId} ──────────────────────────────────────────────
+    // Public read for active+visible merchants.
+    // Owners can write their own merchant (limited fields).
+    // Admins can read/write all.
+
+    match /merchants/{merchantId} {
+      allow read: if resource.data.visibilityStatus == 'visible'
+                     && resource.data.status == 'active';
+      allow read: if isAuthenticated()
+                     && merchantBelongsToUser(merchantId);
+      allow read: if isAdmin();
+
+      allow create: if isAdmin()
+        || (isOwnerRole() && request.resource.data.sourceType == 'owner_created');
+      allow update: if isAdmin();
+      allow update: if isOwnerRole()
+        && merchantBelongsToUser(merchantId)
+        && !('verificationStatus' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('visibilityStatus' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('ownerUserId' in request.resource.data.diff(resource.data).affectedKeys());
+      allow delete: if isAdmin();
+    }
+
+    // ─── merchant_public/{merchantId} ────────────────────────────────────────
+    // Public read only. Writes are handled exclusively by Cloud Functions.
+
+    match /merchant_public/{merchantId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ─── merchant_schedules/{merchantId} ────────────────────────────────────
+    // Public read. Owners write their own. Admins write all.
+
+    match /merchant_schedules/{merchantId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      allow write: if isOwnerRole() && merchantBelongsToUser(merchantId);
+    }
+
+    // ─── merchant_operational_signals/{merchantId} ───────────────────────────
+    // Public read. Owners write their own. Admins write all.
+
+    match /merchant_operational_signals/{merchantId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      allow write: if isOwnerRole() && merchantBelongsToUser(merchantId);
+    }
+
+    // ─── merchant_products/{productId} ──────────────────────────────────────
+    // Public read of visible products. Owners write own merchant products.
+    // Admins write all.
+
+    match /merchant_products/{productId} {
+      allow read: if resource.data.visibilityStatus == 'visible';
+      allow read: if isAuthenticated()
+                     && merchantBelongsToUser(resource.data.merchantId);
+      allow read: if isAdmin();
+
+      allow create: if isAdmin();
+      allow create: if isOwnerRole()
+        && merchantBelongsToUser(request.resource.data.merchantId);
+      allow update: if isAdmin();
+      allow update: if isOwnerRole()
+        && merchantBelongsToUser(resource.data.merchantId);
+      allow delete: if isAdmin();
+      allow delete: if isOwnerRole()
+        && merchantBelongsToUser(resource.data.merchantId);
+    }
+
+    // ─── pharmacy_duties/{dutyId} ────────────────────────────────────────────
+    // Public read of published duties. Owners write their merchant duties.
+    // Admins write all.
+
+    match /pharmacy_duties/{dutyId} {
+      allow read: if resource.data.status == 'published';
+      allow read: if isAuthenticated()
+                     && merchantBelongsToUser(resource.data.merchantId);
+      allow read: if isAdmin();
+
+      allow create: if isAdmin();
+      allow create: if isOwnerRole()
+        && merchantBelongsToUser(request.resource.data.merchantId);
+      allow update: if isAdmin();
+      allow update: if isOwnerRole()
+        && merchantBelongsToUser(resource.data.merchantId);
+      allow delete: if isAdmin();
+    }
+
+    // ─── external_places/{externalPlaceDocId} ────────────────────────────────
+    // Admin only. External seed data — not exposed publicly.
+
+    match /external_places/{externalPlaceDocId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ─── import_batches/{batchId} ────────────────────────────────────────────
+    // Admin only.
+
+    match /import_batches/{batchId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ─── merchant_claims/{claimId} ───────────────────────────────────────────
+    // Authenticated users create claims. Users read their own claims.
+    // Admins read and update all.
+
+    match /merchant_claims/{claimId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow read, update: if isAdmin();
+    }
+
+    // ─── reports/{reportId} ──────────────────────────────────────────────────
+    // Authenticated users create reports. Admins read and update all.
+
+    match /reports/{reportId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.createdBy == request.auth.uid;
+      allow read, update: if isAdmin();
+    }
+
+    // ─── admin_configs/{configId} ────────────────────────────────────────────
+    // Admin read/write. Super admin only for write on global config.
+
+    match /admin_configs/{configId} {
+      allow read: if isAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+  }
+}

@@ -24,6 +24,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | 0049   | Implementar campos derivados operativos | Backend / Firebase  | ✅ Entregada |
 | 0050   | Implementar agregados públicos       | Backend / Firebase     | ✅ Entregada |
 | 0121   | Estrategia cobertura inicial y bootstrap | Cobertura / Data   | ✅ Entregada |
+| 0027   | Definir mapa completo de pantallas   | UX / arquitectura      | ✅ Entregada |
+| 0028   | Diseñar navegación principal         | UX / arquitectura      | ✅ Entregada |
 
 ---
 
@@ -69,8 +71,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0026] **Diseñar modelo de badges y branding snippets** — P2 — `Data, Branding, Post-MVP`
 
 ### ÉPICA 6: UX / arquitectura de pantallas
-- [0027] **Definir mapa completo de pantallas** — P0 — `UX/UI, Producto, Fundacional`
-- [0028] **Diseñar navegación principal** — P0 — `UX/UI, Mobile, Fundacional`
+- [0027] **Definir mapa completo de pantallas** — P0 — `UX/UI, Producto, Fundacional` ✅
+- [0028] **Diseñar navegación principal** — P0 — `UX/UI, Mobile, Fundacional` ✅
 - [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP`
 - [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP`
 - [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP`

@@ -8,6 +8,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | ID     | Tarjeta                              | Épica                  | Estado      |
 |--------|--------------------------------------|------------------------|-------------|
 | 0001   | Definir propuesta de valor final     | Dirección del producto | ✅ Entregada |
+| 0007   | Mantener actualizado ARCHITECTURE.md | Documentación maestra  | ✅ Entregada |
 
 ---
 
@@ -24,7 +25,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 2: Documentación maestra
 - [0005] **Mantener actualizado VISION.md** — P0 — `Producto, Fundacional`
 - [0006] **Mantener actualizado PRD-MVP.md** — P0 — `Producto, Fundacional`
-- [0007] **Mantener actualizado ARCHITECTURE.md** — P0 — `Backend, Mobile, Web, Data, Fundacional`
+- [0007] **Mantener actualizado ARCHITECTURE.md** — P0 — `Backend, Mobile, Web, Data, Fundacional` ✅
 - [0008] **Mantener actualizado ROADMAP.md** — P1 — `Producto, Operaciones, Fundacional`
 - [0009] **Mantener actualizado PROMPT-PLAYBOOK.md** — P1 — `Producto, Operaciones, Fundacional`
 

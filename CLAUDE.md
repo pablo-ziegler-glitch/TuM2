@@ -1,34 +1,41 @@
 # CLAUDE.md — Memoria persistente del proyecto TuM2
 
+## Reglas de idioma
+
+- **Descripciones, comentarios y documentación**: siempre en **español**
+- **Código fuente**: siempre en **inglés** (variables, funciones, clases, archivos, etc.)
+
+---
+
 ## Estado del backlog
 
 El backlog maestro de TuM2 está estructurado en 17 épicas (ver sección abajo).
 El usuario pasa las tarjetas de a una. Estado actual:
 
-| ID     | Tarjeta                              | Épica                  | Estado      |
-|--------|--------------------------------------|------------------------|-------------|
-| 0001   | Definir propuesta de valor final     | Dirección del producto | ✅ Entregada |
-| 0005   | Mantener actualizado VISION.md       | Documentación maestra  | ✅ Entregada |
-| 0006   | Mantener actualizado PRD-MVP.md      | Documentación maestra  | ✅ Entregada |
-| 0007   | Mantener actualizado ARCHITECTURE.md | Documentación maestra  | ✅ Entregada |
-| 0019   | Diseñar modelo de usuarios           | Modelo de datos        | ✅ Entregada |
-| 0020   | Diseñar modelo de comercios          | Modelo de datos        | ✅ Entregada |
-| 0021   | Diseñar modelo de productos          | Modelo de datos        | ✅ Entregada |
-| 0022   | Diseñar modelo de horarios           | Modelo de datos        | ✅ Entregada |
-| 0023   | Diseñar modelo de señales operativas | Modelo de datos        | ✅ Entregada |
-| 0024   | Diseñar modelo de turnos/guardias    | Modelo de datos        | ✅ Entregada |
-| 0042   | Crear proyecto base Firebase         | Backend / Firebase     | ✅ Entregada |
-| 0043   | Configurar ambientes dev/staging/prod| Backend / Firebase     | ✅ Entregada |
-| 0044   | Configurar Authentication            | Backend / Firebase     | ✅ Entregada |
-| 0045   | Configurar Firestore base            | Backend / Firebase     | ✅ Entregada |
-| 0046   | Definir Firestore Rules iniciales    | Backend / Firebase     | ✅ Entregada |
-| 0048   | Implementar Cloud Functions base     | Backend / Firebase     | ✅ Entregada |
-| 0049   | Implementar campos derivados operativos | Backend / Firebase  | ✅ Entregada |
-| 0050   | Implementar agregados públicos       | Backend / Firebase     | ✅ Entregada |
-| 0052   | Crear proyecto base mobile           | Mobile app             | ✅ Entregada |
-| 0121   | Estrategia cobertura inicial y bootstrap | Cobertura / Data   | ✅ Entregada |
-| 0027   | Definir mapa completo de pantallas   | UX / arquitectura      | ✅ Entregada |
-| 0028   | Diseñar navegación principal         | UX / arquitectura      | ✅ Entregada |
+| Definición ✅ | Actividad completada |
+|---|---|
+| **[0001]** Definir propuesta de valor final ✅ | Dirección del producto — propuesta de valor final definida y documentada |
+| **[0005]** Mantener actualizado VISION.md ✅ | Documentación maestra — VISION.md actualizado y vigente |
+| **[0006]** Mantener actualizado PRD-MVP.md ✅ | Documentación maestra — PRD-MVP.md actualizado y vigente |
+| **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
+| **[0019]** Diseñar modelo de usuarios ✅ | Modelo de datos — modelo de usuarios definido con roles y atributos |
+| **[0020]** Diseñar modelo de comercios ✅ | Modelo de datos — modelo de comercios definido con campos públicos y operativos |
+| **[0021]** Diseñar modelo de productos ✅ | Modelo de datos — modelo de productos definido con variantes y disponibilidad |
+| **[0022]** Diseñar modelo de horarios ✅ | Modelo de datos — modelo de horarios definido con franjas y excepciones |
+| **[0023]** Diseñar modelo de señales operativas ✅ | Modelo de datos — modelo de señales operativas definido por rubro |
+| **[0024]** Diseñar modelo de turnos/guardias ✅ | Modelo de datos — modelo de turnos de farmacia definido con rotación y vigencia |
+| **[0042]** Crear proyecto base Firebase ✅ | Backend / Firebase — proyecto Firebase creado y configurado |
+| **[0043]** Configurar ambientes dev/staging/prod ✅ | Backend / Firebase — tres ambientes configurados con variables separadas |
+| **[0044]** Configurar Authentication ✅ | Backend / Firebase — autenticación configurada con proveedores y roles |
+| **[0045]** Configurar Firestore base ✅ | Backend / Firebase — Firestore configurado con colecciones base |
+| **[0046]** Definir Firestore Rules iniciales ✅ | Backend / Firebase — reglas de seguridad iniciales definidas por rol |
+| **[0048]** Implementar Cloud Functions base ✅ | Backend / Firebase — funciones base implementadas y desplegadas |
+| **[0049]** Implementar campos derivados operativos ✅ | Backend / Firebase — isOpenNow, isOnDutyToday y otros campos derivados implementados |
+| **[0050]** Implementar agregados públicos ✅ | Backend / Firebase — agregados públicos implementados para consumo mobile y web |
+| **[0052]** Crear proyecto base mobile ✅ | Mobile app — proyecto mobile base creado con estructura y dependencias |
+| **[0121]** Estrategia cobertura inicial y bootstrap ✅ | Cobertura / Data — estrategia de cobertura y bootstrap con Google Places definida |
+| **[0027]** Definir mapa completo de pantallas ✅ | UX / arquitectura — mapa de pantallas completo definido para todos los roles |
+| **[0028]** Diseñar navegación principal ✅ | UX / arquitectura — navegación principal diseñada con estructura de tabs y flujos |
 
 ---
 

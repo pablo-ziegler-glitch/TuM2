@@ -1,0 +1,111 @@
+import 'package:flutter/material.dart';
+import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_text_styles.dart';
+
+class CategoryOption {
+  final String id;
+  final String label;
+  final IconData icon;
+
+  const CategoryOption({required this.id, required this.label, required this.icon});
+}
+
+const kCategories = [
+  CategoryOption(id: 'pharmacy',   label: 'Farmacia',    icon: Icons.local_pharmacy_outlined),
+  CategoryOption(id: 'kiosk',      label: 'Kiosco',      icon: Icons.store_outlined),
+  CategoryOption(id: 'grocery',    label: 'Almacén',     icon: Icons.shopping_basket_outlined),
+  CategoryOption(id: 'vet',        label: 'Veterinaria', icon: Icons.pets_outlined),
+  CategoryOption(id: 'bakery',     label: 'Panadería',   icon: Icons.bakery_dining_outlined),
+  CategoryOption(id: 'other',      label: 'Otro',        icon: Icons.more_horiz),
+];
+
+class CategoryGrid extends StatelessWidget {
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
+  final bool hasError;
+
+  const CategoryGrid({
+    super.key,
+    required this.selectedId,
+    required this.onSelect,
+    this.hasError = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: hasError
+          ? BoxDecoration(
+              border: Border.all(color: AppColors.errorFg),
+              borderRadius: BorderRadius.circular(8),
+            )
+          : null,
+      padding: hasError ? const EdgeInsets.all(8) : EdgeInsets.zero,
+      child: GridView.count(
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1.1,
+        children: kCategories.map((cat) {
+          final isSelected = cat.id == selectedId;
+          return _CategoryChip(
+            option: cat,
+            isSelected: isSelected,
+            onTap: () => onSelect(cat.id),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final CategoryOption option;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CategoryChip({
+    required this.option,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary50 : AppColors.surface,
+          border: Border.all(
+            color: isSelected ? AppColors.primary500 : AppColors.neutral200,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              option.icon,
+              size: 22,
+              color: isSelected ? AppColors.primary500 : AppColors.neutral600,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              option.label,
+              style: AppTextStyles.bodyXs.copyWith(
+                color: isSelected ? AppColors.primary500 : AppColors.neutral800,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

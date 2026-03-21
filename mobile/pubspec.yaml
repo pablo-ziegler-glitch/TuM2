@@ -1,0 +1,40 @@
+name: tum2
+description: TuM2 — Tu metro cuadrado. Directorio de comercios del barrio.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.19.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.4
+
+  # Firebase
+  firebase_core: ^2.30.1
+  firebase_auth: ^4.19.5
+  cloud_firestore: ^4.17.3
+
+  # Local storage (borrador / draft)
+  shared_preferences: ^2.2.3
+
+  # Utils
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.9
+  riverpod_generator: ^2.4.0
+
+flutter:
+  uses-material-design: true

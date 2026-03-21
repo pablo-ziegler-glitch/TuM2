@@ -94,3 +94,11 @@ export type {
   BootstrapRules,
   FeatureFlags,
 } from './admin_configs';
+
+// ── Onboarding owner progress ─────────────────────────────────────────────────
+export type {
+  OnboardingOwnerProgress,
+  OnboardingOwnerStep,
+  OnboardingStep1Data,
+  OnboardingStep2Data,
+} from './onboarding_owner';

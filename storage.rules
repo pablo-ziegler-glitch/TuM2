@@ -1,0 +1,37 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Imágenes de comercios — lectura pública, escritura solo owner autenticado
+    match /merchants/{merchantId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.role == 'owner'
+        && request.resource.size < 5 * 1024 * 1024   // max 5 MB
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Imágenes de productos
+    match /products/{merchantId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.token.role == 'owner'
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Avatares de usuarios
+    match /users/{userId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // Todo lo demás: denegado
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

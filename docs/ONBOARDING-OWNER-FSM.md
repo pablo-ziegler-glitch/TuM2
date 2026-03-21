@@ -122,7 +122,7 @@ Documento técnico del flujo de registro de comercio. Define los estados, transi
 | `draft_expired` | `START_FRESH` | `step_1` | Draft ya limpiado por CF; inicia registro desde cero |
 | `confirmation` | `SUBMIT_START` | `submitting` | Inicia escritura en Firestore |
 | `submitting` | `SUBMIT_OK` | `submit_success` | `merchants/{draftId}` creado con `visibilityStatus: review_pending` |
-| `submitting` | `SUBMIT_FAIL` | `submit_error` | Timeout o error de red; datos guardados en AsyncStorage |
+| `submitting` | `SUBMIT_FAIL` | `submit_error` | Timeout o error de red; datos guardados en `SharedPreferences` (Flutter) |
 | `submit_error` | `RETRY_SUBMIT` | `submitting` | Reintenta con el mismo `draftMerchantId` (idempotente) |
 | `submit_error` | `EXIT_APP` | `abandoned` | Usuario elige "Intentar más tarde"; draft conservado |
 | `step_2` | `DUPLICATE_HARD` | `ownership_claim` | Nombre + dirección coinciden con comercio existente en Firestore |

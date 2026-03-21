@@ -42,7 +42,7 @@ Los tokens base están en `design/tokens.json`. Para los estados de excepción s
 
 **Lógica:**
 - "Guardar borrador y salir" → dispara `SAVE_DRAFT` + `EXIT_APP` → estado `abandoned` con TTL 72 h.
-- "Descartar y salir" → dispara `DISCARD` + `EXIT_APP` → borra draft de AsyncStorage y Firestore, navega a HOME-01 o AUTH-03.
+- "Descartar y salir" → dispara `DISCARD` + `EXIT_APP` → borra draft de `SharedPreferences` y Firestore, navega a HOME-01 o AUTH-03.
 - "Seguir completando" → cierra el sheet, no cambia estado.
 
 ---
@@ -98,7 +98,7 @@ Misma estructura que EX-02, con los siguientes cambios:
 | CTA primario | "Registrar mi comercio" (`primary.500`, full width) — framing positivo, no "volver a intentar" |
 | Footer | "El proceso toma menos de 5 minutos." — reduce barrera de re-entrada |
 
-**Lógica:** al mostrar EX-04, el sistema ya habrá eliminado el draft de AsyncStorage. El backend maneja el TTL server-side; AsyncStorage actúa solo como caché local.
+**Lógica:** al mostrar EX-04, el sistema ya habrá eliminado el draft de `SharedPreferences`. El backend maneja el TTL server-side; `SharedPreferences` actúa solo como caché local.
 
 ---
 
@@ -279,14 +279,14 @@ Este patrón no es redundante: cada capa sirve a un usuario diferente.
 
 ## Arquitectura del borrador (TTL)
 
-### Problema de solo-AsyncStorage
+### Problema de solo-almacenamiento local
 
-Si el borrador vive únicamente en AsyncStorage del dispositivo, el usuario pierde el progress al cambiar de dispositivo o reinstalar la app.
+Si el borrador vive únicamente en el dispositivo (`SharedPreferences`), el usuario pierde el progress al cambiar de dispositivo o reinstalar la app.
 
 ### Arquitectura correcta
 
 ```
-AsyncStorage (dispositivo)
+SharedPreferences (dispositivo Flutter)
     ↕ sincronización
 Firestore: merchant_drafts/{draftId}
     - userId
@@ -298,7 +298,7 @@ Firestore: merchant_drafts/{draftId}
 ```
 
 **Reglas:**
-- AsyncStorage es el caché local para uso offline y acceso rápido.
+- `SharedPreferences` es el caché local para uso offline y acceso rápido (paquete `shared_preferences`).
 - Firestore es la fuente de verdad para el borrador.
 - El TTL se extiende server-side cuando el usuario retoma (no solo localmente).
 - Al expirar, una Cloud Function limpia `merchant_drafts/{draftId}` y el campo `onboardingOwnerProgress` en `users/{uid}`.

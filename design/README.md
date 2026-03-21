@@ -30,17 +30,43 @@ Los tonos **oscuros (700–900)** se usan para texto y énfasis.
 
 ## Consumo por plataforma
 
-### React Native / Expo (mobile — TuM2-0052)
+### Flutter / Dart (mobile — TuM2-0052)
 
-```ts
-import tokens from '../../design/tokens.json';
+Los tokens se traducen a una clase `AppColors` en Dart. No se importa el JSON en runtime — se genera un archivo de constantes durante el setup del proyecto (o se mantiene a mano sincronizado con `tokens.json`).
 
-const colors = {
-  primary: tokens.color.primary.value,
-  primaryLight: tokens.color.primary.shades['100'],
-  secondary: tokens.color.secondary.value,
-  // ...
-};
+```dart
+// lib/design/app_colors.dart
+import 'package:flutter/material.dart';
+
+abstract class AppColors {
+  // Primary — #0E5BD8
+  static const primary = Color(0xFF0E5BD8);
+  static const primary50 = Color(0xFFEBF1FD);
+  static const primary100 = Color(0xFFC3D6F9);
+  static const primary500 = Color(0xFF0E5BD8);
+  static const primary700 = Color(0xFF083E98);
+
+  // Secondary — #0F766E
+  static const secondary = Color(0xFF0F766E);
+  static const secondary50 = Color(0xFFE6F5F4);
+  static const secondary500 = Color(0xFF0F766E);
+
+  // Tertiary — #FF8D46
+  static const tertiary = Color(0xFFFF8D46);
+  static const tertiary50 = Color(0xFFFFF3EB);
+  static const tertiary500 = Color(0xFFFF8D46);
+
+  // Neutral — #C9C7B8
+  static const neutral = Color(0xFFC9C7B8);
+  static const neutral50 = Color(0xFFF9F8F6);
+  static const neutral400 = Color(0xFFC9C7B8);
+  static const neutral500 = Color(0xFFB0AE9F);
+  static const neutral900 = Color(0xFF2D2D26);
+
+  // Semánticos de excepción (no en tokens.json — definidos en ONBOARDING-OWNER-EXCEPTIONS.md)
+  static const error = Color(0xFFDC2626);
+  static const errorBg = Color(0xFFFEF2F2);
+}
 ```
 
 ### Next.js / Tailwind (web — TuM2-0070)

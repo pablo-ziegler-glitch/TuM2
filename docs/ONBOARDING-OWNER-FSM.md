@@ -58,7 +58,22 @@ Documento técnico del flujo de registro de comercio. Define los estados, transi
                          └──────────────────────────────┘
 
     Desde cualquier estado activo:
-    EXIT_APP ──► abandoned (progreso guardado, retomable)
+    EXIT_APP ──────────────► abandoned (progreso guardado, retomable)
+    SAVE_DRAFT + EXIT_APP ──► abandoned (TTL 72 h, sincronizado a Firestore)
+    DISCARD + EXIT_APP ────► idle (draft eliminado)
+
+    Al abrir el flujo con draft existente:
+    draft vigente (>6 h) ──► draft_resumable → EX-02
+    draft urgente (≤6 h) ──► draft_resumable → EX-03
+    draft expirado ────────► draft_expired   → EX-04
+
+    En el submit:
+    confirmation ─SUBMIT_START──► submitting → EX-05
+    submitting ──SUBMIT_OK─────► submit_success → EX-06
+    submitting ──SUBMIT_FAIL───► submit_error → EX-07
+
+    En duplicado hard (paso 2):
+    step_2 ──DUPLICATE_HARD──► ownership_claim → EX-14
 ```
 
 ---
@@ -74,7 +89,13 @@ Documento técnico del flujo de registro de comercio. Define los estados, transi
 | `confirmation` | ONBOARDING-OWNER-04 | Revisa resumen antes de publicar |
 | `submitted` | — (loading/splash) | `merchants/{id}` creado con `visibilityStatus: review_pending` |
 | `completed` | OWNER-01 | Comercio aprobado y visible, flujo cerrado |
-| `abandoned` | — | Usuario salió sin completar; progreso persistido para retomar |
+| `abandoned` | — | Usuario salió sin completar; progreso persistido para retomar (TTL 72 h) |
+| `draft_resumable` | EX-02 / EX-03 | Draft vigente detectado al abrir el flujo |
+| `draft_expired` | EX-04 | Draft encontrado pero TTL vencido; se limpia y se ofrece registro limpio |
+| `submitting` | EX-05 | Escritura en Firestore en curso; estado no interrumpible |
+| `submit_success` | EX-06 | Escritura confirmada; `visibilityStatus: review_pending` |
+| `submit_error` | EX-07 | Error de red en SUBMIT; datos guardados localmente, reintentable |
+| `ownership_claim` | EX-14 | Duplicado hard detectado (nombre + dirección); inicia flujo de reclamación |
 
 ---
 
@@ -96,6 +117,17 @@ Documento técnico del flujo de registro de comercio. Define los estados, transi
 | `confirmation` | `BACK` | `step_3` | — |
 | `submitted` | `APPROVE` (CF) | `completed` | `onClaimApprovedPromoteMerchant` o auto-approve flag activo en `admin_configs`. Limpia `onboardingOwnerProgress`. |
 | `abandoned` | `RESUME` | paso guardado | Lee `onboardingOwnerProgress.currentStep`, redirige al paso correspondiente |
+| `draft_resumable` | `RESUME` | paso guardado | Igual que `abandoned` + extiende TTL por 72 h adicionales |
+| `draft_resumable` | `START_FRESH` | `step_1` | Elimina draft anterior, genera nuevo `draftMerchantId` |
+| `draft_expired` | `START_FRESH` | `step_1` | Draft ya limpiado por CF; inicia registro desde cero |
+| `confirmation` | `SUBMIT_START` | `submitting` | Inicia escritura en Firestore |
+| `submitting` | `SUBMIT_OK` | `submit_success` | `merchants/{draftId}` creado con `visibilityStatus: review_pending` |
+| `submitting` | `SUBMIT_FAIL` | `submit_error` | Timeout o error de red; datos guardados en AsyncStorage |
+| `submit_error` | `RETRY_SUBMIT` | `submitting` | Reintenta con el mismo `draftMerchantId` (idempotente) |
+| `submit_error` | `EXIT_APP` | `abandoned` | Usuario elige "Intentar más tarde"; draft conservado |
+| `step_2` | `DUPLICATE_HARD` | `ownership_claim` | Nombre + dirección coinciden con comercio existente en Firestore |
+| `ownership_claim` | `CLAIM_OWNERSHIP` | flujo externo | Inicia verificación de identidad (proceso humano, 24 h) |
+| `ownership_claim` | `START_FRESH` | `step_1` | Usuario elige registrar otro comercio distinto |
 
 ---
 
@@ -186,4 +218,14 @@ Al autenticar exitosamente en AUTH-03:
 
 ---
 
-*Documento generado para TuM2-0030-01. Ver SCREENS-MAP.md para las fichas de pantalla y NAVIGATION.md para los guards de navegación.*
+---
+
+## 8. Documentos relacionados
+
+| Documento | Contenido |
+|-----------|-----------|
+| `ONBOARDING-OWNER-EXCEPTIONS.md` | Especificación de los 14 estados de excepción (EX-01 a EX-14): borrador/TTL, loading, éxito, errores de red, validación inline, edge cases de negocio |
+| `SCREENS-MAP.md` | Fichas de pantalla ONBOARDING-OWNER-01 a 04 |
+| `NAVIGATION.md` | Guards de navegación y detección de owner pendiente |
+
+*Documento generado para TuM2-0030-01. Actualizado con estados de excepción en TuM2-0030-03.*

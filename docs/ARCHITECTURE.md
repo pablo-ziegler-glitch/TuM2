@@ -1,330 +1,317 @@
-# TuM2 — Arquitectura del producto
-### Tarjeta: TuM2-0007
+# TuM2 — Arquitectura del sistema v1
 
-**Producto:** TuM2
-**Lectura de marca:** Tu metro cuadrado
-**Estudio desarrollador:** Floki
+Documento técnico de referencia para el equipo. Describe las decisiones de arquitectura, el stack, la estructura de datos y los patrones de integración.
 
 ---
 
-## 1. Objetivo arquitectónico
+## 1. Visión general
 
-Construir una plataforma mobile + web para TuM2 que soporte desde el MVP:
+TuM2 es una plataforma de información de comercios locales compuesta por:
 
-- Directorio de comercios
-- Catálogo público
-- Señales operativas
-- Farmacias de turno
-- Comunidad segmentada
-- Una capa de branding clara y desacoplada del core UX
-- Un fuerte componente de cercanía geográfica
-
-La arquitectura debe preservar:
-
-| Principio | Descripción |
-|-----------|-------------|
-| Claridad | Estructura de código y datos legible y navegable |
-| Rapidez de desarrollo | Bajo tiempo de setup, iteración fluida |
-| Bajo costo inicial | Firebase como BaaS, sin infra propia en MVP |
-| Seguridad | Firestore Rules + App Check + roles por claims |
-| Escalabilidad progresiva | Agnóstico a la carga; Cloud Functions + agregados |
-| Consistencia de proximidad | La geolocalización es componente central, no accesorio |
-
----
-
-## 2. Principio UX-arquitectónico
-
-**La identidad de marca no debe estar hardcodeada en navegación crítica.**
-
-Debe desacoplarse en módulos versionables:
-
-- Catálogo de microcopies
-- Templates de notificación
-- Onboarding content
-- Badges y sellos
-- Mensajes de estado
-- Sistema de rangos
-
-Esto permite:
-- Iterar tono sin romper flows
-- Mantener claridad funcional
-- Probar variantes de copy (A/B)
-
----
-
-## 3. Stack propuesto
-
-### Frontend
-
-| Plataforma | Tecnología |
-|------------|-----------|
-| Mobile (iOS + Android) | Flutter |
-| Web pública | Flutter Web o web dedicada |
-| Panel admin | Web restringida (Flutter Web o lightweight framework) |
-
-### Backend
-
-| Servicio | Uso |
-|----------|-----|
-| Firebase Auth | Autenticación, roles via custom claims |
-| Firestore | Base de datos principal (NoSQL, tiempo real) |
-| Cloud Functions | Lógica server-side, derivaciones, TTL, triggers |
-| Storage | Imágenes de comercios y productos |
-| Firebase Hosting / App Hosting | Deploy web pública y panel admin |
-| FCM | Push notifications |
-| Analytics | Eventos de uso y activación |
-| Crashlytics | Monitoreo de errores en producción |
-| Remote Config | Feature flags y variantes de copy |
-| App Check | Protección de endpoints contra tráfico no autorizado |
-
----
-
-## 4. Dominios principales
-
-### User
 ```
-id
-email
-displayName
-roleType           // customer | owner | admin
-currentRank        // opcional
-xpPoints           // opcional
-status
-createdAt
-```
-
-### Store
-```
-id
-ownerId
-name
-slug
-category
-description
-imageUrl
-address
-geo                // lat, lng, geohash
-neighborhood       // opcional
-locality           // opcional
-visibilityStatus   // hidden | review_pending | visible | suppressed
-createdAt
-updatedAt
-```
-
-### Product
-```
-id
-storeId
-name
-description
-price
-stockStatus
-imageUrls
-isVisible
-updatedAt
-```
-
-### StoreSchedule
-```
-storeId
-timezone
-weeklySchedule     // { lun: { open, close }, ... }
-updatedAt
-```
-
-### OperationalSignal
-```
-id
-storeId
-signalType
-status
-notes
-sourceType
-confidenceLevel
-updatedAt
-```
-
-### DutySchedule
-```
-id
-storeId
-date
-startTime
-endTime
-status
-notes
-sourceType
-updatedAt
-```
-
-### Proposal
-```
-id
-segment
-createdBy
-title
-description
-status
-voteCount
-shareSlug
-moderationStatus
-createdAt
-```
-
-### Vote
-```
-proposalId
-userId
-segment
-voteType
-createdAt
-```
-
-### BrandingSnippet
-```
-id
-contextType
-segment
-tone
-text
-active
-version
-```
-
-### BadgeDefinition
-```
-id
-key
-label
-description
-visualStyle
-active
+┌─────────────────────────────────────────────────────────────────┐
+│                         CLIENTES                                │
+│  App Mobile (Flutter)              │  Web pública (Flutter Web) │
+└───────────────────────┬─────────────────────────────────────────┘
+                        │ Firestore SDK / REST
+┌───────────────────────▼─────────────────────────────────────────┐
+│                     FIREBASE                                    │
+│  Authentication  │  Firestore  │  Cloud Functions  │  Storage   │
+└───────────────────────┬─────────────────────────────────────────┘
+                        │ Admin SDK
+┌───────────────────────▼─────────────────────────────────────────┐
+│               DATOS EXTERNOS (solo admin)                       │
+│  Google Places API (fuente semilla)  │  Futuras fuentes         │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. Arquitectura del módulo geográfico
+## 2. Stack técnico
 
-TuM2 trata la geolocalización como componente central, no accesorio.
+| Capa | Tecnología | Versión | Notas |
+|------|-----------|---------|-------|
+| Mobile | Flutter | — | iOS + Android |
+| Navegación | Flutter Navigator 2 / go_router | — | Bottom tabs + Stack + Modal |
+| Web | Flutter Web | — | Web pública / panel admin |
+| Backend | Firebase | — | Serverless exclusivo |
+| Base de datos | Cloud Firestore | — | NoSQL documental |
+| Autenticación | Firebase Auth | — | Email magic link + Google |
+| Funciones | Cloud Functions for Firebase | Node 20 + TS | Triggers + Scheduled jobs |
+| Storage | Firebase Storage | — | Fotos de comercios y productos |
+| Analytics | Firebase Analytics + Crashlytics | — | Base MVP |
+| Mapas mobile | google_maps_flutter | — | Google Maps SDK |
+| Mapas web | Google Maps Embed API | — | Solo embed en MVP |
+| Tipos compartidos | TypeScript `/schema/types/` | TS 5.4 | Modelo canónico |
 
-**Requisitos:**
-- Ubicación del comercio
-- Zona / localidad
-- Consultas por cercanía
-- Filtros "cerca mío"
-- Segmentación por radio o área
-- Posibilidad futura de vista barrial o por cuadrícula/zona
+---
 
-**Campos mínimos en Store:**
+## 3. Ambientes
+
+| Alias | Proyecto Firebase | Uso |
+|-------|------------------|-----|
+| `dev` | tum2-dev | Desarrollo local con emuladores |
+| `staging` | tum2-staging | QA y validación pre-lanzamiento |
+| `prod` | tum2-prod | Producción |
+
+El proyecto soporta switching con `firebase use <alias>`.
+
+Los emuladores locales cubren: Auth (9099), Firestore (8080), Storage (9199), Functions (5001), UI (4000).
+
+---
+
+## 4. Modelo de datos — Colecciones Firestore
+
+### Colecciones principales
+
+| Colección | Propósito | Acceso público |
+|-----------|-----------|---------------|
+| `users/{userId}` | Documento de usuario con rol y estado | Solo propio |
+| `zones/{zoneId}` | Barrios/zonas con métricas de cobertura | ✅ |
+| `merchants/{merchantId}` | Entidad canónica de comercio (source of truth) | Solo visible+active |
+| `merchant_public/{merchantId}` | Proyección read-optimized (escrita por Cloud Functions) | ✅ |
+| `merchant_schedules/{merchantId}` | Horarios operativos por día | ✅ |
+| `merchant_operational_signals/{merchantId}` | Estado operativo en tiempo real | ✅ |
+| `merchant_products/{productId}` | Productos del comercio | Solo visibles |
+| `pharmacy_duties/{dutyId}` | Turnos de guardia de farmacias | Solo publicados |
+| `merchant_claims/{claimId}` | Solicitudes de claim de comercio | Solo propio |
+| `reports/{reportId}` | Reportes de usuarios | Solo admin |
+| `external_places/{externalPlaceDocId}` | Datos crudos de Google Places | Solo admin |
+| `import_batches/{batchId}` | Auditoría de importaciones | Solo admin |
+| `admin_configs/global` | Configuración global y feature flags | Solo admin |
+
+### Patrón de doble colección (merchants / merchant_public)
+
+La decisión arquitectural más importante del sistema es la separación entre `merchants` (fuente de verdad, normalizada) y `merchant_public` (proyección denormalizada, optimizada para lectura pública).
+
 ```
-lat
-lng
-locality
-neighborhood    // opcional
-geohash         // estructura equivalente para queries rápidas
+merchants/{id}          →  Cloud Function trigger  →  merchant_public/{id}
+(escribe: owner/admin)                                (lee: todos)
 ```
 
-**Estrategia de consulta:**
-Las queries de proximidad en Firestore se resuelven con geohash (Geohash range query). Los campos `lat`/`lng` se usan para cálculo preciso de distancia en el cliente o en Cloud Functions.
+**Por qué:** Las queries de descubrimiento (home feed, búsqueda, abierto ahora) necesitan campos derivados (`isOpenNow`, `sortBoost`, `badges`) que no pueden calcularse en cliente sin múltiples colecciones. La proyección pública los tiene pre-calculados y es de solo lectura para clientes.
+
+**Importante:** `merchant_public` nunca se escribe directamente desde cliente. Solo Cloud Functions tienen permiso.
 
 ---
 
-## 6. Arquitectura del módulo operativo
+## 5. Modelo de estados de comercio (3 ejes)
 
-La capa operativa se resuelve con tres niveles:
+Cada documento `merchants/{id}` tiene tres ejes de estado independientes:
 
-| Nivel | Qué contiene | Modelo |
-|-------|-------------|--------|
-| **1 — Horario base** | Días de apertura, bloques horarios, timezone, horarios estándar | `StoreSchedule` |
-| **2 — Señales operativas explícitas** | 24 hs, hasta tarde, horario especial, servicio especial, delivery nocturno, otras señales no derivables automáticamente | `OperationalSignal` |
-| **3 — Calendario operativo programado** | Turnos, guardias, calendario mensual, farmacias de turno, estados `programado / confirmado / modificado` | `DutySchedule` |
+```
+status               visibilityStatus        verificationStatus
+─────────────────    ────────────────────    ──────────────────────────
+draft                hidden                  unverified
+active               review_pending          referential
+inactive             visible                 community_submitted
+archived             suppressed              claimed
+                                             validated
+                                             verified
+```
 
----
+**Regla de visibilidad pública:** un comercio aparece en `merchant_public` solo si:
+- `status = 'active'`
+- `visibilityStatus = 'visible'`
+- Tiene nombre, categoría, zona y ubicación
 
-## 7. Derivaciones automáticas
-
-El backend calcula campos derivados para consulta rápida. Se materializan en documentos agregados para acelerar listados.
-
-| Campo derivado | Descripción |
-|----------------|-------------|
-| `isOpenNow` | Calculado desde `StoreSchedule` + timezone actual |
-| `isLateNightNow` | Señal de horario extendido activa en este momento |
-| `isOnDutyToday` | `DutySchedule` activo para la fecha de hoy |
-| `hasActiveSpecialSignal` | Al menos una `OperationalSignal` activa |
-| `operationalFreshnessHours` | Horas desde la última actualización operativa |
-| `operationalDataCompletenessScore` | Score 0–100 de completitud del perfil operativo |
-| `distanceBucket` | `< 200m / 200-500m / 500m-1km / > 1km` (opcional, futuro) |
-| `nearUserZone` | Bandera booleana derivada de zona del usuario (opcional, futuro) |
-
----
-
-## 8. Módulos frontend
-
-### Core (todos los usuarios)
-- Navegación estándar
-- Sesión (auth)
-- Theming (`AppColors`, `AppTextStyles`)
-- Analytics
-- Remote Config
-
-### Owner module
-- Gestión de comercio (nombre, categoría, dirección, imágenes)
-- Productos (alta, edición, stock)
-- Horarios semanales
-- Señales operativas
-- Calendario de turnos
-
-### Customer module
-- Buscar (texto + filtros)
-- Mapa
-- Categorías
-- Perfil + favoritos
-- Abierto ahora
-- Farmacias de turno
-- Detalle de comercio
-- Detalle de producto
-- Cerca mío
-
-### Brand layer (desacoplado del UX core)
-- Onboarding TuM2
-- Badges y sellos
-- Loading copy
-- Notificaciones
-- Estados narrativos (mensajes de éxito, error, vacío)
+**sortBoost por nivel de verificación:**
+| Nivel | Boost |
+|-------|-------|
+| verified | 100 |
+| validated | 90 |
+| claimed | 80 |
+| referential | 70 |
+| community_submitted | 40 |
+| unverified | 20 |
 
 ---
 
-## 9. Reglas de arquitectura narrativa
+## 6. Cloud Functions
 
-1. Toda pantalla crítica debe tener copy claro y directo.
-2. La marca debe sentirse cercana y útil — nunca invasiva en tareas críticas.
-3. Mensajes de error severos deben priorizar claridad sobre tono.
-4. La navegación principal debe seguir naming estándar (sin naming de marca en rutas).
-5. Los templates de copy deben poder versionarse (`BrandingSnippet.version`).
-6. La filosofía de cercanía debe aparecer en momentos de descubrimiento, no en flows de gestión.
+### Arquitectura de funciones
+
+```
+functions/src/
+├── index.ts              — Exports centralizados
+├── triggers/             — Reaccionan a escrituras en Firestore
+│   ├── merchants.ts      — Sync merchants → merchant_public
+│   ├── schedules.ts      — Recalcular isOpenNow en cambio de horario
+│   ├── signals.ts        — Sync señales operativas a merchant_public
+│   ├── duties.ts         — Sync turno de farmacia → hasPharmacyDutyToday
+│   ├── claims.ts         — Promover a 'claimed' al aprobar claim
+│   ├── reports.ts        — Suprimir comercio si supera umbral de reportes
+│   └── externalPlaces.ts — Normalizar datos de Google Places al ingestar
+├── jobs/                 — Tareas programadas y callables admin
+│   ├── refreshOpenStatuses.ts  — Nightly: recalcula isOpenNow en todos
+│   ├── refreshDuties.ts        — Nightly: actualiza hasPharmacyDutyToday
+│   └── bootstrap.ts            — Callable admin: seed de zona desde Google Places
+├── coverage/             — Métricas de cobertura por zona
+│   └── zoneCoverage.ts
+├── admin/                — Callables de administración
+│   └── rebuildPublic.ts  — Reconstruir todas las proyecciones merchant_public
+└── lib/                  — Utilidades internas
+    ├── projection.ts     — computeSortBoost(), computeMerchantPublicProjection()
+    ├── schedules.ts      — Parsing de horarios, isOpenNow
+    ├── normalizeCategory.ts
+    ├── dedupe.ts         — Detección de duplicados en seeds externos
+    ├── scoring.ts        — Confidence scoring para datos externos
+    └── types.ts          — Type aliases internos
+```
+
+### Campos derivados clave
+
+| Campo | Colección | Quién lo calcula | Cuándo |
+|-------|-----------|-----------------|--------|
+| `isOpenNow` | merchant_public | schedules.ts trigger + nightly job | Cambio de horario / señal / cada noche |
+| `isOnDutyToday` | merchant_public | duties.ts trigger + nightly job | Cambio de turno / cada noche |
+| `sortBoost` | merchant_public | projection.ts | Cambio de verificación |
+| `badges` | merchant_public | projection.ts | Cambio de datos del comercio |
+| `searchKeywords` | merchant_public | projection.ts | Cambio de nombre/categoría |
 
 ---
 
-## 10. Principio rector
+## 7. Seguridad — Firestore Rules
 
-> **TuM2 debe sentirse cercana en marca y precisa en uso.**
->
-> La arquitectura debe sostener la idea de "tu entorno comercial inmediato" como núcleo del producto — tanto en la experiencia del vecino que busca un comercio, como en la del dueño que lo gestiona.
+Las reglas siguen el principio de **mínimo privilegio**:
+
+| Colección | Lectura pública | Owner escribe | Admin escribe |
+|-----------|----------------|--------------|--------------|
+| `users` | Solo propio | Solo propio (no cambia rol) | ✅ |
+| `zones` | ✅ | — | ✅ |
+| `merchants` | Solo visible+active | Solo su comercio | ✅ |
+| `merchant_public` | ✅ | ❌ (solo CF) | ❌ (solo CF) |
+| `merchant_schedules` | ✅ | Solo su comercio | ✅ |
+| `merchant_operational_signals` | ✅ | Solo su comercio | ✅ |
+| `merchant_products` | Solo visibles | Solo su comercio | ✅ |
+| `pharmacy_duties` | Solo publicados | Solo su comercio | ✅ |
+| `external_places` | ❌ | ❌ | ✅ |
+| `import_batches` | ❌ | ❌ | ✅ |
+| `merchant_claims` | Solo propio | Crear (propio) | ✅ |
+| `reports` | ❌ | Crear | ✅ |
+| `admin_configs` | Solo admin | ❌ | Solo super_admin |
+
+**Custom claims de Firebase Auth:**
+- `role: 'customer' | 'owner' | 'admin' | 'super_admin'`
+- Los claims se validan en reglas y en el backend. Nunca se confía solo en el cliente.
 
 ---
 
-## 11. Documentos relacionados
+## 8. Autenticación y roles
 
-| Documento | Contenido |
-|-----------|-----------|
-| `docs/NAVIGATION.md` | Estructura de navegación Flutter, stacks, guards |
-| `docs/SCREENS-MAP.md` | Mapa completo de pantallas por segmento |
-| `docs/QUERY-ARCHITECTURE.md` | Estrategia de consultas Firestore y agregados |
-| `schema/README.md` | Esquemas Firestore detallados |
-| `design/tokens.json` | Tokens de color del sistema de diseño |
-| `docs/ONBOARDING-OWNER-FSM.md` | FSM del flujo de registro de comercio |
-| `docs/ONBOARDING-OWNER-EXCEPTIONS.md` | Estados de excepción del onboarding OWNER |
+```
+Firebase Auth (idToken)
+└── custom claim: role
+    ├── customer   → AppNavigator + CustomerTabs
+    ├── owner      → AppNavigator + CustomerTabs + OwnerStack modal
+    ├── admin      → AppNavigator + CustomerTabs + AdminStack modal
+    └── super_admin → Admin + acceso a admin_configs
+```
+
+El flujo de asignación de rol:
+1. Usuario se registra → rol `customer` asignado por default.
+2. Si el usuario completa onboarding de comercio → rol cambia a `owner` (via Cloud Function callable o admin).
+3. `admin` y `super_admin` se asignan manualmente desde consola Firebase.
 
 ---
 
-*Documento mantenido bajo TuM2-0007. Actualizar ante cambios de stack, incorporación de nuevos dominios o cambios en principios arquitectónicos.*
+## 9. Bootstrap de datos — Google Places
+
+La estrategia de cobertura inicial usa Google Places como fuente semilla controlada:
+
+```
+Admin dispara runZoneBootstrapBatch(zoneId, maxResults)
+  ↓
+Google Places API (búsqueda por zona + tipo de negocio)
+  ↓
+external_places/{id}  (datos crudos, solo admin)
+  ↓
+onExternalPlaceCreateNormalize (Cloud Function trigger)
+  ↓
+normalización + scoring de confianza + detección de duplicados
+  ↓
+Si confianza >= umbral → merchants/{id} con status='active', verificationStatus='referential'
+Si confianza < umbral → external_places queda en review_pending para revisión admin
+```
+
+**Guardrails:**
+- `maxResults` ≤ 50 por batch.
+- Cada batch se registra en `import_batches` con trazabilidad completa.
+- Los comercios creados desde Google Places tienen `sourceType: 'external_seed'` y son `isClaimable: true`.
+- No se crean registros duplicados (deduplicación por nombre normalizado + geohash).
+
+---
+
+## 10. Navegación mobile (arquitectura)
+
+Ver `docs/NAVIGATION.md` para el detalle completo.
+
+Resumen:
+```
+Root Navigator
+├── AuthStack (sin sesión) — Splash, Onboarding, Login, EmailVerification
+└── AppNavigator (con sesión)
+    ├── CustomerTabs (tab bar) — Inicio, Buscar, Perfil
+    ├── OwnerStack (modal) — Panel, Perfil, Productos, Horarios, Turnos
+    ├── AdminStack (modal) — Panel, Comercios, Detalle, Señales
+    └── SharedScreens — FichaComercio (push), FichaProducto (bottom sheet)
+```
+
+---
+
+## 11. Índices Firestore
+
+Los índices compuestos más críticos para el MVP:
+
+| Query | Índice |
+|-------|--------|
+| Home feed por zona | `merchant_public: zoneId ASC + visibilityStatus ASC + sortBoost DESC` |
+| Abierto ahora | `merchant_public: zoneId ASC + visibilityStatus ASC + isOpenNow ASC` |
+| Por categoría | `merchant_public: zoneId ASC + visibilityStatus ASC + categoryId ASC` |
+| Farmacias de turno | `merchant_public: zoneId ASC + hasPharmacyDutyToday ASC + visibilityStatus ASC` |
+| Turnos por zona/fecha | `pharmacy_duties: zoneId ASC + date ASC + status ASC` |
+| Productos de comercio | `merchant_products: merchantId ASC + visibilityStatus ASC` |
+
+Ver `firestore.indexes.json` para la definición completa (18 índices compuestos).
+
+---
+
+## 12. Tipos compartidos
+
+El directorio `/schema/types/` define los contratos de datos en TypeScript, compartidos entre funciones, app mobile y web:
+
+```
+schema/types/
+├── index.ts                        — Barrel export
+├── user.ts                         — UserDocument, UserRole, UserStatus
+├── zone.ts                         — ZoneDocument, ZoneCoverageMetrics
+├── merchant.ts                     — MerchantDocument y tipos de estado
+├── merchant_public.ts              — MerchantPublicDocument, MerchantBadge
+├── merchant_schedules.ts           — WeeklySchedule, ScheduleSlot, ScheduleException
+├── merchant_operational_signals.ts — OperationalSignals, DerivedSignals
+├── merchant_products.ts            — ProductDocument y tipos de estado
+├── pharmacy_duties.ts              — PharmacyDutyDocument y tipos
+├── external_places.ts              — ExternalPlaceDocument (solo admin)
+├── import_batches.ts               — ImportBatchDocument
+├── merchant_claims.ts              — MerchantClaimDocument
+├── reports.ts                      — ReportDocument, ReportType
+└── admin_configs.ts                — AdminConfigDocument, FeatureFlags
+```
+
+---
+
+## 13. Decisiones de arquitectura tomadas
+
+| Decisión | Alternativas consideradas | Razón |
+|----------|--------------------------|-------|
+| Firebase como backend único | Self-hosted backend (NestJS + PostgreSQL) | Velocidad de desarrollo, realtime out-of-the-box, sin infraestructura que mantener |
+| merchant_public como proyección separada | Leer desde merchants directamente | Performance: queries de descubrimiento con campos derivados sin joins client-side |
+| Expo (managed workflow) | Bare RN | Velocidad de setup, OTA updates, EAS Build |
+| Client-side text search en MVP | Algolia / Typesense | Costo cero en MVP; se puede migrar cuando el volumen lo justifique |
+| No hay ratings / reviews | Sistema de reputación | Complejidad de moderación vs. valor en MVP; se evalúa para Post-MVP (0119) |
+| sortBoost por verificación | Algoritmo de ranking complejo | Transparencia, predictibilidad, fácil de ajustar |
+| Separación 3 ejes de estado (status/visibility/verification) | Estado único | Permite combinaciones que reflejan estados reales del negocio sin ambigüedad |
+
+---
+
+*Documento para TuM2-0007. Ver PRD-MVP.md para el alcance funcional y SCREENS-MAP.md para el diseño de pantallas.*

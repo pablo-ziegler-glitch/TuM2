@@ -195,12 +195,12 @@ SharedScreens
 
 | Componente | Librería recomendada |
 |------------|---------------------|
-| Navegación principal | `go_router` |
-| Tab bar | `NavigationBar` (Material 3, built-in) |
-| Stack navigator | `go_router` routes / `Navigator.push` |
-| Modal / bottom sheet | `showModalBottomSheet` (built-in) |
-| Deep links | `go_router` path-based deep links |
-| Auth state | `firebase_auth` + Riverpod `StreamProvider` |
+| Navegación principal | go_router |
+| Tab bar | NavigationBar / BottomNavigationBar |
+| Stack navigator | go_router ShellRoute |
+| Modal / bottom sheet | showModalBottomSheet / showBottomSheet |
+| Deep links | go_router deep link support |
+| Auth state | Firebase Auth `authStateChanges()` + Provider/Riverpod |
 
 ---
 

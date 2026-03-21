@@ -1,150 +1,229 @@
 # TuM2 — PRD MVP
 ### Tarjeta: TuM2-0006
 
-Product Requirements Document para el lanzamiento del MVP. Define el alcance real, los criterios de aceptación y lo que explícitamente queda fuera.
+**Producto:** TuM2
+**Lectura de marca:** Tu metro cuadrado
+**Estudio desarrollador:** Floki
+**Tono de marca:** Cercano, útil, territorial, claro y confiable.
 
 ---
 
-## 1. Alcance del MVP
+## 1. Objetivo del MVP
 
-El MVP debe resolver **dos jobs-to-be-done** con suficiente calidad para generar valor real:
+Validar que TuM2 puede generar valor real combinando:
 
-1. **CUSTOMER:** "Quiero saber si el comercio de la vuelta está abierto ahora y qué tiene disponible."
-2. **OWNER:** "Quiero tener presencia digital en mi barrio sin necesitar un técnico."
+- directorio de comercios de cercanía
+- catálogo público
+- información operativa especial
+- farmacias de turno
+- filtros de disponibilidad real
+- participación comunitaria segmentada
 
-Todo lo que no sirve directamente a estos dos jobs queda fuera del MVP.
-
----
-
-## 2. Funcionalidades incluidas en MVP
-
-### CUSTOMER
-
-| Feature | Descripción | Prioridad |
-|---------|-------------|-----------|
-| Búsqueda de comercios | Por nombre, categoría, zona | P0 |
-| Ficha de comercio | Nombre, categoría, dirección, horario, señales operativas | P0 |
-| Abierto ahora | Listado de comercios con `isOpenNow: true` en la zona | P0 |
-| Farmacias de turno | Vista dedicada con `isOnDutyToday: true` | P0 |
-| Navegación por categorías | Filtro por rubro (farmacia, kiosco, almacén, etc.) | P0 |
-| Mapa de comercios | Vista mapa con pins de comercios cercanos | P1 |
-| Ficha de producto | Nombre, descripción, precio, stock | P2 |
-| Favoritos | Guardar comercios | P2 |
-
-### OWNER
-
-| Feature | Descripción | Prioridad |
-|---------|-------------|-----------|
-| Registro de comercio | Onboarding en 4 pasos (nombre, dirección, horarios, confirmación) | P0 |
-| Gestión de horarios | Carga semanal con días activos/inactivos y bloques horarios | P0 |
-| Gestión de señales operativas | 24 hs, delivery, horario especial, etc. | P0 |
-| Alta de productos | Nombre, descripción, precio, stock, imagen | P0 |
-| Edición de perfil de comercio | Nombre, categoría, descripción, imagen | P0 |
-| Carga de turnos de farmacia | Calendario mensual de guardias | P0 |
-
-### ADMIN
-
-| Feature | Descripción | Prioridad |
-|---------|-------------|-----------|
-| Revisión y aprobación de comercios | Moderar `visibilityStatus: review_pending` | P1 |
-| Listado de comercios activos | Vista de gestión de plataforma | P2 |
-| Moderación de contenido reportado | Revisar señales reportadas | P1 |
+El MVP debe probar si TuM2 puede convertirse en una herramienta cotidiana para resolver necesidades del entorno inmediato.
 
 ---
 
-## 3. Funcionalidades explícitamente fuera del MVP
+## 2. Hipótesis del MVP
 
-| Feature | Razón |
-|---------|-------|
-| Sistema de propuestas y votos | Complejidad de moderación; Post-MVP |
-| Reputación y rankings | Requiere volumen de datos; Post-MVP |
-| Promociones patrocinadas | Modelo de negocio a definir post-lanzamiento |
-| Carga masiva de productos | Operacional; no crítico para piloto |
-| Verificación avanzada de owners | Proceso manual por soporte en MVP |
-| Links compartibles de comercio | MVP+ si entra tiempo |
-| Onboarding CUSTOMER | Flujo de registro simplificado; nice-to-have |
-| Notificaciones push activas | Infraestructura lista (FCM); activación post-piloto |
+- Los usuarios valoran una app que resuelve disponibilidad real del comercio de cercanía.
+- Los dueños están dispuestos a cargar no solo productos sino también señales operativas.
+- Casos como "farmacia de turno" y "abierto ahora" pueden generar adquisición y recurrencia.
+- Una marca como TuM2 puede posicionarse como herramienta de referencia barrial/zonal sin perder profesionalismo.
 
 ---
 
-## 4. Criterios de aceptación por módulo
+## 3. Usuarios del MVP
 
-### Registro de comercio (OWNER)
-- [ ] El owner puede completar el flujo en < 5 minutos en condiciones normales
-- [ ] El formulario valida nombre, categoría y dirección antes de avanzar
-- [ ] La dirección usa autocomplete con Google Places
-- [ ] La zona se asigna automáticamente por geocoding
-- [ ] Los horarios son opcionales (skip con "Completar después")
-- [ ] El comercio queda en `review_pending` hasta aprobación manual
-- [ ] Si el registro se interrumpe, el borrador se conserva 72 h
-- [ ] El sistema detecta y maneja duplicados (soft warning / hard block)
+**OWNER** — Dueño o administrador de un comercio.
 
-### Ficha pública de comercio (CUSTOMER)
-- [ ] Muestra nombre, categoría, dirección, zona, horarios semanales
-- [ ] Muestra señales operativas activas con antigüedad del dato
-- [ ] Muestra `isOpenNow` calculado en tiempo real
-- [ ] Muestra `isOnDutyToday` para farmacias
-- [ ] Muestra listado de productos si hay al menos 1 cargado
+**CUSTOMER** — Usuario final que consulta comercios, productos e información operativa.
 
-### Búsqueda
-- [ ] El usuario puede buscar por nombre de comercio
-- [ ] El usuario puede filtrar por categoría
-- [ ] El resultado incluye distancia estimada al comercio
-
-### Farmacias de turno
-- [ ] Vista dedicada que lista las farmacias con `isOnDutyToday: true`
-- [ ] Muestra horario de guardia del día
-- [ ] Fallback claro si no hay datos de turno para ese día
-
-### Señales operativas
-- [ ] El owner puede activar/desactivar señales desde su panel
-- [ ] Las señales se reflejan en la ficha pública en < 5 minutos
-- [ ] Las señales tienen timestamp de última actualización visible para el CUSTOMER
+**ADMIN** — Administrador interno del sistema.
 
 ---
 
-## 5. Requisitos no funcionales
+## 4. Módulos del MVP
 
-| Requisito | Criterio |
-|-----------|---------|
-| Performance | Listado de comercios carga en < 2 s en red 4G |
-| Offline | La app muestra datos cacheados si se pierde la conexión; no rompe |
-| Seguridad | Firestore Rules impiden que un owner edite datos de otro comercio |
-| Disponibilidad | Firebase SLA: > 99.9 % uptime para Firestore y Auth |
-| Escalabilidad | Los agregados públicos soportan hasta 10.000 comercios sin degradación |
+### 4.1 Autenticación y perfil
+
+- registro/login
+- selección de rol
+- perfil básico
+- verificación mínima
+
+### 4.2 Alta de comercio
+
+- nombre
+- rubro
+- ubicación
+- descripción
+- imagen
+- estado público
+
+### 4.3 Gestión de productos
+
+- alta/edición/baja
+- lógica precio
+- stock
+- visibilidad
+
+### 4.4 Información operativa especial
+
+- horarios base
+- abierto ahora
+- 24 hs
+- hasta tarde
+- horario especial
+- turnos y guardias
+- farmacia de turno
+
+### 4.5 Catálogo y ficha pública
+
+- productos visibles
+- ficha pública del comercio
+- visualización operativa
+- última actualización del dato
+
+### 4.6 Discover y filtros
+
+- buscar comercio
+- buscar por categoría
+- filtros:
+  - abierto ahora
+  - 24 hs
+  - hasta tarde
+  - farmacia de turno
+  - cerca mío / en mi zona
+
+### 4.7 Interacción cliente-comercio
+
+- seguir comercio
+- guardar producto
+- compartir ficha
+
+### 4.8 Roadmap participativo segmentado
+
+- board OWNER
+- board CUSTOMER
+- propuestas
+- votos
+- links compartibles
+
+### 4.9 Panel admin
+
+- moderación
+- revisión de contenido
+- revisión de señales operativas
+- estados de roadmap
 
 ---
 
-## 6. Stack de MVP
+## 5. Branding funcional en el MVP
 
-Ver `docs/ARCHITECTURE.md` para el stack completo.
+La personalidad de TuM2 debe entrar en el MVP desde el inicio, pero sin invadir el uso.
 
-Resumen:
-- Mobile: Flutter (iOS + Android)
-- Web pública: Flutter Web o web dedicada
-- Backend: Firebase (Auth, Firestore, Cloud Functions, Storage)
+**Incluido en MVP**
 
----
+- onboarding breve con narrativa de cercanía y utilidad
+- frases de loading claras
+- badges y sellos sobrios
+- notificaciones breves
+- mensajes de estado con foco en cercanía y utilidad
 
-## 7. Supuestos del MVP
+**No incluido en MVP**
 
-1. El piloto inicia en una zona geográfica acotada de CABA.
-2. El volumen inicial de comercios es de 50–200 comercios registrados.
-3. La aprobación de comercios es manual por el equipo de TuM2 en MVP.
-4. No hay monetización en MVP — el foco es validación de uso.
-5. Los owners del piloto son captados proactivamente por el equipo de TuM2.
-
----
-
-## 8. Dependencias críticas
-
-| Dependencia | Impacto si falla |
-|-------------|-----------------|
-| Google Places API | Sin autocomplete de dirección en el registro OWNER |
-| Firebase Firestore | Sin base de datos operativa |
-| Firebase Auth | Sin sistema de sesión y roles |
-| Cloud Functions | Sin campos derivados (`isOpenNow`, `isOnDutyToday`) |
+- tono excesivamente marketinero
+- lenguaje confuso
+- naming raro en navegación core
+- microcopy que opaque acciones críticas
 
 ---
 
-*Documento mantenido bajo TuM2-0006. Actualizar ante cambios en el alcance del MVP o incorporación de nuevas features al scope.*
+## 6. Reglas UX del MVP
+
+**Regla crítica**
+
+La interfaz debe ser intuitiva, clara y resolutiva.
+
+**Navegación core**
+
+Mantener nombres estándar:
+
+- Buscar
+- Mapa
+- Categorías
+- Perfil
+- Favoritos
+- Mi comercio
+- Productos
+
+**Capa de personalidad**
+
+Usar branding TuM2 en:
+
+- bienvenida
+- estados vacíos
+- loading
+- badges
+- sellos
+- avisos
+- mensajes de actualización
+
+---
+
+## 7. Sistema de rangos del MVP
+
+TuM2 incluirá gamificación ligera desde el MVP.
+
+**Ejemplos iniciales de rangos**
+
+- Vecino
+- Referente
+- Explorador
+- Conector
+- Radar
+
+**Aplicación**
+
+Los rangos no alteran permisos core. Funcionan como:
+
+- reconocimiento
+- pertenencia
+- incentivo de aporte
+- señal de participación útil
+
+---
+
+## 8. Sellos del ecosistema
+
+TuM2 debe soportar conceptualmente una línea de sellos como:
+
+- "Visible en TuM2"
+- "Activo en TuM2"
+- "Horario Actualizado"
+- "Turno Cargado"
+- "Comercio de tu zona"
+
+Esto puede funcionar como:
+
+- confianza
+- señal visual
+- material promocional
+- presencia activa dentro del ecosistema
+
+---
+
+## 9. Criterio de éxito del MVP
+
+El MVP será exitoso si:
+
+- los comercios se registran y cargan datos
+- los usuarios consultan señales operativas
+- farmacias de turno y abierto ahora generan uso real
+- los filtros de cercanía son usados
+- TuM2 empieza a ser percibida como herramienta útil de la zona
+- el roadmap segmentado recibe participación genuina
+
+---
+
+*Documento mantenido bajo TuM2-0006. Actualizar ante cambios en el alcance del MVP o incorporación de nuevas hipótesis.*

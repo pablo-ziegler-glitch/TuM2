@@ -1,110 +1,208 @@
 # TuM2 — Visión del producto
 ### Tarjeta: TuM2-0005
 
----
+**Producto:** TuM2
+**Lectura de marca:** Tu metro cuadrado
+**Estudio desarrollador:** Floki
 
-## 1. Propuesta de valor
-
-**TuM2 conecta a los vecinos con los comercios de su zona, en tiempo real.**
-
-El problema central: los comercios de barrio no tienen presencia digital útil. Las personas no saben si están abiertos, si tienen lo que necesitan, quién está de turno hoy. Google Maps muestra datos desactualizados. Las redes sociales son caóticas. No existe un lugar claro donde el vecino pueda consultar su entorno comercial inmediato con confianza.
-
-TuM2 resuelve eso.
+**Definición breve:** TuM2 es una app mobile + web que digitaliza el comercio real de cercanía. Permite descubrir comercios, consultar productos, ver información operativa útil y entender qué está pasando en tu zona real, en tu entorno cotidiano, en tu metro cuadrado. Fue concebida y desarrollada por Floki.
 
 ---
 
-## 2. Visión a largo plazo
+## 1. Qué problema resolvemos
 
-> **Ser la fuente de verdad del comercio de proximidad en Argentina.**
+La información útil del comercio local suele estar dispersa, incompleta o directamente fuera de internet. Hoy muchas personas no pueden saber fácilmente:
 
-TuM2 es el lugar donde el vecino va primero cuando necesita saber si la farmacia de la vuelta está abierta, si el almacén del barrio tiene mozzarella, o qué kiosco tiene envío a domicilio a las 11 de la noche.
+- qué comercio cercano vende lo que necesitan
+- qué local está abierto ahora
+- qué farmacia está de turno
+- qué negocio atiende hasta tarde
+- qué opciones reales tienen a su alrededor en ese momento
 
-Y es el lugar donde el dueño del comercio gestiona su presencia operativa de forma simple, desde el celular, en menos de 5 minutos.
+Al mismo tiempo, los comercios pequeños y medianos no cuentan con una forma simple de mostrarse digitalmente en su contexto real:
 
----
+- qué venden
+- cómo operan
+- cuándo están disponibles
+- qué particularidades tienen
+- cómo comunicar información útil a la gente que tienen cerca
 
-## 3. El problema que resolvemos
-
-### Para el vecino (CUSTOMER)
-- No sabe si el comercio de la vuelta está abierto ahora mismo
-- No puede consultar el stock en tiempo real
-- No conoce señales operativas especiales (24 hs, delivery, turno de farmacia)
-- Pierde tiempo yendo a comercios cerrados o sin el producto que necesita
-
-### Para el dueño (OWNER)
-- No tiene presencia digital útil sin una web o app propia
-- No puede comunicar cambios de horario o señales operativas de forma simple
-- No tiene visibilidad en su zona más allá de las redes sociales
-- El alta en plataformas genéricas (Google, Waze) es lenta y sin foco barrial
+TuM2 resuelve ese problema organizando digitalmente lo que pasa en el entorno comercial inmediato de cada persona.
 
 ---
 
-## 4. Segmentos principales
+## 2. Para quién es
 
-### CUSTOMER — El vecino
-- Persona que vive o trabaja cerca de comercios de barrio
-- Busca información operativa inmediata: ¿están abiertos? ¿tienen lo que necesito?
-- Objetivo: encontrar lo que necesita, en su zona, sin fricciones
+**Dueños de comercios**
 
-### OWNER — El dueño del comercio
-- Propietario o encargado de un comercio de barrio
-- Quiere tener presencia digital sin complejidad técnica
-- Objetivo: ser visible y actualizado para los vecinos de su zona
+- farmacias
+- kioscos
+- almacenes
+- maxikioscos
+- veterinarias
+- ferreterías
+- tiendas de barrio
+- locales con horarios extendidos
+- comercios con señales operativas especiales
 
-### ADMIN — El operador TuM2
-- Equipo interno de TuM2
-- Modera contenido, aprueba registros, gestiona la plataforma
-- Objetivo: garantizar la calidad y confiabilidad de los datos
+**Clientes finales**
 
----
-
-## 5. Diferenciación
-
-| Dimensión | TuM2 | Google Maps | Redes sociales |
-|-----------|------|-------------|----------------|
-| Foco geográfico | Barrio / zona inmediata | Global | Sin foco |
-| Actualización operativa | Tiempo real, por el dueño | Lenta, crowdsourced | Irregular |
-| Señales operativas | Nativas (turno, 24 hs, delivery) | No | No |
-| Simplicidad de alta | < 5 min para el dueño | Proceso largo | Variable |
-| Confiabilidad | Alta (fuente: el dueño) | Media | Baja |
+- personas que quieren resolver algo cerca
+- personas que necesitan saber qué está abierto en su zona
+- personas que buscan farmacias de turno
+- usuarios que quieren consultar productos sin perder tiempo
+- personas que valoran información útil, rápida y cercana
 
 ---
 
-## 6. Rubros prioritarios MVP
+## 3. Qué NO vamos a hacer
 
-- Farmacias (con módulo de turno)
-- Kioscos
-- Almacenes
-- Veterinarias
-- Panaderías
+TuM2 no busca convertirse inicialmente en:
 
----
-
-## 7. Geografía inicial
-
-Piloto en zona delimitada de CABA (barrio o conjunto de barrios adyacentes). La cobertura inicial será acotada y curada — es preferible 100 comercios reales y actualizados en un radio de 10 cuadras que 1.000 comercios con datos vacíos.
-
----
-
-## 8. Principios de producto
-
-1. **Cercanía como núcleo** — cada decisión de producto debe reforzar la idea de "tu entorno inmediato"
-2. **El dueño actualiza, el vecino confía** — la confiabilidad del dato operativo viene del dueño, no del crowdsourcing
-3. **Simple antes que completo** — menos features bien ejecutadas que muchas a medias
-4. **Marca útil, no invasiva** — el tono de TuM2 es cálido y cercano, pero nunca obstruye tareas funcionales
-5. **Datos frescos o ningún dato** — mostrar "sin información" es mejor que mostrar datos viejos
+- un ERP enterprise
+- un sistema contable complejo
+- una plataforma fiscal avanzada
+- un marketplace full con logística completa
+- una red social generalista
+- un POS corporativo
+- una app de descuentos vacía sin valor operativo real
+- una experiencia centrada en features decorativas
 
 ---
 
-## 9. Métricas de éxito del MVP
+## 4. Cuál es el diferencial
 
-| Métrica | Descripción |
-|---------|-------------|
-| Comercios activos en zona piloto | Comercios con datos completos y visibilityStatus: visible |
-| Retención semanal OWNER | % de owners que actualizan al menos 1 dato por semana |
-| Consultas exitosas CUSTOMER | Búsquedas que terminan con vista de ficha de comercio |
-| Cobertura operativa | % de comercios con señal operativa activa en las últimas 24 hs |
-| NPS inicial | Encuesta a owners y customers en la primera semana del piloto |
+El diferencial de TuM2 está en combinar en una sola experiencia:
+
+- gestión simple del comercio
+- catálogo público consultable
+- señales operativas reales
+- información local útil de cercanía
+- participación de dueños y clientes en la evolución del producto
+- una marca basada en proximidad, territorio y utilidad cotidiana
+
+**Diferenciales concretos**
+
+- farmacias de turno
+- abierto ahora
+- 24 hs real
+- abierto hasta tarde
+- horario especial
+- guardias o turnos
+- catálogo público
+- comunidad segmentada entre dueños y clientes
+- foco en el entorno real del usuario
+
+---
+
+## 5. Promesa para el dueño
+
+**Promesa principal:** "TuM2 te ayuda a estar visible para la gente que te tiene cerca, mostrando qué vendés y cómo operás en la vida real."
+
+**Qué le prometemos al dueño**
+
+- visibilidad local útil
+- orden digital básico
+- comunicación operativa clara
+- presencia en el mapa real del barrio o zona
+- posibilidad de mostrar productos y funcionamiento
+- participación real en la evolución del sistema
+
+---
+
+## 6. Promesa para el cliente final
+
+**Promesa principal:** "TuM2 te ayuda a resolver rápido qué tenés cerca, qué está abierto y qué necesitás en tu zona."
+
+**Qué le prometemos al cliente**
+
+- saber qué comercio está abierto
+- consultar productos
+- ver farmacias de turno
+- encontrar comercios activos cerca
+- descubrir opciones reales en su entorno
+- usar una herramienta clara, útil y cotidiana
+
+---
+
+## 7. Filosofía de marca
+
+TuM2 significa:
+
+- tu entorno
+- tu radio cercano
+- tu zona
+- tu lugar cotidiano
+- tu metro cuadrado
+
+**Tesis de marca**
+
+TuM2 debe sentirse como:
+
+- cercano
+- útil
+- real
+- concreto
+- actual
+- confiable
+- barrial sin ser precario
+- moderno sin ser frío
+
+No es una marca abstracta. Es una marca anclada en el territorio cotidiano de la persona.
+
+---
+
+## 8. Principios del producto
+
+- Cercanía antes que abstracción
+- Utilidad real antes que ruido
+- Información viva antes que presencia decorativa
+- Lo operativo es parte central del valor
+- La confianza nace de información útil y cercana
+- Dueños y clientes tienen necesidades distintas
+- El producto debe sentirse cotidiano y resolutivo
+
+---
+
+## 9. Tesis del producto
+
+TuM2 no solo debe responder: qué vende un comercio.
+
+También debe responder:
+
+- si está abierto
+- si está cerca
+- cuándo opera
+- qué particularidades tiene
+- qué farmacia está de turno
+- qué podés resolver en tu entorno inmediato
+
+TuM2 debe convertirse en la capa digital del comercio real que rodea a cada persona.
+
+---
+
+## 10. Visión a largo plazo
+
+Que TuM2 se convierta en la referencia cotidiana del comercio local de cercanía.
+
+Que cuando una persona necesite saber:
+
+- qué hay cerca
+- qué local está abierto
+- qué farmacia está de turno
+- dónde conseguir un producto
+- qué sigue activo en su zona
+
+use primero TuM2.
+
+Y que cuando un comercio quiera existir digitalmente para su barrio, su radio de influencia o su zona, quiera estar en TuM2.
+
+---
+
+## 11. Firma del producto
+
+Desarrollado por Floki.
+Producto: TuM2.
 
 ---
 

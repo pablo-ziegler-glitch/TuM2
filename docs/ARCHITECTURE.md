@@ -11,7 +11,7 @@ TuM2 es una plataforma de información de comercios locales compuesta por:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         CLIENTES                                │
-│  App Mobile (React Native / Expo)  │  Web pública (Next.js)     │
+│  App Mobile (Flutter)              │  Web pública (Flutter Web) │
 └───────────────────────┬─────────────────────────────────────────┘
                         │ Firestore SDK / REST
 ┌───────────────────────▼─────────────────────────────────────────┐
@@ -31,16 +31,16 @@ TuM2 es una plataforma de información de comercios locales compuesta por:
 
 | Capa | Tecnología | Versión | Notas |
 |------|-----------|---------|-------|
-| Mobile | React Native (Expo) | Expo 51 / RN 0.74 | iOS + Android |
-| Navegación | React Navigation | v6 | Bottom tabs + Stack + Modal |
-| Web | Next.js (o Astro) | TBD | Principalmente SSR/SSG |
+| Mobile | Flutter | — | iOS + Android |
+| Navegación | Flutter Navigator 2 / go_router | — | Bottom tabs + Stack + Modal |
+| Web | Flutter Web | — | Web pública / panel admin |
 | Backend | Firebase | — | Serverless exclusivo |
 | Base de datos | Cloud Firestore | — | NoSQL documental |
 | Autenticación | Firebase Auth | — | Email magic link + Google |
 | Funciones | Cloud Functions for Firebase | Node 20 + TS | Triggers + Scheduled jobs |
 | Storage | Firebase Storage | — | Fotos de comercios y productos |
 | Analytics | Firebase Analytics + Crashlytics | — | Base MVP |
-| Mapas mobile | react-native-maps | — | Google Maps SDK |
+| Mapas mobile | google_maps_flutter | — | Google Maps SDK |
 | Mapas web | Google Maps Embed API | — | Solo embed en MVP |
 | Tipos compartidos | TypeScript `/schema/types/` | TS 5.4 | Modelo canónico |
 

@@ -191,16 +191,16 @@ SharedScreens
 
 ---
 
-## 11. Tecnología sugerida (React Native)
+## 11. Tecnología sugerida (Flutter)
 
 | Componente | Librería recomendada |
 |------------|---------------------|
-| Navegación principal | React Navigation v6 |
-| Tab bar | `@react-navigation/bottom-tabs` |
-| Stack navigator | `@react-navigation/native-stack` |
-| Modal / bottom sheet | `@gorhom/bottom-sheet` |
-| Deep links | React Navigation Linking API |
-| Auth state | Firebase Auth `onAuthStateChanged` + Context |
+| Navegación principal | go_router |
+| Tab bar | NavigationBar / BottomNavigationBar |
+| Stack navigator | go_router ShellRoute |
+| Modal / bottom sheet | showModalBottomSheet / showBottomSheet |
+| Deep links | go_router deep link support |
+| Auth state | Firebase Auth `authStateChanges()` + Provider/Riverpod |
 
 ---
 

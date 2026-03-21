@@ -106,8 +106,8 @@ El MVP de TuM2 cubre **una zona piloto** con **rubros prioritarios**, con el obj
 
 | Plataforma | Incluida | Notas |
 |------------|---------|-------|
-| App mobile iOS | ✅ | React Native / Expo |
-| App mobile Android | ✅ | React Native / Expo |
+| App mobile iOS | ✅ | Flutter |
+| App mobile Android | ✅ | Flutter |
 | Web pública | ✅ | Fichas, farmacias de turno, abierto ahora |
 | Panel admin web | ✅ | Moderación básica |
 | API pública | ❌ | Post-MVP |
@@ -119,7 +119,7 @@ El MVP de TuM2 cubre **una zona piloto** con **rubros prioritarios**, con el obj
 ### Técnicas
 - Firebase (Auth, Firestore, Functions, Storage) como backend exclusivo.
 - No hay búsqueda full-text server-side en MVP (se usa `searchKeywords` en cliente).
-- Mapas: react-native-maps (Google Maps SDK) en mobile, embed estático en web en MVP.
+- Mapas: google_maps_flutter (Google Maps SDK) en mobile, embed estático en web en MVP.
 - Sin pagos, sin carrito, sin checkout.
 
 ### De negocio
@@ -172,11 +172,11 @@ El MVP de TuM2 cubre **una zona piloto** con **rubros prioritarios**, con el obj
 
 | Capa | Tecnología |
 |------|-----------|
-| Mobile | React Native (Expo) + TypeScript |
-| Navegación | React Navigation v6 |
+| Mobile | Flutter |
+| Navegación | go_router |
 | Backend | Firebase (Firestore, Auth, Functions) |
 | Functions | Node.js 20 + TypeScript |
-| Web | TBD (Next.js o Astro) |
+| Web | Flutter Web |
 | Storage | Firebase Storage |
 | Analytics | Firebase Analytics + Crashlytics |
 | Mapas mobile | react-native-maps (Google Maps) |

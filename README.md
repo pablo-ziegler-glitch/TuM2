@@ -26,14 +26,7 @@ TuM2/
 │       ├── coverage/        — Métricas de cobertura por zona
 │       ├── admin/           — Callables de administración
 │       └── lib/             — Utilidades internas (projection, scheduling, etc.)
-├── mobile/                  — App mobile React Native / Expo (en desarrollo)
-│   └── src/
-│       ├── navigation/      — Estructura de navegación (Root, Auth, App, Tabs)
-│       ├── screens/         — Pantallas organizadas por segmento
-│       ├── components/      — Componentes reutilizables
-│       ├── hooks/           — Custom hooks (useAuth, etc.)
-│       ├── services/        — Integración Firebase
-│       └── types/           — Types específicos de la app
+├── mobile/                  — App mobile Flutter (pendiente flutter create)
 ├── firestore.rules          — Reglas de seguridad Firestore
 ├── firestore.indexes.json   — Índices compuestos Firestore
 ├── firebase.json            — Configuración Firebase y emuladores
@@ -85,8 +78,9 @@ npm run deploy      # Deploy a Firebase (requiere firebase use <alias>)
 ### App Mobile
 ```bash
 cd mobile
-npm install
-npx expo start      # Iniciar Expo dev server
+flutter create . --org com.floki.tum2 --project-name tum2 --platforms android,ios
+flutter pub get
+flutter run
 ```
 
 ---
@@ -99,7 +93,7 @@ npx expo start      # Iniciar Expo dev server
 | [VISION.md](docs/VISION.md) | Visión del producto, propuesta de valor, principios |
 | [PRD-MVP.md](docs/PRD-MVP.md) | Alcance del MVP, features, criterios de aceptación |
 | [SCREENS-MAP.md](docs/SCREENS-MAP.md) | Pantallas completas, flujos UX, deep links |
-| [NAVIGATION.md](docs/NAVIGATION.md) | Arquitectura de navegación React Navigation |
+| [NAVIGATION.md](docs/NAVIGATION.md) | Arquitectura de navegación Flutter (go_router) |
 | [QUERY-ARCHITECTURE.md](docs/QUERY-ARCHITECTURE.md) | Patrones de queries Firestore por pantalla |
 | [schema/README.md](schema/README.md) | Modelo de datos, colecciones, índices |
 | [CLAUDE.md](CLAUDE.md) | Backlog maestro y estado del proyecto |
@@ -108,8 +102,8 @@ npx expo start      # Iniciar Expo dev server
 
 ## Stack
 
-- **Mobile:** React Native (Expo) + TypeScript
-- **Navegación:** React Navigation v6
+- **Mobile:** Flutter
+- **Navegación:** go_router
 - **Backend:** Firebase (Firestore, Auth, Functions, Storage)
-- **Web:** Next.js (planificado)
-- **Tipos:** TypeScript compartido en `/schema/types/`
+- **Web:** Flutter Web
+- **Tipos compartidos:** TypeScript en `/schema/types/` (backend/functions)

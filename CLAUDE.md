@@ -8,6 +8,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | ID     | Tarjeta                              | Épica                  | Estado      |
 |--------|--------------------------------------|------------------------|-------------|
 | 0001   | Definir propuesta de valor final     | Dirección del producto | ✅ Entregada |
+| 0005   | Mantener actualizado VISION.md       | Documentación maestra  | ✅ Entregada |
+| 0006   | Mantener actualizado PRD-MVP.md      | Documentación maestra  | ✅ Entregada |
 | 0007   | Mantener actualizado ARCHITECTURE.md | Documentación maestra  | ✅ Entregada |
 | 0019   | Diseñar modelo de usuarios           | Modelo de datos        | ✅ Entregada |
 | 0020   | Diseñar modelo de comercios          | Modelo de datos        | ✅ Entregada |
@@ -23,6 +25,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | 0048   | Implementar Cloud Functions base     | Backend / Firebase     | ✅ Entregada |
 | 0049   | Implementar campos derivados operativos | Backend / Firebase  | ✅ Entregada |
 | 0050   | Implementar agregados públicos       | Backend / Firebase     | ✅ Entregada |
+| 0052   | Crear proyecto base mobile           | Mobile app             | ✅ Entregada |
 | 0121   | Estrategia cobertura inicial y bootstrap | Cobertura / Data   | ✅ Entregada |
 | 0027   | Definir mapa completo de pantallas   | UX / arquitectura      | ✅ Entregada |
 | 0028   | Diseñar navegación principal         | UX / arquitectura      | ✅ Entregada |
@@ -40,8 +43,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - OWNER, CUSTOMER y ADMIN con sus objetivos
 
 ### ÉPICA 2: Documentación maestra
-- [0005] **Mantener actualizado VISION.md** — P0 — `Producto, Fundacional`
-- [0006] **Mantener actualizado PRD-MVP.md** — P0 — `Producto, Fundacional`
+- [0005] **Mantener actualizado VISION.md** — P0 — `Producto, Fundacional` ✅
+- [0006] **Mantener actualizado PRD-MVP.md** — P0 — `Producto, Fundacional` ✅
 - [0007] **Mantener actualizado ARCHITECTURE.md** — P0 — `Backend, Mobile, Web, Data, Fundacional` ✅
 - [0008] **Mantener actualizado ROADMAP.md** — P1 — `Producto, Operaciones, Fundacional`
 - [0009] **Mantener actualizado PROMPT-PLAYBOOK.md** — P1 — `Producto, Operaciones, Fundacional`
@@ -101,7 +104,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0051] **Configurar CI/CD técnico mínimo** — P1 — `Backend, Mobile, Web, Operaciones, Lanzamiento`
 
 ### ÉPICA 8: Mobile app
-- [0052] **Crear proyecto mobile base** — P0 — `Mobile, Fundacional`
+- [0052] **Crear proyecto mobile base** — P0 — `Mobile, Fundacional` ✅
 - [0053] **Implementar shell de app** — P0 — `Mobile, UX/UI, MVP`
 - [0054] **Implementar login / registro** — P0 — `Mobile, Seguridad, MVP`
 - [0055] **Implementar home CUSTOMER** — P1 — `Mobile, Producto, MVP`

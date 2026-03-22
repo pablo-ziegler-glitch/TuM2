@@ -23,16 +23,20 @@ class CategoryGrid extends StatelessWidget {
   final String? selectedId;
   final ValueChanged<String> onSelect;
   final bool hasError;
+  /// Si se provee, usa estas categorías en lugar de [kCategories].
+  final List<CategoryOption>? categories;
 
   const CategoryGrid({
     super.key,
     required this.selectedId,
     required this.onSelect,
     this.hasError = false,
+    this.categories,
   });
 
   @override
   Widget build(BuildContext context) {
+    final items = categories ?? kCategories;
     return Container(
       decoration: hasError
           ? BoxDecoration(
@@ -48,7 +52,7 @@ class CategoryGrid extends StatelessWidget {
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
         childAspectRatio: 1.1,
-        children: kCategories.map((cat) {
+        children: items.map((cat) {
           final isSelected = cat.id == selectedId;
           return _CategoryChip(
             option: cat,

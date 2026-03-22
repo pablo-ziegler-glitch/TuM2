@@ -2,28 +2,38 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_text_styles.dart';
 import '../models/onboarding_draft.dart';
+import '../repositories/categories_repository.dart';
+import '../repositories/onboarding_owner_repository.dart';
+import '../services/duplicate_check_service.dart';
 import '../widgets/step_indicator.dart';
 import '../widgets/exit_modal.dart';
 import '../widgets/category_chip.dart';
 import '../widgets/inline_error.dart';
+import '../analytics/onboarding_analytics.dart';
 
 /// ONBOARDING-OWNER-01 — Paso 1: Tipo y nombre del comercio
 ///
 /// Estados:
-///   Normal     — formulario vacío habilitado
+///   Normal     — formulario habilitado con categorías desde Firestore
 ///   EX-08      — intento de avanzar con campos vacíos (banner global + errores inline)
-///   EX-13      — nombre duplicado soft (warning, el flujo no se bloquea)
+///   EX-13      — nombre duplicado soft (warning naranja, flujo no bloqueado)
 ///   EX-14      — comercio ya registrado hard (pantalla bloqueante interstitial)
 class Step1TipoNombreScreen extends StatefulWidget {
   final Step1Data? initialData;
   final ValueChanged<Step1Data> onNext;
   final VoidCallback onExit;
+  final CategoriesRepository categoriesRepository;
+  final DuplicateCheckService duplicateCheckService;
+  final OnboardingOwnerRepository ownerRepository;
 
   const Step1TipoNombreScreen({
     super.key,
     this.initialData,
     required this.onNext,
     required this.onExit,
+    required this.categoriesRepository,
+    required this.duplicateCheckService,
+    required this.ownerRepository,
   });
 
   @override
@@ -34,8 +44,12 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
   final _nameCtrl = TextEditingController();
   String? _selectedCategoryId;
   bool _submitted = false;
-  bool _showDuplicateWarning = false; // EX-13
-  bool _showAlreadyRegistered = false; // EX-14
+  DuplicateState _duplicateState = DuplicateState.none;
+  DuplicateCandidate? _firstCandidate;
+
+  // Categorías cargadas desde Firestore
+  List<CategoryOption> _categoryOptions = [];
+  bool _loadingCategories = true;
 
   bool get _nameEmpty => _nameCtrl.text.trim().isEmpty;
   bool get _categoryEmpty => _selectedCategoryId == null;
@@ -48,6 +62,47 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
       _nameCtrl.text = widget.initialData!.name;
       _selectedCategoryId = widget.initialData!.categoryId;
     }
+    _loadCategories();
+    _subscribeToDuplicates();
+  }
+
+  Future<void> _loadCategories() async {
+    final cats = await widget.categoriesRepository.getCategories();
+    if (!mounted) return;
+    setState(() {
+      _categoryOptions = cats.map((c) => CategoryOption(
+        id: c.id,
+        label: c.label,
+        icon: _iconForName(c.iconName),
+      )).toList();
+      _loadingCategories = false;
+    });
+  }
+
+  IconData _iconForName(String iconName) {
+    const map = <String, IconData>{
+      'local_pharmacy': Icons.local_pharmacy_outlined,
+      'storefront': Icons.store_outlined,
+      'shopping_basket': Icons.shopping_basket_outlined,
+      'pets': Icons.pets_outlined,
+      'bakery_dining': Icons.bakery_dining_outlined,
+      'store': Icons.more_horiz,
+    };
+    return map[iconName] ?? Icons.store_outlined;
+  }
+
+  void _subscribeToDuplicates() {
+    widget.duplicateCheckService.stateStream.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        _duplicateState = state;
+        _firstCandidate = widget.duplicateCheckService.candidates.isNotEmpty
+            ? widget.duplicateCheckService.candidates.first
+            : null;
+      });
+      if (state == DuplicateState.soft) OnboardingAnalytics.logDuplicateSoft();
+      if (state == DuplicateState.hard) OnboardingAnalytics.logDuplicateHard();
+    });
   }
 
   @override
@@ -58,17 +113,30 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
 
   void _onNameChanged(String value) {
     setState(() {});
-    // Simular check de duplicado (en producción: debounced Firestore query)
-    if (value.toLowerCase().contains('farmacia del centro')) {
-      setState(() => _showDuplicateWarning = true);
-    } else {
-      setState(() => _showDuplicateWarning = false);
-    }
+    // Debounced duplicate check via service (zoneId vacío = búsqueda sin filtro de zona)
+    widget.duplicateCheckService.checkName(
+      name: value,
+      lat: 0,
+      lng: 0,
+      zoneId: '',
+    );
   }
 
-  void _onNext() {
+  Future<void> _onNext() async {
     setState(() => _submitted = true);
     if (_nameEmpty || _categoryEmpty) return;
+
+    // Si es hard duplicate, mostrar interstitial en lugar de avanzar
+    if (_duplicateState == DuplicateState.hard) return;
+
+    try {
+      await widget.ownerRepository.saveStep1(Step1Data(
+        name: _nameCtrl.text.trim(),
+        categoryId: _selectedCategoryId!,
+      ));
+    } catch (_) {
+      // Error de red al guardar: continuar de todos modos (se reintentará)
+    }
 
     widget.onNext(Step1Data(
       name: _nameCtrl.text.trim(),
@@ -78,13 +146,20 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
 
   Future<void> _onExitTap() async {
     final action = await showExitModal(context);
-    if (action == ExitAction.saveDraft || action == ExitAction.discard) {
+    if (action == ExitAction.saveDraft) {
+      await widget.ownerRepository.abandonDraft();
+      OnboardingAnalytics.logExited('step_1');
+      widget.onExit();
+    } else if (action == ExitAction.discard) {
+      await widget.ownerRepository.discardDraft();
+      OnboardingAnalytics.logDraftDiscarded();
       widget.onExit();
     }
   }
 
   // EX-14 — pantalla interstitial bloqueante
   Widget _buildAlreadyRegisteredInterstitial() {
+    final candidate = _firstCandidate;
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: SafeArea(
@@ -94,7 +169,6 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              // Ícono "?" naranja grande
               Center(
                 child: Container(
                   width: 72,
@@ -115,46 +189,36 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Text(
-                'Este comercio ya existe',
-                style: AppTextStyles.headingLg,
-                textAlign: TextAlign.center,
-              ),
+              Text('Este comercio ya existe',
+                  style: AppTextStyles.headingLg, textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text(
-                'Encontramos "Farmacia del Centro" en Almagro Norte ya registrada en TuM2.',
+                'Encontramos "${candidate?.name ?? _nameCtrl.text}" ya registrado en TuM2.',
                 style: AppTextStyles.bodySm,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
-
-              // Card del comercio existente
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.neutral200),
+              if (candidate != null)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.neutral200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(candidate.name, style: AppTextStyles.headingSm),
+                      const SizedBox(height: 4),
+                      Text(candidate.address, style: AppTextStyles.bodySm),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Farmacia del Centro',
-                        style: AppTextStyles.headingSm),
-                    const SizedBox(height: 4),
-                    Text('Av. Corrientes 1234, CABA',
-                        style: AppTextStyles.bodySm),
-                    Text('Zona: Almagro Norte',
-                        style: AppTextStyles.bodySm),
-                  ],
-                ),
-              ),
               const Spacer(),
-
-              // CTA primario: reclamar
               ElevatedButton(
                 onPressed: () {
-                  // → flujo externo de claim (TuM2-0037)
+                  // → flujo de claim (TuM2-0037), pendiente de implementar
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary500,
@@ -166,10 +230,11 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                 child: const Text('Soy el dueño — reclamar'),
               ),
               const SizedBox(height: 10),
-
-              // CTA secundario: registrar otro
               OutlinedButton(
-                onPressed: () => setState(() => _showAlreadyRegistered = false),
+                onPressed: () {
+                  widget.duplicateCheckService.reset();
+                  setState(() => _duplicateState = DuplicateState.none);
+                },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.primary500,
                   side: const BorderSide(color: AppColors.primary500),
@@ -194,11 +259,13 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // EX-14: interstitial bloqueante
-    if (_showAlreadyRegistered) return _buildAlreadyRegisteredInterstitial();
+    if (_duplicateState == DuplicateState.hard) {
+      return _buildAlreadyRegisteredInterstitial();
+    }
 
     final nameHasError = _submitted && _nameEmpty;
     final categoryHasError = _submitted && _categoryEmpty;
+    final showDuplicateWarning = _duplicateState == DuplicateState.soft;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
@@ -241,7 +308,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // EX-08: banner global cuando hay errores al intentar avanzar
+                    // EX-08: banner global
                     if (_hasErrors) ...[
                       ValidationBanner(
                         title: 'Revisá los campos',
@@ -263,10 +330,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                       onChanged: _onNameChanged,
                       decoration: InputDecoration(
                         hintText: 'Ej: Farmacia del Centro',
-                        hintStyle: AppTextStyles.bodyMd
-                            .copyWith(color: AppColors.neutral500),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
+                        hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.neutral500),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         filled: true,
                         fillColor: AppColors.surface,
                         enabledBorder: OutlineInputBorder(
@@ -274,7 +339,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                           borderSide: BorderSide(
                             color: nameHasError
                                 ? AppColors.errorFg
-                                : _showDuplicateWarning
+                                : showDuplicateWarning
                                     ? AppColors.warningFg
                                     : AppColors.neutral300,
                           ),
@@ -284,7 +349,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                           borderSide: BorderSide(
                             color: nameHasError
                                 ? AppColors.errorFg
-                                : _showDuplicateWarning
+                                : showDuplicateWarning
                                     ? AppColors.warningFg
                                     : AppColors.primary500,
                             width: 1.5,
@@ -292,19 +357,17 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                         ),
                       ),
                     ),
-                    // EX-08: error inline nombre
                     if (nameHasError)
                       InlineError(message: 'Ingresá el nombre del comercio'),
-                    // EX-13: warning de nombre duplicado (soft)
-                    if (_showDuplicateWarning && !nameHasError) ...[
+                    // EX-13: warning soft duplicate
+                    if (showDuplicateWarning && !nameHasError) ...[
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: AppColors.warningFg.withOpacity(0.4)),
+                          border: Border.all(color: AppColors.warningFg.withOpacity(0.4)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,8 +381,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                             const SizedBox(height: 4),
                             RichText(
                               text: TextSpan(
-                                style: AppTextStyles.bodyXs
-                                    .copyWith(color: AppColors.neutral700),
+                                style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
                                 children: const [
                                   TextSpan(text: '¿Es el mismo local? '),
                                   TextSpan(
@@ -329,9 +391,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                                       decoration: TextDecoration.underline,
                                     ),
                                   ),
-                                  TextSpan(
-                                      text:
-                                          '. Si es otro, usá un nombre diferente.'),
+                                  TextSpan(text: '. Si es otro, usá un nombre diferente.'),
                                 ],
                               ),
                             ),
@@ -346,24 +406,28 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                     Text(
                       'Categoría *',
                       style: AppTextStyles.labelMd.copyWith(
-                        color: categoryHasError
-                            ? AppColors.errorFg
-                            : AppColors.neutral900,
+                        color: categoryHasError ? AppColors.errorFg : AppColors.neutral900,
                       ),
                     ),
                     const SizedBox(height: 8),
-                    CategoryGrid(
-                      selectedId: _selectedCategoryId,
-                      onSelect: (id) =>
-                          setState(() => _selectedCategoryId = id),
-                      hasError: categoryHasError,
-                    ),
-                    // EX-08: error inline categoría
+                    _loadingCategories
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : CategoryGrid(
+                            selectedId: _selectedCategoryId,
+                            onSelect: (id) => setState(() => _selectedCategoryId = id),
+                            hasError: categoryHasError,
+                            categories: _categoryOptions.isNotEmpty ? _categoryOptions : null,
+                          ),
                     if (categoryHasError)
                       InlineError(message: 'Seleccioná una categoría'),
 
-                    // EX-13: CTA continuar de todos modos (cuando hay duplicado soft)
-                    if (_showDuplicateWarning) ...[
+                    // EX-13: CTA continuar de todos modos
+                    if (showDuplicateWarning) ...[
                       const SizedBox(height: 20),
                       ElevatedButton(
                         onPressed: _categoryEmpty ? null : _onNext,
@@ -391,8 +455,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
               ),
             ),
 
-            // ── Footer con CTA ─────────────────────────────────────────
-            if (!_showDuplicateWarning)
+            // ── Footer CTA ─────────────────────────────────────────────
+            if (!showDuplicateWarning)
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 child: ElevatedButton(

@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_text_styles.dart';
 import '../models/onboarding_draft.dart';
+import '../repositories/onboarding_owner_repository.dart';
+import '../services/google_places_service.dart';
 import '../widgets/step_indicator.dart';
 import '../widgets/exit_modal.dart';
 import '../widgets/inline_error.dart';
+import '../analytics/onboarding_analytics.dart';
 
 /// ONBOARDING-OWNER-02 — Paso 2: Dirección y zona
 ///
 /// Estados:
 ///   Normal     — input de dirección con autocomplete (Google Places)
-///   EX-09      — dirección inválida (sin número de puerta / no reconocida)
+///   EX-09      — dirección inválida (sin número / no reconocida / sin zona)
 ///   EX-10      — error de red en Places API (sin conexión)
 enum _AddressState { idle, searching, invalidAddress, networkError, valid }
 
@@ -19,6 +22,8 @@ class Step2DireccionScreen extends StatefulWidget {
   final ValueChanged<Step2Data> onNext;
   final VoidCallback onBack;
   final VoidCallback onExit;
+  final GooglePlacesService placesService;
+  final OnboardingOwnerRepository ownerRepository;
 
   const Step2DireccionScreen({
     super.key,
@@ -26,6 +31,8 @@ class Step2DireccionScreen extends StatefulWidget {
     required this.onNext,
     required this.onBack,
     required this.onExit,
+    required this.placesService,
+    required this.ownerRepository,
   });
 
   @override
@@ -37,11 +44,18 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
   _AddressState _addressState = _AddressState.idle;
   bool _submitted = false;
 
+  List<PlaceSuggestion> _suggestions = [];
+  Step2Data? _resolvedData;
+
+  // Session token: regenerado al seleccionar un lugar
+  String _sessionToken = DateTime.now().millisecondsSinceEpoch.toString();
+
   @override
   void initState() {
     super.initState();
     if (widget.initialData != null) {
       _addrCtrl.text = widget.initialData!.address;
+      _resolvedData = widget.initialData;
       _addressState = _AddressState.valid;
     }
   }
@@ -52,54 +66,115 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
     super.dispose();
   }
 
-  void _onAddressChanged(String value) {
+  Future<void> _onAddressChanged(String value) async {
     setState(() {
       _submitted = false;
+      _resolvedData = null;
       if (value.isEmpty) {
         _addressState = _AddressState.idle;
+        _suggestions = [];
       } else {
         _addressState = _AddressState.searching;
       }
     });
 
-    // Simular validación de autocomplete
-    if (value.toLowerCase().contains('s/n') ||
-        (value.isNotEmpty && !RegExp(r'\d').hasMatch(value))) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted) setState(() => _addressState = _AddressState.invalidAddress);
+    if (value.trim().length < 3) return;
+
+    try {
+      final suggestions = await widget.placesService.getAddressSuggestions(
+        value,
+        _sessionToken,
+      );
+      if (!mounted) return;
+      setState(() {
+        _suggestions = suggestions;
+        _addressState = _AddressState.searching;
       });
-    } else if (value.toLowerCase().contains('santa fe')) {
-      // Simular EX-10: Places sin red
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted) setState(() => _addressState = _AddressState.networkError);
+    } on PlacesNetworkException {
+      if (!mounted) return;
+      setState(() {
+        _addressState = _AddressState.networkError;
+        _suggestions = [];
       });
-    } else if (value.length > 5 && RegExp(r'\d').hasMatch(value)) {
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted) setState(() => _addressState = _AddressState.valid);
-      });
+      OnboardingAnalytics.logError('step_2', 'places_network_error');
     }
   }
 
-  void _onNext() {
+  Future<void> _onSuggestionSelected(PlaceSuggestion suggestion) async {
+    setState(() {
+      _addrCtrl.text = suggestion.description;
+      _suggestions = [];
+      _addressState = _AddressState.searching;
+    });
+
+    try {
+      final details = await widget.placesService.getPlaceDetails(
+        suggestion.placeId,
+        _sessionToken,
+      );
+
+      final zone = await widget.placesService.resolveZone(
+        details.lat,
+        details.lng,
+      );
+
+      // Regenerar session token para la próxima sesión
+      _sessionToken = (DateTime.now().millisecondsSinceEpoch + 1).toString();
+
+      if (!mounted) return;
+      setState(() {
+        _resolvedData = Step2Data(
+          address: details.formattedAddress,
+          lat: details.lat,
+          lng: details.lng,
+          geohash: '',    // computado server-side en CF-01
+          zoneId: zone.zoneId,
+          cityId: zone.cityId,
+          provinceId: zone.provinceId,
+        );
+        _addrCtrl.text = details.formattedAddress;
+        _addressState = _AddressState.valid;
+      });
+    } on ZoneNotFoundException {
+      if (!mounted) return;
+      setState(() => _addressState = _AddressState.invalidAddress);
+      OnboardingAnalytics.logError('step_2', 'zone_not_found');
+    } on PlacesNetworkException {
+      if (!mounted) return;
+      setState(() => _addressState = _AddressState.networkError);
+      OnboardingAnalytics.logError('step_2', 'places_network_error');
+    }
+  }
+
+  Future<void> _onNext() async {
     setState(() => _submitted = true);
-    if (_addressState != _AddressState.valid) return;
-    widget.onNext(Step2Data(
-      address: _addrCtrl.text.trim(),
-      lat: -34.6037,
-      lng: -58.3816,
-      zoneId: 'almagro-norte',
-    ));
+    if (_addressState != _AddressState.valid || _resolvedData == null) return;
+
+    try {
+      await widget.ownerRepository.saveStep2(_resolvedData!);
+    } catch (_) {
+      // Error de red al guardar: continuar de todos modos
+    }
+
+    widget.onNext(_resolvedData!);
   }
 
   Future<void> _onExitTap() async {
     final action = await showExitModal(context);
-    if (action == ExitAction.saveDraft || action == ExitAction.discard) {
+    if (action == ExitAction.saveDraft) {
+      await widget.ownerRepository.abandonDraft();
+      OnboardingAnalytics.logExited('step_2');
+      widget.onExit();
+    } else if (action == ExitAction.discard) {
+      await widget.ownerRepository.discardDraft();
+      OnboardingAnalytics.logDraftDiscarded();
       widget.onExit();
     }
   }
 
   bool get _isNetworkError => _addressState == _AddressState.networkError;
-  bool get _isInvalidAddress => _addressState == _AddressState.invalidAddress ||
+  bool get _isInvalidAddress =>
+      _addressState == _AddressState.invalidAddress ||
       (_submitted && _addressState != _AddressState.valid && !_isNetworkError);
 
   @override
@@ -146,7 +221,7 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // EX-10: banner warning sin conexión
+                    // EX-10: banner sin conexión
                     if (_isNetworkError) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -188,29 +263,30 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Campo dirección
+                    // Campo dirección con autocomplete
                     Text('Dirección *', style: AppTextStyles.labelMd),
                     const SizedBox(height: 6),
                     TextField(
                       controller: _addrCtrl,
                       onChanged: _onAddressChanged,
                       decoration: InputDecoration(
-                        hintText: _isNetworkError
-                            ? 'Buscando "Av. Santa Fe 2..."'
-                            : 'Ej: Av. Corrientes 1234, CABA',
+                        hintText: 'Ej: Av. Corrientes 1234, CABA',
                         hintStyle: AppTextStyles.bodyMd
                             .copyWith(color: AppColors.neutral500),
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: AppColors.neutral300,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                        ),
+                        prefixIcon: const Icon(Icons.search,
+                            color: AppColors.neutral500, size: 20),
+                        suffixIcon: _addressState == _AddressState.searching
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.primary500),
+                                ),
+                              )
+                            : null,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 12),
                         filled: true,
@@ -240,12 +316,72 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                       ),
                     ),
 
-                    // EX-09: error inline dirección sin número
-                    if (_isInvalidAddress && !_isNetworkError)
-                      InlineError(message: 'La dirección debe incluir número de puerta'),
+                    // Dropdown de sugerencias Places
+                    if (_suggestions.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.neutral200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _suggestions.length,
+                          separatorBuilder: (_, __) =>
+                              Divider(height: 1, color: AppColors.neutral200),
+                          itemBuilder: (_, i) {
+                            final s = _suggestions[i];
+                            return InkWell(
+                              onTap: () => _onSuggestionSelected(s),
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 10),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.location_on_outlined,
+                                        size: 16, color: AppColors.neutral500),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(s.mainText,
+                                              style: AppTextStyles.bodySm
+                                                  .copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w500)),
+                                          if (s.secondaryText.isNotEmpty)
+                                            Text(s.secondaryText,
+                                                style: AppTextStyles.bodyXs
+                                                    .copyWith(
+                                                        color: AppColors
+                                                            .neutral500)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
 
-                    // EX-09: card de error "Dirección no reconocida"
+                    // EX-09: error inline + card
                     if (_isInvalidAddress && !_isNetworkError) ...[
+                      InlineError(
+                          message: 'No pudimos identificar la zona. Intentá con otra dirección.'),
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -255,28 +391,17 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                           border: Border.all(
                               color: AppColors.errorFg.withOpacity(0.3)),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.error_outline,
-                                    color: AppColors.errorFg, size: 16),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Dirección no reconocida',
-                                  style: AppTextStyles.labelSm.copyWith(
-                                    color: AppColors.errorFg,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Buscá con número de puerta para asignar la zona correcta.',
-                              style: AppTextStyles.bodyXs
-                                  .copyWith(color: AppColors.errorFg),
+                            const Icon(Icons.error_outline,
+                                color: AppColors.errorFg, size: 16),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Dirección no reconocida. Buscá con número de puerta para asignar la zona correcta.',
+                                style: AppTextStyles.bodyXs
+                                    .copyWith(color: AppColors.errorFg),
+                              ),
                             ),
                           ],
                         ),
@@ -285,9 +410,34 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
 
                     const SizedBox(height: 16),
 
+                    // Zona asignada (cuando es válida)
+                    if (_addressState == _AddressState.valid &&
+                        _resolvedData != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondary50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.secondary500),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle,
+                                color: AppColors.secondary500, size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Zona: ${_resolvedData!.zoneId}',
+                              style: AppTextStyles.bodySm.copyWith(
+                                  color: AppColors.secondary500,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
                     // Mapa placeholder
-                    // EX-09: "Seleccioná una dirección válida" — mapa no oculto (evita layout jump)
-                    // EX-10: "Mapa no disponible sin conexión"
                     _MapPlaceholder(
                       isNetworkError: _isNetworkError,
                       isInvalidAddress: _isInvalidAddress,
@@ -306,7 +456,6 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // EX-10: "Reintentar búsqueda" reemplaza "Siguiente"
                   if (_isNetworkError)
                     OutlinedButton(
                       onPressed: () => _onAddressChanged(_addrCtrl.text),
@@ -339,8 +488,7 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                   TextButton(
                     onPressed: widget.onBack,
                     style: TextButton.styleFrom(
-                      foregroundColor: AppColors.neutral700,
-                    ),
+                        foregroundColor: AppColors.neutral700),
                     child: const Text('← Atrás'),
                   ),
                 ],
@@ -393,12 +541,7 @@ class _MapPlaceholder extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: borderColor,
-          style: isInvalidAddress && !isNetworkError
-              ? BorderStyle.solid
-              : BorderStyle.solid,
-        ),
+        border: Border.all(color: borderColor),
       ),
       child: Center(
         child: Column(

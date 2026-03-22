@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_text_styles.dart';
 import '../models/onboarding_draft.dart';
+import '../services/onboarding_owner_submit_service.dart';
+import '../analytics/onboarding_analytics.dart';
 import '../widgets/step_indicator.dart';
 import '../widgets/exit_modal.dart';
 
@@ -19,6 +21,8 @@ class Step4ConfirmacionScreen extends StatefulWidget {
   final Step1Data step1;
   final Step2Data step2;
   final bool step3Skipped;
+  final String draftMerchantId;
+  final OnboardingOwnerSubmitService submitService;
   final VoidCallback onBack;
   final VoidCallback onExit;
   final VoidCallback onGoToProfile; // EX-06 → OWNER-01
@@ -29,6 +33,8 @@ class Step4ConfirmacionScreen extends StatefulWidget {
     required this.step1,
     required this.step2,
     required this.step3Skipped,
+    required this.draftMerchantId,
+    required this.submitService,
     required this.onBack,
     required this.onExit,
     required this.onGoToProfile,
@@ -43,14 +49,32 @@ class Step4ConfirmacionScreen extends StatefulWidget {
 class _Step4ConfirmacionScreenState extends State<Step4ConfirmacionScreen> {
   _PublishState _publishState = _PublishState.idle;
 
+  @override
+  void initState() {
+    super.initState();
+    // Suscribir al stream del submit service
+    widget.submitService.stateStream.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        switch (state) {
+          case SubmitState.loading:
+            _publishState = _PublishState.loading;
+          case SubmitState.success:
+            _publishState = _PublishState.success;
+            OnboardingAnalytics.logCompleted();
+          case SubmitState.networkError:
+            _publishState = _PublishState.networkError;
+            OnboardingAnalytics.logError('confirmation', 'submit_network_error');
+          case SubmitState.idle:
+            _publishState = _PublishState.idle;
+        }
+      });
+    });
+  }
+
   Future<void> _onPublish() async {
-    setState(() => _publishState = _PublishState.loading);
-    // Simular escritura en Firestore
-    await Future.delayed(const Duration(seconds: 2));
-    // Simular 70% éxito / 30% error de red (en producción: try/catch real)
-    final success = DateTime.now().millisecond % 10 < 7;
-    setState(() => _publishState =
-        success ? _PublishState.success : _PublishState.networkError);
+    OnboardingAnalytics.logSubmitted();
+    await widget.submitService.submit(widget.draftMerchantId);
   }
 
   Future<void> _onExitTap() async {

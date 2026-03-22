@@ -29,6 +29,9 @@ dependencies:
   # Local storage (borrador / draft)
   shared_preferences: ^2.2.3
 
+  # Deep links (magic link callback)
+  app_links: ^6.3.0
+
   # Utils
   intl: ^0.19.0
 

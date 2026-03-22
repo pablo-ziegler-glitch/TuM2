@@ -41,6 +41,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   bool get _canResend => _secondsLeft == 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // El email ya fue enviado en AUTH-03; arranca el cooldown de inmediato
+    // para evitar reenvíos duplicados al abrir la pantalla.
+    _startCooldown();
+  }
+
   void _startCooldown() {
     setState(() => _secondsLeft = _cooldownSeconds);
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {

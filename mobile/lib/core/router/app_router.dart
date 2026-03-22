@@ -82,8 +82,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         return AppRoutes.home;
       }
 
-      // Sin sesión en rutas protegidas → auth flow
-      if (!isLoggedIn && !isInAuthFlow && location != AppRoutes.splash) {
+      // Sin sesión → auth flow.
+      // Incluye splash: una vez que auth termina de cargar y no hay sesión,
+      // splash debe ceder el paso a onboarding o login (no quedarse colgado).
+      if (!isLoggedIn && !isInAuthFlow) {
         final isFirstLaunch = isFirstLaunchAsync.valueOrNull ?? false;
         return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.login;
       }

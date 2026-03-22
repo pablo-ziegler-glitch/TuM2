@@ -17,6 +17,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final isOwner = ref.watch(isOwnerProvider).valueOrNull ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
@@ -37,6 +38,61 @@ class ProfileScreen extends ConsumerWidget {
               name: user?.displayName ?? 'Alex Rivera',
               email: user?.email ?? 'alex.rivera@example.com',
             ),
+            // sección MI COMERCIO — solo si el usuario tiene rol owner
+            if (isOwner) ...[
+              const SizedBox(height: 20),
+              Text(
+                'MI COMERCIO',
+                style: AppTextStyles.labelSm.copyWith(
+                  color: AppColors.neutral500,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => context.push(AppRoutes.owner),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary500,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary400,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.storefront,
+                            color: AppColors.surface, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.displayName ?? 'Mi Comercio',
+                              style: AppTextStyles.headingSm
+                                  .copyWith(color: AppColors.surface),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Gestionar mi comercio →',
+                              style: AppTextStyles.bodySm
+                                  .copyWith(color: AppColors.primary100),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             // menú principal
             _MenuCard(

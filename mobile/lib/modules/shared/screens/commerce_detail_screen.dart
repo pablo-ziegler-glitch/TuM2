@@ -4,9 +4,37 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
+// ── Demo data (reemplazar con carga Firestore en TuM2-0058) ──────────────────
+
+typedef _CommerceData = ({String name, String subtitle, String address});
+
+const Map<String, _CommerceData> _demoCommerces = {
+  'cafe-aura': (
+    name: 'Café Aura',
+    subtitle: 'Cafetería Especializada & Pastelería Artesanal',
+    address: 'Av. Siempre Viva 742, Palermo',
+  ),
+  'paper-atelier': (
+    name: 'The Paper Atelier',
+    subtitle: 'Papelería artesanal & journals para el nómade moderno',
+    address: 'Thames 1540, Palermo Soho',
+  ),
+  'cafe-esquina': (
+    name: 'Café de la Esquina',
+    subtitle: 'Artesanal & Orgánico',
+    address: 'Gurruchaga 899, Villa Crespo',
+  ),
+};
+
+_CommerceData _resolveData(String id) =>
+    _demoCommerces[id] ??
+    (name: id, subtitle: 'Comercio en TuM2', address: 'Buenos Aires');
+
+// ── Pantalla ──────────────────────────────────────────────────────────────────
+
 /// HOME-01 Detail — Ficha pública de un comercio.
-/// Recibe [commerceId] para futura carga desde Firestore.
-/// Por ahora muestra datos estáticos de demo (Café Aura).
+/// Recibe [commerceId] para futura carga desde Firestore (TuM2-0058).
+/// Por ahora resuelve datos del mapa de demo según el id recibido.
 class CommerceDetailScreen extends StatelessWidget {
   final String commerceId;
 
@@ -14,6 +42,8 @@ class CommerceDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final data = _resolveData(commerceId);
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: CustomScrollView(
@@ -27,14 +57,14 @@ class CommerceDetailScreen extends StatelessWidget {
                 children: [
                   _StatusBadge(),
                   const SizedBox(height: 10),
-                  Text('Café Aura', style: AppTextStyles.headingLg),
+                  Text(data.name, style: AppTextStyles.headingLg),
                   const SizedBox(height: 4),
                   Text(
-                    'Cafetería Especializada & Pastelería Artesanal',
+                    data.subtitle,
                     style: AppTextStyles.bodySm,
                   ),
                   const SizedBox(height: 16),
-                  _InfoRows(),
+                  _InfoRows(address: data.address),
                   const SizedBox(height: 16),
                   _MapWidget(),
                   const SizedBox(height: 16),
@@ -113,16 +143,19 @@ class _StatusBadge extends StatelessWidget {
 // ── Info rows ─────────────────────────────────────────────────────────────────
 
 class _InfoRows extends StatelessWidget {
-  static const _rows = [
-    (icon: Icons.location_on_outlined, text: 'Av. Siempre Viva 742, Palermo'),
-    (icon: Icons.access_time_outlined, text: 'Lun-Dom: 08–22h'),
-    (icon: Icons.pages_outlined, text: 'Déliric, GR'),
-  ];
+  const _InfoRows({required this.address});
+  final String address;
 
   @override
   Widget build(BuildContext context) {
+    final rows = [
+      (icon: Icons.location_on_outlined, text: address),
+      (icon: Icons.access_time_outlined, text: 'Lun-Dom: 08–22h'),
+      (icon: Icons.pages_outlined, text: 'Déliric, GR'),
+    ];
+
     return Column(
-      children: _rows
+      children: rows
           .map(
             (row) => Padding(
               padding: const EdgeInsets.only(bottom: 8),

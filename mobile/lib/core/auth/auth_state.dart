@@ -25,9 +25,14 @@ class AuthAuthenticated extends AuthState {
   /// ID del comercio asociado. Null si el owner aún no completó el onboarding.
   final String? merchantId;
 
+  /// Indica si el owner completó el flujo de onboarding de comercio.
+  /// Derivado del claim 'onboardingComplete' o de merchantId != null como fallback.
+  final bool onboardingComplete;
+
   const AuthAuthenticated({
     required this.user,
     required this.role,
     this.merchantId,
+    this.onboardingComplete = false,
   });
 }

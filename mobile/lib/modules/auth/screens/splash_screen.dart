@@ -1,39 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../core/providers/auth_providers.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 /// AUTH-01 — Splash / Loading
 ///
-/// Pantalla de entrada. Detecta si hay sesión activa y redirige.
-/// Fondo azul primary500, logo TuM2 centrado con círculos decorativos.
-///
-/// Flujo:
+/// Pantalla de entrada. Muestra el logo mientras el estado de auth se resuelve.
+/// La navegación la maneja el redirect de go_router en app_router.dart:
 ///   sesión activa     → /home
 ///   primer uso        → /onboarding
 ///   sesión expirada   → /login
-///
-/// Nota: la navegación la maneja el redirect de go_router en app_router.dart.
-/// Esta pantalla solo muestra el logo mientras el estado de auth se resuelve.
-class SplashScreen extends ConsumerWidget {
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen(authStateProvider, (_, next) {
-      if (!next.isLoading) {
-        final user = next.valueOrNull;
-        if (user != null) {
-          context.go(AppRoutes.home);
-        }
-        // Sin sesión: el redirect de app_router maneja onboarding vs login
-      }
-    });
-
+  Widget build(BuildContext context) {
+    // Navegación manejada completamente por el redirect de app_router.dart.
+    // Cuando auth resuelve: con sesión → home, sin sesión → onboarding o login.
     return Scaffold(
       backgroundColor: AppColors.primary500,
       body: Stack(

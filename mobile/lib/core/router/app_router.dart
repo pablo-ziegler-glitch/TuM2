@@ -39,15 +39,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       final location = state.uri.path;
 
-      // Si tiene sesión y está en pantallas de auth → redirigir a home
       final isInAuthFlow = location == AppRoutes.login ||
           location == AppRoutes.onboarding ||
           location == AppRoutes.verifyEmail;
 
-      if (isLoggedIn && isInAuthFlow) return AppRoutes.home;
+      // Con sesión en splash o en auth flow → home
+      if (isLoggedIn && (location == AppRoutes.splash || isInAuthFlow)) {
+        return AppRoutes.home;
+      }
 
-      // Sin sesión y fuera del auth flow → redirigir según primer uso
-      if (!isLoggedIn && !isInAuthFlow && location != AppRoutes.splash) {
+      // Sin sesión en splash o en rutas protegidas → redirigir según primer uso
+      // El guard isAuthLoading ya cubre la espera; aquí auth ya resolvió
+      if (!isLoggedIn && !isInAuthFlow) {
         final isFirstLaunch = isFirstLaunchAsync.valueOrNull ?? false;
         return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.login;
       }

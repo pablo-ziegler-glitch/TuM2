@@ -74,7 +74,6 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
     return MaterialApp.router(
       title: 'TuM2',
       debugShowCheckedModeBanner: false,
-      routerConfig: router,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary500,
@@ -89,9 +88,6 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
         fontFamily: 'Roboto',
       ),
       routerConfig: router,
-    );
-  }
-}
     );
   }
 }

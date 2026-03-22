@@ -216,3 +216,12 @@ class AuthNotifier extends Notifier<AuthState> {
 
 final authNotifierProvider =
     NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+
+/// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
+/// Lee el custom claim del JWT (caché local, sin roundtrip de red).
+final isOwnerProvider = FutureProvider<bool>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return false;
+  final result = await user.getIdTokenResult();
+  return result.claims?['role'] == 'owner';
+});

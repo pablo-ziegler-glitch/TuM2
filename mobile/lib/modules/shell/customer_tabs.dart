@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/router/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 
 /// Shell del tab bar principal de la app.

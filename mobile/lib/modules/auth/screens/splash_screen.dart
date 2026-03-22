@@ -1,116 +1,97 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/auth/auth_notifier.dart';
+import '../../../core/auth/auth_state.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
-/// AUTH-01 — Splash / Loading
+/// AUTH-01 — Splash con detección de sesión y lógica de decisión.
 ///
-/// Pantalla de entrada. Muestra el logo mientras el estado de auth se resuelve.
-/// La navegación la maneja el redirect de go_router en app_router.dart:
-///   sesión activa     → /home
-///   primer uso        → /onboarding
-///   sesión expirada   → /login
-class SplashScreen extends StatelessWidget {
+/// Muestra el logo + indicador de carga mientras [AuthNotifier] resuelve
+/// el estado inicial. Si Firebase no responde en 5 segundos, redirige a
+/// /login con un banner de error de red.
+///
+/// La navegación post-carga la maneja el redirect global del router —
+/// esta pantalla no hace context.go() excepto en el caso de timeout.
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Navegación manejada completamente por el redirect de app_router.dart.
-    // Cuando auth resuelve: con sesión → home, sin sesión → onboarding o login.
-    return Scaffold(
-      backgroundColor: AppColors.primary500,
-      body: Stack(
-        children: [
-          // Círculos decorativos semi-transparentes
-          Positioned(
-            top: -60,
-            right: -80,
-            child: _DecorativeCircle(size: 280, opacity: 0.08),
-          ),
-          Positioned(
-            bottom: 80,
-            left: -60,
-            child: _DecorativeCircle(size: 200, opacity: 0.05),
-          ),
-
-          // Contenido centrado
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Ícono pin
-                const Icon(
-                  Icons.location_on_rounded,
-                  size: 32,
-                  color: Colors.white70,
-                ),
-                const SizedBox(height: 8),
-
-                // Logo TuM2
-                // TODO(assets): reemplazar con asset SVG/PNG del logo en blanco
-                Text(
-                  'TuM2',
-                  style: AppTextStyles.headingLg.copyWith(
-                    color: Colors.white,
-                    fontSize: 48,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Claim
-                Text(
-                  'TU BARRIO, SIEMPRE CONECTADO',
-                  style: AppTextStyles.bodyXs.copyWith(
-                    color: Colors.white.withOpacity(0.7),
-                    letterSpacing: 1.5,
-                  ),
-                ),
-
-                const SizedBox(height: 48),
-
-                // Barra de progreso
-                SizedBox(
-                  width: 120,
-                  child: LinearProgressIndicator(
-                    backgroundColor: Colors.white.withOpacity(0.2),
-                    valueColor: AlwaysStoppedAnimation(
-                      Colors.white.withOpacity(0.54),
-                    ),
-                    minHeight: 2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Cargando...',
-                  style: AppTextStyles.bodyXs.copyWith(
-                    color: Colors.white.withOpacity(0.54),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _DecorativeCircle extends StatelessWidget {
-  const _DecorativeCircle({required this.size, required this.opacity});
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  Timer? _timeoutTimer;
 
-  final double size;
-  final double opacity;
+  @override
+  void initState() {
+    super.initState();
+    _startTimeoutGuard();
+  }
+
+  /// Si tras 5 segundos el estado sigue siendo [AuthLoading], fuerza
+  /// AuthUnauthenticated para que el redirect global lleve a /login.
+  /// Navegar directamente con context.go() quedaría atrapado en el guard
+  /// que redirige a splash mientras el estado sea AuthLoading.
+  void _startTimeoutGuard() {
+    _timeoutTimer = Timer(const Duration(seconds: 5), () {
+      if (!mounted) return;
+      final current = ref.read(authNotifierProvider).authState;
+      if (current is AuthLoading) {
+        ref.read(authNotifierProvider).forceUnauthenticated();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sin conexión. Intentá nuevamente.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timeoutTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(opacity),
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Logo TuM2
+            Text(
+              'TuM2',
+              style: AppTextStyles.headingLg.copyWith(
+                color: AppColors.primary500,
+                fontSize: 40,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 32),
+            // Indicador de carga sutil
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.primary400,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

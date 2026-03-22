@@ -36,8 +36,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0121]** Estrategia cobertura inicial y bootstrap ✅ | Cobertura / Data — estrategia de cobertura y bootstrap con Google Places definida |
 | **[0027]** Definir mapa completo de pantallas ✅ | UX / arquitectura — mapa de pantallas completo definido para todos los roles |
 | **[0028]** Diseñar navegación principal ✅ | UX / arquitectura — navegación principal diseñada con estructura de tabs y flujos |
-| **[0029]** Diseñar onboarding CUSTOMER ✅ | UX/UI — AUTH stack completo diseñado: splash, onboarding 3 slides, login/registro (5 estados), verificación email (4 estados) |
-| **[0030]** Diseñar onboarding OWNER ✅ | UX/UI — flujo completo implementado: draft entry, step1 tipo+nombre, step2 dirección, step3 horarios, step4 confirmación |
+| **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, 4 bugs de code review corregidos |
 
 ---
 
@@ -114,7 +113,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### ÉPICA 8: Mobile app
 - [0052] **Crear proyecto mobile base** — P0 — `Mobile, Fundacional` ✅
-- [0053] **Implementar shell de app** — P0 — `Mobile, UX/UI, MVP`
+- [0053] **Implementar shell de app** — P0 — `Mobile, UX/UI, MVP` ✅
 - [0054] **Implementar login / registro** — P0 — `Mobile, Seguridad, MVP`
 - [0055] **Implementar home CUSTOMER** — P1 — `Mobile, Producto, MVP`
 - [0056] **Implementar búsqueda de comercios** — P0 — `Mobile, MVP`

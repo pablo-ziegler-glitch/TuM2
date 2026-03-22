@@ -14,6 +14,7 @@ class PrimaryButton extends StatelessWidget {
     this.onPressed,
     this.isLoading = false,
     this.icon,
+    this.backgroundColor,
   });
 
   final String label;
@@ -22,6 +23,9 @@ class PrimaryButton extends StatelessWidget {
 
   /// Ícono opcional a la izquierda del label (p.ej. logo Google).
   final Widget? icon;
+
+  /// Color de fondo alternativo (p.ej. secondary500 o tertiary500 en onboarding).
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +37,7 @@ class PrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary500,
+          backgroundColor: backgroundColor ?? AppColors.primary500,
           disabledBackgroundColor: AppColors.neutral200,
           foregroundColor: Colors.white,
           disabledForegroundColor: AppColors.neutral500,

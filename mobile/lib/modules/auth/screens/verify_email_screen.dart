@@ -16,18 +16,11 @@ import '../../../core/widgets/secondary_button.dart';
 /// El usuario ve esta pantalla después de ingresar su email en AUTH-03.
 /// Debe tocar el link en su email para completar el login.
 ///
-/// Funcionalidades:
-/// - Botón "Reenviar link" con cooldown de 30 segundos
-/// - Link "Usar otro email" → vuelve a AUTH-03
-/// - Toast de confirmación al reenviar
-///
 /// Estados:
-/// 1. Default (esperando que el user abra el link)
-/// 2. Cooldown activo (botón deshabilitado + countdown)
-/// 3. Link reenviado (toast verde)
-/// 4. Error reenvío (toast rojo)
-///
-/// TODO(figma): implementar ilustración "sobre abierto" cuando lleguen los mockups.
+/// 1. Default (esperando que el user abra el link) — banner verde "Email enviado correctamente"
+/// 2. Cooldown activo (botón deshabilitado + countdown + barra de progreso)
+/// 3. Link reenviado (toast verde "¡Link reenviado! Revisá tu bandeja.")
+/// 4. Error reenvío (toast rojo con mensaje)
 class VerifyEmailScreen extends ConsumerStatefulWidget {
   const VerifyEmailScreen({super.key, required this.email});
 
@@ -41,6 +34,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   static const _cooldownSeconds = 30;
   int _secondsLeft = 0;
   Timer? _timer;
+
+  /// Indica que el email fue enviado (primera vez o tras reenvío exitoso).
+  /// Controla el banner verde y la ilustración con check.
+  bool _emailJustSent = true;
 
   bool get _canResend => _secondsLeft == 0;
 
@@ -69,9 +66,10 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
     if (state.emailSent) {
       _startCooldown();
+      setState(() => _emailJustSent = true);
       AppToast.show(
         context,
-        message: 'Link reenviado',
+        message: '¡Link reenviado! Revisá tu bandeja.',
         type: ToastType.success,
       );
     } else if (state.errorMessage != null) {
@@ -103,20 +101,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // TODO(figma): ilustración "sobre abierto con check"
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: AppColors.primary50,
-                  borderRadius: BorderRadius.circular(50),
-                ),
-                child: const Icon(
-                  Icons.mark_email_unread_outlined,
-                  size: 48,
-                  color: AppColors.primary400,
-                ),
-              ),
+              // Ilustración — sobre con check badge cuando se envió
+              _EnvelopeIllustration(sent: _emailJustSent),
 
               const SizedBox(height: 32),
 
@@ -143,14 +129,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const TextSpan(
-                      text: '\nTocalo para ingresar a TuM2.',
-                    ),
+                    const TextSpan(text: ' Tocalo para ingresar a TuM2.'),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
+
+              // Banner "Email enviado correctamente"
+              if (_emailJustSent) _SuccessBanner(),
+
+              const SizedBox(height: 20),
 
               // Botón reenviar con cooldown
               SecondaryButton(
@@ -162,6 +151,21 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 isLoading: isLoading,
               ),
 
+              // Barra de progreso del cooldown
+              if (_secondsLeft > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: _secondsLeft / _cooldownSeconds,
+                      backgroundColor: AppColors.neutral100,
+                      valueColor: const AlwaysStoppedAnimation(AppColors.primary500),
+                      minHeight: 2,
+                    ),
+                  ),
+                ),
+
               const SizedBox(height: 20),
 
               // Usar otro email
@@ -171,12 +175,97 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                   'Usar otro email',
                   style: AppTextStyles.labelSm.copyWith(
                     color: AppColors.primary500,
+                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Ilustración del sobre. Muestra check badge cuando [sent] es true.
+class _EnvelopeIllustration extends StatelessWidget {
+  const _EnvelopeIllustration({required this.sent});
+
+  final bool sent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: const BoxDecoration(
+            color: AppColors.primary50,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            sent
+                ? Icons.mark_email_read_outlined
+                : Icons.mark_email_unread_outlined,
+            size: 48,
+            color: AppColors.primary400,
+          ),
+        ),
+        if (sent)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: const BoxDecoration(
+                color: AppColors.successFg,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                size: 16,
+                color: Colors.white,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Banner verde inline "Email enviado correctamente".
+class _SuccessBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.successBg,
+        border: Border.all(
+          color: AppColors.successFg.withOpacity(0.4),
+          width: 0.8,
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.check_circle_outline_rounded,
+            size: 16,
+            color: AppColors.successFg,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Email enviado correctamente',
+            style: AppTextStyles.labelSm.copyWith(
+              color: AppColors.successFg,
+            ),
+          ),
+        ],
       ),
     );
   }

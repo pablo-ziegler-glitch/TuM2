@@ -9,6 +9,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_text_input.dart';
 import '../../../core/widgets/error_banner.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../core/widgets/secondary_button.dart';
 
 /// AUTH-03 — Login / Registro
 ///
@@ -16,13 +17,10 @@ import '../../../core/widgets/primary_button.dart';
 ///
 /// Estados:
 ///   1. Default (email vacío)
-///   2. Email válido (botón activo)
+///   2. Email válido (botón activo, check en input)
 ///   3. Loading (spinner, inputs deshabilitados)
 ///   4. Error inline (email inválido)
-///   5. Error banner (fallo de red u otro)
-///
-/// TODO(figma): implementar layout final con logo, card y espaciados
-/// cuando lleguen los mockups. Por ahora estructura funcional completa.
+///   5. Error banner de red (fuera del card, al final del scroll)
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -48,7 +46,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _validateEmail(String value) {
     if (value.isEmpty) return null;
     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) {
-      return 'El email no es válido.';
+      return 'Email inválido. Revisá el formato.';
     }
     return null;
   }
@@ -93,7 +91,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             children: [
               const SizedBox(height: 40),
 
-              // TODO(figma): reemplazar con asset logo TuM2
+              // Logo TuM2 con ícono pin
+              // TODO(assets): reemplazar con asset logo TuM2
+              const Icon(
+                Icons.location_on_rounded,
+                size: 28,
+                color: AppColors.primary500,
+              ),
+              const SizedBox(height: 4),
               Text(
                 'TuM2',
                 style: AppTextStyles.headingLg.copyWith(
@@ -131,34 +136,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Error de red / servidor
-                    if (networkError != null) ...[
-                      ErrorBanner(
-                        message: networkError,
-                        onDismiss: () =>
-                            ref.read(authNotifierProvider.notifier).clearError(),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Input email
-                    AppTextInput(
-                      hint: 'Tu email',
-                      controller: _emailController,
-                      errorText: _emailError,
-                      enabled: !isLoading,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.done,
-                      autocorrect: false,
-                      prefixIcon: const Icon(Icons.mail_outline, size: 20),
-                      onChanged: (_) {
-                        if (_emailError != null) {
-                          setState(() => _emailError = null);
-                        }
-                        setState(() {}); // rebuild para activar botón
-                      },
-                      onSubmitted: (_) {
-                        if (_emailIsValid) _sendMagicLink();
+                    // Input email con check cuando es válido
+                    AnimatedBuilder(
+                      animation: _emailController,
+                      builder: (context, _) {
+                        return AppTextInput(
+                          hint: 'Tu email',
+                          controller: _emailController,
+                          errorText: _emailError,
+                          enabled: !isLoading,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.done,
+                          autocorrect: false,
+                          prefixIcon: const Icon(Icons.mail_outline, size: 20),
+                          suffixIcon: _emailIsValid
+                              ? const Icon(
+                                  Icons.check_circle_rounded,
+                                  size: 20,
+                                  color: AppColors.successFg,
+                                )
+                              : null,
+                          onChanged: (_) {
+                            if (_emailError != null) {
+                              setState(() => _emailError = null);
+                            }
+                            setState(() {});
+                          },
+                          onSubmitted: (_) {
+                            if (_emailIsValid) _sendMagicLink();
+                          },
+                        );
                       },
                     ),
 
@@ -192,11 +199,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Botón Google
-                    PrimaryButton(
+                    // Botón Google (outline)
+                    SecondaryButton(
                       label: 'Continuar con Google',
                       onPressed: isLoading ? null : _signInWithGoogle,
-                      isLoading: false,
                       icon: Container(
                         width: 20,
                         height: 20,
@@ -205,7 +211,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Center(
-                          // TODO(figma): reemplazar con asset logo Google
+                          // TODO(assets): reemplazar con asset logo Google
                           child: Text('G',
                               style: TextStyle(
                                   fontSize: 12, fontWeight: FontWeight.w700)),
@@ -216,39 +222,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               ),
 
+              // Error de red / servidor (fuera del card)
+              if (networkError != null) ...[
+                const SizedBox(height: 16),
+                ErrorBanner(
+                  message: networkError,
+                  onDismiss: () =>
+                      ref.read(authNotifierProvider.notifier).clearError(),
+                ),
+              ],
+
               const SizedBox(height: 24),
 
               // Términos y condiciones
-              Text(
-                'Al continuar aceptás los ',
-                style: AppTextStyles.bodyXs,
+              RichText(
                 textAlign: TextAlign.center,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap: () {/* TODO: abrir términos */},
-                    child: Text(
-                      'Términos y condiciones',
-                      style: AppTextStyles.bodyXs.copyWith(
-                        color: AppColors.primary500,
-                        decoration: TextDecoration.underline,
+                text: TextSpan(
+                  style: AppTextStyles.bodyXs,
+                  children: [
+                    const TextSpan(text: 'Al continuar aceptás los '),
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () {/* TODO: abrir términos */},
+                        child: Text(
+                          'Términos y condiciones',
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.primary500,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  Text(' y la ', style: AppTextStyles.bodyXs),
-                  GestureDetector(
-                    onTap: () {/* TODO: abrir política */},
-                    child: Text(
-                      'Política de privacidad',
-                      style: AppTextStyles.bodyXs.copyWith(
-                        color: AppColors.primary500,
-                        decoration: TextDecoration.underline,
+                    const TextSpan(text: ' y la '),
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () {/* TODO: abrir política */},
+                        child: Text(
+                          'Política de privacidad',
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.primary500,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),

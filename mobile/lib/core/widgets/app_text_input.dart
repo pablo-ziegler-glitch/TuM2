@@ -17,6 +17,7 @@ class AppTextInput extends StatelessWidget {
     this.onChanged,
     this.onSubmitted,
     this.prefixIcon,
+    this.suffixIcon,
     this.autofocus = false,
     this.autocorrect = false,
   });
@@ -30,6 +31,7 @@ class AppTextInput extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final Widget? prefixIcon;
+  final Widget? suffixIcon;
   final bool autofocus;
   final bool autocorrect;
 
@@ -57,6 +59,7 @@ class AppTextInput extends StatelessWidget {
               color: AppColors.neutral400,
             ),
             prefixIcon: prefixIcon,
+            suffixIcon: suffixIcon,
             prefixIconColor: hasError
                 ? AppColors.errorFg
                 : enabled

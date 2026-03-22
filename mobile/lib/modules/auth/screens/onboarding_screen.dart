@@ -10,10 +10,7 @@ import '../../../core/widgets/primary_button.dart';
 /// AUTH-02 — Onboarding CUSTOMER (carrusel 3 slides)
 ///
 /// Pantalla de bienvenida para primer uso.
-/// Muestra 3 slides con la propuesta de valor de TuM2.
-///
-/// TODO(figma): implementar layout real con ilustraciones cuando lleguen los mockups.
-/// Por ahora es un placeholder funcional con PageView y navegación correcta.
+/// Cada slide tiene su propio color de acento: primary, secondary, tertiary.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -26,23 +23,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentPage = 0;
 
   static const _slides = [
-    _OnboardingSlide(
+    _SlideData(
       title: 'Encontrá comercios abiertos ahora en tu cuadra',
       subtitle:
           'Kioscos, almacenes, panaderías y más — sabés al instante si están abiertos.',
-      // TODO(figma): agregar ilustración
+      icon: Icons.location_on_rounded,
+      accentColor: AppColors.primary500,
+      bgColor: AppColors.primary50,
     ),
-    _OnboardingSlide(
+    _SlideData(
       title: 'Farmacias de turno al instante',
-      subtitle:
-          'Sin llamar a nadie. Sabés cuál está de guardia esta noche.',
-      // TODO(figma): agregar ilustración
+      subtitle: 'Sin llamar a nadie. Sabés cuál está de guardia esta noche.',
+      icon: Icons.local_pharmacy_outlined,
+      accentColor: AppColors.secondary500,
+      bgColor: AppColors.secondary50,
     ),
-    _OnboardingSlide(
+    _SlideData(
       title: 'Seguí tus comercios favoritos',
       subtitle:
           'Recibí alertas cuando abren, cambian sus horarios o publican novedades.',
-      // TODO(figma): agregar ilustración
+      icon: Icons.favorite_border_rounded,
+      accentColor: AppColors.tertiary500,
+      bgColor: AppColors.tertiary50,
     ),
   ];
 
@@ -70,6 +72,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentSlide = _slides[_currentPage];
     final isLastPage = _currentPage == _slides.length - 1;
 
     return Scaffold(
@@ -98,7 +101,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemCount: _slides.length,
                 onPageChanged: (i) => setState(() => _currentPage = i),
                 itemBuilder: (context, index) {
-                  return _slides[index];
+                  return _OnboardingSlide(data: _slides[index]);
                 },
               ),
             ),
@@ -115,7 +118,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   height: 8,
                   decoration: BoxDecoration(
                     color: _currentPage == i
-                        ? AppColors.primary500
+                        ? currentSlide.accentColor
                         : AppColors.neutral300,
                     borderRadius: BorderRadius.circular(4),
                   ),
@@ -129,8 +132,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: PrimaryButton(
-                label: isLastPage ? 'Empezar' : 'Siguiente',
+                label: isLastPage ? 'Empezar →' : 'Siguiente →',
                 onPressed: _next,
+                backgroundColor: currentSlide.accentColor,
               ),
             ),
 
@@ -142,14 +146,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _OnboardingSlide extends StatelessWidget {
-  const _OnboardingSlide({
+/// Datos inmutables por slide.
+class _SlideData {
+  const _SlideData({
     required this.title,
     required this.subtitle,
+    required this.icon,
+    required this.accentColor,
+    required this.bgColor,
   });
 
   final String title;
   final String subtitle;
+  final IconData icon;
+  final Color accentColor;
+  final Color bgColor;
+}
+
+class _OnboardingSlide extends StatelessWidget {
+  const _OnboardingSlide({required this.data});
+
+  final _SlideData data;
 
   @override
   Widget build(BuildContext context) {
@@ -158,19 +175,19 @@ class _OnboardingSlide extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // TODO(figma): placeholder de ilustración
+          // Ilustración con ícono y color de acento por slide
           Container(
-            height: 200,
-            width: 200,
+            width: 180,
+            height: 180,
             decoration: BoxDecoration(
-              color: AppColors.primary50,
-              borderRadius: BorderRadius.circular(20),
+              shape: BoxShape.circle,
+              color: data.bgColor,
             ),
-            child: const Center(
+            child: Center(
               child: Icon(
-                Icons.storefront_outlined,
+                data.icon,
                 size: 80,
-                color: AppColors.primary300,
+                color: data.accentColor,
               ),
             ),
           ),
@@ -178,7 +195,7 @@ class _OnboardingSlide extends StatelessWidget {
           const SizedBox(height: 40),
 
           Text(
-            title,
+            data.title,
             textAlign: TextAlign.center,
             style: AppTextStyles.headingMd,
           ),
@@ -186,7 +203,7 @@ class _OnboardingSlide extends StatelessWidget {
           const SizedBox(height: 12),
 
           Text(
-            subtitle,
+            data.subtitle,
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMd.copyWith(
               color: AppColors.neutral700,

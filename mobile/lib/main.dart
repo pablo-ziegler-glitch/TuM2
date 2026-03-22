@@ -1,99 +1,81 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'core/firebase/firebase_options.dart';
+import 'core/providers/auth_providers.dart';
+import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
-import 'modules/brand/onboarding_owner/models/onboarding_draft.dart';
-import 'modules/brand/onboarding_owner/onboarding_owner_flow.dart';
 
-void main() async {
+/// Punto de entrada de la app TuM2.
+///
+/// Inicializa Firebase y monta la app con Riverpod + go_router.
+/// Para dev local con emuladores, Firebase se conecta automáticamente
+/// a localhost:9099 (auth) y localhost:8080 (firestore).
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(
-    const ProviderScope(child: TuM2App()),
+    const ProviderScope(
+      child: TuM2App(),
+    ),
   );
 }
 
-// ─── Router ──────────────────────────────────────────────────────────────────
-
-final _router = GoRouter(
-  initialLocation: '/',
-  redirect: _globalRedirect,
-  routes: [
-    GoRoute(path: '/', builder: (_, __) => const _SplashScreen()),
-    GoRoute(
-      path: '/onboarding/owner',
-      builder: (context, state) {
-        final extra = state.extra as OnboardingDraft?;
-        return OnboardingOwnerFlow(
-          existingDraft: extra,
-          onComplete: () => context.go('/owner'),
-          onExit: () => context.go('/home'),
-        );
-      },
-    ),
-    GoRoute(
-      path: '/home',
-      builder: (_, __) => const _PlaceholderScreen(label: 'HOME-01'),
-    ),
-    GoRoute(
-      path: '/owner',
-      builder: (_, __) => const _PlaceholderScreen(label: 'OWNER-01'),
-    ),
-  ],
-);
-
-/// NAV-01: Guard global de navegación.
-///
-/// Después del login:
-/// - Si role == 'owner' y onboardingOwnerProgress.currentStep != 'completed'
-///   → redirigir a /onboarding/owner con el borrador existente (si hay).
-Future<String?> _globalRedirect(BuildContext context, GoRouterState state) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return null; // Sin sesión, no redirigir desde auth stack
-
-  // Solo aplicar guard si no estamos ya en el onboarding
-  if (state.matchedLocation == '/onboarding/owner') return null;
-
-  try {
-    final userDoc = await FirebaseFirestore.instance
-        .doc('users/${user.uid}')
-        .get();
-
-    if (!userDoc.exists) return null;
-    final data = userDoc.data() as Map<String, dynamic>;
-
-    if (data['role'] != 'owner') return null;
-
-    final progress = data['onboardingOwnerProgress'] as Map<String, dynamic>?;
-    if (progress == null) {
-      // Owner sin onboarding iniciado → enviar al flujo
-      return '/onboarding/owner';
-    }
-
-    final currentStep = progress['currentStep'] as String?;
-    if (currentStep == 'completed') return null;
-
-    // Hay un borrador activo → construir OnboardingDraft y enviarlo como extra
-    // go_router no soporta `extra` en redirect; navegamos via GoRouter.of
-    // En su lugar, simplemente redirigimos a /onboarding/owner y el flow
-    // lee el borrador desde el repositorio en initState.
-    return '/onboarding/owner';
-  } catch (_) {
-    return null;
-  }
-}
-
-// ─── App ─────────────────────────────────────────────────────────────────────
-
-class TuM2App extends StatelessWidget {
+class TuM2App extends ConsumerStatefulWidget {
   const TuM2App({super.key});
 
   @override
+  ConsumerState<TuM2App> createState() => _TuM2AppState();
+}
+
+class _TuM2AppState extends ConsumerState<TuM2App> {
+  StreamSubscription<Uri>? _linkSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  Future<void> _initDeepLinks() async {
+    final appLinks = AppLinks();
+
+    // Link que abrió la app desde estado terminado
+    final initialUri = await appLinks.getInitialLink();
+    if (initialUri != null) {
+      _handleUri(initialUri);
+    }
+
+    // Links mientras la app está en foreground o background
+    _linkSub = appLinks.uriLinkStream.listen(_handleUri);
+  }
+
+  /// Procesa el URI entrante. Solo actúa si el host/path corresponde al
+  /// callback de magic link configurado en ActionCodeSettings.
+  void _handleUri(Uri uri) {
+    if (uri.host == 'tum2.app' && uri.path == '/auth/verify') {
+      ref.read(authNotifierProvider.notifier).handleEmailLink(uri.toString());
+    }
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final router = ref.watch(appRouterProvider);
+
     return MaterialApp.router(
       title: 'TuM2',
       debugShowCheckedModeBanner: false,
@@ -107,6 +89,10 @@ class TuM2App extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
+      routerConfig: router,
+    );
+  }
+}
     );
   }
 }

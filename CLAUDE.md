@@ -36,6 +36,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0121]** Estrategia cobertura inicial y bootstrap ✅ | Cobertura / Data — estrategia de cobertura y bootstrap con Google Places definida |
 | **[0027]** Definir mapa completo de pantallas ✅ | UX / arquitectura — mapa de pantallas completo definido para todos los roles |
 | **[0028]** Diseñar navegación principal ✅ | UX / arquitectura — navegación principal diseñada con estructura de tabs y flujos |
+| **[0029]** Diseñar onboarding CUSTOMER ✅ | UX/UI — AUTH stack completo diseñado: splash, onboarding 3 slides, login/registro (5 estados), verificación email (4 estados) |
+| **[0030]** Diseñar onboarding OWNER ✅ | UX/UI — flujo completo implementado: draft entry, step1 tipo+nombre, step2 dirección, step3 horarios, step4 confirmación |
 
 ---
 
@@ -83,8 +85,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 6: UX / arquitectura de pantallas
 - [0027] **Definir mapa completo de pantallas** — P0 — `UX/UI, Producto, Fundacional` ✅
 - [0028] **Diseñar navegación principal** — P0 — `UX/UI, Mobile, Fundacional` ✅
-- [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP`
-- [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP`
+- [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP` ✅
+- [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP`
 - [0032] **Diseñar pantalla Mapa** — P1 — `UX/UI, MVP`
 - [0033] **Diseñar ficha pública de comercio** — P0 — `UX/UI, Producto, MVP`

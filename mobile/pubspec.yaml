@@ -25,8 +25,14 @@ dependencies:
   cloud_functions: ^4.7.3
   firebase_analytics: ^10.10.0
 
+  # Google Sign-In
+  google_sign_in: ^6.2.1
+
   # Local storage (borrador / draft)
   shared_preferences: ^2.2.3
+
+  # Deep links (magic link callback)
+  app_links: ^6.3.0
 
   # Utils
   intl: ^0.19.0

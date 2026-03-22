@@ -54,6 +54,12 @@ export interface MerchantDoc {
   category: string;
   zone: string;
   address?: string;
+  lat?: number;
+  lng?: number;
+  geohash?: string;
+  zoneId?: string;
+  cityId?: string;
+  provinceId?: string;
   verificationStatus: VerificationStatus;
   visibilityStatus: VisibilityStatus;
   sourceType: SourceType;
@@ -64,6 +70,52 @@ export interface MerchantDoc {
   externalPlaceId?: string;
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
+}
+
+// ─── Onboarding Owner Types ─────────────────────────────────────────────────
+
+export type OnboardingOwnerStep =
+  | "step_1"
+  | "step_2"
+  | "step_3"
+  | "confirmation"
+  | "submitted"
+  | "completed"
+  | "abandoned";
+
+export interface OnboardingStep1Data {
+  name: string;
+  categoryId: string;
+}
+
+export interface OnboardingStep2Data {
+  address: string;
+  lat: number;
+  lng: number;
+  geohash: string;
+  zoneId: string;
+  cityId: string;
+  provinceId: string;
+}
+
+export interface OnboardingStep3Day {
+  open: string;   // "HH:MM"
+  close: string;  // "HH:MM"
+  closed?: boolean;
+}
+
+export type OnboardingStep3Data = Partial<Record<string, OnboardingStep3Day>>;
+
+export interface OnboardingOwnerProgress {
+  currentStep: OnboardingOwnerStep;
+  draftMerchantId: string | null;
+  step1: OnboardingStep1Data | null;
+  step2: OnboardingStep2Data | null;
+  step3: OnboardingStep3Data | null;
+  step3Skipped: boolean;
+  startedAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
+  abandonedAt?: FirebaseFirestore.Timestamp;
 }
 
 export interface MerchantPublicDoc {

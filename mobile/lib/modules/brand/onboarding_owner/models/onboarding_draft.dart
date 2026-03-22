@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 /// Estado local del borrador de onboarding OWNER.
 /// Refleja OnboardingOwnerProgress de schema/types/onboarding_owner.ts.
 /// La fuente de verdad es Firestore; SharedPreferences actúa como caché local.
@@ -6,6 +8,7 @@ class OnboardingDraft {
   final String currentStep;
   final Step1Data? step1;
   final Step2Data? step2;
+  final List<DaySchedule>? step3;
   final bool step3Skipped;
   final DateTime createdAt;
   final DateTime expiresAt;
@@ -15,6 +18,7 @@ class OnboardingDraft {
     required this.currentStep,
     this.step1,
     this.step2,
+    this.step3,
     this.step3Skipped = false,
     required this.createdAt,
     required this.expiresAt,
@@ -73,18 +77,60 @@ class Step2Data {
   final double lat;
   final double lng;
   final String zoneId;
+  final String geohash;
+  final String cityId;
+  final String provinceId;
 
   const Step2Data({
     required this.address,
     required this.lat,
     required this.lng,
     required this.zoneId,
+    this.geohash = '',
+    this.cityId = '',
+    this.provinceId = '',
   });
+}
+
+/// Horario de un día de la semana para el onboarding step 3.
+class DaySchedule {
+  final String day;        // 'Lun', 'Mar', ... (label display)
+  final String dayKey;     // 'monday', 'tuesday', ... (Firestore key)
+  bool enabled;
+  TimeOfDay openTime;
+  TimeOfDay closeTime;
+
+  DaySchedule({
+    required this.day,
+    required this.dayKey,
+    this.enabled = true,
+    this.openTime = const TimeOfDay(hour: 9, minute: 0),
+    this.closeTime = const TimeOfDay(hour: 20, minute: 0),
+  });
+
+  bool get hasTimeError =>
+      enabled &&
+      (closeTime.hour < openTime.hour ||
+          (closeTime.hour == openTime.hour &&
+              closeTime.minute <= openTime.minute));
+
+  String get openLabel =>
+      '${openTime.hour.toString().padLeft(2, '0')}:${openTime.minute.toString().padLeft(2, '0')}';
+
+  String get closeLabel =>
+      '${closeTime.hour.toString().padLeft(2, '0')}:${closeTime.minute.toString().padLeft(2, '0')}';
+
+  /// Convierte a mapa para Firestore (schedule field en merchant_schedules).
+  Map<String, dynamic> toFirestoreMap() {
+    if (!enabled) return {'closed': true, 'open': openLabel, 'close': closeLabel};
+    return {'open': openLabel, 'close': closeLabel};
+  }
 }
 
 class OnboardingState {
   final Step1Data? step1;
   final Step2Data? step2;
+  final List<DaySchedule>? step3;
   final bool step3Skipped;
   final String currentStep;
   final OnboardingDraft? existingDraft;
@@ -92,6 +138,7 @@ class OnboardingState {
   const OnboardingState({
     this.step1,
     this.step2,
+    this.step3,
     this.step3Skipped = false,
     this.currentStep = 'idle',
     this.existingDraft,
@@ -100,6 +147,7 @@ class OnboardingState {
   OnboardingState copyWith({
     Step1Data? step1,
     Step2Data? step2,
+    List<DaySchedule>? step3,
     bool? step3Skipped,
     String? currentStep,
     OnboardingDraft? existingDraft,
@@ -107,6 +155,7 @@ class OnboardingState {
     return OnboardingState(
       step1: step1 ?? this.step1,
       step2: step2 ?? this.step2,
+      step3: step3 ?? this.step3,
       step3Skipped: step3Skipped ?? this.step3Skipped,
       currentStep: currentStep ?? this.currentStep,
       existingDraft: existingDraft ?? this.existingDraft,

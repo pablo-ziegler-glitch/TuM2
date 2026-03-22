@@ -84,8 +84,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 6: UX / arquitectura de pantallas
 - [0027] **Definir mapa completo de pantallas** — P0 — `UX/UI, Producto, Fundacional` ✅
 - [0028] **Diseñar navegación principal** — P0 — `UX/UI, Mobile, Fundacional` ✅
-- [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP`
-- [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP`
+- [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP` ✅
+- [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP`
 - [0032] **Diseñar pantalla Mapa** — P1 — `UX/UI, MVP`
 - [0033] **Diseñar ficha pública de comercio** — P0 — `UX/UI, Producto, MVP`

@@ -2,241 +2,279 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/auth_providers.dart';
+import '../auth/auth_notifier.dart';
+import '../auth/auth_state.dart';
+import 'app_routes.dart';
+import 'router_guards.dart';
 import '../../modules/auth/screens/splash_screen.dart';
-import '../../modules/auth/screens/onboarding_screen.dart';
 import '../../modules/auth/screens/login_screen.dart';
+import '../../modules/auth/screens/onboarding_screen.dart';
 import '../../modules/auth/screens/verify_email_screen.dart';
 import '../../modules/home/screens/home_screen.dart';
 import '../../modules/search/screens/search_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
+import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
 import '../../modules/shared/screens/commerce_detail_screen.dart';
 import '../../modules/shell/customer_tabs.dart';
 import '../../modules/brand/onboarding_owner/onboarding_owner_flow.dart';
 import '../../modules/brand/onboarding_owner/models/onboarding_draft.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
-// ── Nombres de rutas ──────────────────────────────────────────────────────────
+// ── Pending route (deep link pre-auth) ───────────────────────────────────────
 
-abstract class AppRoutes {
-  // Auth
-  static const splash              = '/';
-  static const onboarding          = '/onboarding';
-  static const login               = '/login';
-  static const verifyEmail         = '/verify-email';
+/// Ruta pendiente guardada cuando un deep link llega sin sesión activa.
+/// Se restaura automáticamente tras el login exitoso.
+final pendingRouteProvider = StateProvider<String?>((ref) => null);
 
-  // CustomerTabs — Tab Inicio
-  static const home                = '/home';
-  static const homeAbiertoAhora   = '/home/abierto-ahora';
-  static const homeFarmacias       = '/home/farmacias-de-turno';
+// ── Router provider ──────────────────────────────────────────────────────────
 
-  // CustomerTabs — Tab Buscar
-  static const search              = '/search';
-  static const searchMap           = '/search/mapa';
+/// Provider del [GoRouter] de la aplicación.
+///
+/// Usa [AuthNotifier] como [refreshListenable] para re-evaluar los guards
+/// cada vez que el estado de autenticación cambia.
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final authNotifier = ref.read(authNotifierProvider);
 
-  // CustomerTabs — Tab Perfil
-  static const profile             = '/profile';
+  final router = GoRouter(
+    initialLocation: AppRoutes.splash,
+    refreshListenable: authNotifier,
+    redirect: (context, state) => _buildRedirect(ref, state),
+    routes: _buildRoutes(),
+  );
 
-  // Owner (modal full-screen)
-  static const owner               = '/owner';
-  static const ownerEdit           = '/owner/edit';
-  static const ownerProducts       = '/owner/products';
-  static const ownerSchedules      = '/owner/schedules';
-  static const ownerDuties         = '/owner/duties';
+  ref.onDispose(router.dispose);
+  return router;
+});
 
-  // Shared
-  static const commerceDetail      = '/commerce/:id';
-  static const onboardingOwner     = '/onboarding/owner';
+// ── Redirect global ──────────────────────────────────────────────────────────
 
-  /// Construye la ruta concreta de detalle de un comercio.
-  static String commerceDetailPath(String id) => '/commerce/$id';
+String? _buildRedirect(Ref ref, GoRouterState state) {
+  final authState = ref.read(authNotifierProvider).authState;
+  final location = state.uri.toString();
+
+  // Guardar pending route para deep links pre-auth.
+  final shouldSavePending =
+      (authState is AuthLoading || authState is AuthUnauthenticated) &&
+      !RouterGuards.isPublicPath(location) &&
+      location != AppRoutes.splash;
+  if (shouldSavePending) {
+    ref.read(pendingRouteProvider.notifier).state = location;
+  }
+
+  return RouterGuards.evaluate(
+    authState: authState,
+    location: location,
+    pendingRoute: ref.read(pendingRouteProvider),
+    consumePendingRoute: () {
+      ref.read(pendingRouteProvider.notifier).state = null;
+    },
+  );
 }
 
-// ── Provider del router ───────────────────────────────────────────────────────
+// ── Árbol de rutas ────────────────────────────────────────────────────────────
 
-/// Provider del GoRouter. Se recrea cuando cambia el estado de auth
-/// para que el redirect global se re-evalúe.
-final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState    = ref.watch(authStateProvider);
-  final isFirstLaunchAsync = ref.watch(isFirstLaunchProvider);
+List<RouteBase> _buildRoutes() {
+  return [
+    // ── Auth Stack ────────────────────────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.splash,
+      builder: (_, __) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.login,
+      builder: (_, __) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.onboarding,
+      builder: (_, __) => const OnboardingScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.emailVerification,
+      builder: (context, state) {
+        final email = state.uri.queryParameters['email'] ?? '';
+        return VerifyEmailScreen(email: email);
+      },
+    ),
 
-  return GoRouter(
-    initialLocation: AppRoutes.splash,
-    debugLogDiagnostics: false,
-    redirect: (context, state) {
-      final isLoggedIn   = authState.valueOrNull != null;
-      final isAuthLoading = authState.isLoading;
-
-      // Mientras Firebase resuelve la sesión → quedarse en splash
-      if (isAuthLoading) return AppRoutes.splash;
-
-      final location = state.uri.path;
-
-      final isInAuthFlow = location == AppRoutes.login ||
-          location == AppRoutes.onboarding ||
-          location == AppRoutes.verifyEmail;
-
-      // Con sesión en splash o en auth flow → home
-      if (isLoggedIn && (location == AppRoutes.splash || isInAuthFlow)) {
-        return AppRoutes.home;
-      }
-
-      // Sin sesión → auth flow.
-      // Incluye splash: una vez que auth termina de cargar y no hay sesión,
-      // splash debe ceder el paso a onboarding o login (no quedarse colgado).
-      if (!isLoggedIn && !isInAuthFlow) {
-        final isFirstLaunch = isFirstLaunchAsync.valueOrNull ?? false;
-        return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.login;
-      }
-
-      return null; // sin redirect
-    },
-    routes: [
-      // ── Auth Stack ────────────────────────────────────────────────────────
-      GoRoute(
-        path: AppRoutes.splash,
-        builder: (context, state) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.onboarding,
-        builder: (context, state) => const OnboardingScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.login,
-        builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.verifyEmail,
-        builder: (context, state) {
-          final email = state.uri.queryParameters['email'] ?? '';
-          return VerifyEmailScreen(email: email);
-        },
-      ),
-
-      // ── CustomerTabs (StatefulShellRoute — estado preservado) ─────────────
-      StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            CustomerTabs(navigationShell: navigationShell),
-        branches: [
-          // Tab Inicio
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.home,
-                builder: (_, __) => const HomeScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'abierto-ahora',
-                    builder: (_, __) => const PlaceholderScreen(
-                      screenId: 'HOME-02',
-                      label: 'Abierto ahora',
-                    ),
+    // ── CustomerTabs (StatefulShellRoute con estado preservado) ───────────────
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) =>
+          CustomerTabs(navigationShell: navigationShell),
+      branches: [
+        // Tab Inicio
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, __) => const HomeScreen(),
+              routes: [
+                GoRoute(
+                  path: 'abierto-ahora',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'HOME-02',
+                    label: 'Abierto ahora',
                   ),
-                  GoRoute(
-                    path: 'farmacias-de-turno',
-                    builder: (_, __) => const PlaceholderScreen(
-                      screenId: 'HOME-03',
-                      label: 'Farmacias de turno',
-                    ),
+                ),
+                GoRoute(
+                  path: 'farmacias-de-turno',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'HOME-03',
+                    label: 'Farmacias de turno',
                   ),
-                ],
-              ),
-            ],
-          ),
-
-          // Tab Buscar
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.search,
-                builder: (_, __) => const SearchScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'mapa',
-                    builder: (_, __) => const PlaceholderScreen(
-                      screenId: 'SEARCH-03',
-                      label: 'Mapa',
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          // Tab Perfil
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: AppRoutes.profile,
-                builder: (_, __) => const ProfileScreen(),
-              ),
-            ],
-          ),
-        ],
-      ),
-
-      // ── Owner (modal full-screen) ─────────────────────────────────────────
-      GoRoute(
-        path: AppRoutes.owner,
-        pageBuilder: (context, state) => MaterialPage(
-          key: state.pageKey,
-          fullscreenDialog: true,
-          child: const OwnerPanelScreen(),
+                ),
+              ],
+            ),
+          ],
         ),
-        routes: [
-          GoRoute(
-            path: 'edit',
-            builder: (_, __) => const PlaceholderScreen(
-              screenId: 'OWNER-02',
-              label: 'Editar perfil del comercio',
-            ),
-          ),
-          GoRoute(
-            path: 'products',
-            builder: (_, __) => const PlaceholderScreen(
-              screenId: 'OWNER-03',
-              label: 'Productos',
-            ),
-          ),
-          GoRoute(
-            path: 'schedules',
-            builder: (_, __) => const PlaceholderScreen(
-              screenId: 'OWNER-06',
-              label: 'Horarios y señales',
-            ),
-          ),
-          GoRoute(
-            path: 'duties',
-            builder: (_, __) => const PlaceholderScreen(
-              screenId: 'OWNER-09',
-              label: 'Turnos de farmacia',
-            ),
-          ),
-        ],
-      ),
 
-      // ── Ficha de comercio (fuera del shell → sin tab bar) ─────────────────
-      GoRoute(
-        path: '/commerce/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return CommerceDetailScreen(commerceId: id);
-        },
-      ),
+        // Tab Buscar
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: AppRoutes.search,
+              builder: (_, __) => const SearchScreen(),
+              routes: [
+                GoRoute(
+                  path: 'resultados',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'SEARCH-02',
+                    label: 'Resultados de búsqueda',
+                  ),
+                ),
+                GoRoute(
+                  path: 'mapa',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'SEARCH-03',
+                    label: 'Mapa',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
 
-      // ── Onboarding owner (TuM2-0030 — path estable para no romper PR #15) ─
-      GoRoute(
-        path: AppRoutes.onboardingOwner,
-        builder: (context, state) {
-          final extra = state.extra as OnboardingDraft?;
-          return OnboardingOwnerFlow(
-            existingDraft: extra,
-            onComplete: () => context.go(AppRoutes.owner),
-            onExit: () => context.go(AppRoutes.home),
-          );
-        },
+        // Tab Perfil
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: AppRoutes.profile,
+              builder: (_, __) => const ProfileScreen(),
+              routes: [
+                GoRoute(
+                  path: 'settings',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'PROFILE-02',
+                    label: 'Configuración',
+                  ),
+                ),
+                GoRoute(
+                  path: 'propuestas',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'PROFILE-03',
+                    label: 'Propuestas y votos',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+
+    // ── OwnerStack (modal full-screen) ────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.owner,
+      pageBuilder: (context, state) => MaterialPage(
+        key: state.pageKey,
+        fullscreenDialog: true,
+        child: const OwnerPanelScreen(),
       ),
-    ],
-  );
-});
+      routes: [
+        GoRoute(
+          path: 'edit',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'OWNER-02',
+            label: 'Editar perfil del comercio',
+            roleRequired: 'owner',
+          ),
+        ),
+        GoRoute(
+          path: 'products',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'OWNER-03',
+            label: 'Productos',
+            roleRequired: 'owner',
+          ),
+        ),
+        GoRoute(
+          path: 'schedules',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'OWNER-06',
+            label: 'Horarios y señales',
+            roleRequired: 'owner',
+          ),
+        ),
+        GoRoute(
+          path: 'duties',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'OWNER-09',
+            label: 'Turnos de farmacia',
+            roleRequired: 'owner',
+          ),
+        ),
+      ],
+    ),
+
+    // ── AdminStack (modal full-screen) ────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.admin,
+      pageBuilder: (context, state) => MaterialPage(
+        key: state.pageKey,
+        fullscreenDialog: true,
+        child: const AdminPanelPlaceholderScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'merchants',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'ADMIN-02',
+            label: 'Comercios (moderación)',
+            roleRequired: 'admin',
+          ),
+        ),
+        GoRoute(
+          path: 'signals',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'ADMIN-04',
+            label: 'Señales reportadas',
+            roleRequired: 'admin',
+          ),
+        ),
+      ],
+    ),
+
+    // ── Shared Screens ─────────────────────────────────────────────────────────
+    // DETAIL-01: Ficha de comercio — fuera del shell, el tab bar se oculta.
+    GoRoute(
+      path: '/commerce/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return CommerceDetailScreen(commerceId: id);
+      },
+    ),
+
+    // DETAIL-03: Onboarding de owner — path estable para compatibilidad.
+    GoRoute(
+      path: AppRoutes.onboardingOwner,
+      builder: (context, state) {
+        final extra = state.extra as OnboardingDraft?;
+        return OnboardingOwnerFlow(
+          existingDraft: extra,
+          onComplete: () => context.go(AppRoutes.owner),
+          onExit: () => context.go(AppRoutes.home),
+        );
+      },
+    ),
+  ];
+}

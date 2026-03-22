@@ -40,7 +40,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0030]** Diseñar onboarding OWNER ✅ | UX/UI — flujo completo implementado: draft entry, step1 tipo+nombre, step2 dirección, step3 horarios, step4 confirmación |
 | **[0033]** Diseñar ficha pública de comercio ✅ | UX/UI — HOME-01 Detail diseñado por Stitches: hero imagen, badge ABIERTO, info rows, mapa, acciones, historia y galería |
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
-| **[0053]** Implementar shell de app ✅ | Mobile app — shell completo con StatefulShellRoute 3 tabs (Inicio/Buscar/Perfil), guards auth, owner modal, commerce detail, PlaceholderScreen para sub-rutas |
+| **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
 
 ---
 

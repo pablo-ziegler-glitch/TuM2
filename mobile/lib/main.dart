@@ -1,12 +1,7 @@
-import 'dart:async';
-
-import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/firebase/firebase_options.dart';
-import 'core/providers/auth_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
 
@@ -85,6 +80,10 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
           surface: AppColors.surface,
         ),
         scaffoldBackgroundColor: AppColors.scaffoldBg,
+        navigationBarTheme: const NavigationBarThemeData(
+          backgroundColor: AppColors.surface,
+          indicatorColor: AppColors.primary100,
+        ),
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),

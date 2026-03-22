@@ -1,0 +1,280 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../auth/auth_notifier.dart';
+import '../auth/auth_state.dart';
+import 'app_routes.dart';
+import 'router_guards.dart';
+import '../../modules/auth/screens/splash_screen.dart';
+import '../../modules/auth/screens/login_placeholder_screen.dart';
+import '../../modules/auth/screens/onboarding_placeholder_screen.dart';
+import '../../modules/home/screens/home_placeholder_screen.dart';
+import '../../modules/search/screens/search_placeholder_screen.dart';
+import '../../modules/profile/screens/profile_placeholder_screen.dart';
+import '../../modules/owner/screens/owner_panel_placeholder_screen.dart';
+import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
+import '../../modules/shared/screens/commerce_detail_placeholder_screen.dart';
+import '../../modules/shell/customer_tabs.dart';
+import '../../modules/brand/onboarding_owner/onboarding_owner_flow.dart';
+import '../../modules/brand/onboarding_owner/models/onboarding_draft.dart';
+import '../../shared/widgets/placeholder_screen.dart';
+
+// ── Pending route (deep link pre-auth) ───────────────────────────────────────
+
+/// Ruta pendiente guardada cuando un deep link llega sin sesión activa.
+/// Se restaura automáticamente tras el login exitoso.
+final pendingRouteProvider = StateProvider<String?>((ref) => null);
+
+// ── Router provider ──────────────────────────────────────────────────────────
+
+/// Provider del [GoRouter] de la aplicación.
+///
+/// Se mantiene vivo durante toda la sesión (keepAlive). Usa [AuthNotifier]
+/// como [refreshListenable] para re-evaluar los guards cada vez que
+/// el estado de autenticación cambia.
+final routerProvider = Provider<GoRouter>((ref) {
+  // Provider no-autoDispose: el router vive durante toda la sesión de la app.
+  final authNotifier = ref.read(authNotifierProvider);
+
+  final router = GoRouter(
+    initialLocation: AppRoutes.splash,
+    refreshListenable: authNotifier,
+    redirect: (context, state) => _buildRedirect(ref, state),
+    routes: _buildRoutes(),
+  );
+
+  ref.onDispose(router.dispose);
+  return router;
+});
+
+// ── Redirect global ──────────────────────────────────────────────────────────
+
+String? _buildRedirect(Ref ref, GoRouterState state) {
+  final authState = ref.read(authNotifierProvider).authState;
+  final location = state.uri.toString();
+
+  // Si el estado no está autenticado y la ruta es protegida, guardar pending route
+  if (authState is AuthUnauthenticated && !RouterGuards.isPublicPath(location)) {
+    ref.read(pendingRouteProvider.notifier).state = location;
+  }
+
+  return RouterGuards.evaluate(
+    authState: authState,
+    location: location,
+    pendingRoute: ref.read(pendingRouteProvider),
+    consumePendingRoute: () {
+      ref.read(pendingRouteProvider.notifier).state = null;
+    },
+  );
+}
+
+// ── Árbol de rutas ────────────────────────────────────────────────────────────
+
+List<RouteBase> _buildRoutes() {
+  return [
+    // ── Auth Stack ────────────────────────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.splash,
+      builder: (_, __) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.login,
+      builder: (_, __) => const LoginPlaceholderScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.onboarding,
+      builder: (_, __) => const OnboardingPlaceholderScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.emailVerification,
+      builder: (_, __) => const PlaceholderScreen(
+        screenId: 'AUTH-04',
+        label: 'Verificación de email',
+      ),
+    ),
+
+    // ── CustomerTabs (StatefulShellRoute con estado preservado) ───────────────
+    StatefulShellRoute.indexedStack(
+      builder: (context, state, navigationShell) {
+        return CustomerTabs(navigationShell: navigationShell);
+      },
+      branches: [
+        // Tab Inicio
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, __) => const HomePlaceholderScreen(),
+              routes: [
+                GoRoute(
+                  path: 'abierto-ahora',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'HOME-02',
+                    label: 'Abierto ahora',
+                  ),
+                ),
+                GoRoute(
+                  path: 'farmacias-de-turno',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'HOME-03',
+                    label: 'Farmacias de turno',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // Tab Buscar
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: AppRoutes.search,
+              builder: (_, __) => const SearchPlaceholderScreen(),
+              routes: [
+                GoRoute(
+                  path: 'resultados',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'SEARCH-02',
+                    label: 'Resultados de búsqueda',
+                  ),
+                ),
+                GoRoute(
+                  path: 'mapa',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'SEARCH-03',
+                    label: 'Mapa',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // Tab Perfil
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: AppRoutes.profile,
+              builder: (_, __) => const ProfilePlaceholderScreen(),
+              routes: [
+                GoRoute(
+                  path: 'settings',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'PROFILE-02',
+                    label: 'Configuración',
+                  ),
+                ),
+                GoRoute(
+                  path: 'propuestas',
+                  builder: (_, __) => const PlaceholderScreen(
+                    screenId: 'PROFILE-03',
+                    label: 'Propuestas y votos',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+
+    // ── OwnerStack (modal full-screen) ────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.owner,
+      pageBuilder: (context, state) => MaterialPage(
+        key: state.pageKey,
+        fullscreenDialog: true,
+        child: const OwnerPanelPlaceholderScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'edit',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'OWNER-02',
+            label: 'Editar perfil del comercio',
+            roleRequired: 'owner',
+          ),
+        ),
+        GoRoute(
+          path: 'products',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'OWNER-03',
+            label: 'Productos',
+            roleRequired: 'owner',
+          ),
+        ),
+        GoRoute(
+          path: 'schedules',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'OWNER-06',
+            label: 'Horarios y señales',
+            roleRequired: 'owner',
+          ),
+        ),
+        GoRoute(
+          path: 'duties',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'OWNER-09',
+            label: 'Turnos de farmacia',
+            roleRequired: 'owner',
+          ),
+        ),
+      ],
+    ),
+
+    // ── AdminStack (modal full-screen) ────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.admin,
+      pageBuilder: (context, state) => MaterialPage(
+        key: state.pageKey,
+        fullscreenDialog: true,
+        child: const AdminPanelPlaceholderScreen(),
+      ),
+      routes: [
+        GoRoute(
+          path: 'merchants',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'ADMIN-02',
+            label: 'Comercios (moderación)',
+            roleRequired: 'admin',
+          ),
+        ),
+        GoRoute(
+          path: 'signals',
+          builder: (_, __) => const PlaceholderScreen(
+            screenId: 'ADMIN-04',
+            label: 'Señales reportadas',
+            roleRequired: 'admin',
+          ),
+        ),
+      ],
+    ),
+
+    // ── Shared Screens ─────────────────────────────────────────────────────────
+    // DETAIL-01: Ficha de comercio — accesible desde cualquier stack.
+    // Al estar fuera del StatefulShellRoute, el tab bar se oculta naturalmente.
+    GoRoute(
+      path: '/commerce/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return CommerceDetailPlaceholderScreen(commerceId: id);
+      },
+    ),
+
+    // DETAIL-03: Onboarding de owner — mantiene el path existente para
+    // compatibilidad con OnboardingOwnerFlow (TuM2-0052).
+    GoRoute(
+      path: AppRoutes.onboardingOwner,
+      builder: (context, state) {
+        final extra = state.extra as OnboardingDraft?;
+        return OnboardingOwnerFlow(
+          existingDraft: extra,
+          onComplete: () => context.go(AppRoutes.owner),
+          onExit: () => context.go(AppRoutes.home),
+        );
+      },
+    ),
+  ];
+}

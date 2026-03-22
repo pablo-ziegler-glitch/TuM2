@@ -22,6 +22,15 @@ export { nightlyRefreshPharmacyDutyFlags } from "./jobs/refreshDuties";
 
 export { updateZoneCoverageMetrics, scheduledRefreshZoneCoverage } from "./coverage/zoneCoverage";
 
+// ─── Owner Onboarding Callables ────────────────────────────────────────────
+
+export { onboardingOwnerSubmit } from "./callables/onboardingOwnerSubmit";
+export { checkMerchantDuplicates } from "./callables/checkMerchantDuplicates";
+
+// ─── Onboarding Scheduled Jobs ─────────────────────────────────────────────
+
+export { nightlyCleanupExpiredDrafts } from "./jobs/cleanupExpiredDrafts";
+
 // ─── Admin Callables ───────────────────────────────────────────────────────
 
 export { runZoneBootstrapBatch } from "./jobs/bootstrap";

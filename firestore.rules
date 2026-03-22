@@ -37,13 +37,29 @@ service cloud.firestore {
     // Users can read/write their own document (except role field).
     // Admins can read all users.
 
+    // Returns true if the draftMerchantId field is being changed after it was
+    // already set. Prevents client-side replay attacks on the onboarding submit.
+    function draftMerchantIdUnchanged() {
+      let progress = 'onboardingOwnerProgress';
+      let existingId = resource.data[progress].draftMerchantId;
+      let newId = request.resource.data[progress].draftMerchantId;
+      // Allow if it was null/unset before, or if it stays the same
+      return existingId == null || existingId == newId;
+    }
+
+    function onboardingProgressExists() {
+      return 'onboardingOwnerProgress' in resource.data
+          && resource.data.onboardingOwnerProgress != null;
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId)
         && !('role' in request.resource.data)
             || request.resource.data.role == 'customer';
       allow update: if isOwner(userId)
-        && !('role' in request.resource.data.diff(resource.data).affectedKeys());
+        && !('role' in request.resource.data.diff(resource.data).affectedKeys())
+        && (!onboardingProgressExists() || draftMerchantIdUnchanged());
       allow update: if isAdmin();
       allow delete: if isSuperAdmin();
     }

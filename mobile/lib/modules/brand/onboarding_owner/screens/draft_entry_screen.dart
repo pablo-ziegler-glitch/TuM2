@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_text_styles.dart';
 import '../models/onboarding_draft.dart';
+import '../repositories/onboarding_owner_repository.dart';
+import '../analytics/onboarding_analytics.dart';
 
 /// Pantalla pre-step que aparece cuando hay un borrador existente.
 ///
@@ -12,19 +14,50 @@ class DraftEntryScreen extends StatelessWidget {
   final OnboardingDraft draft;
   final VoidCallback onResume;
   final VoidCallback onStartFresh;
+  final OnboardingOwnerRepository ownerRepository;
 
   const DraftEntryScreen({
     super.key,
     required this.draft,
     required this.onResume,
     required this.onStartFresh,
+    required this.ownerRepository,
   });
+
+  Future<void> _handleResume(BuildContext context) async {
+    await ownerRepository.extendTTL();
+    OnboardingAnalytics.logDraftResumed();
+    onResume();
+  }
+
+  Future<void> _handleDiscard(BuildContext context) async {
+    await ownerRepository.discardDraft();
+    OnboardingAnalytics.logDraftDiscarded();
+    onStartFresh();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (draft.isExpired) return _ExpiredView(draft: draft, onStartFresh: onStartFresh);
-    if (draft.isAboutToExpire) return _ResumableView(draft: draft, onResume: onResume, onStartFresh: onStartFresh, isUrgent: true);
-    return _ResumableView(draft: draft, onResume: onResume, onStartFresh: onStartFresh, isUrgent: false);
+    if (draft.isExpired) {
+      return _ExpiredView(
+        draft: draft,
+        onStartFresh: () => _handleDiscard(context),
+      );
+    }
+    if (draft.isAboutToExpire) {
+      return _ResumableView(
+        draft: draft,
+        onResume: () => _handleResume(context),
+        onStartFresh: () => _handleDiscard(context),
+        isUrgent: true,
+      );
+    }
+    return _ResumableView(
+      draft: draft,
+      onResume: () => _handleResume(context),
+      onStartFresh: () => _handleDiscard(context),
+      isUrgent: false,
+    );
   }
 }
 

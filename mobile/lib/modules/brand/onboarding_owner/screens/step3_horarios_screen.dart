@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_text_styles.dart';
+import '../models/onboarding_draft.dart';
+import '../repositories/onboarding_owner_repository.dart';
 import '../widgets/step_indicator.dart';
 import '../widgets/exit_modal.dart';
 import '../widgets/schedule_row.dart';
+import '../analytics/onboarding_analytics.dart';
 
 /// ONBOARDING-OWNER-03 — Paso 3: Horarios iniciales
 ///
@@ -13,10 +16,11 @@ import '../widgets/schedule_row.dart';
 ///
 /// El usuario puede skipear con "Completar después" (step3Skipped: true).
 class Step3HorariosScreen extends StatefulWidget {
-  final VoidCallback onNext; // SAVE_STEP_3
-  final VoidCallback onSkip; // SKIP_STEP_3
+  final ValueChanged<List<DaySchedule>> onNext; // SAVE_STEP_3
+  final VoidCallback onSkip;                    // SKIP_STEP_3
   final VoidCallback onBack;
   final VoidCallback onExit;
+  final OnboardingOwnerRepository ownerRepository;
 
   const Step3HorariosScreen({
     super.key,
@@ -24,6 +28,7 @@ class Step3HorariosScreen extends StatefulWidget {
     required this.onSkip,
     required this.onBack,
     required this.onExit,
+    required this.ownerRepository,
   });
 
   @override
@@ -37,13 +42,13 @@ class _Step3HorariosScreenState extends State<Step3HorariosScreen> {
   void initState() {
     super.initState();
     _schedules = [
-      DaySchedule(day: 'Lun', openTime: const TimeOfDay(hour: 9, minute: 0),  closeTime: const TimeOfDay(hour: 20, minute: 0)),
-      DaySchedule(day: 'Mar', openTime: const TimeOfDay(hour: 18, minute: 0), closeTime: const TimeOfDay(hour: 8, minute: 0)),  // EX-11: error precargado
-      DaySchedule(day: 'Mié', openTime: const TimeOfDay(hour: 9, minute: 0),  closeTime: const TimeOfDay(hour: 20, minute: 0)),
-      DaySchedule(day: 'Jue', openTime: const TimeOfDay(hour: 9, minute: 0),  closeTime: const TimeOfDay(hour: 20, minute: 0)),
-      DaySchedule(day: 'Vie', openTime: const TimeOfDay(hour: 9, minute: 0),  closeTime: const TimeOfDay(hour: 21, minute: 0)),
-      DaySchedule(day: 'Sáb', openTime: const TimeOfDay(hour: 10, minute: 0), closeTime: const TimeOfDay(hour: 14, minute: 0)),
-      DaySchedule(day: 'Dom', enabled: false, openTime: const TimeOfDay(hour: 9, minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(day: 'Lun', dayKey: 'monday',    openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(day: 'Mar', dayKey: 'tuesday',   openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(day: 'Mié', dayKey: 'wednesday', openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(day: 'Jue', dayKey: 'thursday',  openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(day: 'Vie', dayKey: 'friday',    openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 21, minute: 0)),
+      DaySchedule(day: 'Sáb', dayKey: 'saturday',  openTime: const TimeOfDay(hour: 10, minute: 0), closeTime: const TimeOfDay(hour: 14, minute: 0)),
+      DaySchedule(day: 'Dom', dayKey: 'sunday',    enabled: false, openTime: const TimeOfDay(hour: 9, minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
     ];
   }
 
@@ -54,9 +59,32 @@ class _Step3HorariosScreenState extends State<Step3HorariosScreen> {
 
   Future<void> _onExitTap() async {
     final action = await showExitModal(context);
-    if (action == ExitAction.saveDraft || action == ExitAction.discard) {
+    if (action == ExitAction.saveDraft) {
+      await widget.ownerRepository.abandonDraft();
+      OnboardingAnalytics.logExited('step_3');
+      widget.onExit();
+    } else if (action == ExitAction.discard) {
+      await widget.ownerRepository.discardDraft();
+      OnboardingAnalytics.logDraftDiscarded();
       widget.onExit();
     }
+  }
+
+  Future<void> _onSave() async {
+    if (!_canContinue) return;
+    try {
+      await widget.ownerRepository.saveStep3(_schedules);
+    } catch (_) {
+      // Error de red: continuar de todos modos (se guardará en el submit)
+    }
+    widget.onNext(_schedules);
+  }
+
+  Future<void> _onSkip() async {
+    try {
+      await widget.ownerRepository.skipStep3();
+    } catch (_) {}
+    widget.onSkip();
   }
 
   @override
@@ -133,7 +161,7 @@ class _Step3HorariosScreenState extends State<Step3HorariosScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ElevatedButton(
-                    onPressed: _canContinue ? widget.onNext : null,
+                    onPressed: _canContinue ? _onSave : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary500,
                       foregroundColor: Colors.white,
@@ -147,7 +175,7 @@ class _Step3HorariosScreenState extends State<Step3HorariosScreen> {
                   ),
                   const SizedBox(height: 10),
                   TextButton(
-                    onPressed: widget.onSkip,
+                    onPressed: _onSkip,
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.neutral700,
                     ),

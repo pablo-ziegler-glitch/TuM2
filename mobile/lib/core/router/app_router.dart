@@ -54,8 +54,13 @@ String? _buildRedirect(Ref ref, GoRouterState state) {
   final authState = ref.read(authNotifierProvider).authState;
   final location = state.uri.toString();
 
-  // Si el estado no está autenticado y la ruta es protegida, guardar pending route
-  if (authState is AuthUnauthenticated && !RouterGuards.isPublicPath(location)) {
+  // Guardar pending route para deep links — tanto en cold-start (AuthLoading) como
+  // cuando la sesión no está activa (AuthUnauthenticated), para no perder la URL destino.
+  final shouldSavePending =
+      (authState is AuthLoading || authState is AuthUnauthenticated) &&
+      !RouterGuards.isPublicPath(location) &&
+      location != AppRoutes.splash;
+  if (shouldSavePending) {
     ref.read(pendingRouteProvider.notifier).state = location;
   }
 

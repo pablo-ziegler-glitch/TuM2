@@ -53,20 +53,20 @@ abstract class RouterGuards {
         if (isPublicPath(location)) return null;
         return AppRoutes.login;
 
-      case AuthAuthenticated(:final role, :final merchantId):
+      case AuthAuthenticated(:final role, :final onboardingComplete):
         // Desde ruta de auth → navegar al destino autenticado
         if (isAuthPath(location)) {
           return _authenticatedHome(
             role: role,
-            merchantId: merchantId,
+            onboardingComplete: onboardingComplete,
             pendingRoute: pendingRoute,
             consumePendingRoute: consumePendingRoute,
           );
         }
 
-        // Owner sin comercio → onboarding
+        // Owner que no completó el onboarding → redirigir a flujo de alta
         if (role == 'owner' &&
-            merchantId == null &&
+            !onboardingComplete &&
             !location.startsWith('/onboarding/owner')) {
           return AppRoutes.onboardingOwner;
         }
@@ -87,7 +87,7 @@ abstract class RouterGuards {
 
   static String _authenticatedHome({
     required String role,
-    required String? merchantId,
+    required bool onboardingComplete,
     String? pendingRoute,
     void Function()? consumePendingRoute,
   }) {
@@ -95,7 +95,7 @@ abstract class RouterGuards {
       consumePendingRoute?.call();
       return pendingRoute;
     }
-    if (role == 'owner' && merchantId == null) {
+    if (role == 'owner' && !onboardingComplete) {
       return AppRoutes.onboardingOwner;
     }
     return AppRoutes.home;

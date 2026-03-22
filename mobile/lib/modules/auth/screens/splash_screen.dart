@@ -34,14 +34,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     _startTimeoutGuard();
   }
 
-  /// Si tras 5 segundos el estado sigue siendo [AuthLoading], ir a /login
-  /// y mostrar un banner de error de conectividad.
+  /// Si tras 5 segundos el estado sigue siendo [AuthLoading], fuerza
+  /// AuthUnauthenticated para que el redirect global lleve a /login.
+  /// Navegar directamente con context.go() quedaría atrapado en el guard
+  /// que redirige a splash mientras el estado sea AuthLoading.
   void _startTimeoutGuard() {
     _timeoutTimer = Timer(const Duration(seconds: 5), () {
       if (!mounted) return;
       final current = ref.read(authNotifierProvider).authState;
       if (current is AuthLoading) {
-        context.go(AppRoutes.login);
+        ref.read(authNotifierProvider).forceUnauthenticated();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(

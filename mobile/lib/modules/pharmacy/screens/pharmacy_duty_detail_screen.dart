@@ -1,8 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+
+// ── Helpers de acción nativa ──────────────────────────────────────────────────
+
+Future<void> _openMaps(String address) async {
+  final encoded = Uri.encodeComponent(address);
+  final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$encoded');
+  if (await canLaunchUrl(uri)) await launchUrl(uri,
+      mode: LaunchMode.externalApplication);
+}
+
+Future<void> _callPhone(String phone) async {
+  final cleaned = phone.replaceAll(RegExp(r'[\s\-()]'), '');
+  final uri = Uri.parse('tel:$cleaned');
+  if (await canLaunchUrl(uri)) await launchUrl(uri);
+}
 
 // ── Demo data (reemplazar con carga Firestore en TuM2-0061) ──────────────────
 
@@ -127,7 +144,7 @@ class PharmacyDutyDetailScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => _openMaps(data.address),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary500,
                         foregroundColor: AppColors.surface,
@@ -150,7 +167,7 @@ class PharmacyDutyDetailScreen extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => _callPhone(data.phone),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.neutral900,
                         side: BorderSide(color: AppColors.neutral300),

@@ -1,9 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+
+// ── Helpers de acción nativa ──────────────────────────────────────────────────
+
+Future<void> _openMaps(String address) async {
+  final encoded = Uri.encodeComponent(address);
+  final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$encoded');
+  if (await canLaunchUrl(uri)) await launchUrl(uri,
+      mode: LaunchMode.externalApplication);
+}
+
+Future<void> _callPhone(String phone) async {
+  final cleaned = phone.replaceAll(RegExp(r'[\s\-()]'), '');
+  final uri = Uri.parse('tel:$cleaned');
+  if (await canLaunchUrl(uri)) await launchUrl(uri);
+}
 
 // ── Modelos de demo ───────────────────────────────────────────────────────────
 // Reemplazar con carga Firestore en TuM2-0061
@@ -15,6 +32,7 @@ typedef _PharmacyData = ({
   String name,
   String address,
   String distanceText,
+  int distanceMeters,
   String dutyUntil,
   _TrustLevel trust,
   String phone,
@@ -26,6 +44,7 @@ const List<_PharmacyData> _demoPharmacies = [
     name: 'Farmacia Central Palermo',
     address: 'Av. Independencia 1420, CABA',
     distanceText: 'A 450m de tu ubicación',
+    distanceMeters: 450,
     dutyUntil: 'hasta mañana 08:30',
     trust: _TrustLevel.official,
     phone: '+54 11 4321-9876',
@@ -35,6 +54,7 @@ const List<_PharmacyData> _demoPharmacies = [
     name: 'Farmacia del Jardín',
     address: 'Scalabrini Ortiz 2105, CABA',
     distanceText: 'A 820m de tu ubicación',
+    distanceMeters: 820,
     dutyUntil: 'hasta mañana 08:30',
     trust: _TrustLevel.verified,
     phone: '+54 11 4567-8901',
@@ -44,6 +64,7 @@ const List<_PharmacyData> _demoPharmacies = [
     name: 'Nueva Era Farmacias',
     address: 'Av. Las Heras 3800, CABA',
     distanceText: 'A 1.2km de tu ubicación',
+    distanceMeters: 1200,
     dutyUntil: 'hasta mañana 08:30',
     trust: _TrustLevel.unverified,
     phone: '+54 11 4890-1234',
@@ -506,10 +527,29 @@ class _ResultsBody extends StatelessWidget {
   final VoidCallback onChangeZone;
   final List<_PharmacyData> pharmacies;
 
+  // Farmacias con filtros aplicados.
+  // filterCerca: ordena por distancia ascendente.
+  // filterConfianza: muestra solo official y verified.
+  List<_PharmacyData> get _filtered {
+    var list = [...pharmacies];
+    if (filterConfianza) {
+      list = list
+          .where((p) =>
+              p.trust == _TrustLevel.official ||
+              p.trust == _TrustLevel.verified)
+          .toList();
+    }
+    if (filterCerca) {
+      list.sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+    }
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final dayLabel = _dayLabel(now);
+    final filtered = _filtered;
 
     return CustomScrollView(
       slivers: [
@@ -641,16 +681,31 @@ class _ResultsBody extends StatelessWidget {
             ),
           ),
         ),
-        // Lista de farmacias
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, i) => Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: _PharmacyCard(data: pharmacies[i]),
+        // Lista de farmacias (con filtros aplicados)
+        if (filtered.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+              child: Center(
+                child: Text(
+                  'Ningún resultado coincide con los filtros activos.',
+                  style: AppTextStyles.bodyMd
+                      .copyWith(color: AppColors.neutral500),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
-            childCount: pharmacies.length,
+          )
+        else
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) => Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: _PharmacyCard(data: filtered[i]),
+              ),
+              childCount: filtered.length,
+            ),
           ),
-        ),
         // Sección: Información importante
         SliverToBoxAdapter(
           child: _InfoImportanteSection(),
@@ -801,7 +856,7 @@ class _PharmacyCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => _openMaps(data.address),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary500,
                         foregroundColor: AppColors.surface,
@@ -822,7 +877,7 @@ class _PharmacyCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  _PhoneButton(),
+                  _PhoneButton(phone: data.phone),
                 ],
               ),
             ],
@@ -901,10 +956,13 @@ class _TrustBadge extends StatelessWidget {
 }
 
 class _PhoneButton extends StatelessWidget {
+  const _PhoneButton({required this.phone});
+  final String phone;
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () => _callPhone(phone),
       child: Container(
         width: 42,
         height: 42,

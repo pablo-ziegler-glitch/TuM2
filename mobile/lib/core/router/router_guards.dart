@@ -15,8 +15,11 @@ abstract class RouterGuards {
   /// Devuelve true si el path no requiere sesión activa.
   static bool isPublicPath(String path) {
     if (publicPaths.contains(path)) return true;
-    // /commerce/:id es público (contenido visible sin login)
+    // /commerce/:id y /pharmacy/:id son públicos (contenido visible sin login)
     if (path.startsWith('/commerce/')) return true;
+    if (path.startsWith('/pharmacy/')) return true;
+    // La vista listado de farmacias de turno también es pública
+    if (path == AppRoutes.homeFarmacias) return true;
     return false;
   }
 

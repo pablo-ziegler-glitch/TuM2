@@ -41,6 +41,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0033]** Diseñar ficha pública de comercio ✅ | UX/UI — HOME-01 Detail diseñado por Stitches: hero imagen, badge ABIERTO, info rows, mapa, acciones, historia y galería |
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
 | **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
+| **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — SEARCH-01 diseñado: rubros TuM2 (Farmacias/Kioscos/Almacenes/Veterinarias/Panaderías), search bar interactivo, accesos rápidos "Abierto ahora" y "Farmacias de turno", hero card, tarjeta mapa |
 
 ---
 
@@ -90,7 +91,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0028] **Diseñar navegación principal** — P0 — `UX/UI, Mobile, Fundacional` ✅
 - [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP` ✅
 - [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP` ✅
-- [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP`
+- [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP` ✅
 - [0032] **Diseñar pantalla Mapa** — P1 — `UX/UI, MVP`
 - [0033] **Diseñar ficha pública de comercio** — P0 — `UX/UI, Producto, MVP` ✅
 - [0034] **Diseñar ficha de producto** — P1 — `UX/UI, MVP`

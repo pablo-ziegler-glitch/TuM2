@@ -127,12 +127,20 @@ TuM2 App
 
 ---
 
-### SEARCH-01 — Buscar
+### SEARCH-01 — Buscar ✅ diseñado
 - **Propósito:** descubrimiento activo por texto o categoría.
 - **Modos:**
-  - Categoría rápida (chips): Farmacias, Kioscos, Almacenes, Veterinarias, Panaderías, +.
-  - Búsqueda por texto libre.
-- **Salida:** → SEARCH-02 (resultados), → SEARCH-03 (mapa).
+  - Categoría rápida (chips): Farmacias, Kioscos, Almacenes, Veterinarias, Panaderías, Todo.
+  - Búsqueda por texto libre (tap en barra → SEARCH-02).
+- **Bloques de UI:**
+  - Header: label "CERCA DE VOS" + título "Explorar" + ícono mapa (→ SEARCH-03).
+  - Barra de búsqueda tappable → SEARCH-02.
+  - Chips de categoría horizontales scrolleables; tap en rubro → SEARCH-02.
+  - Sección "Accesos rápidos": grilla 2 columnas — "Abierto ahora" (→ HOME-02) y "Farmacias de turno" (→ HOME-03).
+  - Sección "Destacado cerca tuyo": hero card 200px con gradient, badge DESTACADO, → DETAIL-01.
+  - Tarjeta "Ver comercios en el mapa" → SEARCH-03.
+- **Archivo:** `mobile/lib/modules/search/screens/search_screen.dart`
+- **Salida:** → SEARCH-02 (resultados), → SEARCH-03 (mapa), → DETAIL-01, → HOME-02, → HOME-03.
 
 ### SEARCH-02 — Resultados de búsqueda
 - **Fuente:** `merchant_public` filtrado por `categoryTags` o text search (Algolia / Typesense en el futuro; client-side en MVP).

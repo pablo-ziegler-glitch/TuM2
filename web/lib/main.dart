@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_text_styles.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Inicializa los datos de localización para fechas en español
+  await initializeDateFormatting('es', null);
   runApp(const TuM2AdminApp());
 }
 

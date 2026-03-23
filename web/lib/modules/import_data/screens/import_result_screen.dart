@@ -18,27 +18,29 @@ class ImportResultScreen extends StatefulWidget {
 }
 
 class _ImportResultScreenState extends State<ImportResultScreen> {
-  late ImportBatchUi _batch;
+  ImportBatchUi? _batch;
   bool _reverted = false;
 
   @override
   void initState() {
     super.initState();
-    // Busca el batch en los datos mock
-    _batch = mockBatches.firstWhere(
-      (b) => b.id == widget.batchId,
-      orElse: () => mockBatches.first,
-    );
+    // Busca el batch en los datos mock; null si no existe (fail closed)
+    try {
+      _batch = mockBatches.firstWhere((b) => b.id == widget.batchId);
+    } catch (_) {
+      _batch = null;
+    }
   }
 
   Future<void> _handleRevert() async {
-    final confirmed = await showRevertConfirmDialog(context, _batch);
+    if (_batch == null) return;
+    final confirmed = await showRevertConfirmDialog(context, _batch!);
     if (confirmed && mounted) {
       setState(() => _reverted = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Importación revertida. ${_batch.createdCount} establecimientos desactivados.',
+            'Importación revertida. ${_batch!.createdCount} establecimientos desactivados.',
             style: AppTextStyles.bodySm.copyWith(color: Colors.white),
           ),
           backgroundColor: AppColors.neutral900,
@@ -51,7 +53,38 @@ class _ImportResultScreenState extends State<ImportResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = DateFormat('dd \'de\' MMMM \'de\' yyyy — HH:mm \'hs\'', 'es').format(_batch.createdAt);
+    // Muestra pantalla de no encontrado si el batchId es inválido o inexistente
+    if (_batch == null) {
+      return Scaffold(
+        backgroundColor: AppColors.scaffoldBg,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.search_off_outlined, size: 48, color: AppColors.neutral400),
+              const SizedBox(height: 16),
+              Text('Importación no encontrada', style: AppTextStyles.headingSm),
+              const SizedBox(height: 8),
+              Text(
+                'El ID "${widget.batchId}" no corresponde a ningún batch registrado.',
+                style: AppTextStyles.bodySm,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/datasets'),
+                icon: const Icon(Icons.arrow_back, size: 16),
+                label: const Text('Volver al listado'),
+                style: OutlinedButton.styleFrom(foregroundColor: AppColors.primary500),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final batch = _batch!;
+    final dateStr = DateFormat('dd \'de\' MMMM \'de\' yyyy — HH:mm \'hs\'', 'es').format(batch.createdAt);
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
@@ -61,23 +94,23 @@ class _ImportResultScreenState extends State<ImportResultScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Encabezado
-            _ResultHeader(batch: _batch, dateStr: dateStr, reverted: _reverted),
+            _ResultHeader(batch: batch, dateStr: dateStr, reverted: _reverted),
             const SizedBox(height: 28),
             // Stats de procesamiento
-            _ProcessingStats(batch: _batch),
+            _ProcessingStats(batch: batch),
             const SizedBox(height: 24),
             // Fila inferior: próximos pasos + info del archivo
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _NextStepsCard(batch: _batch)),
+                Expanded(child: _NextStepsCard(batch: batch)),
                 const SizedBox(width: 16),
-                SizedBox(width: 300, child: _FileInfoCard(batch: _batch)),
+                SizedBox(width: 300, child: _FileInfoCard(batch: batch)),
               ],
             ),
             const SizedBox(height: 24),
             // Errores
-            if (_batch.errors.isNotEmpty) _ErrorsSection(batch: _batch),
+            if (batch.errors.isNotEmpty) _ErrorsSection(batch: batch),
             const SizedBox(height: 24),
             // Botón de reversión
             if (!_reverted)

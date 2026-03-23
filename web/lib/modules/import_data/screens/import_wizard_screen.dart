@@ -40,6 +40,7 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
       0 => _datasetType != null && _zone != null && _fileName != null,
       1 => true,
       2 => true,
+      3 => true, // paso final: habilita "Iniciar importación"
       _ => false,
     };
   }

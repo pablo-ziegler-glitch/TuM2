@@ -15,6 +15,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | Definición ✅ | Actividad completada |
 |---|---|
 | **[0001]** Definir propuesta de valor final ✅ | Dirección del producto — propuesta de valor final definida y documentada |
+| **[0003]** Cerrar alcance real del MVP ✅ | Dirección del producto — scope MVP congelado, documentado en docs/MVP-SCOPE.md: IN/OUT, guardrails, decisiones clave, BDD, analytics, roadmap y rollout |
 | **[0005]** Mantener actualizado VISION.md ✅ | Documentación maestra — VISION.md actualizado y vigente |
 | **[0006]** Mantener actualizado PRD-MVP.md ✅ | Documentación maestra — PRD-MVP.md actualizado y vigente |
 | **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
@@ -57,7 +58,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0001] **Definir propuesta de valor final de TuM2** — P0 — `Producto, Fundacional` ✅
 - [0002] **Definir claim principal de marca** — P1 — `Branding, Producto, Fundacional`
   - Opciones: "Lo que necesitás, en tu zona" / "Todo lo que pasa en tu metro cuadrado" / "Comercios reales, cerca tuyo"
-- [0003] **Cerrar alcance real del MVP** — P0 — `Producto, Fundacional`
+- [0003] **Cerrar alcance real del MVP** — P0 — `Producto, Fundacional` ✅
 - [0004] **Cerrar segmentos principales** — P0 — `Producto, Seguridad, Fundacional`
   - OWNER, CUSTOMER y ADMIN con sus objetivos
 

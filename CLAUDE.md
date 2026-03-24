@@ -43,6 +43,11 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
+| **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
+| **[0036]** Diseñar vista Abierto ahora ✅ | UX/UI — HOME-02 implementado: header con zona activa + indicador en vivo, filtro por categoría (6 rubros), lista de comercios con horario de cierre y action buttons, barra "Ver en el mapa" |
+| **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
+| **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 diseñado por Stitches e implementado: listado con badges de turno y confianza, 4 estados (sin ubicación, cargando, resultados, vacío), detalle con verificación, mapa, CTAs y reporte |
+| **[0061]** Implementar vista Farmacias de turno ✅ | Mobile app — PharmacyDutyScreen y PharmacyDutyDetailScreen implementados con datos demo; ruta /pharmacy/:id fuera del shell; integración Firestore pendiente en fase siguiente |
 
 ---
 
@@ -92,12 +97,12 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0028] **Diseñar navegación principal** — P0 — `UX/UI, Mobile, Fundacional` ✅
 - [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP` ✅
 - [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP` ✅
-- [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP`
+- [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP` ✅
 - [0032] **Diseñar pantalla Mapa** — P1 — `UX/UI, MVP`
 - [0033] **Diseñar ficha pública de comercio** — P0 — `UX/UI, Producto, MVP` ✅
 - [0034] **Diseñar ficha de producto** — P1 — `UX/UI, MVP`
-- [0035] **Diseñar vista Farmacias de turno** — P0 — `UX/UI, Operaciones, MVP`
-- [0036] **Diseñar vista Abierto ahora** — P0 — `UX/UI, MVP`
+- [0035] **Diseñar vista Farmacias de turno** — P0 — `UX/UI, Operaciones, MVP` ✅
+- [0036] **Diseñar vista Abierto ahora** — P0 — `UX/UI, MVP` ✅
 - [0037] **Diseñar panel Mi comercio** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0038] **Diseñar flujo carga de productos** — P0 — `UX/UI, Operaciones, MVP`
 - [0039] **Diseñar flujo carga de horarios y señales** — P0 — `UX/UI, Operaciones, MVP`
@@ -127,7 +132,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0058] **Implementar ficha de comercio** — P0 — `Mobile, Producto, MVP`
 - [0059] **Implementar ficha de producto** — P2 — `Mobile, MVP`
 - [0060] **Implementar vista Abierto ahora** — P0 — `Mobile, MVP`
-- [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP`
+- [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` ✅
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
 - [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP`

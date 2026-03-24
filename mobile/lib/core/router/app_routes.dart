@@ -15,6 +15,8 @@ abstract class AppRoutes {
   static const search = '/search';
   static const searchResults = '/search/resultados';
   static const searchMap = '/search/mapa';
+  static const searchFarmacias = '/search/farmacias';
+  static const searchLocationFallback = '/search/ubicacion';
 
   // ── CustomerTabs — Tab Perfil ───────────────────────────────────────────────
   static const profile = '/profile';
@@ -37,6 +39,12 @@ abstract class AppRoutes {
   static const commerceDetail = '/commerce/:id';
   static const onboardingOwner = '/onboarding/owner';
 
+  // ── Pharmacy ─────────────────────────────────────────────────────────────────
+  static const pharmacyDutyDetail = '/pharmacy/:id';
+
   /// Construye la ruta concreta de detalle de un comercio.
   static String commerceDetailPath(String id) => '/commerce/$id';
+
+  /// Construye la ruta concreta de detalle de una farmacia de turno.
+  static String pharmacyDutyDetailPath(String id) => '/pharmacy/$id';
 }

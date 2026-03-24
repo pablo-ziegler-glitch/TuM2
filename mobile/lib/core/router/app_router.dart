@@ -11,7 +11,12 @@ import '../../modules/auth/screens/login_screen.dart';
 import '../../modules/auth/screens/onboarding_screen.dart';
 import '../../modules/auth/screens/verify_email_screen.dart';
 import '../../modules/home/screens/home_screen.dart';
+import '../../modules/home/screens/abierto_ahora_screen.dart';
+import '../../modules/home/screens/farmacias_turno_screen.dart';
 import '../../modules/search/screens/search_screen.dart';
+import '../../modules/search/screens/search_results_screen.dart';
+import '../../modules/search/screens/pharmacy_results_screen.dart';
+import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
@@ -19,6 +24,8 @@ import '../../modules/shared/screens/commerce_detail_screen.dart';
 import '../../modules/shell/customer_tabs.dart';
 import '../../modules/brand/onboarding_owner/onboarding_owner_flow.dart';
 import '../../modules/brand/onboarding_owner/models/onboarding_draft.dart';
+import '../../modules/pharmacy/screens/pharmacy_duty_screen.dart';
+import '../../modules/pharmacy/screens/pharmacy_duty_detail_screen.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
 // ── Pending route (deep link pre-auth) ───────────────────────────────────────
@@ -111,17 +118,11 @@ List<RouteBase> _buildRoutes() {
               routes: [
                 GoRoute(
                   path: 'abierto-ahora',
-                  builder: (_, __) => const PlaceholderScreen(
-                    screenId: 'HOME-02',
-                    label: 'Abierto ahora',
-                  ),
+                  builder: (_, __) => const AbiertoAhoraScreen(),
                 ),
                 GoRoute(
                   path: 'farmacias-de-turno',
-                  builder: (_, __) => const PlaceholderScreen(
-                    screenId: 'HOME-03',
-                    label: 'Farmacias de turno',
-                  ),
+                  builder: (_, __) => const FarmaciasTurnoScreen(),
                 ),
               ],
             ),
@@ -137,10 +138,21 @@ List<RouteBase> _buildRoutes() {
               routes: [
                 GoRoute(
                   path: 'resultados',
-                  builder: (_, __) => const PlaceholderScreen(
-                    screenId: 'SEARCH-02',
-                    label: 'Resultados de búsqueda',
-                  ),
+                  builder: (context, state) {
+                    final q = state.uri.queryParameters['q'] ?? '';
+                    final openNow =
+                        state.uri.queryParameters['openNow'] == 'true';
+                    return SearchResultsScreen(
+                        query: q, openNowFilter: openNow);
+                  },
+                ),
+                GoRoute(
+                  path: 'farmacias',
+                  builder: (_, __) => const PharmacyResultsScreen(),
+                ),
+                GoRoute(
+                  path: 'ubicacion',
+                  builder: (_, __) => const LocationFallbackScreen(),
                 ),
                 GoRoute(
                   path: 'mapa',
@@ -261,6 +273,15 @@ List<RouteBase> _buildRoutes() {
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return CommerceDetailScreen(commerceId: id);
+      },
+    ),
+
+    // Detalle de farmacia de turno — fuera del shell.
+    GoRoute(
+      path: '/pharmacy/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return PharmacyDutyDetailScreen(pharmacyId: id);
       },
     ),
 

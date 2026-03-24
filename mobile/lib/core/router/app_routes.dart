@@ -39,6 +39,12 @@ abstract class AppRoutes {
   static const commerceDetail = '/commerce/:id';
   static const onboardingOwner = '/onboarding/owner';
 
+  // ── Pharmacy ─────────────────────────────────────────────────────────────────
+  static const pharmacyDutyDetail = '/pharmacy/:id';
+
   /// Construye la ruta concreta de detalle de un comercio.
   static String commerceDetailPath(String id) => '/commerce/$id';
+
+  /// Construye la ruta concreta de detalle de una farmacia de turno.
+  static String pharmacyDutyDetailPath(String id) => '/pharmacy/$id';
 }

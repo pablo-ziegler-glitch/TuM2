@@ -44,6 +44,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
 | **[0036]** Diseñar vista Abierto ahora ✅ | UX/UI — HOME-02 implementado: header con zona activa + indicador en vivo, filtro por categoría (6 rubros), lista de comercios con horario de cierre y action buttons, barra "Ver en el mapa" |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
+| **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 diseñado por Stitches e implementado: listado con badges de turno y confianza, 4 estados (sin ubicación, cargando, resultados, vacío), detalle con verificación, mapa, CTAs y reporte |
+| **[0061]** Implementar vista Farmacias de turno ✅ | Mobile app — PharmacyDutyScreen y PharmacyDutyDetailScreen implementados con datos demo; ruta /pharmacy/:id fuera del shell; integración Firestore pendiente en fase siguiente |
 
 ---
 
@@ -128,7 +130,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0058] **Implementar ficha de comercio** — P0 — `Mobile, Producto, MVP`
 - [0059] **Implementar ficha de producto** — P2 — `Mobile, MVP`
 - [0060] **Implementar vista Abierto ahora** — P0 — `Mobile, MVP`
-- [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP`
+- [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` ✅
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
 - [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP`

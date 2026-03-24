@@ -12,7 +12,6 @@ import '../../modules/auth/screens/onboarding_screen.dart';
 import '../../modules/auth/screens/verify_email_screen.dart';
 import '../../modules/home/screens/home_screen.dart';
 import '../../modules/home/screens/abierto_ahora_screen.dart';
-import '../../modules/home/screens/farmacias_turno_screen.dart';
 import '../../modules/search/screens/search_screen.dart';
 import '../../modules/search/screens/search_results_screen.dart';
 import '../../modules/search/screens/pharmacy_results_screen.dart';
@@ -122,7 +121,7 @@ List<RouteBase> _buildRoutes() {
                 ),
                 GoRoute(
                   path: 'farmacias-de-turno',
-                  builder: (_, __) => const FarmaciasTurnoScreen(),
+                  builder: (_, __) => const PharmacyDutyScreen(),
                 ),
               ],
             ),

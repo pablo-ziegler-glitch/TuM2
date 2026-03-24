@@ -113,16 +113,29 @@ TuM2 App
 - **Fallback zona vacía:** CTA "Sugerir un comercio" + resultados `review_pending` con badge.
 - **Salidas:** → DETAIL-01, → HOME-02, → HOME-03, → SEARCH-01.
 
-### HOME-02 — Abierto ahora
+### HOME-02 — Abierto ahora ✅ diseñado e implementado
 - **Propósito:** filtrar solo comercios con `isOpenNow = true` en la zona.
 - **Fuente:** `merchant_public` con filtro `isOpenNow == true`.
-- **Extras:** chip de hora actual, contador de resultados.
-- **Salida:** → DETAIL-01.
+- **UI implementada:**
+  - Header: zona activa ("PALERMO") + título "Abierto ahora" + chip "En vivo" con indicador verde pulsante.
+  - Barra de estado: ícono storefront + contador de resultados + hora actual.
+  - Filtro por categoría: chips horizontales animados (Todos / Cafeterías / Kioscos / Almacenes / Panaderías / Farmacias).
+  - Lista de comercios: `_CommerceCard` con thumbnail, nombre, tipo·zona, distancia, horario de cierre, rating, botón filled/outline.
+  - Estado vacío: ícono + mensaje + CTA "Ver todos los rubros".
+  - Barra inferior fija "Ver en el mapa" → SEARCH-03.
+- **Archivo:** `modules/home/screens/abierto_ahora_screen.dart`
+- **Salida:** → DETAIL-01, → SEARCH-03 (mapa).
 
-### HOME-03 — Farmacias de turno
+### HOME-03 — Farmacias de turno ✅ diseñado e implementado
 - **Propósito:** ver qué farmacia está de guardia hoy y cómo llegar.
 - **Fuente:** `merchant_public` filtrado `isOnDutyToday == true` + colección `pharmacy_duties`.
-- **UI:** listado con dirección + teléfono + mapa mini embed.
+- **UI implementada:**
+  - Header: fecha formateada en español (ej: "MIÉRCOLES 24 DE MAR") + badge "HOY" verde.
+  - Meta row: zona activa + cantidad de farmacias de turno.
+  - Hero card farmacia activa: fondo azul oscuro, badge "ACTIVA AHORA" con punto pulsante, rating, nombre, dirección/horarios/distancia, botón "Cómo llegar" + ícono teléfono.
+  - Sección "Resto del día": header con contador + lista `_PharmacyListItem` (ícono, nombre, dirección, horario, distancia, chevron).
+  - Disclaimer: caja tertiary50 con ícono info y texto sobre actualización de turnos.
+- **Archivo:** `modules/home/screens/farmacias_turno_screen.dart`
 - **Salida:** → DETAIL-01, → mapa nativo (llamada / cómo llegar).
 
 ---

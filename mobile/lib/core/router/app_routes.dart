@@ -15,6 +15,8 @@ abstract class AppRoutes {
   static const search = '/search';
   static const searchResults = '/search/resultados';
   static const searchMap = '/search/mapa';
+  static const searchFarmacias = '/search/farmacias';
+  static const searchLocationFallback = '/search/ubicacion';
 
   // ── CustomerTabs — Tab Perfil ───────────────────────────────────────────────
   static const profile = '/profile';

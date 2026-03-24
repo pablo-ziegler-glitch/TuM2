@@ -5,47 +5,93 @@ import '../../shell/admin_shell.dart';
 import '../../modules/import_data/screens/import_list_screen.dart';
 import '../../modules/import_data/screens/import_wizard_screen.dart';
 import '../../modules/import_data/screens/import_result_screen.dart';
+import '../../modules/import_data/screens/import_batch_history_screen.dart';
 
 /// Router principal del portal admin.
 /// Rutas disponibles:
-///   /datasets           — lista de importaciones (vacío o con datos)
-///   /datasets/new       — wizard de nueva importación
-///   /datasets/:id       — resultado de un batch específico
-///   /commerces          — placeholder hasta implementar TuM2-0078
-///   /settings           — placeholder hasta implementar configuración admin
+///   /dashboard              — panel principal (placeholder)
+///   /businesses             — listado de comercios (placeholder)
+///   /imports                — overview dashboard de importaciones
+///   /imports/new            — wizard de nueva importación (6 pasos)
+///   /imports/history        — historial de batches con filtros
+///   /imports/:id            — detalle y auditoría de un batch específico
+///   /templates              — plantillas de importación (placeholder)
+///   /analytics              — analítica (placeholder)
+///   /settings               — configuración (placeholder)
 final appRouter = GoRouter(
-  initialLocation: '/datasets',
+  initialLocation: '/imports',
   routes: [
     ShellRoute(
       builder: (context, state, child) => AdminShell(child: child),
       routes: [
         GoRoute(
-          path: '/datasets',
+          path: '/dashboard',
+          builder: (context, state) => const _PlaceholderScreen(
+            label: 'Dashboard',
+            description: 'Panel principal de métricas — próximamente',
+          ),
+        ),
+        GoRoute(
+          path: '/businesses',
+          builder: (context, state) => const _PlaceholderScreen(
+            label: 'Businesses',
+            description: 'Listado y moderación de comercios — TuM2-0078',
+          ),
+        ),
+        GoRoute(
+          path: '/imports',
           builder: (context, state) => const ImportListScreen(),
         ),
         GoRoute(
-          path: '/datasets/new',
+          path: '/imports/new',
           builder: (context, state) => const ImportWizardScreen(),
         ),
         GoRoute(
-          path: '/datasets/:id',
+          path: '/imports/history',
+          builder: (context, state) => const ImportBatchHistoryScreen(),
+        ),
+        GoRoute(
+          path: '/imports/:id',
           builder: (context, state) {
             final id = state.pathParameters['id']!;
             return ImportResultScreen(batchId: id);
           },
         ),
+        // Rutas legacy para compatibilidad con referencias anteriores
         GoRoute(
-          path: '/commerces',
+          path: '/datasets',
+          redirect: (context, state) => '/imports',
+        ),
+        GoRoute(
+          path: '/datasets/new',
+          redirect: (context, state) => '/imports/new',
+        ),
+        GoRoute(
+          path: '/datasets/:id',
+          redirect: (context, state) {
+            final id = state.pathParameters['id']!;
+            return '/imports/$id';
+          },
+        ),
+        GoRoute(
+          path: '/templates',
           builder: (context, state) => const _PlaceholderScreen(
-            label: 'Comercios',
-            description: 'Listado y moderación de comercios — TuM2-0078',
+            label: 'Templates',
+            description: 'Plantillas de importación y mapeo de campos — próximamente',
+          ),
+        ),
+        GoRoute(
+          path: '/analytics',
+          builder: (context, state) => const _PlaceholderScreen(
+            label: 'Analytics',
+            description: 'Analítica de importaciones y calidad de datos — próximamente',
           ),
         ),
         GoRoute(
           path: '/settings',
           builder: (context, state) => const _PlaceholderScreen(
-            label: 'Configuración',
-            description: 'Configuración del panel admin',
+            label: 'Settings',
+            description: 'Configuración del panel admin — próximamente',
           ),
         ),
       ],

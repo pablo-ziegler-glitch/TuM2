@@ -4,12 +4,20 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/import_batch_ui.dart';
+import '../widgets/wizard_step_type.dart';
+import '../widgets/wizard_step_template.dart';
 import '../widgets/wizard_step_archivo.dart';
-import '../widgets/wizard_step_preview.dart';
 import '../widgets/wizard_step_config.dart';
+import '../widgets/wizard_step_validation.dart';
+import '../widgets/wizard_step_confirm.dart';
 
-/// Wizard de importación de datasets.
-/// Flujo: Archivo → Preview → Configuración → Continuar
+/// Wizard de importación de 6 pasos:
+///   1. Type       — selección del tipo de importación
+///   2. Template   — selección de plantilla / schema
+///   3. Upload     — carga del archivo (CSV/XLSX/JSON)
+///   4. Mapping    — mapeo de campos con confianza IA
+///   5. Validation — preview y validación de filas
+///   6. Confirm    — resumen final y confirmación
 class ImportWizardScreen extends StatefulWidget {
   const ImportWizardScreen({super.key});
 
@@ -18,243 +26,289 @@ class ImportWizardScreen extends StatefulWidget {
 }
 
 class _ImportWizardScreenState extends State<ImportWizardScreen> {
-  int _currentStep = 0;
+  int _step = 0;
 
-  // Estado del wizard
-  DatasetType? _datasetType;
-  String? _zone;
+  // ── Estado del wizard ──────────────────────────────────────────────────────
+  ImportType? _importType;
+  String? _templateName;
+  String _zone = '';
   String? _fileName;
-  List<FieldMapping> _fieldMappings = [
-    const FieldMapping(csvColumn: 'business_name', tum2Field: 'Nombre del Negocio', enabled: true, required: true),
-    const FieldMapping(csvColumn: 'phone_number', tum2Field: 'Teléfono Principal', enabled: true, required: false),
-    const FieldMapping(csvColumn: 'full_address', tum2Field: 'Dirección Completa', enabled: true, required: true),
-    const FieldMapping(csvColumn: 'opening_hours', tum2Field: 'Horario de Atención', enabled: false, required: false),
-  ];
+  List<FieldMapping> _mappings = List.from(
+    mockBatches.first.fieldMappings.isNotEmpty
+        ? mockBatches.first.fieldMappings
+        : const <FieldMapping>[],
+  );
   bool _deduplicationEnabled = true;
   String _visibilityAfterImport = 'hidden';
 
-  static const _stepLabels = ['Archivo', 'Preview', 'Configuración', 'Continuar'];
+  static const _steps = [
+    _WizardStep(label: 'Type', icon: Icons.category_outlined),
+    _WizardStep(label: 'Template', icon: Icons.description_outlined),
+    _WizardStep(label: 'Upload', icon: Icons.upload_file_outlined),
+    _WizardStep(label: 'Mapping', icon: Icons.compare_arrows_outlined),
+    _WizardStep(label: 'Validation', icon: Icons.fact_check_outlined),
+    _WizardStep(label: 'Confirm', icon: Icons.check_circle_outline),
+  ];
 
-  bool get _canGoNext {
-    return switch (_currentStep) {
-      0 => _datasetType != null && _zone != null && _fileName != null,
-      1 => true,
-      2 => true,
-      3 => true, // paso final: habilita "Iniciar importación"
-      _ => false,
-    };
-  }
+  bool get _canGoNext => switch (_step) {
+    0 => _importType != null,
+    1 => _templateName != null,
+    2 => _fileName != null || true, // archivo opcional en mock
+    3 => _mappings.any((m) => m.enabled),
+    4 => true,
+    5 => true,
+    _ => false,
+  };
 
-  void _onFileSelected() {
-    // Simula la selección de un archivo
-    setState(() {
-      _fileName = 'farmacias_cordoba_v2.csv';
-    });
-  }
-
-  void _goNext() {
-    if (_currentStep < _stepLabels.length - 1) {
-      setState(() => _currentStep++);
+  void _next() {
+    if (_step < _steps.length - 1) {
+      setState(() => _step++);
     } else {
       _submitImport();
     }
   }
 
-  void _goBack() {
-    if (_currentStep > 0) {
-      setState(() => _currentStep--);
-    } else {
-      context.go('/datasets');
-    }
+  void _back() {
+    if (_step > 0) setState(() => _step--);
   }
 
   void _submitImport() {
-    // Simula el envío y navega al resultado
-    context.go('/datasets/batch_482');
+    // En producción aquí se dispara la Cloud Function de importación.
+    // En mock navegamos al detalle del primer batch.
+    context.go('/imports/batch_482');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
-      body: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Encabezado con stepper
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => context.go('/datasets'),
-                  child: Text(
-                    'Importar Nuevo Dataset',
-                    style: AppTextStyles.headingMd,
-                  ),
-                ),
-                const Spacer(),
-              ],
+      body: Column(
+        children: [
+          _buildTopBar(context),
+          _buildStepProgress(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(40, 28, 40, 28),
+              child: _buildCurrentStep(),
             ),
-            const SizedBox(height: 20),
-            // Stepper horizontal
-            _HorizontalStepper(
-              steps: _stepLabels,
-              currentStep: _currentStep,
-            ),
-            const SizedBox(height: 28),
-            // Contenido del paso actual
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.neutral100),
-                ),
-                padding: const EdgeInsets.all(28),
-                child: _buildStepContent(),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Barra de navegación del wizard
-            _WizardNav(
-              canGoNext: _canGoNext,
-              isLastStep: _currentStep == _stepLabels.length - 1,
-              onBack: _goBack,
-              onNext: _goNext,
-            ),
-          ],
-        ),
+          ),
+          _buildBottomBar(context),
+        ],
       ),
     );
   }
 
-  Widget _buildStepContent() {
-    return switch (_currentStep) {
-      0 => WizardStepArchivo(
-          selectedDatasetType: _datasetType,
-          selectedZone: _zone,
-          fileName: _fileName,
-          onDatasetTypeChanged: (t) => setState(() => _datasetType = t),
-          onZoneChanged: (z) => setState(() => _zone = z),
-          onFileSelected: _onFileSelected,
+  Widget _buildTopBar(BuildContext context) {
+    return Container(
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(bottom: BorderSide(color: AppColors.neutral100)),
+      ),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: () => context.go('/imports'),
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                children: [
+                  const Icon(Icons.arrow_back, size: 16, color: AppColors.neutral500),
+                  const SizedBox(width: 6),
+                  Text('Import Management', style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Text('/', style: TextStyle(color: AppColors.neutral300)),
+          const SizedBox(width: 12),
+          Text('New Import', style: AppTextStyles.labelMd),
+          const Spacer(),
+          if (_importType != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primary500.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(_importType!.label, style: AppTextStyles.labelSm.copyWith(color: AppColors.primary500, fontSize: 12)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepProgress() {
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+      child: Row(
+        children: _steps.asMap().entries.map((entry) {
+          final i = entry.key;
+          final step = entry.value;
+          final isDone = i < _step;
+          final isActive = i == _step;
+          final isUpcoming = i > _step;
+
+          return Expanded(
+            child: Row(
+              children: [
+                // Ícono del paso
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDone
+                        ? AppColors.successFg
+                        : isActive
+                            ? AppColors.primary500
+                            : AppColors.neutral100,
+                  ),
+                  child: Icon(
+                    isDone ? Icons.check : step.icon,
+                    size: 14,
+                    color: isUpcoming ? AppColors.neutral400 : Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Etiqueta
+                Expanded(
+                  child: Text(
+                    step.label,
+                    style: AppTextStyles.labelSm.copyWith(
+                      fontSize: 11,
+                      color: isActive
+                          ? AppColors.primary500
+                          : isDone
+                              ? AppColors.successFg
+                              : AppColors.neutral400,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // Conector
+                if (i < _steps.length - 1)
+                  Expanded(
+                    child: Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                      color: isDone ? AppColors.successFg : AppColors.neutral200,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildCurrentStep() {
+    return switch (_step) {
+      0 => WizardStepType(
+          selected: _importType,
+          onSelect: (t) => setState(() {
+            _importType = t;
+            _templateName = null; // resetear template al cambiar tipo
+          }),
         ),
-      1 => WizardStepPreview(rows: mockCsvPreview),
-      2 => WizardStepConfig(
-          mappings: _fieldMappings,
+      1 => WizardStepTemplate(
+          importType: _importType ?? ImportType.officialDataset,
+          selectedTemplate: _templateName,
+          onSelect: (t) => setState(() {
+            _templateName = t;
+            // Si seleccionó un template conocido, pre-cargar los mappings del mock
+            if (mockBatches.first.fieldMappings.isNotEmpty) {
+              _mappings = List.from(mockBatches.first.fieldMappings);
+            }
+          }),
+        ),
+      2 => WizardStepArchivo(
+          selectedDatasetType: null,
+          selectedZone: _zone.isEmpty ? null : _zone,
+          fileName: _fileName,
+          onDatasetTypeChanged: (_) {},
+          onZoneChanged: (z) => setState(() => _zone = z ?? ''),
+          onFileSelected: () => setState(() => _fileName = 'dataset_import.csv'),
+        ),
+      3 => WizardStepConfig(
+          mappings: _mappings,
           deduplicationEnabled: _deduplicationEnabled,
           visibilityAfterImport: _visibilityAfterImport,
-          onMappingsChanged: (m) => setState(() => _fieldMappings = m),
+          onMappingsChanged: (m) => setState(() => _mappings = m),
           onDeduplicationChanged: (v) => setState(() => _deduplicationEnabled = v),
           onVisibilityChanged: (v) => setState(() => _visibilityAfterImport = v),
         ),
-      _ => const Center(child: Text('Procesando importación...')),
+      4 => WizardStepValidation(previewRows: mockCsvPreview),
+      5 => WizardStepConfirm(
+          importType: _importType ?? ImportType.officialDataset,
+          templateName: _templateName,
+          zone: _zone,
+          fileName: _fileName,
+          totalRows: mockCsvPreview.length,
+          validRows: mockCsvPreview.where((r) => !r.hasError && !r.hasWarning).length,
+          warningRows: mockCsvPreview.where((r) => r.hasWarning && !r.hasError).length,
+          errorRows: mockCsvPreview.where((r) => r.hasError).length,
+          fieldMappings: _mappings,
+          deduplicationEnabled: _deduplicationEnabled,
+          visibilityAfterImport: _visibilityAfterImport,
+        ),
+      _ => const SizedBox.shrink(),
     };
   }
-}
 
-// ── Stepper horizontal ────────────────────────────────────────────────────────
+  Widget _buildBottomBar(BuildContext context) {
+    final isLastStep = _step == _steps.length - 1;
 
-class _HorizontalStepper extends StatelessWidget {
-  const _HorizontalStepper({required this.steps, required this.currentStep});
-  final List<String> steps;
-  final int currentStep;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: steps.asMap().entries.map((entry) {
-        final i = entry.key;
-        final label = entry.value;
-        final isDone = i < currentStep;
-        final isActive = i == currentStep;
-
-        return Expanded(
-          child: Row(
-            children: [
-              // Círculo numerado
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: isDone ? AppColors.successFg : (isActive ? AppColors.primary500 : AppColors.neutral200),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: isDone
-                    ? const Icon(Icons.check, size: 16, color: Colors.white)
-                    : Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: isActive ? Colors.white : AppColors.neutral600,
-                        ),
-                      ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppTextStyles.labelMd.copyWith(
-                  color: isDone ? AppColors.successFg : (isActive ? AppColors.primary500 : AppColors.neutral500),
-                ),
-              ),
-              // Línea conectora
-              if (i < steps.length - 1)
-                Expanded(
-                  child: Container(
-                    height: 1,
-                    margin: const EdgeInsets.symmetric(horizontal: 12),
-                    color: i < currentStep ? AppColors.successFg : AppColors.neutral200,
-                  ),
-                ),
-            ],
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.neutral100)),
+      ),
+      child: Row(
+        children: [
+          // Indicador de paso
+          Text(
+            'Step ${_step + 1} of ${_steps.length}',
+            style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400),
           ),
-        );
-      }).toList(),
+          const Spacer(),
+          if (_step > 0)
+            OutlinedButton(
+              onPressed: _back,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.neutral700,
+                side: const BorderSide(color: AppColors.neutral300),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                textStyle: AppTextStyles.labelSm,
+              ),
+              child: const Text('Back'),
+            ),
+          const SizedBox(width: 12),
+          FilledButton(
+            onPressed: _canGoNext ? _next : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: isLastStep ? AppColors.successFg : AppColors.primary500,
+              disabledBackgroundColor: AppColors.neutral200,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              textStyle: AppTextStyles.labelSm,
+            ),
+            child: Text(isLastStep ? 'Start Import' : 'Continue'),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ── Navegación del wizard ─────────────────────────────────────────────────────
-
-class _WizardNav extends StatelessWidget {
-  const _WizardNav({
-    required this.canGoNext,
-    required this.isLastStep,
-    required this.onBack,
-    required this.onNext,
-  });
-  final bool canGoNext;
-  final bool isLastStep;
-  final VoidCallback onBack;
-  final VoidCallback onNext;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        OutlinedButton(
-          onPressed: onBack,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.neutral700,
-            side: const BorderSide(color: AppColors.neutral300),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-          child: const Text('Atrás'),
-        ),
-        FilledButton.icon(
-          onPressed: canGoNext ? onNext : null,
-          icon: Icon(isLastStep ? Icons.check : Icons.arrow_forward, size: 16),
-          label: Text(isLastStep ? 'Iniciar importación' : 'Continuar →'),
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.primary500,
-            disabledBackgroundColor: AppColors.neutral200,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-        ),
-      ],
-    );
-  }
+class _WizardStep {
+  const _WizardStep({required this.label, required this.icon});
+  final String label;
+  final IconData icon;
 }

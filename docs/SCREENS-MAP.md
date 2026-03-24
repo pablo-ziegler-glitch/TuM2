@@ -113,31 +113,58 @@ TuM2 App
 - **Fallback zona vacía:** CTA "Sugerir un comercio" + resultados `review_pending` con badge.
 - **Salidas:** → DETAIL-01, → HOME-02, → HOME-03, → SEARCH-01.
 
-### HOME-02 — Abierto ahora
+### HOME-02 — Abierto ahora ✅ diseñado e implementado
 - **Propósito:** filtrar solo comercios con `isOpenNow = true` en la zona.
 - **Fuente:** `merchant_public` con filtro `isOpenNow == true`.
-- **Extras:** chip de hora actual, contador de resultados.
-- **Salida:** → DETAIL-01.
+- **UI implementada:**
+  - Header: zona activa ("PALERMO") + título "Abierto ahora" + chip "En vivo" con indicador verde pulsante.
+  - Barra de estado: ícono storefront + contador de resultados + hora actual.
+  - Filtro por categoría: chips horizontales animados (Todos / Cafeterías / Kioscos / Almacenes / Panaderías / Farmacias).
+  - Lista de comercios: `_CommerceCard` con thumbnail, nombre, tipo·zona, distancia, horario de cierre, rating, botón filled/outline.
+  - Estado vacío: ícono + mensaje + CTA "Ver todos los rubros".
+  - Barra inferior fija "Ver en el mapa" → SEARCH-03.
+- **Archivo:** `modules/home/screens/abierto_ahora_screen.dart`
+- **Salida:** → DETAIL-01, → SEARCH-03 (mapa).
 
-### HOME-03 — Farmacias de turno
+### HOME-03 — Farmacias de turno ✅ diseñado e implementado
 - **Propósito:** ver qué farmacia está de guardia hoy y cómo llegar.
 - **Fuente:** `merchant_public` filtrado `isOnDutyToday == true` + colección `pharmacy_duties`.
-- **UI:** listado con dirección + teléfono + mapa mini embed.
+- **UI implementada:**
+  - Header: fecha formateada en español (ej: "MIÉRCOLES 24 DE MAR") + badge "HOY" verde.
+  - Meta row: zona activa + cantidad de farmacias de turno.
+  - Hero card farmacia activa: fondo azul oscuro, badge "ACTIVA AHORA" con punto pulsante, rating, nombre, dirección/horarios/distancia, botón "Cómo llegar" + ícono teléfono.
+  - Sección "Resto del día": header con contador + lista `_PharmacyListItem` (ícono, nombre, dirección, horario, distancia, chevron).
+  - Disclaimer: caja tertiary50 con ícono info y texto sobre actualización de turnos.
+- **Archivo:** `modules/home/screens/farmacias_turno_screen.dart`
 - **Salida:** → DETAIL-01, → mapa nativo (llamada / cómo llegar).
 
 ---
 
-### SEARCH-01 — Buscar
+### SEARCH-01 — Buscar ✅ diseñado e implementado
 - **Propósito:** descubrimiento activo por texto o categoría.
-- **Modos:**
-  - Categoría rápida (chips): Farmacias, Kioscos, Almacenes, Veterinarias, Panaderías, +.
-  - Búsqueda por texto libre.
-- **Salida:** → SEARCH-02 (resultados), → SEARCH-03 (mapa).
+- **Estados:**
+  1. **Initial** — header TuM2, barra tappable, accesos rápidos (Farmacias de turno / Kioscos 24h / Cerca de ti / Mi zona), sugerencias para ti (hero card + grid + lista).
+  2. **Focused** — búsquedas recientes + BORRAR ALL, explorar categorías (grid íconos), barrios populares.
+  3. **Typing** — autocompletado filtrado por query, tendencias del barrio (carousel).
+- **Archivos:** `modules/search/screens/search_screen.dart`, `modules/search/widgets/zone_selector_sheet.dart`, `modules/search/widgets/search_filters_sheet.dart`
+- **Salida:** → SEARCH-02, → SEARCH-03, → SEARCH-farmacias.
 
-### SEARCH-02 — Resultados de búsqueda
-- **Fuente:** `merchant_public` filtrado por `categoryTags` o text search (Algolia / Typesense en el futuro; client-side en MVP).
-- **Toggle lista/mapa:** botón para ir a SEARCH-03 con mismos resultados.
+### SEARCH-02 — Resultados de búsqueda ✅ diseñado e implementado
+- **Fuente:** `merchant_public` filtrado por query/categoría (client-side en MVP).
+- **Estados:** loading (skeletons) / results (lista) / openNow / verified / empty / error.
+- **Barra inferior:** "Vista en mapa" → SEARCH-03.
+- **Archivo:** `modules/search/screens/search_results_screen.dart`
 - **Salida:** → DETAIL-01, → SEARCH-03.
+
+### SEARCH-FARMACIAS — Especialidad Farmacias ✅ diseñado e implementado
+- **Propósito:** vista dedicada a farmacias con énfasis en turno activo.
+- **Bloques:** hero farmacia de turno (CTAs: Cómo llegar / Llamar), filtros (De Turno / Abierto / 24hs), grid 2×2 farmacias cercanas, sección confianza.
+- **Archivo:** `modules/search/screens/pharmacy_results_screen.dart`
+
+### SEARCH-UBICACION — Fallback de ubicación ✅ diseñado e implementado
+- **Propósito:** cuando GPS no disponible o denegado. Selección manual de zona.
+- **Bloques:** input manual, lista sugerencias, FAQ zona, mapa interactivo, "Explorar toda la ciudad".
+- **Archivo:** `modules/search/screens/location_fallback_screen.dart`
 
 ### SEARCH-03 — Mapa
 - **Propósito:** ver comercios de la zona en mapa interactivo.

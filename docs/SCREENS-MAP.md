@@ -127,25 +127,31 @@ TuM2 App
 
 ---
 
-### SEARCH-01 — Buscar ✅ diseñado
+### SEARCH-01 — Buscar ✅ diseñado e implementado
 - **Propósito:** descubrimiento activo por texto o categoría.
-- **Modos:**
-  - Categoría rápida (chips): Farmacias, Kioscos, Almacenes, Veterinarias, Panaderías, Todo.
-  - Búsqueda por texto libre (tap en barra → SEARCH-02).
-- **Bloques de UI:**
-  - Header: label "CERCA DE VOS" + título "Explorar" + ícono mapa (→ SEARCH-03).
-  - Barra de búsqueda tappable → SEARCH-02.
-  - Chips de categoría horizontales scrolleables; tap en rubro → SEARCH-02.
-  - Sección "Accesos rápidos": grilla 2 columnas — "Abierto ahora" (→ HOME-02) y "Farmacias de turno" (→ HOME-03).
-  - Sección "Destacado cerca tuyo": hero card 200px con gradient, badge DESTACADO, → DETAIL-01.
-  - Tarjeta "Ver comercios en el mapa" → SEARCH-03.
-- **Archivo:** `mobile/lib/modules/search/screens/search_screen.dart`
-- **Salida:** → SEARCH-02 (resultados), → SEARCH-03 (mapa), → DETAIL-01, → HOME-02, → HOME-03.
+- **Estados:**
+  1. **Initial** — header TuM2, barra tappable, accesos rápidos (Farmacias de turno / Kioscos 24h / Cerca de ti / Mi zona), sugerencias para ti (hero card + grid + lista).
+  2. **Focused** — búsquedas recientes + BORRAR ALL, explorar categorías (grid íconos), barrios populares.
+  3. **Typing** — autocompletado filtrado por query, tendencias del barrio (carousel).
+- **Archivos:** `modules/search/screens/search_screen.dart`, `modules/search/widgets/zone_selector_sheet.dart`, `modules/search/widgets/search_filters_sheet.dart`
+- **Salida:** → SEARCH-02, → SEARCH-03, → SEARCH-farmacias.
 
-### SEARCH-02 — Resultados de búsqueda
-- **Fuente:** `merchant_public` filtrado por `categoryTags` o text search (Algolia / Typesense en el futuro; client-side en MVP).
-- **Toggle lista/mapa:** botón para ir a SEARCH-03 con mismos resultados.
+### SEARCH-02 — Resultados de búsqueda ✅ diseñado e implementado
+- **Fuente:** `merchant_public` filtrado por query/categoría (client-side en MVP).
+- **Estados:** loading (skeletons) / results (lista) / openNow / verified / empty / error.
+- **Barra inferior:** "Vista en mapa" → SEARCH-03.
+- **Archivo:** `modules/search/screens/search_results_screen.dart`
 - **Salida:** → DETAIL-01, → SEARCH-03.
+
+### SEARCH-FARMACIAS — Especialidad Farmacias ✅ diseñado e implementado
+- **Propósito:** vista dedicada a farmacias con énfasis en turno activo.
+- **Bloques:** hero farmacia de turno (CTAs: Cómo llegar / Llamar), filtros (De Turno / Abierto / 24hs), grid 2×2 farmacias cercanas, sección confianza.
+- **Archivo:** `modules/search/screens/pharmacy_results_screen.dart`
+
+### SEARCH-UBICACION — Fallback de ubicación ✅ diseñado e implementado
+- **Propósito:** cuando GPS no disponible o denegado. Selección manual de zona.
+- **Bloques:** input manual, lista sugerencias, FAQ zona, mapa interactivo, "Explorar toda la ciudad".
+- **Archivo:** `modules/search/screens/location_fallback_screen.dart`
 
 ### SEARCH-03 — Mapa
 - **Propósito:** ver comercios de la zona en mapa interactivo.

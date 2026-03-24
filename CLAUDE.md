@@ -41,7 +41,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0033]** Diseñar ficha pública de comercio ✅ | UX/UI — HOME-01 Detail diseñado por Stitches: hero imagen, badge ABIERTO, info rows, mapa, acciones, historia y galería |
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
 | **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
-| **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — SEARCH-01 diseñado: rubros TuM2 (Farmacias/Kioscos/Almacenes/Veterinarias/Panaderías), search bar interactivo, accesos rápidos "Abierto ahora" y "Farmacias de turno", hero card, tarjeta mapa |
+| **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
 
 ---
 

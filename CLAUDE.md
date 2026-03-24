@@ -41,6 +41,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0033]** Diseñar ficha pública de comercio ✅ | UX/UI — HOME-01 Detail diseñado por Stitches: hero imagen, badge ABIERTO, info rows, mapa, acciones, historia y galería |
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
 | **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
+| **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
+| **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
 | **[0036]** Diseñar vista Abierto ahora ✅ | UX/UI — HOME-02 implementado: header con zona activa + indicador en vivo, filtro por categoría (6 rubros), lista de comercios con horario de cierre y action buttons, barra "Ver en el mapa" |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
@@ -150,8 +152,12 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0076] **Implementar links compartibles** — P1 — `Web, Growth, MVP`
 
 ### ÉPICA 10: Admin / Moderación
-- [0077] **Diseñar panel admin mínimo** — P1 — `Admin, Producto, MVP`
+- [0077] **Diseñar panel admin mínimo** — P1 — `Admin, Producto, MVP` ✅
+  - Flutter Web portal: AdminShell (sidebar + topbar), go_router, tokens compartidos con mobile
 - [0078] **Implementar listado de comercios** — P2 — `Admin, MVP`
+- [0122] **Implementar módulo de importación de datasets (admin web)** — P1 — `Admin, Web, Data, Operaciones, MVP` ✅
+  - 7 estados de UI: empty state, lista con tabla/KPIs/paginación, wizard Archivo→Preview→Configuración, resultado del batch, modal de reversión
+  - Schema import_batches extendido: ImportFieldMapping, ImportRowError, ImportVisibility, batchNumber, datasetType, fieldMappings, deduplicationEnabled, visibilityAfterImport, errors, contadores UI
 - [0079] **Implementar listado de propuestas** — P2 — `Admin, MVP`
 - [0080] **Implementar moderación de contenido** — P1 — `Admin, Seguridad, MVP`
 - [0081] **Implementar revisión de señales operativas reportadas** — P1 — `Admin, Operaciones, MVP`
@@ -254,6 +260,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### Fase D — Expansión MVP+
 - TuM2-0029 / 0032 / 0034 / 0041
+- TuM2-0122 ✅ (completado adelantado)
 - TuM2-0055 / 0057 / 0059 / 0062 / 0063 / 0069
 - TuM2-0076
 - TuM2-0077 a 0081
@@ -282,6 +289,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0090, 0091, 0092
 - TuM2-0094, 0095, 0097
 - TuM2-0100, 0101, 0102, 0104
+- TuM2-0077 ✅, TuM2-0078, 0079, 0080, 0081, TuM2-0122 ✅
 
 ---
 
@@ -312,6 +320,8 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 **Mobile:** TuM2-0052, 0053, 0054, 0056, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068
 
 **Web:** TuM2-0070, 0071, 0072, 0074, 0075
+
+**Admin / Web portal:** TuM2-0077 ✅, TuM2-0122 ✅, TuM2-0078, 0079, 0080, 0081
 
 **Analytics / QA / Seguridad:** TuM2-0082, 0083, 0087, 0089, 0090, 0091, 0092
 

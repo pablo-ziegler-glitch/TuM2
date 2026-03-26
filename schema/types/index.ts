@@ -1,5 +1,5 @@
 // ── Users ────────────────────────────────────────────────────────────────────
-export type { UserDocument, UserRole, UserStatus } from './user';
+export type { UserDocument, UserRole, UserStatus, TrustLevel } from './user';
 
 // ── Zones ────────────────────────────────────────────────────────────────────
 export type {
@@ -16,9 +16,12 @@ export type {
   MerchantStatus,
   MerchantVisibilityStatus,
   MerchantVerificationStatus,
+  MerchantOwnershipStatus,
   MerchantSourceType,
   MerchantLocation,
   MerchantContact,
+  ConfidenceLevel,
+  OwnerDisplay,
 } from './merchant';
 
 // ── Merchant public view ─────────────────────────────────────────────────────
@@ -47,7 +50,7 @@ export type {
   IsOpenNowConfidence,
 } from './merchant_operational_signals';
 
-// ── Merchant products ────────────────────────────────────────────────────────
+// ── Merchant products (catalog) ───────────────────────────────────────────────
 export type {
   MerchantProductDocument,
   ProductStatus,
@@ -77,6 +80,7 @@ export type {
   MerchantClaimDocument,
   MerchantClaimStatus,
   ClaimEvidence,
+  ClaimEvidenceType,
 } from './merchant_claims';
 
 // ── Reports ──────────────────────────────────────────────────────────────────
@@ -86,6 +90,63 @@ export type {
   ReportType,
   ReportStatus,
 } from './reports';
+
+// ── Contributions ────────────────────────────────────────────────────────────
+export type {
+  ContributionDocument,
+  ContributionTargetType,
+  ContributionType,
+  ContributionStatus,
+  ContributionReviewMode,
+} from './contributions';
+
+// ── Conversations & messages ──────────────────────────────────────────────────
+export type {
+  ConversationDocument,
+  ConversationStatus,
+  ConversationType,
+  MessageDocument,
+  MessageType,
+  MessageStatus,
+  MessageSenderRole,
+} from './conversations';
+
+// ── Favorites ────────────────────────────────────────────────────────────────
+export type { FavoriteDocument } from './favorites';
+
+// ── Feedback ─────────────────────────────────────────────────────────────────
+export type {
+  FeedbackDocument,
+  FeedbackType,
+  FeedbackChannel,
+  FeedbackStatus,
+} from './feedback';
+
+// ── Categories & subcategories ───────────────────────────────────────────────
+export type { CategoryDocument, SubcategoryDocument } from './categories';
+
+// ── Moderation queue ─────────────────────────────────────────────────────────
+export type {
+  ModerationQueueDocument,
+  ModerationEntityType,
+  ModerationPriority,
+  ModerationStatus,
+} from './moderation_queue';
+
+// ── Audit logs ───────────────────────────────────────────────────────────────
+export type {
+  AuditLogDocument,
+  AuditEntityType,
+  AuditAction,
+  AuditSource,
+  AuditFieldChange,
+} from './audit_logs';
+
+// ── Entity versions ───────────────────────────────────────────────────────────
+export type {
+  EntityVersionDocument,
+  VersionedEntityType,
+} from './entity_versions';
 
 // ── Admin configs ────────────────────────────────────────────────────────────
 export type {

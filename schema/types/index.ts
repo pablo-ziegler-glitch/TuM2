@@ -19,6 +19,7 @@ export type {
   MerchantSourceType,
   MerchantLocation,
   MerchantContact,
+  ConfidenceLevel,
 } from './merchant';
 
 // ── Merchant public view ─────────────────────────────────────────────────────

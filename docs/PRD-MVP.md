@@ -13,11 +13,14 @@ El MVP de TuM2 cubre **una zona piloto** con **rubros prioritarios**, con el obj
 - Objetivo: 30-100 comercios activos en el piloto.
 
 ### Rubros prioritarios en MVP
+
 1. Farmacias (incluye turno de guardia)
 2. Kioscos
-3. Almacenes / despensas
+3. Almacenes
 4. Veterinarias
-5. Panaderías / confiterías
+5. Tiendas de comida al paso
+6. Casas de comida / Rotiserías
+7. Gomerías
 
 ---
 

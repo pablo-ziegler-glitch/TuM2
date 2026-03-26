@@ -26,11 +26,34 @@ El MVP de TuM2 cubre **una zona piloto** con **rubros prioritarios**, con el obj
 
 ## 2. Segmentos y roles
 
-| Rol | Descripción | Autenticación requerida |
-|-----|-------------|------------------------|
-| CUSTOMER | Vecino que busca comercios | No (lectura pública), Sí (guardar favoritos) |
-| OWNER | Dueño o encargado de un comercio | Sí (siempre) |
-| ADMIN | Equipo TuM2, moderación | Sí (siempre) |
+> Especificación completa en `docs/SEGMENTS.md` (TuM2-0004).
+
+### Roles y custom claims de Firebase Auth
+
+| Rol | Custom claim `role` | Descripción | Autenticación |
+|-----|---------------------|-------------|---------------|
+| CUSTOMER anónimo | — | Vecino sin cuenta: lectura pública, sugerencias y reportes | No requerida |
+| CUSTOMER registrado | `customer` | Vecino con cuenta: favoritos, seguir comercios, sugerencias con mayor confianza | Sí |
+| OWNER provisional | `owner_pending` | Dueño durante revisión admin del comercio | Sí |
+| OWNER confirmado | `owner` | Dueño con comercio aprobado: panel operativo completo | Sí |
+| ADMIN | `admin` | Operador TuM2: moderación, bootstrap, aprobaciones | Sí (asignación manual) |
+| ADMIN super | `super_admin` | Acceso a `admin_configs/global` — preparado, inactivo en UI MVP | Sí (asignación manual) |
+
+### Rol compuesto OWNER ⊃ CUSTOMER
+
+Un OWNER mantiene **todas** las capacidades de CUSTOMER más su panel operativo. No hay cambio de sesión ni switch de contexto. El acceso al panel se expone vía botón en PROFILE-01 → OwnerStack modal.
+
+### Ciclo de vida de custom claims
+
+| Evento | Transición |
+|--------|-----------|
+| Registro | `customer` |
+| Submit onboarding de comercio | `owner_pending` |
+| ADMIN aprueba | `owner` |
+| ADMIN rechaza | vuelve a `customer` |
+| Asignación manual admin | `admin` / `super_admin` |
+
+**Regla de seguridad:** todas las transiciones de rol ocurren exclusivamente en Cloud Functions con Admin SDK. Nunca desde el cliente.
 
 ---
 

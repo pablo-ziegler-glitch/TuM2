@@ -2,6 +2,17 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type MerchantStatus = 'draft' | 'active' | 'inactive' | 'archived';
 
+/**
+ * Nivel de confianza persistido. Compartido entre merchants y pharmacy_duties.
+ * Escala: 80–100 → verified | 60–79 → community_trusted | 30–59 → pending | 0–29 → under_review
+ */
+export type ConfidenceLevel =
+  | 'verified'
+  | 'community_trusted'
+  | 'pending'
+  | 'under_review'
+  | 'low_confidence';
+
 export type MerchantVisibilityStatus =
   | 'hidden'
   | 'review_pending'

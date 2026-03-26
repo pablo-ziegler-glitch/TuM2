@@ -132,9 +132,8 @@ export interface MerchantDocument {
   chatEnabled?: boolean;
   communityEditable?: boolean;
   favoritesCount?: number;
-  reportsCount?: number;
-  contributionsCount?: number;
   reportCount?: number;
+  contributionsCount?: number;
   lastVerifiedAt?: Timestamp | null;
   lastCommunityUpdateAt?: Timestamp | null;
   lastOwnerUpdateAt?: Timestamp | null;

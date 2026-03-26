@@ -1,6 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'customer' | 'owner' | 'moderator' | 'admin' | 'super_admin';
+export type UserRole = 'customer' | 'owner' | 'admin' | 'super_admin';
 export type UserStatus = 'active' | 'pending' | 'blocked';
 
 /**

@@ -7,6 +7,31 @@
 
 ---
 
+## Convención de nombres de conversación y PR
+
+Cada conversación de Claude Code para este proyecto debe identificarse con el patrón:
+
+```
+tum2-XXXX — PR#YY — descripción corta
+```
+
+- `XXXX` = número de tarjeta del backlog (ej: `0061`, `0045`)
+- Si no hay tarjeta asignable → usar `xxxx` literal (ej: `tum2-xxxx`)
+- `YY` = número del PR de GitHub que se va a generar en esa conversación
+- Si todavía no se conoce el número de PR → omitir hasta que se cree
+
+**Ejemplos:**
+- `tum2-0061 — PR#22 — implementar pharmacy duty screen`
+- `tum2-0045 — PR#18 — configurar firestore base`
+- `tum2-xxxx — PR#25 — mejora pharmacy duties schema`
+
+**Reglas operativas:**
+- Una conversación = una tarjeta = un PR (siempre que sea posible)
+- Si la tarjeta es muy grande → partir en sub-PRs y numerarlos en el título
+- PRs chicos y cohesivos, nunca mezclar tarjetas distintas en un mismo PR
+
+---
+
 ## Estado del backlog
 
 El backlog maestro de TuM2 está estructurado en 17 épicas (ver sección abajo).

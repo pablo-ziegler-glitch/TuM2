@@ -25,6 +25,7 @@ import '../../modules/brand/onboarding_owner/onboarding_owner_flow.dart';
 import '../../modules/brand/onboarding_owner/models/onboarding_draft.dart';
 import '../../modules/pharmacy/screens/pharmacy_duty_screen.dart';
 import '../../modules/pharmacy/screens/pharmacy_duty_detail_screen.dart';
+import '../../modules/pharmacy/models/pharmacy_duty_item.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
 // ── Pending route (deep link pre-auth) ───────────────────────────────────────
@@ -280,7 +281,8 @@ List<RouteBase> _buildRoutes() {
       path: '/pharmacy/:id',
       builder: (context, state) {
         final id = state.pathParameters['id']!;
-        return PharmacyDutyDetailScreen(pharmacyId: id);
+        final item = state.extra as PharmacyDutyItem?;
+        return PharmacyDutyDetailScreen(pharmacyId: id, item: item);
       },
     ),
 

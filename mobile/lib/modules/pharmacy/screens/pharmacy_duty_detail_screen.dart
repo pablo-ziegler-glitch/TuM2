@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../models/pharmacy_duty_item.dart';
 
 // ── Helpers de acción nativa ──────────────────────────────────────────────────
 
@@ -11,8 +14,9 @@ Future<void> _openMaps(String address) async {
   final encoded = Uri.encodeComponent(address);
   final uri = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=$encoded');
-  if (await canLaunchUrl(uri)) await launchUrl(uri,
-      mode: LaunchMode.externalApplication);
+  if (await canLaunchUrl(uri)) {
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 }
 
 Future<void> _callPhone(String phone) async {
@@ -21,100 +25,148 @@ Future<void> _callPhone(String phone) async {
   if (await canLaunchUrl(uri)) await launchUrl(uri);
 }
 
-// ── Demo data (reemplazar con carga Firestore en TuM2-0061) ──────────────────
-
-typedef _PharmacyDetail = ({
-  String name,
-  String address,
-  String distanceText,
-  String phone,
-  String dutyUntil,
-  String source,
-  String verifiedAgo,
-  String hours,
-});
-
-const Map<String, _PharmacyDetail> _demoDetails = {
-  'farmacia-central-palermo': (
-    name: 'Farmacia Central Palermo',
-    address: 'Av. Independencia 1420, Ciudad Autónoma de Buenos Aires',
-    distanceText: 'A 450m de tu ubicación actual',
-    phone: '+54 11 4321-9876',
-    dutyUntil: 'DE TURNO HASTA MAÑANA 08:30',
-    source: 'MINISTERIO DE SALUD',
-    verifiedAgo: '12 MIN',
-    hours: 'Abierto 24hs (Turno asignado)',
-  ),
-  'farmacia-del-jardin': (
-    name: 'Farmacia del Jardín',
-    address: 'Scalabrini Ortiz 2105, Ciudad Autónoma de Buenos Aires',
-    distanceText: 'A 820m de tu ubicación actual',
-    phone: '+54 11 4567-8901',
-    dutyUntil: 'DE TURNO HASTA MAÑANA 08:30',
-    source: 'COLEGIO DE FARMACÉUTICOS',
-    verifiedAgo: '45 MIN',
-    hours: 'Abierto 24hs (Turno asignado)',
-  ),
-  'nueva-era-farmacias': (
-    name: 'Nueva Era Farmacias',
-    address: 'Av. Las Heras 3800, Ciudad Autónoma de Buenos Aires',
-    distanceText: 'A 1.2km de tu ubicación actual',
-    phone: '+54 11 4890-1234',
-    dutyUntil: 'DE TURNO HASTA MAÑANA 08:30',
-    source: 'DATOS DE LA COMUNIDAD',
-    verifiedAgo: '2 HS',
-    hours: 'Abierto 24hs (Turno asignado)',
-  ),
-};
-
-_PharmacyDetail _resolveDetail(String id) =>
-    _demoDetails[id] ??
-    (
-      name: id,
-      address: 'Buenos Aires',
-      distanceText: '',
-      phone: 'Sin teléfono registrado',
-      dutyUntil: 'DE TURNO',
-      source: 'FUENTE NO DISPONIBLE',
-      verifiedAgo: '',
-      hours: 'Consultar en la farmacia',
-    );
+void _logEvent(String name, Map<String, Object> params) {
+  FirebaseAnalytics.instance.logEvent(name: name, parameters: params);
+}
 
 // ── Pantalla ──────────────────────────────────────────────────────────────────
 
 /// Detalle de farmacia de turno.
-/// Recibe [pharmacyId] para futura carga desde Firestore en TuM2-0061.
+/// Si [item] se proporciona, se usan sus datos directamente (navegación desde lista).
+/// Si [item] es null (deep link), se hace fetch de merchant_public/{pharmacyId}.
 class PharmacyDutyDetailScreen extends StatelessWidget {
   final String pharmacyId;
+  final PharmacyDutyItem? item;
 
-  const PharmacyDutyDetailScreen({super.key, required this.pharmacyId});
+  const PharmacyDutyDetailScreen({
+    super.key,
+    required this.pharmacyId,
+    this.item,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final data = _resolveDetail(pharmacyId);
+    if (item != null) {
+      return _DetailView(pharmacyId: pharmacyId, item: item!);
+    }
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance
+          .doc('merchant_public/$pharmacyId')
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: AppColors.scaffoldBg,
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError ||
+            !snapshot.hasData ||
+            !snapshot.data!.exists) {
+          return Scaffold(
+            backgroundColor: AppColors.scaffoldBg,
+            body: Column(
+              children: [
+                _buildAppBarSimple(context),
+                const Expanded(
+                  child: Center(
+                    child: Text('No se pudo cargar la farmacia.'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        final data =
+            snapshot.data!.data() as Map<String, dynamic>;
+        final fallbackItem = PharmacyDutyItem(
+          dutyId: '',
+          merchantId: pharmacyId,
+          name: data['name'] as String? ?? '',
+          address: data['address'] as String? ?? '',
+          phone: data['phone'] as String?,
+          lat: (data['lat'] as num?)?.toDouble(),
+          lng: (data['lng'] as num?)?.toDouble(),
+          startsAt: DateTime.now(),
+          endsAt: DateTime.now().add(const Duration(hours: 8)),
+          date: '',
+          zoneId: '',
+          verificationStatus:
+              data['verificationStatus'] as String? ?? 'unverified',
+          dutyVerificationStatus: 'referential',
+          confidenceScore:
+              (data['confidenceScore'] as num?)?.toDouble(),
+        );
+        return _DetailView(
+            pharmacyId: pharmacyId, item: fallbackItem);
+      },
+    );
+  }
+
+  Widget _buildAppBarSimple(BuildContext context) {
+    return SafeArea(
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back),
+            color: AppColors.neutral700,
+            onPressed: () => context.pop(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Vista interna con datos ───────────────────────────────────────────────────
+
+class _DetailView extends StatelessWidget {
+  const _DetailView({
+    required this.pharmacyId,
+    required this.item,
+  });
+  final String pharmacyId;
+  final PharmacyDutyItem item;
+
+  String? get _verificationSource {
+    switch (item.dutyVerificationStatus) {
+      case 'validated':
+      case 'claimed':
+        return 'MINISTERIO DE SALUD';
+      case 'referential':
+        return 'DATOS DE LA COMUNIDAD';
+      default:
+        return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCoords = item.lat != null && item.lng != null;
+    final source = _verificationSource;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: CustomScrollView(
         slivers: [
-          _buildAppBar(context, data),
+          _buildAppBar(context),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Verificación
-                  if (data.verifiedAgo.isNotEmpty)
-                    _VerificationRow(
-                        source: data.source, verifiedAgo: data.verifiedAgo),
-                  const SizedBox(height: 12),
+                  // Verificación (solo si hay source conocido)
+                  if (source != null)
+                    _VerificationRow(source: source),
+                  if (source != null) const SizedBox(height: 12),
                   // Nombre
-                  Text(data.name, style: AppTextStyles.headingLg),
+                  Text(item.name, style: AppTextStyles.headingLg),
                   const SizedBox(height: 10),
-                  // Badge turno
-                  _DutyBadge(label: data.dutyUntil),
-                  const SizedBox(height: 8),
+                  // Badge turno (solo si hay datos de turno)
+                  if (item.dutyId.isNotEmpty)
+                    _DutyBadge(label: item.dutyBadgeLabel),
+                  if (item.dutyId.isNotEmpty) const SizedBox(height: 8),
                   // Link info
                   GestureDetector(
                     onTap: () {},
@@ -134,74 +186,98 @@ class PharmacyDutyDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // Mapa placeholder
-                  _MapWidget(
-                    address: data.address,
-                    distanceText: data.distanceText,
-                  ),
-                  const SizedBox(height: 20),
-                  // CTA principal — Cómo llegar
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _openMaps(data.address),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary500,
-                        foregroundColor: AppColors.surface,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                  // Mapa (solo si hay coordenadas)
+                  if (hasCoords) ...[
+                    _MapWidget(address: item.address),
+                    const SizedBox(height: 20),
+                  ],
+                  // CTA principal — Cómo llegar (solo si hay coordenadas)
+                  if (hasCoords) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          _logEvent('farmacia_maps_tap', {
+                            'merchant_id': pharmacyId,
+                            'zone_id': item.zoneId,
+                            'trust_level': item.trustLevel.name,
+                          });
+                          _openMaps(item.address);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary500,
+                          foregroundColor: AppColors.surface,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      icon: const Icon(Icons.directions_outlined, size: 20),
-                      label: Text(
-                        'Cómo llegar',
-                        style: AppTextStyles.labelMd
-                            .copyWith(color: AppColors.surface),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  // CTA secundario — Llamar
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _callPhone(data.phone),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.neutral900,
-                        side: BorderSide(color: AppColors.neutral300),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                        icon: const Icon(Icons.directions_outlined,
+                            size: 20),
+                        label: Text(
+                          'Cómo llegar',
+                          style: AppTextStyles.labelMd
+                              .copyWith(color: AppColors.surface),
                         ),
                       ),
-                      icon: Icon(Icons.phone_outlined,
-                          size: 20, color: AppColors.neutral700),
-                      label: Text('Llamar ahora',
-                          style: AppTextStyles.labelMd),
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 10),
+                  ],
+                  // CTA secundario — Llamar (solo si hay teléfono)
+                  if (item.phone != null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          _logEvent('farmacia_call_tap', {
+                            'merchant_id': pharmacyId,
+                            'zone_id': item.zoneId,
+                            'trust_level': item.trustLevel.name,
+                          });
+                          _callPhone(item.phone!);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.neutral900,
+                          side:
+                              BorderSide(color: AppColors.neutral300),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        icon: Icon(Icons.phone_outlined,
+                            size: 20, color: AppColors.neutral700),
+                        label: Text('Llamar ahora',
+                            style: AppTextStyles.labelMd),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ] else
+                    const SizedBox(height: 24),
                   const Divider(color: AppColors.neutral200),
                   const SizedBox(height: 16),
-                  // Datos de contacto y horario
-                  _InfoDetailRow(
-                    icon: Icons.phone_outlined,
-                    text: data.phone,
-                  ),
-                  const SizedBox(height: 10),
+                  // Teléfono (solo si existe)
+                  if (item.phone != null) ...[
+                    _InfoDetailRow(
+                      icon: Icons.phone_outlined,
+                      text: item.phone!,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   _InfoDetailRow(
                     icon: Icons.access_time_outlined,
-                    text: data.hours,
+                    text: item.dutyId.isNotEmpty
+                        ? 'Abierto 24hs (Turno asignado)'
+                        : 'Consultar en la farmacia',
                   ),
                   const SizedBox(height: 24),
                   const Divider(color: AppColors.neutral200),
                   const SizedBox(height: 16),
-                  // Foto placeholder
                   _PhotoPlaceholder(),
                   const SizedBox(height: 24),
-                  // Acciones secundarias
                   _SecondaryActions(),
                 ],
               ),
@@ -212,7 +288,7 @@ class PharmacyDutyDetailScreen extends StatelessWidget {
     );
   }
 
-  SliverAppBar _buildAppBar(BuildContext context, _PharmacyDetail data) {
+  SliverAppBar _buildAppBar(BuildContext context) {
     return SliverAppBar(
       pinned: true,
       backgroundColor: AppColors.surface,
@@ -250,12 +326,8 @@ class PharmacyDutyDetailScreen extends StatelessWidget {
 // ── Verificación ──────────────────────────────────────────────────────────────
 
 class _VerificationRow extends StatelessWidget {
-  const _VerificationRow({
-    required this.source,
-    required this.verifiedAgo,
-  });
+  const _VerificationRow({required this.source});
   final String source;
-  final String verifiedAgo;
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +344,7 @@ class _VerificationRow extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              'VERIFICADO HACE $verifiedAgo POR $source',
+              'FUENTE: $source',
               style: AppTextStyles.bodyXs.copyWith(
                 color: AppColors.successFg,
                 letterSpacing: 0.3,
@@ -315,9 +387,8 @@ class _DutyBadge extends StatelessWidget {
 // ── Mapa ──────────────────────────────────────────────────────────────────────
 
 class _MapWidget extends StatelessWidget {
-  const _MapWidget({required this.address, required this.distanceText});
+  const _MapWidget({required this.address});
   final String address;
-  final String distanceText;
 
   @override
   Widget build(BuildContext context) {
@@ -325,7 +396,6 @@ class _MapWidget extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Column(
         children: [
-          // Mapa placeholder
           Container(
             height: 160,
             color: AppColors.neutral200,
@@ -341,7 +411,6 @@ class _MapWidget extends StatelessWidget {
                     Text('Buenos Aires', style: AppTextStyles.bodyXs),
                   ],
                 ),
-                // Pin central
                 Positioned(
                   bottom: 60,
                   child: Icon(Icons.location_on,
@@ -350,43 +419,20 @@ class _MapWidget extends StatelessWidget {
               ],
             ),
           ),
-          // Dirección debajo del mapa
           Container(
             color: AppColors.surface,
             padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.location_on_outlined,
-                        size: 14, color: AppColors.neutral500),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        address,
-                        style: AppTextStyles.bodySm,
-                      ),
-                    ),
-                  ],
-                ),
-                if (distanceText.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.directions_walk,
-                          size: 14, color: AppColors.primary500),
-                      const SizedBox(width: 6),
-                      Text(
-                        distanceText,
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.primary600,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                Icon(Icons.location_on_outlined,
+                    size: 14, color: AppColors.neutral500),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    address,
+                    style: AppTextStyles.bodySm,
                   ),
-                ],
+                ),
               ],
             ),
           ),

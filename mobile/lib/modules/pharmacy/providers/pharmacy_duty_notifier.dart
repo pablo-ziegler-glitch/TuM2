@@ -73,11 +73,13 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
   PharmacyDutyNotifier({
     PharmacyDutyRepository? repository,
     GeoLocationService? geoService,
-    required String initialZoneId,
+    String initialZoneId = '',
   })  : _repository = repository ?? PharmacyDutyRepository(),
         _geoService = geoService ?? GeoLocationService(),
         super(PharmacyDutyState(
-          duties: const AsyncLoading(),
+          // AsyncData([]) como estado inicial: sin zona conocida aún.
+          // La pantalla detecta zoneId.isEmpty para mostrar noLocation.
+          duties: const AsyncData([]),
           zoneId: initialZoneId,
           sortOrder: PharmacyDutySortOrder.byDistance,
         ));
@@ -112,8 +114,32 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
 
   /// Recarga los datos desde Firestore sin cambiar zona ni posición.
   Future<void> refresh() async {
-    state = state.copyWith(duties: const AsyncLoading());
     await _loadDuties();
+  }
+
+  /// Actualiza la posición del usuario y recalcula las distancias en la lista actual.
+  void setUserPosition(double lat, double lng) {
+    state = state.copyWith(userPosition: (lat: lat, lng: lng));
+    final current = state.duties.valueOrNull;
+    if (current == null || current.isEmpty) return;
+    for (final item in current) {
+      if (item.lat != null && item.lng != null) {
+        item.distanceMeters = DistanceCalculator.haversine(
+          lat1: lat, lng1: lng, lat2: item.lat!, lng2: item.lng!,
+        ).round();
+      }
+    }
+    if (state.sortOrder == PharmacyDutySortOrder.byDistance) {
+      final sorted = List<PharmacyDutyItem>.from(current)
+        ..sort((a, b) {
+          final da = a.distanceMeters ?? 999999;
+          final db = b.distanceMeters ?? 999999;
+          return da.compareTo(db);
+        });
+      state = state.copyWith(duties: AsyncData(sorted));
+    } else {
+      state = state.copyWith(duties: AsyncData(List.from(current)));
+    }
   }
 
   // ── Ordenamiento (cliente, sin nueva query) ───────────────────────────────
@@ -161,6 +187,7 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
   // ── Internos ──────────────────────────────────────────────────────────────
 
   Future<void> _loadDuties() async {
+    state = state.copyWith(duties: const AsyncLoading());
     try {
       final items = await _repository.getDutiesForZone(state.zoneId);
 
@@ -207,10 +234,15 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
-/// Provider del notifier de farmacias de turno, parametrizado por zoneId.
+/// Provider principal de farmacias de turno para [PharmacyDutyScreen].
 ///
-/// El caller debe conocer el zoneId antes de crear este provider.
-/// Para obtenerlo: usar [GeoLocationService] + lógica de zona, o selector manual.
+/// No-family: la pantalla lo controla mediante [loadForZone] y [setUserPosition].
+/// Estado inicial: AsyncData([]) con zoneId vacío (pantalla muestra noLocation).
+final pharmacyDutyProvider = StateNotifierProvider.autoDispose<PharmacyDutyNotifier, PharmacyDutyState>(
+  (ref) => PharmacyDutyNotifier(),
+);
+
+/// Provider parametrizado por zoneId (para casos donde se conoce la zona de antemano).
 final pharmacyDutyNotifierProvider = StateNotifierProvider.autoDispose
     .family<PharmacyDutyNotifier, PharmacyDutyState, String>(
   (ref, zoneId) => PharmacyDutyNotifier(initialZoneId: zoneId),

@@ -1,9 +1,15 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/firebase/firebase_options.dart';
+import 'core/providers/auth_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
+import 'core/widgets/app_toast.dart';
 
 /// Punto de entrada de la app TuM2.
 ///
@@ -23,6 +29,9 @@ Future<void> main() async {
     ),
   );
 }
+
+// Clave global para mostrar toasts de autenticación desde fuera de un Scaffold.
+final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 class TuM2App extends ConsumerStatefulWidget {
   const TuM2App({super.key});
@@ -55,9 +64,23 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
 
   /// Procesa el URI entrante. Solo actúa si el host/path corresponde al
   /// callback de magic link configurado en ActionCodeSettings.
-  void _handleUri(Uri uri) {
+  Future<void> _handleUri(Uri uri) async {
     if (uri.host == 'tum2.app' && uri.path == '/auth/verify') {
-      ref.read(authNotifierProvider.notifier).handleEmailLink(uri.toString());
+      final link = uri.toString();
+      final hasPending =
+          await ref.read(authNotifierProvider.notifier).hasPendingEmailLink();
+
+      if (hasPending) {
+        // Dispositivo correcto: procesar directamente
+        ref.read(authNotifierProvider.notifier).handleEmailLink(link);
+      } else {
+        // Dispositivo diferente: guardar link y navegar a verify-email
+        // para que el usuario ingrese el email con el que pidió el link.
+        ref.read(pendingMagicLinkProvider.notifier).state = link;
+        ref
+            .read(appRouterProvider)
+            .go('${AppRoutes.emailVerification}?cross_device=true');
+      }
     }
   }
 
@@ -71,9 +94,27 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
 
+    // Mostrar toast post-autenticación cuando el provider lo notifica.
+    // Usamos ScaffoldMessengerKey para mostrarlo sin depender de un Scaffold activo.
+    ref.listen<String?>(pendingAuthToastProvider, (_, toast) {
+      if (toast != null) {
+        _scaffoldMessengerKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text(toast),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.successBg,
+            showCloseIcon: true,
+            closeIconColor: AppColors.successFg,
+          ),
+        );
+        ref.read(pendingAuthToastProvider.notifier).state = null;
+      }
+    });
+
     return MaterialApp.router(
       title: 'TuM2',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: _scaffoldMessengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary500,

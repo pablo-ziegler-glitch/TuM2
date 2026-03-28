@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -6,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const _kOnboardingSeenKey = 'onboarding_seen';
+const _kPendingEmailLinkKey = 'pending_email_link';
+const _kOnboardingOwnerDraftKey = 'onboarding_owner_draft';
 
 /// URL base para magic links. En producción apunta al dominio real.
 /// En desarrollo se puede usar el emulador de Auth.
@@ -37,9 +40,30 @@ Future<void> markOnboardingSeen() async {
   await prefs.setBool(_kOnboardingSeenKey, true);
 }
 
-// ── Auth notifier ─────────────────────────────────────────────────────────────
+// ── DisplayName micro-step ────────────────────────────────────────────────────
 
-/// Estado de las operaciones de autenticación.
+/// true si el usuario eligió saltar el micro-step de displayName.
+/// Se reinicia en false al hacer logout.
+final displayNameSkippedProvider = StateProvider<bool>((ref) => false);
+
+// ── Pending magic link (cross-device) ─────────────────────────────────────────
+
+/// Guarda el magic link URI cuando se recibe en un dispositivo diferente
+/// al que lo solicitó (no hay pending_email_link en SharedPreferences).
+/// La pantalla AUTH-04 lo consume para procesar el link con email manual.
+final pendingMagicLinkProvider = StateProvider<String?>((ref) => null);
+
+// ── Toast post-autenticación ──────────────────────────────────────────────────
+
+/// Mensaje de toast a mostrar tras login exitoso.
+/// null = no hay toast pendiente.
+/// main.dart lo escucha y muestra el SnackBar.
+final pendingAuthToastProvider = StateProvider<String?>((ref) => null);
+
+// ── Auth notifier (estado de UI) ──────────────────────────────────────────────
+
+/// Estado de las operaciones de autenticación (loading, error, emailSent).
+/// Separado del estado de navegación (AuthNotifier en auth_notifier.dart).
 class AuthState {
   const AuthState({
     this.isLoading = false,
@@ -67,13 +91,15 @@ class AuthState {
   }
 }
 
-/// Notifier principal de autenticación.
-/// Maneja magic link y Google Sign-In.
+/// Notifier de operaciones de autenticación (magic link + Google).
+/// Maneja estado de UI: isLoading, error, emailSent.
+/// No gestiona navegación — eso es responsabilidad de AuthNotifier (ChangeNotifier).
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() => const AuthState();
 
   /// Envía el magic link al email indicado.
+  /// Guarda el email en SharedPreferences para recuperarlo al procesar el link.
   Future<void> sendMagicLink(String email) async {
     state = state.copyWith(isLoading: true, clearError: true, emailSent: false);
 
@@ -94,7 +120,7 @@ class AuthNotifier extends Notifier<AuthState> {
 
       // Persistir el email localmente para usarlo al procesar el link
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('pending_email_link', email);
+      await prefs.setString(_kPendingEmailLinkKey, email);
 
       state = state.copyWith(isLoading: false, emailSent: true);
     } on FirebaseAuthException catch (e) {
@@ -111,12 +137,16 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   /// Procesa el magic link recibido por deep link.
-  Future<void> handleEmailLink(String link) async {
+  ///
+  /// [emailOverride] se usa en el caso cross-device: el usuario ingresa
+  /// manualmente el email con el que pidió el link en otro dispositivo.
+  Future<void> handleEmailLink(String link, {String? emailOverride}) async {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('pending_email_link') ?? '';
+      final email =
+          emailOverride ?? prefs.getString(_kPendingEmailLinkKey) ?? '';
 
       if (email.isEmpty) {
         state = state.copyWith(
@@ -134,12 +164,20 @@ class AuthNotifier extends Notifier<AuthState> {
         return;
       }
 
-      await FirebaseAuth.instance.signInWithEmailLink(
+      final credential = await FirebaseAuth.instance.signInWithEmailLink(
         email: email,
         emailLink: link,
       );
 
-      await prefs.remove('pending_email_link');
+      // Limpiar link pendiente tras auth exitosa
+      await prefs.remove(_kPendingEmailLinkKey);
+
+      // Limpiar link cross-device si había uno guardado
+      ref.read(pendingMagicLinkProvider.notifier).state = null;
+
+      // Programar toast de bienvenida
+      _scheduleAuthToast(credential.user);
+
       state = state.copyWith(isLoading: false);
     } on FirebaseAuthException catch (e) {
       state = state.copyWith(
@@ -172,7 +210,12 @@ class AuthNotifier extends Notifier<AuthState> {
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      final result =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Programar toast de bienvenida
+      _scheduleAuthToast(result.user);
+
       state = state.copyWith(isLoading: false);
     } on FirebaseAuthException catch (e) {
       state = state.copyWith(
@@ -187,14 +230,76 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// Cierra la sesión actual.
+  /// Cierra la sesión actual ejecutando las 3 acciones obligatorias en orden.
+  ///
+  /// Si alguna acción falla, se registra el error pero se continúa con las
+  /// siguientes (no hacer rollback del logout).
   Future<void> signOut() async {
-    await FirebaseAuth.instance.signOut();
-    await GoogleSignIn().signOut();
+    // Acción 1: cerrar sesión en Firebase Auth
+    try {
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().signOut();
+    } catch (e) {
+      // Loguear pero continuar
+      // ignore: avoid_print
+      print('[AuthNotifier.signOut] Error en Firebase signOut: $e');
+    }
+
+    // Acción 2: limpiar SharedPreferences (no limpiar onboarding_seen)
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await Future.wait([
+        prefs.remove(_kPendingEmailLinkKey),
+        prefs.remove(_kOnboardingOwnerDraftKey),
+      ]);
+    } catch (e) {
+      // ignore: avoid_print
+      print('[AuthNotifier.signOut] Error limpiando SharedPreferences: $e');
+    }
+
+    // Acción 3: invalidar providers de estado de usuario en Riverpod
+    try {
+      ref.invalidate(isOwnerProvider);
+      ref.read(displayNameSkippedProvider.notifier).state = false;
+      ref.read(pendingMagicLinkProvider.notifier).state = null;
+      ref.read(pendingAuthToastProvider.notifier).state = null;
+    } catch (e) {
+      // ignore: avoid_print
+      print('[AuthNotifier.signOut] Error invalidando providers: $e');
+    }
+  }
+
+  /// Retorna true si existe un pending_email_link guardado en SharedPreferences.
+  /// Usado para detectar el caso cross-device del magic link.
+  Future<bool> hasPendingEmailLink() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString(_kPendingEmailLinkKey);
+    return email != null && email.isNotEmpty;
   }
 
   /// Limpia el error visible sin cambiar otro estado.
   void clearError() => state = state.copyWith(clearError: true);
+
+  /// Programa el toast de bienvenida según si el usuario es nuevo o existente.
+  /// Aproximación: si createdAt ≈ lastSignInTime → usuario nuevo.
+  void _scheduleAuthToast(User? user) {
+    if (user == null) return;
+
+    final createdAt = user.metadata.creationTime;
+    final lastSignIn = user.metadata.lastSignInTime;
+
+    // Diferencia menor a 10 segundos → consideramos usuario nuevo
+    final isNewUser = createdAt != null &&
+        lastSignIn != null &&
+        lastSignIn.difference(createdAt).abs().inSeconds < 10;
+
+    final name = user.displayName?.split(' ').first ?? '';
+    final message = isNewUser
+        ? '¡Bienvenido a TuM2!'
+        : '¡Hola de nuevo${name.isNotEmpty ? ', $name' : ''}!';
+
+    ref.read(pendingAuthToastProvider.notifier).state = message;
+  }
 
   String _mapFirebaseError(FirebaseAuthException e) {
     switch (e.code) {
@@ -217,11 +322,37 @@ class AuthNotifier extends Notifier<AuthState> {
 final authNotifierProvider =
     NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
 
+// ── Provider de rol ───────────────────────────────────────────────────────────
+
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
-/// Lee el custom claim del JWT (caché local, sin roundtrip de red).
+/// Usa forceRefresh: false (caché local del JWT). Para refresh explícito usar
+/// authRoleProvider en auth_role_provider.dart.
 final isOwnerProvider = FutureProvider<bool>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return false;
   final result = await user.getIdTokenResult();
   return result.claims?['role'] == 'owner';
+});
+
+// ── Provider de merchantId del owner ─────────────────────────────────────────
+
+/// merchantId del comercio del owner autenticado.
+/// Lee desde Firestore merchants collection (query por ownerUserId).
+/// Null si el usuario no es owner o aún no completó el onboarding.
+final ownerMerchantIdProvider = FutureProvider<String?>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return null;
+
+  try {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('merchants')
+        .where('ownerUserId', isEqualTo: user.uid)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) return null;
+    return snapshot.docs.first.id;
+  } catch (_) {
+    return null;
+  }
 });

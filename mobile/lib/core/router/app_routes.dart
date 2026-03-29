@@ -6,6 +6,10 @@ abstract class AppRoutes {
   static const login = '/login';
   static const emailVerification = '/email-verification';
 
+  /// Micro-step de nombre de usuario para nuevos usuarios de magic link.
+  /// Se muestra solo cuando user.displayName es null/vacío tras el primer login.
+  static const displayName = '/auth/display-name';
+
   // ── CustomerTabs — Tab Inicio ───────────────────────────────────────────────
   static const home = '/home';
   static const homeAbiertoAhora = '/home/abierto-ahora';

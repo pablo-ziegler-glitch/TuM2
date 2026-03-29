@@ -5,7 +5,7 @@ import 'package:tum2/core/auth/auth_state.dart';
 import 'package:tum2/core/router/app_routes.dart';
 import 'package:tum2/core/router/router_guards.dart';
 
-/// Fake de [User] para tests — los guards no invocan métodos del usuario.
+/// Fake de [User] para tests — los guards leen solo role/onboardingComplete.
 class _FakeUser extends Fake implements User {}
 
 void main() {
@@ -33,6 +33,12 @@ void main() {
     test('/commerce/:id es público', () {
       expect(RouterGuards.isPublicPath('/commerce/abc123'), isTrue);
     });
+    test('/pharmacy/:id es público', () {
+      expect(RouterGuards.isPublicPath('/pharmacy/farma-01'), isTrue);
+    });
+    test('/home/farmacias-de-turno es público', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.homeFarmacias), isTrue);
+    });
     test('/home es protegido', () {
       expect(RouterGuards.isPublicPath(AppRoutes.home), isFalse);
     });
@@ -41,6 +47,12 @@ void main() {
     });
     test('/admin es protegido', () {
       expect(RouterGuards.isPublicPath(AppRoutes.admin), isFalse);
+    });
+    test('/auth/display-name es protegido', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.displayName), isFalse);
+    });
+    test('/profile es protegido', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.profile), isFalse);
     });
   });
 
@@ -96,6 +108,14 @@ void main() {
       );
       expect(result, equals(AppRoutes.splash));
     });
+
+    test('desde /auth/display-name redirige a splash', () {
+      final result = RouterGuards.evaluate(
+        authState: const AuthLoading(),
+        location: AppRoutes.displayName,
+      );
+      expect(result, equals(AppRoutes.splash));
+    });
   });
 
   // ── evaluate: AuthUnauthenticated ────────────────────────────────────────────
@@ -107,6 +127,7 @@ void main() {
       AppRoutes.onboarding,
       AppRoutes.emailVerification,
       '/commerce/shop1',
+      '/pharmacy/farma-01',
     ];
 
     for (final path in publicPaths) {
@@ -142,6 +163,14 @@ void main() {
       );
       expect(result, equals(AppRoutes.login));
     });
+
+    test('en /auth/display-name redirige a login', () {
+      final result = RouterGuards.evaluate(
+        authState: const AuthUnauthenticated(),
+        location: AppRoutes.displayName,
+      );
+      expect(result, equals(AppRoutes.login));
+    });
   });
 
   // ── evaluate: AuthAuthenticated — desde ruta auth ────────────────────────────
@@ -155,12 +184,13 @@ void main() {
       expect(result, equals(AppRoutes.home));
     });
 
-    test('owner con comercio desde /login va a /home', () {
+    test('owner con comercio completado desde /login va a /home', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(
           user: fakeUser,
           role: 'owner',
           merchantId: 'merchant-123',
+          onboardingComplete: true, // owner que completó el alta
         ),
         location: AppRoutes.login,
       );
@@ -169,7 +199,11 @@ void main() {
 
     test('owner sin comercio desde /login va a onboarding', () {
       final result = RouterGuards.evaluate(
-        authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
+        authState: AuthAuthenticated(
+          user: fakeUser,
+          role: 'owner',
+          // onboardingComplete: false por defecto
+        ),
         location: AppRoutes.login,
       );
       expect(result, equals(AppRoutes.onboardingOwner));
@@ -190,6 +224,14 @@ void main() {
       );
       expect(result, equals(AppRoutes.home));
     });
+
+    test('customer desde onboarding va a /home', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
+        location: AppRoutes.onboarding,
+      );
+      expect(result, equals(AppRoutes.home));
+    });
   });
 
   // ── evaluate: AuthAuthenticated — guards de rol ──────────────────────────────
@@ -199,6 +241,14 @@ void main() {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
         location: '/home',
+      );
+      expect(result, isNull);
+    });
+
+    test('customer en /profile no redirige', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
+        location: '/profile',
       );
       expect(result, isNull);
     });
@@ -227,19 +277,20 @@ void main() {
       expect(result, equals(AppRoutes.home));
     });
 
-    test('owner con comercio en /owner no redirige', () {
+    test('owner con onboarding completo en /owner no redirige', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(
           user: fakeUser,
           role: 'owner',
           merchantId: 'merchant-123',
+          onboardingComplete: true,
         ),
         location: '/owner',
       );
       expect(result, isNull);
     });
 
-    test('owner sin comercio en /home redirige a onboarding', () {
+    test('owner sin onboarding en /home redirige a /onboarding/owner', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
         location: '/home',
@@ -247,7 +298,15 @@ void main() {
       expect(result, equals(AppRoutes.onboardingOwner));
     });
 
-    test('owner sin comercio en /onboarding/owner no redirige', () {
+    test('owner sin onboarding en /search redirige a /onboarding/owner', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
+        location: '/search',
+      );
+      expect(result, equals(AppRoutes.onboardingOwner));
+    });
+
+    test('owner sin onboarding en /onboarding/owner no redirige', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
         location: '/onboarding/owner',
@@ -255,12 +314,13 @@ void main() {
       expect(result, isNull);
     });
 
-    test('owner con comercio en /admin redirige a /home', () {
+    test('owner con onboarding en /admin redirige a /home', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(
           user: fakeUser,
           role: 'owner',
           merchantId: 'merchant-123',
+          onboardingComplete: true,
         ),
         location: '/admin',
       );
@@ -331,13 +391,14 @@ void main() {
       expect(consumed, isTrue);
     });
 
-    test('owner restaura pending route a /owner', () {
+    test('owner con onboarding restaura pending route a /owner/products', () {
       bool consumed = false;
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(
           user: fakeUser,
           role: 'owner',
           merchantId: 'merchant-1',
+          onboardingComplete: true,
         ),
         location: AppRoutes.login,
         pendingRoute: '/owner/products',
@@ -353,6 +414,23 @@ void main() {
         location: AppRoutes.login,
       );
       expect(result, equals(AppRoutes.home));
+    });
+
+    test('owner sin onboarding ignora pending route y va a /onboarding/owner', () {
+      bool consumed = false;
+      // Owner que todavía no terminó el alta no debería saltar a otra ruta
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
+        location: AppRoutes.login,
+        pendingRoute: '/commerce/shop-1',
+        consumePendingRoute: () => consumed = true,
+      );
+      // La pending route '/commerce/shop-1' es accesible para owner,
+      // pero el guard de onboarding tiene prioridad en _authenticatedHome.
+      // Esperamos que vaya a onboardingOwner (la pending route no restaura
+      // cuando el owner aún no completó su alta).
+      expect(result, equals(AppRoutes.onboardingOwner));
+      expect(consumed, isFalse);
     });
   });
 }

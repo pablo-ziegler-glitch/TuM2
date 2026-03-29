@@ -180,8 +180,7 @@ class ProfileScreen extends ConsumerWidget {
                   labelColor: AppColors.errorFg,
                   iconColor: AppColors.errorFg,
                   showChevron: false,
-                  onTap: () =>
-                      ref.read(authOperationProvider.notifier).signOut(),
+                  onTap: () => _confirmSignOut(context, ref),
                 ),
               ],
             ),
@@ -190,6 +189,32 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// Muestra un diálogo de confirmación antes de cerrar la sesión.
+Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Cerrar sesión'),
+      content: const Text('¿Querés cerrar tu sesión en TuM2?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          style: TextButton.styleFrom(foregroundColor: AppColors.errorFg),
+          child: const Text('Cerrar sesión'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed == true) {
+    await ref.read(authOperationProvider.notifier).signOut();
   }
 }
 

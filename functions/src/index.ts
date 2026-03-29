@@ -3,6 +3,15 @@ import { initializeApp } from "firebase-admin/app";
 // Initialize Firebase Admin SDK once
 initializeApp();
 
+// ─── Auth Triggers ─────────────────────────────────────────────────────────
+
+export { onUserCreate } from "./triggers/onUserCreate";
+export { onUserDelete } from "./triggers/onUserDelete";
+
+// ─── Auth Callables ────────────────────────────────────────────────────────
+
+export { assignOwnerRole } from "./callables/assignOwnerRole";
+
 // ─── Firestore Triggers ────────────────────────────────────────────────────
 
 export { onMerchantWriteSyncPublic } from "./triggers/merchants";

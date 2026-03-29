@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/auth_providers.dart';
-import '../../../core/router/app_router.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_text_input.dart';
@@ -13,7 +13,8 @@ import '../../../core/widgets/secondary_button.dart';
 
 /// AUTH-03 — Login / Registro
 ///
-/// Pantalla de autenticación con email magic link + Google Sign-In.
+/// Pantalla de autenticación unificada: email magic link + Google Sign-In.
+/// El sistema detecta si el email existe de forma transparente.
 ///
 /// Estados:
 ///   1. Default (email vacío)
@@ -66,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final state = ref.read(authOperationProvider);
     if (state.emailSent) {
       context.go(
-        '${AppRoutes.verifyEmail}?email=${Uri.encodeComponent(email)}',
+        '${AppRoutes.emailVerification}?email=${Uri.encodeComponent(email)}',
       );
     }
   }
@@ -148,7 +149,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.done,
                           autocorrect: false,
-                          prefixIcon: const Icon(Icons.mail_outline, size: 20),
+                          prefixIcon:
+                              const Icon(Icons.mail_outline, size: 20),
                           suffixIcon: _emailIsValid
                               ? const Icon(
                                   Icons.check_circle_rounded,
@@ -188,12 +190,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Separador
                     Row(
                       children: [
-                        const Expanded(child: Divider(color: AppColors.neutral200)),
+                        const Expanded(
+                            child: Divider(color: AppColors.neutral200)),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12),
                           child: Text('o', style: AppTextStyles.bodyXs),
                         ),
-                        const Expanded(child: Divider(color: AppColors.neutral200)),
+                        const Expanded(
+                            child: Divider(color: AppColors.neutral200)),
                       ],
                     ),
 
@@ -214,7 +219,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           // TODO(assets): reemplazar con asset logo Google
                           child: Text('G',
                               style: TextStyle(
-                                  fontSize: 12, fontWeight: FontWeight.w700)),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700)),
                         ),
                       ),
                     ),

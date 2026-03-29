@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_notifier.dart';
 import '../auth/auth_state.dart';
+import '../providers/auth_providers.dart';
 import 'app_routes.dart';
 import 'router_guards.dart';
 import '../../modules/auth/screens/splash_screen.dart';
 import '../../modules/auth/screens/login_screen.dart';
 import '../../modules/auth/screens/onboarding_screen.dart';
 import '../../modules/auth/screens/verify_email_screen.dart';
+import '../../modules/auth/screens/display_name_screen.dart';
 import '../../modules/home/screens/home_screen.dart';
 import '../../modules/home/screens/abierto_ahora_screen.dart';
 import '../../modules/search/screens/search_screen.dart';
@@ -28,6 +30,9 @@ import '../../modules/pharmacy/screens/pharmacy_duty_detail_screen.dart';
 import '../../modules/pharmacy/models/pharmacy_duty_item.dart';
 import '../../shared/widgets/placeholder_screen.dart';
 
+// Re-exportar para que otros módulos puedan usar AppRoutes importando app_router.dart
+export 'app_routes.dart';
+
 // ── Pending route (deep link pre-auth) ───────────────────────────────────────
 
 /// Ruta pendiente guardada cuando un deep link llega sin sesión activa.
@@ -38,9 +43,10 @@ final pendingRouteProvider = StateProvider<String?>((ref) => null);
 
 /// Provider del [GoRouter] de la aplicación.
 ///
-/// Usa [AuthNotifier] como [refreshListenable] para re-evaluar los guards
-/// cada vez que el estado de autenticación cambia.
+/// Usa [AuthNotifier] (ChangeNotifier) como [refreshListenable] para re-evaluar
+/// los guards cada vez que el estado de autenticación cambia.
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // authNotifier aquí es el ChangeNotifier de auth_notifier.dart
   final authNotifier = ref.read(authNotifierProvider);
 
   final router = GoRouter(
@@ -60,7 +66,36 @@ String? _buildRedirect(Ref ref, GoRouterState state) {
   final authState = ref.read(authNotifierProvider).authState;
   final location = state.uri.toString();
 
-  // Guardar pending route para deep links pre-auth.
+  // ── 1. Primer lanzamiento: splash unauthenticated → onboarding o login ──
+  if (authState is AuthUnauthenticated && location == AppRoutes.splash) {
+    final isFirstLaunch =
+        ref.read(isFirstLaunchProvider).valueOrNull ?? false;
+    return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.login;
+  }
+
+  // ── 2. Micro-step displayName para usuarios de magic link sin nombre ──
+  if (authState is AuthAuthenticated) {
+    final user = authState.user;
+    final displayNameEmpty =
+        user.displayName == null || user.displayName!.isEmpty;
+    final isEmailLinkUser =
+        !user.providerData.any((p) => p.providerId == 'google.com');
+    final skipped = ref.read(displayNameSkippedProvider);
+    final onDisplayNameScreen = location == AppRoutes.displayName;
+
+    if (displayNameEmpty &&
+        isEmailLinkUser &&
+        !skipped &&
+        !onDisplayNameScreen) {
+      // Solo redirigir si viene de una ruta de auth o de home
+      // (no interrumpir flujo de onboarding de owner u otras rutas profundas)
+      if (RouterGuards.isAuthPath(location) || location == AppRoutes.home) {
+        return AppRoutes.displayName;
+      }
+    }
+  }
+
+  // ── 3. Guardar pending route para deep links pre-auth ──
   final shouldSavePending =
       (authState is AuthLoading || authState is AuthUnauthenticated) &&
       !RouterGuards.isPublicPath(location) &&
@@ -69,6 +104,7 @@ String? _buildRedirect(Ref ref, GoRouterState state) {
     ref.read(pendingRouteProvider.notifier).state = location;
   }
 
+  // ── 4. Guards estándar ──
   return RouterGuards.evaluate(
     authState: authState,
     location: location,
@@ -100,8 +136,16 @@ List<RouteBase> _buildRoutes() {
       path: AppRoutes.emailVerification,
       builder: (context, state) {
         final email = state.uri.queryParameters['email'] ?? '';
-        return VerifyEmailScreen(email: email);
+        final crossDevice =
+            state.uri.queryParameters['cross_device'] == 'true';
+        return VerifyEmailScreen(email: email, isCrossDevice: crossDevice);
       },
+    ),
+
+    // Micro-step de nombre de usuario (magic link sin displayName)
+    GoRoute(
+      path: AppRoutes.displayName,
+      builder: (_, __) => const DisplayNameScreen(),
     ),
 
     // ── CustomerTabs (StatefulShellRoute con estado preservado) ───────────────
@@ -300,3 +344,4 @@ List<RouteBase> _buildRoutes() {
     ),
   ];
 }
+

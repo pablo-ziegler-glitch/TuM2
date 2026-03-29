@@ -39,9 +39,12 @@ Future<void> markOnboardingSeen() async {
 
 // ── Auth notifier ─────────────────────────────────────────────────────────────
 
-/// Estado de las operaciones de autenticación.
-class AuthState {
-  const AuthState({
+/// Estado de las operaciones de autenticación (magic link, Google Sign-In).
+///
+/// No confundir con [AuthState] de auth_state.dart, que representa el estado
+/// de sesión (loading / unauthenticated / authenticated).
+class AuthOperationState {
+  const AuthOperationState({
     this.isLoading = false,
     this.errorMessage,
     this.emailSent = false,
@@ -53,13 +56,13 @@ class AuthState {
   /// true cuando el magic link fue enviado exitosamente.
   final bool emailSent;
 
-  AuthState copyWith({
+  AuthOperationState copyWith({
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
     bool? emailSent,
   }) {
-    return AuthState(
+    return AuthOperationState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       emailSent: emailSent ?? this.emailSent,
@@ -67,11 +70,13 @@ class AuthState {
   }
 }
 
-/// Notifier principal de autenticación.
-/// Maneja magic link y Google Sign-In.
-class AuthNotifier extends Notifier<AuthState> {
+/// Notifier de operaciones de autenticación (magic link, Google Sign-In).
+///
+/// No confundir con [AuthNotifier] de auth_notifier.dart, que gestiona el
+/// estado de sesión global (escucha authStateChanges de Firebase).
+class AuthOperationNotifier extends Notifier<AuthOperationState> {
   @override
-  AuthState build() => const AuthState();
+  AuthOperationState build() => const AuthOperationState();
 
   /// Envía el magic link al email indicado.
   Future<void> sendMagicLink(String email) async {
@@ -214,8 +219,9 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 }
 
-final authNotifierProvider =
-    NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+final authOperationProvider =
+    NotifierProvider<AuthOperationNotifier, AuthOperationState>(
+        AuthOperationNotifier.new);
 
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
 /// Lee el custom claim del JWT (caché local, sin roundtrip de red).

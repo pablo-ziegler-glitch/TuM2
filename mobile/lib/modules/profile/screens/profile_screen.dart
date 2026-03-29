@@ -125,7 +125,7 @@ class ProfileScreen extends ConsumerWidget {
                   iconColor: AppColors.errorFg,
                   showChevron: false,
                   onTap: () =>
-                      ref.read(authNotifierProvider.notifier).signOut(),
+                      ref.read(authOperationProvider.notifier).signOut(),
                 ),
               ],
             ),

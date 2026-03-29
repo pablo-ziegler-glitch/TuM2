@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/providers/auth_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
 
@@ -57,7 +58,7 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
   /// callback de magic link configurado en ActionCodeSettings.
   void _handleUri(Uri uri) {
     if (uri.host == 'tum2.app' && uri.path == '/auth/verify') {
-      ref.read(authNotifierProvider.notifier).handleEmailLink(uri.toString());
+      ref.read(authOperationProvider.notifier).handleEmailLink(uri.toString());
     }
   }
 

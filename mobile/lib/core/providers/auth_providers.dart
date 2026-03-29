@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../analytics/auth_analytics.dart';
+
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const _kOnboardingSeenKey = 'onboarding_seen';
@@ -122,8 +124,10 @@ class AuthNotifier extends Notifier<AuthState> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_kPendingEmailLinkKey, email);
 
+      AuthAnalytics.logMagicLinkSent().ignore();
       state = state.copyWith(isLoading: false, emailSent: true);
     } on FirebaseAuthException catch (e) {
+      AuthAnalytics.logMagicLinkError(e.code).ignore();
       state = state.copyWith(
         isLoading: false,
         errorMessage: _mapFirebaseError(e),
@@ -178,8 +182,14 @@ class AuthNotifier extends Notifier<AuthState> {
       // Programar toast de bienvenida
       _scheduleAuthToast(credential.user);
 
+      AuthAnalytics.logMagicLinkVerified(
+        isNewUser: _isNewUser(credential.user),
+        isCrossDevice: emailOverride != null,
+      ).ignore();
+
       state = state.copyWith(isLoading: false);
     } on FirebaseAuthException catch (e) {
+      AuthAnalytics.logMagicLinkError(e.code).ignore();
       state = state.copyWith(
         isLoading: false,
         errorMessage: _mapFirebaseError(e),
@@ -216,8 +226,13 @@ class AuthNotifier extends Notifier<AuthState> {
       // Programar toast de bienvenida
       _scheduleAuthToast(result.user);
 
+      AuthAnalytics.logGoogleSignIn(
+        isNewUser: _isNewUser(result.user),
+      ).ignore();
+
       state = state.copyWith(isLoading: false);
     } on FirebaseAuthException catch (e) {
+      AuthAnalytics.logGoogleSignInError(e.code).ignore();
       state = state.copyWith(
         isLoading: false,
         errorMessage: _mapFirebaseError(e),
@@ -235,6 +250,9 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Si alguna acción falla, se registra el error pero se continúa con las
   /// siguientes (no hacer rollback del logout).
   Future<void> signOut() async {
+    // Evento analytics antes de cerrar la sesión (el uid todavía está disponible)
+    AuthAnalytics.logSignOut().ignore();
+
     // Acción 1: cerrar sesión en Firebase Auth
     try {
       await FirebaseAuth.instance.signOut();
@@ -280,19 +298,23 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Limpia el error visible sin cambiar otro estado.
   void clearError() => state = state.copyWith(clearError: true);
 
+  /// Retorna true si el usuario se acaba de registrar (primer login).
+  /// Aproximación: diferencia entre createdAt y lastSignInTime < 10 segundos.
+  bool _isNewUser(User? user) {
+    if (user == null) return false;
+    final createdAt = user.metadata.creationTime;
+    final lastSignIn = user.metadata.lastSignInTime;
+    return createdAt != null &&
+        lastSignIn != null &&
+        lastSignIn.difference(createdAt).abs().inSeconds < 10;
+  }
+
   /// Programa el toast de bienvenida según si el usuario es nuevo o existente.
   /// Aproximación: si createdAt ≈ lastSignInTime → usuario nuevo.
   void _scheduleAuthToast(User? user) {
     if (user == null) return;
 
-    final createdAt = user.metadata.creationTime;
-    final lastSignIn = user.metadata.lastSignInTime;
-
-    // Diferencia menor a 10 segundos → consideramos usuario nuevo
-    final isNewUser = createdAt != null &&
-        lastSignIn != null &&
-        lastSignIn.difference(createdAt).abs().inSeconds < 10;
-
+    final isNewUser = _isNewUser(user);
     final name = user.displayName?.split(' ').first ?? '';
     final message = isNewUser
         ? '¡Bienvenido a TuM2!'

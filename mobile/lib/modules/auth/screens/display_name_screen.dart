@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics/auth_analytics.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
@@ -72,6 +73,7 @@ class _DisplayNameScreenState extends ConsumerState<DisplayNameScreen> {
         }),
       ]);
 
+      AuthAnalytics.logDisplayNameSet().ignore();
       if (mounted) _goHome();
     } catch (_) {
       setState(() {
@@ -83,6 +85,7 @@ class _DisplayNameScreenState extends ConsumerState<DisplayNameScreen> {
 
   /// Salta el paso sin guardar. Marca el provider para evitar redirect circular.
   void _skip() {
+    AuthAnalytics.logDisplayNameSkipped().ignore();
     ref.read(displayNameSkippedProvider.notifier).state = true;
     _goHome();
   }

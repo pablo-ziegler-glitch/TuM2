@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -50,6 +52,17 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
   }
 
   Future<void> _initDeepLinks() async {
+    // W-01: en web el magic link llega directamente en la URL del browser.
+    // app_links no funciona en web; chequeamos Uri.base al inicio.
+    if (kIsWeb) {
+      final link = Uri.base.toString();
+      if (FirebaseAuth.instance.isSignInWithEmailLink(link)) {
+        // En web siempre es el mismo dispositivo → no hace falta cross-device
+        ref.read(authNotifierProvider.notifier).handleEmailLink(link);
+      }
+      return;
+    }
+
     final appLinks = AppLinks();
 
     // Link que abrió la app desde estado terminado

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -207,21 +208,28 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) {
-        // Usuario canceló
-        state = state.copyWith(isLoading: false);
-        return;
+      UserCredential result;
+
+      if (kIsWeb) {
+        // En web usamos signInWithPopup (no requiere el paquete google_sign_in)
+        result = await FirebaseAuth.instance
+            .signInWithPopup(GoogleAuthProvider());
+      } else {
+        final googleUser = await GoogleSignIn().signIn();
+        if (googleUser == null) {
+          // Usuario canceló
+          state = state.copyWith(isLoading: false);
+          return;
+        }
+
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        result = await FirebaseAuth.instance.signInWithCredential(credential);
       }
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final result =
-          await FirebaseAuth.instance.signInWithCredential(credential);
 
       // Programar toast de bienvenida
       _scheduleAuthToast(result.user);
@@ -347,12 +355,11 @@ final authNotifierProvider =
 // ── Provider de rol ───────────────────────────────────────────────────────────
 
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
-/// Usa forceRefresh: false (caché local del JWT). Para refresh explícito usar
-/// authRoleProvider en auth_role_provider.dart.
+/// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
 final isOwnerProvider = FutureProvider<bool>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return false;
-  final result = await user.getIdTokenResult();
+  final result = await user.getIdTokenResult(true);
   return result.claims?['role'] == 'owner';
 });
 

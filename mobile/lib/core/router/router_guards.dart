@@ -29,7 +29,7 @@ abstract class RouterGuards {
   /// Verifica si el rol tiene acceso a la ruta dada.
   static bool canAccessRoute(String route, String role) {
     if (route.startsWith('/owner') && role == 'customer') return false;
-    if (route.startsWith('/admin') && role != 'admin') return false;
+    if (route.startsWith('/admin') && role != 'admin' && role != 'super_admin') return false;
     return true;
   }
 
@@ -79,8 +79,10 @@ abstract class RouterGuards {
           return AppRoutes.profile;
         }
 
-        // Guard: /admin solo admin
-        if (location.startsWith('/admin') && role != 'admin') {
+        // Guard: /admin solo admin o super_admin
+        if (location.startsWith('/admin') &&
+            role != 'admin' &&
+            role != 'super_admin') {
           return AppRoutes.home;
         }
 

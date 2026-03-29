@@ -55,8 +55,9 @@ class AuthNotifier extends ChangeNotifier {
 
       // Fallback a Firestore si los claims siguen sin estar presentes
       if (role == null) {
-        role = await _fetchRoleFromFirestore(user.uid);
-        merchantId = await _fetchMerchantIdFromFirestore(user.uid);
+        final data = await _fetchUserDataFromFirestore(user.uid);
+        role = data.role;
+        merchantId = data.merchantId;
       }
 
       // Descartar resultado si llegó un evento de auth más reciente durante los awaits
@@ -84,23 +85,19 @@ class AuthNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> _fetchRoleFromFirestore(String uid) async {
+  /// Lee role y merchantId del documento users/$uid en una sola lectura.
+  Future<({String? role, String? merchantId})> _fetchUserDataFromFirestore(
+      String uid) async {
     try {
       final doc = await FirebaseFirestore.instance.doc('users/$uid').get();
-      if (!doc.exists) return null;
-      return (doc.data() as Map<String, dynamic>?)?['role'] as String?;
+      if (!doc.exists) return (role: null, merchantId: null);
+      final data = doc.data() as Map<String, dynamic>?;
+      return (
+        role: data?['role'] as String?,
+        merchantId: data?['merchantId'] as String?,
+      );
     } catch (_) {
-      return null;
-    }
-  }
-
-  Future<String?> _fetchMerchantIdFromFirestore(String uid) async {
-    try {
-      final doc = await FirebaseFirestore.instance.doc('users/$uid').get();
-      if (!doc.exists) return null;
-      return (doc.data() as Map<String, dynamic>?)?['merchantId'] as String?;
-    } catch (_) {
-      return null;
+      return (role: null, merchantId: null);
     }
   }
 

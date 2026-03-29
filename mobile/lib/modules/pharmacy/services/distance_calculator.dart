@@ -47,6 +47,11 @@ class DistanceCalculator {
 ///
 /// Usar siempre esta función para calcular la fecha del turno, nunca
 /// [DateTime.now()] directo, para evitar el off-by-one a medianoche en UTC.
+///
+/// Nota: Argentina no observa horario de verano desde 2008 y es
+/// permanentemente UTC-3, por lo que el offset fijo es correcto.
+/// Si un usuario usa la app desde otra zona horaria, la fecha calculada
+/// sigue siendo la argentina (que es lo correcto para los turnos).
 String todayArgentina() {
   final now = DateTime.now().toUtc().subtract(const Duration(hours: 3));
   return DateFormat('yyyy-MM-dd').format(now);
@@ -54,6 +59,8 @@ String todayArgentina() {
 
 /// Formatea la fecha Argentina actual con lenguaje natural en español.
 /// Ej: "MIÉRCOLES 26 DE MARZO"
+///
+/// Mismo criterio de timezone que [todayArgentina].
 String todayArgentinaLabel() {
   final now = DateTime.now().toUtc().subtract(const Duration(hours: 3));
   final formatted = DateFormat('EEEE d \'de\' MMMM', 'es').format(now);

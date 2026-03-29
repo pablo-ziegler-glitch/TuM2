@@ -231,3 +231,13 @@ final isOwnerProvider = FutureProvider<bool>((ref) async {
   final result = await user.getIdTokenResult();
   return result.claims?['role'] == 'owner';
 });
+
+/// true si el usuario autenticado tiene el claim role='admin' o 'super_admin'.
+/// Lee el custom claim del JWT (caché local, sin roundtrip de red).
+final isAdminProvider = FutureProvider<bool>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return false;
+  final result = await user.getIdTokenResult();
+  final role = result.claims?['role'] as String?;
+  return role == 'admin' || role == 'super_admin';
+});

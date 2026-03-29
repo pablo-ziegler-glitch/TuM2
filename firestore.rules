@@ -41,8 +41,11 @@ service cloud.firestore {
     // already set. Prevents client-side replay attacks on the onboarding submit.
     function draftMerchantIdUnchanged() {
       let progress = 'onboardingOwnerProgress';
+      let incoming = request.resource.data.get(progress, null);
+      // Si el update elimina onboardingOwnerProgress, se permite
+      if (incoming == null) return true;
       let existingId = resource.data[progress].draftMerchantId;
-      let newId = request.resource.data[progress].draftMerchantId;
+      let newId = incoming.draftMerchantId;
       // Allow if it was null/unset before, or if it stays the same
       return existingId == null || existingId == newId;
     }

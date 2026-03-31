@@ -65,12 +65,12 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     if (!_canResend) return;
 
     await ref
-        .read(authNotifierProvider.notifier)
+        .read(authOpProvider.notifier)
         .sendMagicLink(widget.email);
 
     if (!mounted) return;
 
-    final state = ref.read(authNotifierProvider);
+    final state = ref.read(authOpProvider);
 
     if (state.emailSent) {
       _startCooldown();
@@ -86,7 +86,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         message: state.errorMessage!,
         type: ToastType.error,
       );
-      ref.read(authNotifierProvider.notifier).clearError();
+      ref.read(authOpProvider.notifier).clearError();
     }
   }
 
@@ -99,7 +99,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   @override
   Widget build(BuildContext context) {
     final emailDisplay = widget.email.isNotEmpty ? widget.email : 'tu email';
-    final isLoading = ref.watch(authNotifierProvider).isLoading;
+    final isLoading = ref.watch(authOpProvider).isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,

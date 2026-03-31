@@ -5,7 +5,7 @@ import { ReportDoc } from "../lib/types";
 const db = () => getFirestore();
 
 const DEFAULT_SUPPRESSION_THRESHOLD = 3;
-const CONFIG_DOC = "config/moderation";
+const CONFIG_DOC = "admin_configs/moderation";
 
 async function getSuppressionThreshold(): Promise<number> {
   const configSnap = await db().doc(CONFIG_DOC).get();

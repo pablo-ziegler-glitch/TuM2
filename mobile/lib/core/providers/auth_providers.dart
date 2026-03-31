@@ -39,9 +39,10 @@ Future<void> markOnboardingSeen() async {
 
 // ── Auth notifier ─────────────────────────────────────────────────────────────
 
-/// Estado de las operaciones de autenticación.
-class AuthState {
-  const AuthState({
+/// Estado de las operaciones de autenticación (magic link, Google sign-in).
+/// Distinto de [AuthState] en core/auth/auth_state.dart que modela la sesión.
+class AuthOpState {
+  const AuthOpState({
     this.isLoading = false,
     this.errorMessage,
     this.emailSent = false,
@@ -53,13 +54,13 @@ class AuthState {
   /// true cuando el magic link fue enviado exitosamente.
   final bool emailSent;
 
-  AuthState copyWith({
+  AuthOpState copyWith({
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
     bool? emailSent,
   }) {
-    return AuthState(
+    return AuthOpState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       emailSent: emailSent ?? this.emailSent,
@@ -67,11 +68,11 @@ class AuthState {
   }
 }
 
-/// Notifier principal de autenticación.
+/// Notifier principal de operaciones de autenticación.
 /// Maneja magic link y Google Sign-In.
-class AuthNotifier extends Notifier<AuthState> {
+class AuthOpNotifier extends Notifier<AuthOpState> {
   @override
-  AuthState build() => const AuthState();
+  AuthOpState build() => const AuthOpState();
 
   /// Envía el magic link al email indicado.
   Future<void> sendMagicLink(String email) async {
@@ -214,8 +215,8 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 }
 
-final authNotifierProvider =
-    NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+final authOpProvider =
+    NotifierProvider<AuthOpNotifier, AuthOpState>(AuthOpNotifier.new);
 
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
 /// Lee el custom claim del JWT (caché local, sin roundtrip de red).

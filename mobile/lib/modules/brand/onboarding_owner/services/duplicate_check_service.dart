@@ -48,12 +48,14 @@ class DuplicateCheckService {
 
   /// Programa un check con debounce de 800ms.
   /// Llamar cada vez que el nombre cambia en el step 1.
-  /// [zoneId] puede ser null si todavía no se seleccionó dirección (se omite el check).
+  /// [lat], [lng] y [zoneId] son opcionales — si no están disponibles
+  /// (step 1, antes de ingresar dirección), el server busca por nombre
+  /// sin filtro geográfico.
   void checkName({
     required String name,
-    required double lat,
-    required double lng,
-    required String zoneId,
+    double? lat,
+    double? lng,
+    String? zoneId,
   }) {
     _debounceTimer?.cancel();
     if (name.trim().length < 2) {
@@ -68,17 +70,17 @@ class DuplicateCheckService {
 
   Future<void> _performCheck({
     required String name,
-    required double lat,
-    required double lng,
-    required String zoneId,
+    double? lat,
+    double? lng,
+    String? zoneId,
   }) async {
     try {
       final callable = _functions.httpsCallable('checkMerchantDuplicates');
       final result = await callable.call({
         'name': name,
-        'lat': lat,
-        'lng': lng,
-        'zoneId': zoneId,
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+        if (zoneId != null && zoneId.isNotEmpty) 'zoneId': zoneId,
       });
 
       final data = result.data as Map<String, dynamic>;

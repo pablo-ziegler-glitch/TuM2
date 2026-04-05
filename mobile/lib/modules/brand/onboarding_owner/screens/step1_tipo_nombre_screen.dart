@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_text_styles.dart';
 import '../models/onboarding_draft.dart';
 import '../repositories/categories_repository.dart';
 import '../repositories/onboarding_owner_repository.dart';
@@ -113,12 +113,12 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
 
   void _onNameChanged(String value) {
     setState(() {});
-    // Debounced duplicate check via service (zoneId vacío = búsqueda sin filtro de zona)
+    // Chequeo de duplicados solo por nombre (sin filtro de zona ni coordenadas).
+    // Se omite la llamada al server si el nombre es muy corto para evitar
+    // errores de validación innecesarios.
+    if (value.trim().length < 3) return;
     widget.duplicateCheckService.checkName(
       name: value,
-      lat: 0,
-      lng: 0,
-      zoneId: '',
     );
   }
 

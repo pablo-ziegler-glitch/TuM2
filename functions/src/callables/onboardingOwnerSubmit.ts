@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import {
   OnboardingOwnerProgress,
   OnboardingStep3Data,
@@ -122,6 +123,20 @@ export const onboardingOwnerSubmit = onCall(
     const step3Skipped = progress.step3Skipped ?? false;
 
     await db().runTransaction(async (tx) => {
+      // Re-read user inside transaction to avoid stale data
+      const freshUserSnap = await tx.get(userRef);
+      const freshProgress = freshUserSnap.data()?.onboardingOwnerProgress as OnboardingOwnerProgress | undefined;
+      if (!freshProgress || freshProgress.draftMerchantId !== draftMerchantId) {
+        throw new HttpsError(
+          "aborted",
+          "Los datos del onboarding cambiaron durante el envío. Intentá de nuevo."
+        );
+      }
+      const freshStep1 = freshProgress.step1;
+      const freshStep2 = freshProgress.step2;
+      const freshStep3 = freshProgress.step3 as OnboardingStep3Data | null;
+      const freshStep3Skipped = freshProgress.step3Skipped ?? false;
+
       // Check if merchant already exists (idempotency via Firestore)
       const existingMerchant = await tx.get(merchantRef);
       if (existingMerchant.exists) {
@@ -136,16 +151,16 @@ export const onboardingOwnerSubmit = onCall(
       // Write merchant document
       tx.set(merchantRef, {
         merchantId: draftMerchantId,
-        name: step1.name.trim(),
-        category: step1.categoryId,      // campo existente en MerchantDoc
-        zone: step2.zoneId,              // campo existente en MerchantDoc
-        zoneId: step2.zoneId,
-        address: step2.address,
-        lat: step2.lat,
-        lng: step2.lng,
-        geohash: step2.geohash ?? "",
-        cityId: step2.cityId ?? "",
-        provinceId: step2.provinceId ?? "",
+        name: freshStep1!.name.trim(),
+        category: freshStep1!.categoryId,
+        zone: freshStep2!.zoneId,
+        zoneId: freshStep2!.zoneId,
+        address: freshStep2!.address,
+        lat: freshStep2!.lat,
+        lng: freshStep2!.lng,
+        geohash: freshStep2!.geohash ?? "",
+        cityId: freshStep2!.cityId ?? "",
+        provinceId: freshStep2!.provinceId ?? "",
         ownerUserId: uid,
         sourceType: "owner_created",
         visibilityStatus: "review_pending",
@@ -156,20 +171,29 @@ export const onboardingOwnerSubmit = onCall(
       });
 
       // Write schedules if step3 was completed (not skipped)
-      if (!step3Skipped && step3 && Object.keys(step3).length > 0) {
+      if (!freshStep3Skipped && freshStep3 && Object.keys(freshStep3).length > 0) {
         tx.set(schedulesRef, {
           merchantId: draftMerchantId,
-          schedule: step3,
+          schedule: freshStep3,
           timezone: "America/Argentina/Buenos_Aires",
           updatedAt: FieldValue.serverTimestamp(),
         });
       }
 
-      // Mark progress as submitted
+      // Mark progress as submitted and set merchantId on user doc
       tx.update(userRef, {
         "onboardingOwnerProgress.currentStep": "submitted",
         "onboardingOwnerProgress.updatedAt": FieldValue.serverTimestamp(),
+        "merchantId": draftMerchantId,
       });
+    });
+
+    // Set custom claims so the client can detect onboarding completion
+    // without an extra Firestore read on next token refresh.
+    await getAuth().setCustomUserClaims(uid, {
+      role: "owner",
+      merchantId: draftMerchantId,
+      onboardingComplete: true,
     });
 
     console.log(`[onboardingOwnerSubmit] Created merchant=${draftMerchantId} for uid=${uid}`);

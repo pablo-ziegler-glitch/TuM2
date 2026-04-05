@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -79,21 +78,7 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
   /// callback de magic link configurado en ActionCodeSettings.
   Future<void> _handleUri(Uri uri) async {
     if (uri.host == 'tum2.app' && uri.path == '/auth/verify') {
-      final link = uri.toString();
-      final hasPending =
-          await ref.read(authOperationProvider.notifier).hasPendingEmailLink();
-
-      if (hasPending) {
-        // Dispositivo correcto: procesar directamente
-        ref.read(authOperationProvider.notifier).handleEmailLink(link);
-      } else {
-        // Dispositivo diferente: guardar link y navegar a verify-email
-        // para que el usuario ingrese el email con el que pidió el link.
-        ref.read(pendingMagicLinkProvider.notifier).state = link;
-        ref
-            .read(appRouterProvider)
-            .go('${AppRoutes.emailVerification}?cross_device=true');
-      }
+      ref.read(authOpProvider.notifier).handleEmailLink(uri.toString());
     }
   }
 

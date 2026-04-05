@@ -156,7 +156,7 @@ service cloud.firestore {
     // Admins write all.
 
     match /pharmacy_duties/{dutyId} {
-      allow read: if resource.data.status == 'published';
+      allow read: if resource.data.isActive != false;
       allow read: if isAuthenticated()
                      && merchantBelongsToUser(resource.data.merchantId);
       allow read: if isAdmin();
@@ -201,7 +201,7 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow create: if isAuthenticated()
-        && request.resource.data.createdBy == request.auth.uid;
+        && request.resource.data.reportedBy == request.auth.uid;
       allow read, update: if isAdmin();
     }
 

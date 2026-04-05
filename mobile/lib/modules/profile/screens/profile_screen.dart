@@ -180,7 +180,8 @@ class ProfileScreen extends ConsumerWidget {
                   labelColor: AppColors.errorFg,
                   iconColor: AppColors.errorFg,
                   showChevron: false,
-                  onTap: () => _confirmSignOut(context, ref),
+                  onTap: () =>
+                      ref.read(authOpProvider.notifier).signOut(),
                 ),
               ],
             ),

@@ -14,8 +14,10 @@ const DAY_INDEX_TO_KEY: DayOfWeek[] = [
 
 function getNowInArgentina(now?: Date): Date {
   const ref = now ?? new Date();
-  // Convert to Argentina time by formatting and re-parsing
-  const formatted = ref.toLocaleString("en-CA", {
+  // Extraer componentes individuales en la zona horaria de Argentina
+  // para evitar dependencia del parsing de new Date(string) que varía
+  // entre versiones de Node.js.
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: TZ,
     year: "numeric",
     month: "2-digit",
@@ -24,8 +26,19 @@ function getNowInArgentina(now?: Date): Date {
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
-  });
-  return new Date(formatted);
+  }).formatToParts(ref);
+
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+
+  return new Date(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
 }
 
 function parseHHMM(timeStr: string): { hours: number; minutes: number } {

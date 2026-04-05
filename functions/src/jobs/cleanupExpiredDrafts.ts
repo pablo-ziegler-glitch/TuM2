@@ -5,7 +5,7 @@ const db = () => getFirestore();
 const BATCH_SIZE = 500;
 const TTL_HOURS = 72;
 
-const ACTIVE_STEPS = ["step_1", "step_2", "step_3", "confirmation", "abandoned"];
+const ACTIVE_STEPS = ["step_1", "step_2", "step_3", "confirmation"];
 
 /**
  * nightlyCleanupExpiredDrafts

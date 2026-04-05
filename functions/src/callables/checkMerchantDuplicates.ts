@@ -5,9 +5,10 @@ const db = () => getFirestore();
 
 interface CheckDuplicatesRequest {
   name: string;
-  lat: number;
-  lng: number;
-  zoneId: string;
+  lat?: number;
+  lng?: number;
+  zoneId?: string;
+  address?: string;
 }
 
 interface DuplicateCandidate {
@@ -95,8 +96,8 @@ export const checkMerchantDuplicates = onCall(
     }
 
     const { name, lat, lng, zoneId } = request.data as CheckDuplicatesRequest;
-    if (!name || lat == null || lng == null || !zoneId) {
-      throw new HttpsError("invalid-argument", "name, lat, lng y zoneId son requeridos.");
+    if (!name) {
+      throw new HttpsError("invalid-argument", "name es requerido.");
     }
 
     const normalizedInput = normalize(name);
@@ -121,15 +122,18 @@ export const checkMerchantDuplicates = onCall(
       const isNameVerySimilar = distance <= 1;
       const isSimilarName = distance <= 3;
 
-      // Geo distance check (if coordinates available)
+      // Geo distance check (if coordinates available on both sides)
       let geoDistanceMeters = Infinity;
-      if (data.lat != null && data.lng != null) {
+      if (lat != null && lng != null && data.lat != null && data.lng != null) {
         geoDistanceMeters = haversineMeters(lat, lng, data.lat, data.lng);
       }
       const isNearby = geoDistanceMeters < 500;
 
+      const inputAddress = request.data.address?.trim().toLowerCase() ?? "";
       const isSameAddress =
-        data.address && data.address.trim().toLowerCase() === "";
+        inputAddress !== "" &&
+        data.address &&
+        data.address.trim().toLowerCase() === inputAddress;
 
       // Hard duplicate detection
       if (isNameIdentical || (isNameVerySimilar && (isSameAddress || isNearby))) {

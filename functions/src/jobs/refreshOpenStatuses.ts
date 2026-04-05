@@ -9,7 +9,7 @@ const BATCH_SIZE = 500;
 /**
  * nightlyRefreshOpenStatuses
  *
- * Runs every day at 00:05 Argentina time (03:05 UTC).
+ * Runs every day at 03:05 Argentina time.
  * Recalculates isOpenNow for all visible merchants to correct
  * any drift caused by missed trigger events.
  */
@@ -34,19 +34,25 @@ export const nightlyRefreshOpenStatuses = onSchedule(
     const merchantIds = merchantsSnap.docs.map((d) => d.id);
     console.log(`[nightlyRefreshOpenStatuses] Processing ${merchantIds.length} merchants`);
 
+    // Fetch all schedules in parallel to avoid N+1 sequential reads
+    const scheduleSnaps = await Promise.all(
+      merchantIds.map((id) => db().doc(`merchant_schedules/${id}`).get())
+    );
+    const scheduleMap = new Map<string, MerchantScheduleDoc>();
+    for (let i = 0; i < merchantIds.length; i++) {
+      if (scheduleSnaps[i].exists) {
+        scheduleMap.set(merchantIds[i], scheduleSnaps[i].data() as MerchantScheduleDoc);
+      }
+    }
+
     let updated = 0;
     const batches: WriteBatch[] = [];
     let currentBatch = db().batch();
     let batchOps = 0;
 
     for (const merchantId of merchantIds) {
-      const scheduleSnap = await db()
-        .doc(`merchant_schedules/${merchantId}`)
-        .get();
-
-      if (!scheduleSnap.exists) continue;
-
-      const scheduleDoc = scheduleSnap.data() as MerchantScheduleDoc;
+      const scheduleDoc = scheduleMap.get(merchantId);
+      if (!scheduleDoc) continue;
       const openNow = isOpenNow(scheduleDoc);
       const label = todayScheduleLabel(scheduleDoc);
 

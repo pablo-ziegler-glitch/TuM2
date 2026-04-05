@@ -63,14 +63,10 @@ final pendingMagicLinkProvider = StateProvider<String?>((ref) => null);
 /// main.dart lo escucha y muestra el SnackBar.
 final pendingAuthToastProvider = StateProvider<String?>((ref) => null);
 
-// ── Auth notifier (estado de UI) ──────────────────────────────────────────────
-
-/// Estado de las operaciones de autenticación (magic link, Google Sign-In).
-///
-/// No confundir con [AuthState] de auth_state.dart, que representa el estado
-/// de sesión (loading / unauthenticated / authenticated).
-class AuthOperationState {
-  const AuthOperationState({
+/// Estado de las operaciones de autenticación (magic link, Google sign-in).
+/// Distinto de [AuthState] en core/auth/auth_state.dart que modela la sesión.
+class AuthOpState {
+  const AuthOpState({
     this.isLoading = false,
     this.errorMessage,
     this.emailSent = false,
@@ -82,13 +78,13 @@ class AuthOperationState {
   /// true cuando el magic link fue enviado exitosamente.
   final bool emailSent;
 
-  AuthOperationState copyWith({
+  AuthOpState copyWith({
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
     bool? emailSent,
   }) {
-    return AuthOperationState(
+    return AuthOpState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       emailSent: emailSent ?? this.emailSent,
@@ -96,14 +92,11 @@ class AuthOperationState {
   }
 }
 
-/// Notifier de operaciones de autenticación (magic link, Google Sign-In).
-/// Maneja estado de UI: isLoading, error, emailSent.
-///
-/// No confundir con [AuthNotifier] de auth_notifier.dart, que gestiona el
-/// estado de sesión global (escucha authStateChanges de Firebase).
-class AuthOperationNotifier extends Notifier<AuthOperationState> {
+/// Notifier principal de operaciones de autenticación.
+/// Maneja magic link y Google Sign-In.
+class AuthOpNotifier extends Notifier<AuthOpState> {
   @override
-  AuthOperationState build() => const AuthOperationState();
+  AuthOpState build() => const AuthOpState();
 
   /// Envía el magic link al email indicado.
   /// Guarda el email en SharedPreferences para recuperarlo al procesar el link.
@@ -353,11 +346,8 @@ class AuthOperationNotifier extends Notifier<AuthOperationState> {
   }
 }
 
-final authOperationProvider =
-    NotifierProvider<AuthOperationNotifier, AuthOperationState>(
-        AuthOperationNotifier.new);
-
-// ── Provider de rol ───────────────────────────────────────────────────────────
+final authOpProvider =
+    NotifierProvider<AuthOpNotifier, AuthOpState>(AuthOpNotifier.new);
 
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
 /// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.

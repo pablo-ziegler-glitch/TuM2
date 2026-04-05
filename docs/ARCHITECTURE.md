@@ -192,26 +192,59 @@ Las reglas siguen el principio de **mínimo privilegio**:
 | `admin_configs` | Solo admin | ❌ | Solo super_admin |
 
 **Custom claims de Firebase Auth:**
-- `role: 'customer' | 'owner' | 'admin' | 'super_admin'`
+- `role: 'customer' | 'owner_pending' | 'owner' | 'admin' | 'super_admin'`
 - Los claims se validan en reglas y en el backend. Nunca se confía solo en el cliente.
+- `owner_pending` tiene los mismos permisos que `owner` en Firestore Rules, pero el comercio asociado tiene `visibilityStatus = review_pending` (no visible al público).
 
 ---
 
 ## 8. Autenticación y roles
 
+> Especificación completa en `docs/SEGMENTS.md` (TuM2-0004).
+
 ```
 Firebase Auth (idToken)
 └── custom claim: role
-    ├── customer   → AppNavigator + CustomerTabs
-    ├── owner      → AppNavigator + CustomerTabs + OwnerStack modal
-    ├── admin      → AppNavigator + CustomerTabs + AdminStack modal
-    └── super_admin → Admin + acceso a admin_configs
+    ├── customer       → AppNavigator + CustomerTabs
+    ├── owner_pending  → AppNavigator + CustomerTabs + OwnerStack modal (modo revisión)
+    ├── owner          → AppNavigator + CustomerTabs + OwnerStack modal (operativo)
+    ├── admin          → AppNavigator + CustomerTabs + AdminStack modal
+    └── super_admin    → Admin + acceso R+W a admin_configs/global
 ```
 
-El flujo de asignación de rol:
-1. Usuario se registra → rol `customer` asignado por default.
-2. Si el usuario completa onboarding de comercio → rol cambia a `owner` (via Cloud Function callable o admin).
-3. `admin` y `super_admin` se asignan manualmente desde consola Firebase.
+### Ciclo de vida de custom claims
+
+```
+Registro
+  └─→ role = "customer"
+        │
+        ├─ Submit onboarding de comercio
+        │     └─→ role = "owner_pending"
+        │               │
+        │     ADMIN aprueba ──→ role = "owner"
+        │               │
+        │     ADMIN rechaza ──→ role = "customer" (revertido)
+        │
+        └─ Asignación manual (Firebase Console / CF restringida)
+              └─→ role = "admin" | "super_admin"
+```
+
+### Reglas de seguridad críticas
+
+- **Custom claims solo modificables desde Admin SDK en Cloud Functions.** El cliente nunca puede escribir su propio claim.
+- **El cliente decodifica el `idToken` solo para routing de navegación.** La autorización real se valida en Firestore Rules y en el cuerpo de cada Cloud Function.
+- **Token refresh obligatorio antes de llamadas sensibles.** Implementar middleware de refresh del `idToken` en el repositorio de auth del mobile para evitar claims expirados durante sesión activa.
+- **`owner_pending`** es un estado transitorio. El comercio tiene `visibilityStatus = review_pending` y no es visible al público hasta aprobación del ADMIN.
+
+### Guard de navegación por rol
+
+| Rol | Acceso |
+|-----|--------|
+| Sin sesión | AuthStack únicamente |
+| `customer` | CustomerTabs · botón "Ir a mi comercio" oculto |
+| `owner_pending` | CustomerTabs + OwnerStack modal (modo revisión) |
+| `owner` | CustomerTabs + OwnerStack modal (operativo) |
+| `admin` / `super_admin` | CustomerTabs + AdminStack modal + ruta `/admin` |
 
 ---
 

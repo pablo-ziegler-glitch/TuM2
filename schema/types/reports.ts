@@ -1,35 +1,52 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type ReportTargetType = 'merchant' | 'proposal' | 'signal';
+export type ReportTargetType = 'merchant' | 'pharmacy_duty' | 'signal' | 'catalog_item';
 
 export type ReportType =
+  | 'incorrect_information'
   | 'wrong_schedule'
-  | 'wrong_location'
+  | 'wrong_phone'
+  | 'wrong_address'
+  | 'closed_now'
   | 'closed_permanently'
+  | 'not_on_duty'
+  | 'wrong_duty'
   | 'duplicate'
+  | 'abusive_content'
   | 'other';
 
 export type ReportStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
 
 /**
  * Collection: reports/{reportId}
- * User-submitted report flagging incorrect or abusive data.
+ * Reporte de un usuario indicando información incorrecta o abusiva.
+ *
+ * Se mantiene separado de contributions para distinguir acción correctiva
+ * (contribution) de señal de problema (report).
+ * Los reports alimentan el módulo de moderación y pueden decrementar
+ * el confidenceScore del target.
  */
 export interface ReportDocument {
-  // Required
+  // Obligatorios
   id: string;
   targetType: ReportTargetType;
-  /** ID of the document being reported */
+  /** ID del documento reportado */
   targetId: string;
   reportType: ReportType;
   status: ReportStatus;
-  /** UID of the user who submitted the report */
+  /** UID del usuario que envió el reporte */
   createdBy: string;
   createdAt: Timestamp;
+  updatedAt: Timestamp;
 
-  // Optional
+  // Opcionales
+  /** Código de razón más específico que reportType */
+  reasonCode?: string | null;
   description?: string | null;
+  evidenceImageUrl?: string | null;
   reviewedAt?: Timestamp | null;
-  /** UID of the admin who reviewed the report */
+  /** UID del admin que revisó el reporte */
   reviewedBy?: string | null;
+  resolutionNotes?: string | null;
+  resolvedAt?: Timestamp | null;
 }

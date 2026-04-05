@@ -1,32 +1,64 @@
 import type { Timestamp } from 'firebase/firestore';
 
-export type MerchantClaimStatus = 'pending' | 'approved' | 'rejected';
+/**
+ * Estados del ciclo de vida de un reclamo de ownership.
+ * 'disputed' y 'cancelled' están preparados para V1, no implementados en MVP.
+ */
+export type MerchantClaimStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'disputed'
+  | 'cancelled';
+
+export type ClaimEvidenceType =
+  | 'social_profile'
+  | 'photo_storefront'
+  | 'phone_verification'
+  | 'document'
+  | 'other';
 
 export interface ClaimEvidence {
-  /** URL to a photo of the business (e.g. storefront, signage) */
+  /** URL a foto del comercio (frente, cartel, etc.) */
   photoUrl?: string;
-  /** Self-described role of the claimant */
+  /** Descripción del rol del reclamante */
   ownerDescription?: string;
-  /** Phone number provided as proof */
+  /** Teléfono provisto como prueba */
   verificationPhone?: string;
   [key: string]: string | undefined;
 }
 
 /**
  * Collection: merchant_claims/{claimId}
- * A user's request to claim ownership of an unverified or referential merchant.
+ * Solicitud de un usuario para reclamar la propiedad de un comercio.
+ *
+ * Solo el rol owner está activo en MVP.
+ * Staff y disputas complejas quedan para V1.
+ *
+ * claimantUsername y claimantDisplayName se almacenan como snapshot
+ * para mostrar en ficha pública sin necesitar join a users.
  */
 export interface MerchantClaimDocument {
-  // Required
+  // Obligatorios
   id: string;
   merchantId: string;
   userId: string;
   status: MerchantClaimStatus;
   submittedAt: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 
-  // Optional
+  // Opcionales
+  claimantUsername?: string | null;
+  claimantDisplayName?: string | null;
+  evidenceType?: ClaimEvidenceType | null;
+  evidenceUrl?: string | null;
   evidence?: ClaimEvidence;
+  notes?: string | null;
   reviewedAt?: Timestamp | null;
-  /** UID of the admin who reviewed the claim */
+  /** UID del admin que revisó el reclamo */
   reviewedBy?: string | null;
+  reviewDecision?: 'approved' | 'rejected' | null;
+  reviewNotes?: string | null;
+  resolvedAt?: Timestamp | null;
 }

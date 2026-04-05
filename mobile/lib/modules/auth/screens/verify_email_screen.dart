@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/auth_providers.dart';
-import '../../../core/router/app_router.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/app_text_input.dart';
 import '../../../core/widgets/app_toast.dart';
+import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/secondary_button.dart';
 
 /// AUTH-04 — Verificación de email (magic link)
@@ -21,10 +23,20 @@ import '../../../core/widgets/secondary_button.dart';
 /// 2. Cooldown activo (botón deshabilitado + countdown + barra de progreso)
 /// 3. Link reenviado (toast verde "¡Link reenviado! Revisá tu bandeja.")
 /// 4. Error reenvío (toast rojo con mensaje)
+/// 5. Cross-device: campo de email para ingresar el email del otro dispositivo
 class VerifyEmailScreen extends ConsumerStatefulWidget {
-  const VerifyEmailScreen({super.key, required this.email});
+  const VerifyEmailScreen({
+    super.key,
+    required this.email,
+    this.isCrossDevice = false,
+  });
 
+  /// Email con el que se pidió el magic link. Vacío en caso cross-device.
   final String email;
+
+  /// true cuando el link fue abierto en un dispositivo diferente al que
+  /// lo solicitó (no hay pending_email_link en SharedPreferences).
+  final bool isCrossDevice;
 
   @override
   ConsumerState<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
@@ -36,17 +48,32 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   Timer? _timer;
 
   /// Indica que el email fue enviado (primera vez o tras reenvío exitoso).
-  /// Controla el banner verde y la ilustración con check.
   bool _emailJustSent = true;
+
+  // ── Cross-device ───────────────────────────────────────────────────────────
+  final _crossDeviceEmailController = TextEditingController();
+  bool _crossDeviceSubmitting = false;
+  String? _crossDeviceError;
+
+  bool get _crossDeviceEmailValid {
+    final email = _crossDeviceEmailController.text.trim();
+    return email.isNotEmpty &&
+        RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
+  }
 
   bool get _canResend => _secondsLeft == 0;
 
   @override
   void initState() {
     super.initState();
-    // El email ya fue enviado en AUTH-03; arranca el cooldown de inmediato
-    // para evitar reenvíos duplicados al abrir la pantalla.
-    _startCooldown();
+    if (!widget.isCrossDevice) {
+      // El email ya fue enviado en AUTH-03; arranca el cooldown de inmediato
+      // para evitar reenvíos duplicados al abrir la pantalla.
+      _startCooldown();
+    }
+    // En caso cross-device no hay email enviado, por lo que no mostramos
+    // el banner de "enviado" ni el cooldown inicial.
+    _emailJustSent = !widget.isCrossDevice;
   }
 
   void _startCooldown() {
@@ -90,14 +117,55 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     }
   }
 
+  /// Procesa el magic link con el email ingresado manualmente (caso cross-device).
+  Future<void> _processCrossDeviceLink() async {
+    final email = _crossDeviceEmailController.text.trim();
+    if (email.isEmpty) return;
+
+    final link = ref.read(pendingMagicLinkProvider);
+    if (link == null) {
+      setState(() {
+        _crossDeviceError =
+            'No se encontró el link. Probá abrirlo directamente desde el email.';
+      });
+      return;
+    }
+
+    setState(() {
+      _crossDeviceSubmitting = true;
+      _crossDeviceError = null;
+    });
+
+    await ref
+        .read(authOperationProvider.notifier)
+        .handleEmailLink(link, emailOverride: email);
+
+    if (!mounted) return;
+
+    final state = ref.read(authOperationProvider);
+    if (state.errorMessage != null) {
+      setState(() {
+        _crossDeviceSubmitting = false;
+        _crossDeviceError = state.errorMessage;
+      });
+      ref.read(authOperationProvider.notifier).clearError();
+    }
+    // Si el auth fue exitoso, el router redirige automáticamente via authStateChanges.
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
+    _crossDeviceEmailController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isCrossDevice) {
+      return _buildCrossDeviceScreen();
+    }
+
     final emailDisplay = widget.email.isNotEmpty ? widget.email : 'tu email';
     final isLoading = ref.watch(authOpProvider).isLoading;
 
@@ -168,7 +236,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                     child: LinearProgressIndicator(
                       value: _secondsLeft / _cooldownSeconds,
                       backgroundColor: AppColors.neutral100,
-                      valueColor: const AlwaysStoppedAnimation(AppColors.primary500),
+                      valueColor: const AlwaysStoppedAnimation(
+                          AppColors.primary500),
                       minHeight: 2,
                     ),
                   ),
@@ -193,7 +262,113 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       ),
     );
   }
+
+  /// Pantalla alternativa para el caso cross-device:
+  /// el usuario abrió el link en un dispositivo distinto al que lo pidió.
+  Widget _buildCrossDeviceScreen() {
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Ícono ilustrativo
+              Container(
+                width: 64,
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.devices_outlined,
+                  size: 32,
+                  color: AppColors.primary400,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              Text(
+                '¿Abriste el link en otro dispositivo?',
+                style: AppTextStyles.headingMd,
+              ),
+
+              const SizedBox(height: 12),
+
+              Text(
+                'Ingresá el email con el que pediste el link para completar el ingreso.',
+                style: AppTextStyles.bodyMd.copyWith(
+                  color: AppColors.neutral700,
+                ),
+              ),
+
+              const SizedBox(height: 32),
+
+              AnimatedBuilder(
+                animation: _crossDeviceEmailController,
+                builder: (context, _) {
+                  return AppTextInput(
+                    hint: 'Ingresá el email con el que pediste el link',
+                    controller: _crossDeviceEmailController,
+                    errorText: _crossDeviceError,
+                    enabled: !_crossDeviceSubmitting,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    prefixIcon: const Icon(Icons.mail_outline, size: 20),
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) {
+                      if (_crossDeviceEmailValid) _processCrossDeviceLink();
+                    },
+                    onChanged: (_) {
+                      if (_crossDeviceError != null) {
+                        setState(() => _crossDeviceError = null);
+                      }
+                    },
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              AnimatedBuilder(
+                animation: _crossDeviceEmailController,
+                builder: (context, _) {
+                  return PrimaryButton(
+                    label: 'Ingresar',
+                    onPressed: _crossDeviceEmailValid && !_crossDeviceSubmitting
+                        ? _processCrossDeviceLink
+                        : null,
+                    isLoading: _crossDeviceSubmitting,
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              Center(
+                child: TextButton(
+                  onPressed: () => context.go(AppRoutes.login),
+                  child: Text(
+                    'Volver al inicio',
+                    style: AppTextStyles.labelSm.copyWith(
+                      color: AppColors.primary500,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+// ── Widgets auxiliares ────────────────────────────────────────────────────────
 
 /// Ilustración del sobre. Muestra check badge cuando [sent] es true.
 class _EnvelopeIllustration extends StatelessWidget {

@@ -7,6 +7,31 @@
 
 ---
 
+## Convención de nombres de conversación y PR
+
+Cada conversación de Claude Code para este proyecto debe identificarse con el patrón:
+
+```
+tum2-XXXX — PR#YY — descripción corta
+```
+
+- `XXXX` = número de tarjeta del backlog (ej: `0061`, `0045`)
+- Si no hay tarjeta asignable → usar `xxxx` literal (ej: `tum2-xxxx`)
+- `YY` = número del PR de GitHub que se va a generar en esa conversación
+- Si todavía no se conoce el número de PR → omitir hasta que se cree
+
+**Ejemplos:**
+- `tum2-0061 — PR#22 — implementar pharmacy duty screen`
+- `tum2-0045 — PR#18 — configurar firestore base`
+- `tum2-xxxx — PR#25 — mejora pharmacy duties schema`
+
+**Reglas operativas:**
+- Una conversación = una tarjeta = un PR (siempre que sea posible)
+- Si la tarjeta es muy grande → partir en sub-PRs y numerarlos en el título
+- PRs chicos y cohesivos, nunca mezclar tarjetas distintas en un mismo PR
+
+---
+
 ## Estado del backlog
 
 El backlog maestro de TuM2 está estructurado en 17 épicas (ver sección abajo).
@@ -19,6 +44,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0005]** Mantener actualizado VISION.md ✅ | Documentación maestra — VISION.md actualizado y vigente |
 | **[0006]** Mantener actualizado PRD-MVP.md ✅ | Documentación maestra — PRD-MVP.md actualizado y vigente |
 | **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
+| **[0014]** Definir tono de microcopy ✅ | Branding / UX/UI — guía de microcopy MVP Fase 3 documentada en docs/TuM2-0014-MICROCOPY.md |
 | **[0019]** Diseñar modelo de usuarios ✅ | Modelo de datos — modelo de usuarios definido con roles y atributos |
 | **[0020]** Diseñar modelo de comercios ✅ | Modelo de datos — modelo de comercios definido con campos públicos y operativos |
 | **[0021]** Diseñar modelo de productos ✅ | Modelo de datos — modelo de productos definido con variantes y disponibilidad |
@@ -74,7 +100,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional`
 - [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional`
 - [0013] **Definir sistema de sellos** — P1 — `Branding, Producto, MVP`
-- [0014] **Definir tono de microcopy** — P1 — `Branding, UX/UI, MVP`
+- [0014] **Definir tono de microcopy** — P1 — `Branding, UX/UI, MVP` ✅
 
 ### ÉPICA 4: Research funcional y operativo
 - [0015] **Relevar rubros prioritarios** — P0 — `Producto, Operaciones, Fundacional`

@@ -16,6 +16,7 @@ import '../../modules/home/screens/home_screen.dart';
 import '../../modules/home/screens/abierto_ahora_screen.dart';
 import '../../modules/search/screens/search_screen.dart';
 import '../../modules/search/screens/search_results_screen.dart';
+import '../../modules/search/screens/search_map_screen.dart';
 import '../../modules/search/screens/pharmacy_results_screen.dart';
 import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
@@ -68,8 +69,7 @@ String? _buildRedirect(Ref ref, GoRouterState state) {
 
   // ── 1. Primer lanzamiento: splash unauthenticated → onboarding o login ──
   if (authState is AuthUnauthenticated && location == AppRoutes.splash) {
-    final isFirstLaunch =
-        ref.read(isFirstLaunchProvider).valueOrNull ?? false;
+    final isFirstLaunch = ref.read(isFirstLaunchProvider).valueOrNull ?? false;
     return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.login;
   }
 
@@ -96,22 +96,12 @@ String? _buildRedirect(Ref ref, GoRouterState state) {
   }
 
   // ── 3. Guardar pending route para deep links pre-auth ──
-  final shouldSavePending =
-      (authState is AuthLoading || authState is AuthUnauthenticated) &&
-      !RouterGuards.isPublicPath(location) &&
-      location != AppRoutes.splash;
-  if (shouldSavePending) {
-    ref.read(pendingRouteProvider.notifier).state = location;
-  }
-
   // ── 4. Guards estándar ──
   return RouterGuards.evaluate(
     authState: authState,
     location: location,
-    pendingRoute: ref.read(pendingRouteProvider),
-    consumePendingRoute: () {
-      ref.read(pendingRouteProvider.notifier).state = null;
-    },
+    pendingRoute: null,
+    consumePendingRoute: () {},
   );
 }
 
@@ -136,8 +126,7 @@ List<RouteBase> _buildRoutes() {
       path: AppRoutes.emailVerification,
       builder: (context, state) {
         final email = state.uri.queryParameters['email'] ?? '';
-        final crossDevice =
-            state.uri.queryParameters['cross_device'] == 'true';
+        final crossDevice = state.uri.queryParameters['cross_device'] == 'true';
         return VerifyEmailScreen(email: email, isCrossDevice: crossDevice);
       },
     ),
@@ -200,10 +189,7 @@ List<RouteBase> _buildRoutes() {
                 ),
                 GoRoute(
                   path: 'mapa',
-                  builder: (_, __) => const PlaceholderScreen(
-                    screenId: 'SEARCH-03',
-                    label: 'Mapa',
-                  ),
+                  builder: (_, __) => const SearchMapScreen(),
                 ),
               ],
             ),
@@ -344,4 +330,3 @@ List<RouteBase> _buildRoutes() {
     ),
   ];
 }
-

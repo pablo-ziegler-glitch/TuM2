@@ -15,7 +15,17 @@ const _kOnboardingOwnerDraftKey = 'onboarding_owner_draft';
 
 /// URL base para magic links. En producción apunta al dominio real.
 /// En desarrollo se puede usar el emulador de Auth.
-const _kMagicLinkUrl = 'https://tum2.app/auth/verify';
+const _kMagicLinkUrlOverride = String.fromEnvironment('MAGIC_LINK_URL');
+
+String _resolveMagicLinkUrl() {
+  if (_kMagicLinkUrlOverride.isNotEmpty) {
+    return _kMagicLinkUrlOverride;
+  }
+  if (kIsWeb) {
+    return '${Uri.base.origin}/auth/verify';
+  }
+  return 'https://tum2.app/auth/verify';
+}
 
 // ── Stream de sesión ──────────────────────────────────────────────────────────
 
@@ -105,7 +115,7 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
 
     try {
       final settings = ActionCodeSettings(
-        url: _kMagicLinkUrl,
+        url: _resolveMagicLinkUrl(),
         handleCodeInApp: true,
         androidPackageName: 'com.tum2.app',
         androidInstallApp: true,

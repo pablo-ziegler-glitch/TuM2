@@ -3,7 +3,9 @@
 export type VerificationStatus =
   | "unverified"
   | "referential"
+  | "community_submitted"
   | "claimed"
+  | "validated"
   | "verified";
 
 export type VisibilityStatus =
@@ -122,7 +124,9 @@ export interface MerchantPublicDoc {
   merchantId: string;
   name: string;
   category: string;
+  categoryId?: string;
   zone: string;
+  zoneId?: string;
   address?: string;
   verificationStatus: VerificationStatus;
   visibilityStatus: VisibilityStatus;
@@ -131,6 +135,7 @@ export interface MerchantPublicDoc {
   hasPharmacyDutyToday?: boolean;
   operationalSignals?: OperationalSignals;
   sortBoost: number;
+  searchKeywords?: string[];
   isPharmacy?: boolean;
   syncedAt: FirebaseFirestore.Timestamp;
 }

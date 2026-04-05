@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -17,8 +16,7 @@ class PharmacyResultsScreen extends StatefulWidget {
   const PharmacyResultsScreen({super.key});
 
   @override
-  State<PharmacyResultsScreen> createState() =>
-      _PharmacyResultsScreenState();
+  State<PharmacyResultsScreen> createState() => _PharmacyResultsScreenState();
 }
 
 class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
@@ -63,8 +61,8 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
             onTap: () => context.pop(),
             child: Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: Icon(Icons.arrow_back,
-                  color: AppColors.neutral700, size: 22),
+              child:
+                  Icon(Icons.arrow_back, color: AppColors.neutral700, size: 22),
             ),
           ),
           Expanded(
@@ -89,8 +87,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
                     Icon(Icons.location_on_outlined,
                         size: 13, color: AppColors.neutral600),
                     const SizedBox(width: 3),
-                    Text('Palermo, 34m',
-                        style: AppTextStyles.bodyXs),
+                    Text('Palermo, 34m', style: AppTextStyles.bodyXs),
                   ],
                 ),
               ),
@@ -103,8 +100,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.circle,
-                        size: 7, color: AppColors.secondary500),
+                    Icon(Icons.circle, size: 7, color: AppColors.secondary500),
                     const SizedBox(width: 4),
                     Text('Abierto ahora',
                         style: AppTextStyles.bodyXs
@@ -158,8 +154,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
               _filterChip(
                 label: 'Abierto ahora',
                 active: _filterAbierto,
-                onTap: () =>
-                    setState(() => _filterAbierto = !_filterAbierto),
+                onTap: () => setState(() => _filterAbierto = !_filterAbierto),
               ),
               const SizedBox(width: 8),
               _filterChip(
@@ -327,8 +322,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Abiertas ahora cerca de ti',
-              style: AppTextStyles.headingSm),
+          Text('Abiertas ahora cerca de ti', style: AppTextStyles.headingSm),
           const SizedBox(height: 12),
           GridView.count(
             crossAxisCount: 2,
@@ -361,8 +355,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tu salud, nuestra prioridad',
-                style: AppTextStyles.headingSm),
+            Text('Tu salud, nuestra prioridad', style: AppTextStyles.headingSm),
             const SizedBox(height: 8),
             Text(
               'Avalamos únicamente farmacias habilitadas por el Ministerio de Salud. '

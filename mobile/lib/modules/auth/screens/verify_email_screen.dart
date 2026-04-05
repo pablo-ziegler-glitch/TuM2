@@ -137,18 +137,18 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     });
 
     await ref
-        .read(authOperationProvider.notifier)
+        .read(authOpProvider.notifier)
         .handleEmailLink(link, emailOverride: email);
 
     if (!mounted) return;
 
-    final state = ref.read(authOperationProvider);
+    final state = ref.read(authOpProvider);
     if (state.errorMessage != null) {
       setState(() {
         _crossDeviceSubmitting = false;
         _crossDeviceError = state.errorMessage;
       });
-      ref.read(authOperationProvider.notifier).clearError();
+      ref.read(authOpProvider.notifier).clearError();
     }
     // Si el auth fue exitoso, el router redirige automáticamente via authStateChanges.
   }

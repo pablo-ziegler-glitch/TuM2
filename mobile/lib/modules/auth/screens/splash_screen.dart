@@ -2,11 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_notifier.dart';
 import '../../../core/auth/auth_state.dart';
-import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -27,10 +25,12 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   Timer? _timeoutTimer;
+  late final AuthNotifier _authNotifier;
 
   @override
   void initState() {
     super.initState();
+    _authNotifier = ref.read(authNotifierProvider);
     _startTimeoutGuard();
   }
 
@@ -41,9 +41,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   void _startTimeoutGuard() {
     _timeoutTimer = Timer(const Duration(seconds: 5), () {
       if (!mounted) return;
-      final current = ref.read(authNotifierProvider).authState;
+      final current = _authNotifier.authState;
       if (current is AuthLoading) {
-        ref.read(authNotifierProvider).forceUnauthenticated();
+        _authNotifier.forceUnauthenticated();
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(

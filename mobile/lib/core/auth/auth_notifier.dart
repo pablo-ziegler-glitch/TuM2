@@ -38,7 +38,7 @@ class AuthNotifier extends ChangeNotifier {
 
     try {
       // Intentar leer custom claims del token actual
-      var tokenResult = await user.getIdTokenResult(forceRefresh: false);
+      var tokenResult = await user.getIdTokenResult(false);
       String? role = tokenResult.claims?['role'] as String?;
       String? merchantId = tokenResult.claims?['merchantId'] as String?;
       bool? onboardingComplete =
@@ -46,7 +46,7 @@ class AuthNotifier extends ChangeNotifier {
 
       // Race condition post-registro: si el claim no existe, forzar refresh
       if (role == null) {
-        tokenResult = await user.getIdTokenResult(forceRefresh: true);
+        tokenResult = await user.getIdTokenResult(true);
         role = tokenResult.claims?['role'] as String?;
         merchantId = tokenResult.claims?['merchantId'] as String?;
         onboardingComplete =

@@ -370,3 +370,10 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - Máximo 1-3 tareas grandes activas simultáneamente
 - Máximo 3-5 tareas chicas activas simultáneamente
 - Pasar a "Listo para hacer" solo lo que corresponde a la fase actual
+- En cada avance de tarjeta, actualizar siempre `docs/storyscards/<tarjeta>.md` y `CLAUDE.md` con estado real.
+
+## Registro operativo reciente
+- [0056] Implementar bÃºsqueda de comercios: estado actual EN PROGRESO AVANZADO.
+- [0056] Base funcional implementada en Functions + Mobile (SearchNotifier, repositorios, SEARCH-01/02/03 base, buildSearchKeywords y backfill callable).
+- [0056] Pendiente para DoD completo: tests CF/Flutter, analytics y QA de staging con evidencia.
+- [0056] Aclaracion QA: las "capturas pendientes" son screenshots reales de ejecucion (emulador/dispositivo, con datos reales) para evidencia E2E; no son mockups ni rediseno de UI.

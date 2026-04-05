@@ -44,3 +44,4 @@ export { nightlyCleanupExpiredDrafts } from "./jobs/cleanupExpiredDrafts";
 
 export { runZoneBootstrapBatch } from "./jobs/bootstrap";
 export { adminRebuildMerchantPublic } from "./admin/rebuildPublic";
+export { backfillSearchKeywords } from "./admin/backfillKeywords";

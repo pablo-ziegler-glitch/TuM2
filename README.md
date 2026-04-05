@@ -95,6 +95,7 @@ flutter run
 | [SCREENS-MAP.md](docs/SCREENS-MAP.md) | Pantallas completas, flujos UX, deep links |
 | [NAVIGATION.md](docs/NAVIGATION.md) | Arquitectura de navegación Flutter (go_router) |
 | [QUERY-ARCHITECTURE.md](docs/QUERY-ARCHITECTURE.md) | Patrones de queries Firestore por pantalla |
+| [TuM2-0014-MICROCOPY.md](docs/TuM2-0014-MICROCOPY.md) | Guía de tono y microcopy para el MVP Fase 3 |
 | [schema/README.md](schema/README.md) | Modelo de datos, colecciones, índices |
 | [CLAUDE.md](CLAUDE.md) | Backlog maestro y estado del proyecto |
 

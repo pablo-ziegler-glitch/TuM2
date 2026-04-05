@@ -58,7 +58,7 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
       final link = Uri.base.toString();
       if (FirebaseAuth.instance.isSignInWithEmailLink(link)) {
         // En web siempre es el mismo dispositivo → no hace falta cross-device
-        ref.read(authNotifierProvider.notifier).handleEmailLink(link);
+        ref.read(authOperationProvider.notifier).handleEmailLink(link);
       }
       return;
     }
@@ -81,11 +81,11 @@ class _TuM2AppState extends ConsumerState<TuM2App> {
     if (uri.host == 'tum2.app' && uri.path == '/auth/verify') {
       final link = uri.toString();
       final hasPending =
-          await ref.read(authNotifierProvider.notifier).hasPendingEmailLink();
+          await ref.read(authOperationProvider.notifier).hasPendingEmailLink();
 
       if (hasPending) {
         // Dispositivo correcto: procesar directamente
-        ref.read(authNotifierProvider.notifier).handleEmailLink(link);
+        ref.read(authOperationProvider.notifier).handleEmailLink(link);
       } else {
         // Dispositivo diferente: guardar link y navegar a verify-email
         // para que el usuario ingrese el email con el que pidió el link.

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_notifier.dart';
 import '../auth/auth_state.dart';
-import '../providers/auth_providers.dart' hide authNotifierProvider;
+import '../providers/auth_providers.dart';
 import 'app_routes.dart';
 import 'router_guards.dart';
 import '../../modules/auth/screens/splash_screen.dart';

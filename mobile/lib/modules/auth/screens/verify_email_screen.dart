@@ -92,12 +92,12 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     if (!_canResend) return;
 
     await ref
-        .read(authNotifierProvider.notifier)
+        .read(authOperationProvider.notifier)
         .sendMagicLink(widget.email);
 
     if (!mounted) return;
 
-    final state = ref.read(authNotifierProvider);
+    final state = ref.read(authOperationProvider);
 
     if (state.emailSent) {
       _startCooldown();
@@ -113,7 +113,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
         message: state.errorMessage!,
         type: ToastType.error,
       );
-      ref.read(authNotifierProvider.notifier).clearError();
+      ref.read(authOperationProvider.notifier).clearError();
     }
   }
 
@@ -137,18 +137,18 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     });
 
     await ref
-        .read(authNotifierProvider.notifier)
+        .read(authOperationProvider.notifier)
         .handleEmailLink(link, emailOverride: email);
 
     if (!mounted) return;
 
-    final state = ref.read(authNotifierProvider);
+    final state = ref.read(authOperationProvider);
     if (state.errorMessage != null) {
       setState(() {
         _crossDeviceSubmitting = false;
         _crossDeviceError = state.errorMessage;
       });
-      ref.read(authNotifierProvider.notifier).clearError();
+      ref.read(authOperationProvider.notifier).clearError();
     }
     // Si el auth fue exitoso, el router redirige automáticamente via authStateChanges.
   }
@@ -167,7 +167,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     }
 
     final emailDisplay = widget.email.isNotEmpty ? widget.email : 'tu email';
-    final isLoading = ref.watch(authNotifierProvider).isLoading;
+    final isLoading = ref.watch(authOperationProvider).isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,

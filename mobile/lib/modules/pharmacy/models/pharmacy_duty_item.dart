@@ -89,9 +89,9 @@ class PharmacyDutyItem {
   PharmacyTrustLevel get trustLevel {
     switch (verificationStatus) {
       case 'verified':
-        return PharmacyTrustLevel.official;
-      case 'validated':
         return PharmacyTrustLevel.verified;
+      case 'validated':
+        return PharmacyTrustLevel.official;
       case 'claimed':
       case 'community_submitted':
         return PharmacyTrustLevel.community;

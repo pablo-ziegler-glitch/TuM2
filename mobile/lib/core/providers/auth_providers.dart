@@ -65,10 +65,12 @@ final pendingAuthToastProvider = StateProvider<String?>((ref) => null);
 
 // ── Auth notifier (estado de UI) ──────────────────────────────────────────────
 
-/// Estado de las operaciones de autenticación (loading, error, emailSent).
-/// Separado del estado de navegación (AuthNotifier en auth_notifier.dart).
-class AuthState {
-  const AuthState({
+/// Estado de las operaciones de autenticación (magic link, Google Sign-In).
+///
+/// No confundir con [AuthState] de auth_state.dart, que representa el estado
+/// de sesión (loading / unauthenticated / authenticated).
+class AuthOperationState {
+  const AuthOperationState({
     this.isLoading = false,
     this.errorMessage,
     this.emailSent = false,
@@ -80,13 +82,13 @@ class AuthState {
   /// true cuando el magic link fue enviado exitosamente.
   final bool emailSent;
 
-  AuthState copyWith({
+  AuthOperationState copyWith({
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
     bool? emailSent,
   }) {
-    return AuthState(
+    return AuthOperationState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       emailSent: emailSent ?? this.emailSent,
@@ -94,12 +96,14 @@ class AuthState {
   }
 }
 
-/// Notifier de operaciones de autenticación (magic link + Google).
+/// Notifier de operaciones de autenticación (magic link, Google Sign-In).
 /// Maneja estado de UI: isLoading, error, emailSent.
-/// No gestiona navegación — eso es responsabilidad de AuthNotifier (ChangeNotifier).
-class AuthNotifier extends Notifier<AuthState> {
+///
+/// No confundir con [AuthNotifier] de auth_notifier.dart, que gestiona el
+/// estado de sesión global (escucha authStateChanges de Firebase).
+class AuthOperationNotifier extends Notifier<AuthOperationState> {
   @override
-  AuthState build() => const AuthState();
+  AuthOperationState build() => const AuthOperationState();
 
   /// Envía el magic link al email indicado.
   /// Guarda el email en SharedPreferences para recuperarlo al procesar el link.
@@ -349,8 +353,9 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 }
 
-final authNotifierProvider =
-    NotifierProvider<AuthNotifier, AuthState>(AuthNotifier.new);
+final authOperationProvider =
+    NotifierProvider<AuthOperationNotifier, AuthOperationState>(
+        AuthOperationNotifier.new);
 
 // ── Provider de rol ───────────────────────────────────────────────────────────
 
@@ -361,6 +366,16 @@ final isOwnerProvider = FutureProvider<bool>((ref) async {
   if (user == null) return false;
   final result = await user.getIdTokenResult(true);
   return result.claims?['role'] == 'owner';
+});
+
+/// true si el usuario autenticado tiene el claim role='admin' o 'super_admin'.
+/// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
+final isAdminProvider = FutureProvider<bool>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return false;
+  final result = await user.getIdTokenResult(true);
+  final role = result.claims?['role'] as String?;
+  return role == 'admin' || role == 'super_admin';
 });
 
 // ── Provider de merchantId del owner ─────────────────────────────────────────

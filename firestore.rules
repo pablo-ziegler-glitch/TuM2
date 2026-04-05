@@ -39,10 +39,19 @@ service cloud.firestore {
 
     // Returns true if the draftMerchantId field is being changed after it was
     // already set. Prevents client-side replay attacks on the onboarding submit.
+    // Nota: denegar también la eliminación del campo una vez que draftMerchantId
+    // está asignado, para evitar el bypass: eliminar el campo y luego re-escribir
+    // con un ID diferente eludiendo el control de inmutabilidad.
     function draftMerchantIdUnchanged() {
       let progress = 'onboardingOwnerProgress';
+      let incoming = request.resource.data.get(progress, null);
+      // Si el update elimina onboardingOwnerProgress, solo se permite
+      // si aún no había un draftMerchantId asignado (no hay nada que proteger)
+      if (incoming == null) {
+        return resource.data[progress].get('draftMerchantId', null) == null;
+      }
       let existingId = resource.data[progress].draftMerchantId;
-      let newId = request.resource.data[progress].draftMerchantId;
+      let newId = incoming.draftMerchantId;
       // Allow if it was null/unset before, or if it stays the same
       return existingId == null || existingId == newId;
     }

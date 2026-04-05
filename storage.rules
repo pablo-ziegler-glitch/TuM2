@@ -2,20 +2,20 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Imágenes de comercios — lectura pública, escritura solo owner autenticado
+    // Imágenes de comercios — lectura pública, escritura owner o admin
     match /merchants/{merchantId}/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null
-        && request.auth.token.role == 'owner'
+        && request.auth.token.role in ['owner', 'admin']
         && request.resource.size < 5 * 1024 * 1024   // max 5 MB
         && request.resource.contentType.matches('image/.*');
     }
 
-    // Imágenes de productos
+    // Imágenes de productos — escritura owner o admin
     match /products/{merchantId}/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null
-        && request.auth.token.role == 'owner'
+        && request.auth.token.role in ['owner', 'admin']
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }

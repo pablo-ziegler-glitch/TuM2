@@ -60,12 +60,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    await ref.read(authNotifierProvider.notifier).sendMagicLink(email);
+    await ref.read(authOperationProvider.notifier).sendMagicLink(email);
 
     if (!mounted) return;
 
-    final authState = ref.read(authNotifierProvider);
-    if (authState.emailSent) {
+    final state = ref.read(authOperationProvider);
+    if (state.emailSent) {
       context.go(
         '${AppRoutes.emailVerification}?email=${Uri.encodeComponent(email)}',
       );
@@ -73,12 +73,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
-    await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+    await ref.read(authOperationProvider.notifier).signInWithGoogle();
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authNotifierProvider);
+    final authState = ref.watch(authOperationProvider);
     final isLoading = authState.isLoading;
     final networkError = authState.errorMessage;
 
@@ -234,7 +234,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ErrorBanner(
                   message: networkError,
                   onDismiss: () =>
-                      ref.read(authNotifierProvider.notifier).clearError(),
+                      ref.read(authOperationProvider.notifier).clearError(),
                 ),
               ],
 

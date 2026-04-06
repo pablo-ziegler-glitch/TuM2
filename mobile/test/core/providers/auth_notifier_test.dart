@@ -1,358 +1,249 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tum2/core/providers/auth_providers.dart';
+import 'package:tum2/core/router/pending_route_provider.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Nota: AuthNotifier usa FirebaseAuth.instance y GoogleSignIn() directamente
-// (no inyectables). Los tests de Firebase (sendMagicLink, signInWithGoogle,
-// handleEmailLink, signOut·Firebase) son de integración y requieren
-// Firebase inicializado. Este archivo cubre la lógica pura del notifier:
-//   • AuthState.copyWith
-//   • clearError / estado inicial
-//   • hasPendingEmailLink (vía SharedPreferences mock)
-//   • signOut: limpieza de SharedPreferences
-// ─────────────────────────────────────────────────────────────────────────────
-
-void main() {
-  // ── AuthState.copyWith ────────────────────────────────────────────────────
-
-  group('AuthState.copyWith', () {
-    test('estado inicial tiene valores por defecto correctos', () {
-      const state = AuthState();
-      expect(state.isLoading, isFalse);
-      expect(state.errorMessage, isNull);
-      expect(state.emailSent, isFalse);
-    });
-
-    test('isLoading se actualiza correctamente', () {
-      const state = AuthState();
-      final updated = state.copyWith(isLoading: true);
-      expect(updated.isLoading, isTrue);
-      expect(updated.errorMessage, isNull);
-      expect(updated.emailSent, isFalse);
-    });
-
-    test('errorMessage se asigna correctamente', () {
-      const state = AuthState();
-      final updated = state.copyWith(errorMessage: 'Algo salió mal.');
-      expect(updated.errorMessage, equals('Algo salió mal.'));
-      expect(updated.isLoading, isFalse);
-    });
-
-    test('clearError: true limpia el errorMessage aunque se pase uno nuevo', () {
-      const state = AuthState(errorMessage: 'Error previo');
-      final updated = state.copyWith(
-        clearError: true,
-        errorMessage: 'Error nuevo ignorado',
-      );
-      expect(updated.errorMessage, isNull);
-    });
-
-    test('clearError: false preserva el errorMessage existente', () {
-      const state = AuthState(errorMessage: 'Error persistente');
-      final updated = state.copyWith(isLoading: false);
-      expect(updated.errorMessage, equals('Error persistente'));
-    });
-
-    test('emailSent se actualiza correctamente', () {
-      const state = AuthState();
-      final updated = state.copyWith(emailSent: true);
-      expect(updated.emailSent, isTrue);
-    });
-
-    test('campos sin especificar conservan valor previo', () {
-      const state = AuthState(
-        isLoading: true,
-        errorMessage: 'Error',
-        emailSent: true,
-      );
-      final updated = state.copyWith();
-      expect(updated.isLoading, isTrue);
-      expect(updated.errorMessage, equals('Error'));
-      expect(updated.emailSent, isTrue);
-    });
-
-    test('isLoading false + emailSent true → patrón de éxito en sendMagicLink', () {
-      const loading = AuthState(isLoading: true);
-      final success = loading.copyWith(isLoading: false, emailSent: true);
-      expect(success.isLoading, isFalse);
-      expect(success.emailSent, isTrue);
-      expect(success.errorMessage, isNull);
-    });
-
-    test('isLoading false + errorMessage → patrón de error', () {
-      const loading = AuthState(isLoading: true);
-      final error = loading.copyWith(
-        isLoading: false,
-        errorMessage: 'Sin conexión.',
-      );
-      expect(error.isLoading, isFalse);
-      expect(error.emailSent, isFalse);
-      expect(error.errorMessage, equals('Sin conexión.'));
-    });
-  });
-
-  // ── clearError (ProviderContainer) ────────────────────────────────────────
-
-  group('AuthNotifier.clearError', () {
-    test('clearError limpia el errorMessage sin cambiar isLoading ni emailSent',
-        () {
-      // Creamos un contenedor aislado con override del notifier
-      // para evitar que intente inicializar Firebase.
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-
-      // Forzar un estado con error
-      notifier.setStateForTest(
-        const AuthState(
-          isLoading: false,
-          errorMessage: 'Error de red',
-          emailSent: false,
-        ),
-      );
-
-      expect(
-        container.read(authNotifierProvider).errorMessage,
-        equals('Error de red'),
-      );
-
-      notifier.clearError();
-
-      final state = container.read(authNotifierProvider);
-      expect(state.errorMessage, isNull);
-      expect(state.isLoading, isFalse);
-      expect(state.emailSent, isFalse);
-    });
-
-    test('clearError en estado inicial no cambia nada', () {
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      notifier.clearError();
-
-      final state = container.read(authNotifierProvider);
-      expect(state.errorMessage, isNull);
-      expect(state.isLoading, isFalse);
-      expect(state.emailSent, isFalse);
-    });
-  });
-
-  // ── hasPendingEmailLink ───────────────────────────────────────────────────
-
-  group('AuthNotifier.hasPendingEmailLink', () {
-    setUp(() {
-      // Reinicia SharedPreferences a estado vacío antes de cada test
-      SharedPreferences.setMockInitialValues({});
-    });
-
-    test('retorna false cuando no hay email guardado', () async {
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      final result = await notifier.hasPendingEmailLink();
-      expect(result, isFalse);
-    });
-
-    test('retorna true cuando hay un email guardado', () async {
-      SharedPreferences.setMockInitialValues({
-        'pending_email_link': 'usuario@example.com',
-      });
-
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      final result = await notifier.hasPendingEmailLink();
-      expect(result, isTrue);
-    });
-
-    test('retorna false cuando el email guardado es un string vacío', () async {
-      SharedPreferences.setMockInitialValues({
-        'pending_email_link': '',
-      });
-
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      final result = await notifier.hasPendingEmailLink();
-      expect(result, isFalse);
-    });
-  });
-
-  // ── signOut: limpieza de SharedPreferences ────────────────────────────────
-  // Nota: signOut también llama a FirebaseAuth.signOut() y GoogleSignIn.signOut(),
-  // que no se pueden verificar sin Firebase inicializado. Aquí verificamos
-  // únicamente la limpieza de SharedPreferences (acción 2 de las 3).
-
-  group('AuthNotifier.signOut — limpieza de SharedPreferences', () {
-    const kPendingEmailLinkKey = 'pending_email_link';
-    const kOnboardingOwnerDraftKey = 'onboarding_owner_draft';
-
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        kPendingEmailLinkKey: 'test@example.com',
-        kOnboardingOwnerDraftKey: '{"step":2}',
-        'onboarding_seen': 'true', // esta clave NO debe borrarse
-      });
-    });
-
-    test('signOut elimina pending_email_link y onboarding_owner_draft', () async {
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      await notifier.signOut();
-
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString(kPendingEmailLinkKey), isNull);
-      expect(prefs.getString(kOnboardingOwnerDraftKey), isNull);
-    });
-
-    test('signOut NO elimina onboarding_seen', () async {
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      await notifier.signOut();
-
-      final prefs = await SharedPreferences.getInstance();
-      // onboarding_seen debe conservarse entre sesiones
-      expect(prefs.getString('onboarding_seen'), equals('true'));
-    });
-
-    test('signOut resetea displayNameSkippedProvider a false', () async {
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      // Marcar como saltado
-      container.read(displayNameSkippedProvider.notifier).state = true;
-      expect(container.read(displayNameSkippedProvider), isTrue);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      await notifier.signOut();
-
-      expect(container.read(displayNameSkippedProvider), isFalse);
-    });
-
-    test('signOut resetea pendingMagicLinkProvider a null', () async {
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      container.read(pendingMagicLinkProvider.notifier).state =
-          'https://tum2.app/auth/verify?link=xxx';
-      expect(container.read(pendingMagicLinkProvider), isNotNull);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      await notifier.signOut();
-
-      expect(container.read(pendingMagicLinkProvider), isNull);
-    });
-
-    test('signOut resetea pendingAuthToastProvider a null', () async {
-      final container = ProviderContainer(
-        overrides: [
-          authNotifierProvider.overrideWith(() => _FakeAuthNotifier()),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      container.read(pendingAuthToastProvider.notifier).state =
-          '¡Hola de nuevo!';
-      expect(container.read(pendingAuthToastProvider), isNotNull);
-
-      final notifier = container.read(authNotifierProvider.notifier);
-      await notifier.signOut();
-
-      expect(container.read(pendingAuthToastProvider), isNull);
-    });
-  });
+class _FakeUserCredential extends Fake implements UserCredential {
+  @override
+  User? get user => null;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// _FakeAuthNotifier: subclase de AuthNotifier que omite las llamadas a Firebase
-// (FirebaseAuth / GoogleSignIn) para que los tests de lógica pura puedan correr
-// sin Firebase inicializado.
-// ─────────────────────────────────────────────────────────────────────────────
+class _FakeAuthClient implements AuthClient {
+  final _authStateController = StreamController<User?>.broadcast();
 
-class _FakeAuthNotifier extends AuthNotifier {
-  /// Permite inyectar un estado arbitrario desde el test.
-  void setStateForTest(AuthState s) => state = s;
+  FirebaseAuthException? sendMagicLinkError;
+  FirebaseAuthException? signInWithEmailLinkError;
+  bool isEmailLinkValid = true;
+
+  String? lastSentEmail;
+  ActionCodeSettings? lastActionCodeSettings;
+  String? lastSignInEmail;
+  String? lastSignInEmailLink;
+  bool signOutCalled = false;
 
   @override
-  Future<void> sendMagicLink(String email) async {
-    // No-op en tests
+  Stream<User?> authStateChanges() => _authStateController.stream;
+
+  @override
+  Future<void> sendSignInLinkToEmail({
+    required String email,
+    required ActionCodeSettings actionCodeSettings,
+  }) async {
+    if (sendMagicLinkError != null) throw sendMagicLinkError!;
+    lastSentEmail = email;
+    lastActionCodeSettings = actionCodeSettings;
   }
 
   @override
-  Future<void> handleEmailLink(String link, {String? emailOverride}) async {
-    // No-op en tests
+  bool isSignInWithEmailLink(String link) => isEmailLinkValid;
+
+  @override
+  Future<UserCredential> signInWithEmailLink({
+    required String email,
+    required String emailLink,
+  }) async {
+    if (signInWithEmailLinkError != null) throw signInWithEmailLinkError!;
+    lastSignInEmail = email;
+    lastSignInEmailLink = emailLink;
+    return _FakeUserCredential();
   }
 
   @override
-  Future<void> signInWithGoogle() async {
-    // No-op en tests
+  Future<UserCredential> signInWithPopup(AuthProvider provider) async {
+    return _FakeUserCredential();
   }
 
-  /// signOut real excepto las llamadas a Firebase/Google.
-  /// Ejercita las acciones 2 y 3 (SharedPreferences + Riverpod reset).
+  @override
+  Future<UserCredential> signInWithCredential(AuthCredential credential) async {
+    return _FakeUserCredential();
+  }
+
   @override
   Future<void> signOut() async {
-    // Acción 2: limpiar SharedPreferences
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await Future.wait([
-        prefs.remove('pending_email_link'),
-        prefs.remove('onboarding_owner_draft'),
-      ]);
-    } catch (_) {}
-
-    // Acción 3: invalidar/resetear providers de Riverpod
-    try {
-      ref.read(displayNameSkippedProvider.notifier).state = false;
-      ref.read(pendingMagicLinkProvider.notifier).state = null;
-      ref.read(pendingAuthToastProvider.notifier).state = null;
-    } catch (_) {}
+    signOutCalled = true;
   }
+
+  void dispose() {
+    _authStateController.close();
+  }
+}
+
+class _FakeGoogleSignInClient implements GoogleSignInClient {
+  bool signOutCalled = false;
+
+  @override
+  Future<GoogleSignInAccount?> signIn() async => null;
+
+  @override
+  Future<GoogleSignInAccount?> signOut() async {
+    signOutCalled = true;
+    return null;
+  }
+}
+
+void main() {
+  late _FakeAuthClient authClient;
+  late _FakeGoogleSignInClient googleSignInClient;
+
+  ProviderContainer createContainer() {
+    final container = ProviderContainer(
+      overrides: [
+        authClientProvider.overrideWithValue(authClient),
+        googleSignInClientProvider.overrideWithValue(googleSignInClient),
+      ],
+    );
+    addTearDown(() {
+      container.dispose();
+      authClient.dispose();
+    });
+    return container;
+  }
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    authClient = _FakeAuthClient();
+    googleSignInClient = _FakeGoogleSignInClient();
+  });
+
+  group('AuthOpState.copyWith', () {
+    test('mantiene defaults correctos', () {
+      const state = AuthOpState();
+      expect(state.isLoading, isFalse);
+      expect(state.errorMessage, isNull);
+      expect(state.emailSent, isFalse);
+    });
+
+    test('clearError limpia errorMessage', () {
+      const state = AuthOpState(errorMessage: 'Error previo');
+      final updated = state.copyWith(clearError: true);
+      expect(updated.errorMessage, isNull);
+      expect(updated.isLoading, isFalse);
+      expect(updated.emailSent, isFalse);
+    });
+  });
+
+  group('sendMagicLink', () {
+    test('éxito: envía link y persiste pending_email_link', () async {
+      final container = createContainer();
+      final notifier = container.read(authOpProvider.notifier);
+
+      await notifier.sendMagicLink('usuario@example.com');
+
+      expect(authClient.lastSentEmail, 'usuario@example.com');
+      expect(authClient.lastActionCodeSettings, isNotNull);
+      expect(authClient.lastActionCodeSettings!.handleCodeInApp, isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('pending_email_link'), 'usuario@example.com');
+
+      final state = container.read(authOpProvider);
+      expect(state.isLoading, isFalse);
+      expect(state.emailSent, isTrue);
+      expect(state.errorMessage, isNull);
+    });
+
+    test('error Firebase: mapea mensaje UX en español', () async {
+      authClient.sendMagicLinkError =
+          FirebaseAuthException(code: 'network-request-failed');
+
+      final container = createContainer();
+      final notifier = container.read(authOpProvider.notifier);
+
+      await notifier.sendMagicLink('usuario@example.com');
+
+      final state = container.read(authOpProvider);
+      expect(state.isLoading, isFalse);
+      expect(state.emailSent, isFalse);
+      expect(state.errorMessage, 'Sin conexión. Revisá tu red.');
+    });
+  });
+
+  group('handleEmailLink', () {
+    test('same-device: usa pending_email_link y limpia estado pendiente',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'pending_email_link': 'same-device@example.com',
+      });
+
+      final container = createContainer();
+      container.read(pendingMagicLinkProvider.notifier).state =
+          'https://tum2.app/auth/verify?mode=signIn&oobCode=abc';
+
+      final notifier = container.read(authOpProvider.notifier);
+      await notifier.handleEmailLink(
+        'https://tum2.app/auth/verify?mode=signIn&oobCode=abc',
+      );
+
+      expect(authClient.lastSignInEmail, 'same-device@example.com');
+      expect(
+        authClient.lastSignInEmailLink,
+        'https://tum2.app/auth/verify?mode=signIn&oobCode=abc',
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('pending_email_link'), isNull);
+      expect(container.read(pendingMagicLinkProvider), isNull);
+      expect(container.read(authOpProvider).errorMessage, isNull);
+    });
+
+    test('cross-device: usa emailOverride aunque no haya pending_email_link',
+        () async {
+      final container = createContainer();
+      container.read(pendingMagicLinkProvider.notifier).state =
+          'https://tum2.app/auth/verify?mode=signIn&oobCode=xyz';
+
+      final notifier = container.read(authOpProvider.notifier);
+      await notifier.handleEmailLink(
+        'https://tum2.app/auth/verify?mode=signIn&oobCode=xyz',
+        emailOverride: 'cross-device@example.com',
+      );
+
+      expect(authClient.lastSignInEmail, 'cross-device@example.com');
+      expect(
+        authClient.lastSignInEmailLink,
+        'https://tum2.app/auth/verify?mode=signIn&oobCode=xyz',
+      );
+      expect(container.read(pendingMagicLinkProvider), isNull);
+      expect(container.read(authOpProvider).errorMessage, isNull);
+    });
+  });
+
+  group('signOut', () {
+    test('limpia SharedPreferences y providers locales', () async {
+      SharedPreferences.setMockInitialValues({
+        'pending_email_link': 'logout@example.com',
+        'onboarding_owner_draft': '{"step":2}',
+        'onboarding_seen': true,
+      });
+
+      final container = createContainer();
+      container.read(displayNameSkippedProvider.notifier).state = true;
+      container.read(pendingMagicLinkProvider.notifier).state =
+          'https://tum2.app/auth/verify?mode=signIn&oobCode=logout';
+      container.read(pendingAuthToastProvider.notifier).state =
+          '¡Hola de nuevo!';
+      container.read(pendingRouteProvider.notifier).state = '/owner/products';
+
+      final notifier = container.read(authOpProvider.notifier);
+      await notifier.signOut();
+
+      expect(authClient.signOutCalled, isTrue);
+      expect(googleSignInClient.signOutCalled, isTrue);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('pending_email_link'), isNull);
+      expect(prefs.getString('onboarding_owner_draft'), isNull);
+      expect(prefs.getBool('onboarding_seen'), isTrue);
+
+      expect(container.read(displayNameSkippedProvider), isFalse);
+      expect(container.read(pendingMagicLinkProvider), isNull);
+      expect(container.read(pendingAuthToastProvider), isNull);
+      expect(container.read(pendingRouteProvider), isNull);
+    });
+  });
 }

@@ -30,6 +30,13 @@ void main() {
     test('email-verification es público', () {
       expect(RouterGuards.isPublicPath(AppRoutes.emailVerification), isTrue);
     });
+    test('email-verification con query sigue siendo público', () {
+      expect(
+        RouterGuards.isPublicPath(
+            '${AppRoutes.emailVerification}?cross_device=true'),
+        isTrue,
+      );
+    });
     test('/commerce/:id es público', () {
       expect(RouterGuards.isPublicPath('/commerce/abc123'), isTrue);
     });
@@ -54,6 +61,10 @@ void main() {
     test('/profile es protegido', () {
       expect(RouterGuards.isPublicPath(AppRoutes.profile), isFalse);
     });
+    test('/owner con query sigue protegido', () {
+      expect(
+          RouterGuards.isPublicPath('/owner/products?from=deep-link'), isFalse);
+    });
   });
 
   // ── canAccessRoute ──────────────────────────────────────────────────────────
@@ -66,7 +77,8 @@ void main() {
       expect(RouterGuards.canAccessRoute('/owner', 'customer'), isFalse);
     });
     test('customer NO puede acceder a /owner/products', () {
-      expect(RouterGuards.canAccessRoute('/owner/products', 'customer'), isFalse);
+      expect(
+          RouterGuards.canAccessRoute('/owner/products', 'customer'), isFalse);
     });
     test('owner puede acceder a /owner', () {
       expect(RouterGuards.canAccessRoute('/owner', 'owner'), isTrue);
@@ -126,6 +138,7 @@ void main() {
       AppRoutes.login,
       AppRoutes.onboarding,
       AppRoutes.emailVerification,
+      '${AppRoutes.emailVerification}?cross_device=true',
       '/commerce/shop1',
       '/pharmacy/farma-01',
     ];
@@ -416,7 +429,8 @@ void main() {
       expect(result, equals(AppRoutes.home));
     });
 
-    test('owner sin onboarding ignora pending route y va a /onboarding/owner', () {
+    test('owner sin onboarding ignora pending route y va a /onboarding/owner',
+        () {
       bool consumed = false;
       // Owner que todavía no terminó el alta no debería saltar a otra ruta
       final result = RouterGuards.evaluate(

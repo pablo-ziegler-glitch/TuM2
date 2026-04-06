@@ -6,6 +6,7 @@ import '../auth/auth_notifier.dart';
 import '../auth/auth_state.dart';
 import '../providers/auth_providers.dart';
 import 'app_routes.dart';
+import 'pending_route_provider.dart';
 import 'router_guards.dart';
 import '../../modules/auth/screens/splash_screen.dart';
 import '../../modules/auth/screens/login_screen.dart';
@@ -34,12 +35,6 @@ import '../../shared/widgets/placeholder_screen.dart';
 // Re-exportar para que otros módulos puedan usar AppRoutes importando app_router.dart
 export 'app_routes.dart';
 
-// ── Pending route (deep link pre-auth) ───────────────────────────────────────
-
-/// Ruta pendiente guardada cuando un deep link llega sin sesión activa.
-/// Se restaura automáticamente tras el login exitoso.
-final pendingRouteProvider = StateProvider<String?>((ref) => null);
-
 // ── Router provider ──────────────────────────────────────────────────────────
 
 /// Provider del [GoRouter] de la aplicación.
@@ -65,10 +60,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
 String? _buildRedirect(Ref ref, GoRouterState state) {
   final authState = ref.read(authNotifierProvider).authState;
-  final location = state.uri.toString();
+  final locationPath = state.uri.path;
+  final location = state.uri.query.isEmpty
+      ? locationPath
+      : '$locationPath?${state.uri.query}';
+  var pendingRoute = ref.read(pendingRouteProvider);
 
   // ── 1. Primer lanzamiento: splash unauthenticated → onboarding o login ──
-  if (authState is AuthUnauthenticated && location == AppRoutes.splash) {
+  if (authState is AuthUnauthenticated && locationPath == AppRoutes.splash) {
     final isFirstLaunch = ref.read(isFirstLaunchProvider).valueOrNull ?? false;
     return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.login;
   }
@@ -81,7 +80,7 @@ String? _buildRedirect(Ref ref, GoRouterState state) {
     final isEmailLinkUser =
         !user.providerData.any((p) => p.providerId == 'google.com');
     final skipped = ref.read(displayNameSkippedProvider);
-    final onDisplayNameScreen = location == AppRoutes.displayName;
+    final onDisplayNameScreen = locationPath == AppRoutes.displayName;
 
     if (displayNameEmpty &&
         isEmailLinkUser &&
@@ -89,19 +88,30 @@ String? _buildRedirect(Ref ref, GoRouterState state) {
         !onDisplayNameScreen) {
       // Solo redirigir si viene de una ruta de auth o de home
       // (no interrumpir flujo de onboarding de owner u otras rutas profundas)
-      if (RouterGuards.isAuthPath(location) || location == AppRoutes.home) {
+      if (RouterGuards.isAuthPath(locationPath) ||
+          locationPath == AppRoutes.home) {
         return AppRoutes.displayName;
       }
     }
   }
 
   // ── 3. Guardar pending route para deep links pre-auth ──
+  if (authState is AuthUnauthenticated &&
+      !RouterGuards.isPublicPath(locationPath) &&
+      locationPath != AppRoutes.login &&
+      locationPath != AppRoutes.splash &&
+      pendingRoute != location) {
+    pendingRoute = location;
+    ref.read(pendingRouteProvider.notifier).state = location;
+  }
+
   // ── 4. Guards estándar ──
   return RouterGuards.evaluate(
     authState: authState,
     location: location,
-    pendingRoute: null,
-    consumePendingRoute: () {},
+    pendingRoute: pendingRoute,
+    consumePendingRoute: () =>
+        ref.read(pendingRouteProvider.notifier).state = null,
   );
 }
 

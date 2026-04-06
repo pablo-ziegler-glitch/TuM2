@@ -68,6 +68,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0033]** Diseñar ficha pública de comercio ✅ | UX/UI — HOME-01 Detail diseñado por Stitches: hero imagen, badge ABIERTO, info rows, mapa, acciones, historia y galería |
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
 | **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
+| **[0054]** Implementar login / registro ✅ | Mobile app — AUTH MVP completo: magic link email (same/cross-device con app_links), Google Sign-In, guards/redirects por rol consistentes, pending route post-auth, signOut hardened y tests de auth/router actualizados |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
@@ -152,7 +153,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 8: Mobile app
 - [0052] **Crear proyecto mobile base** — P0 — `Mobile, Fundacional` ✅
 - [0053] **Implementar shell de app** — P0 — `Mobile, UX/UI, MVP` ✅
-- [0054] **Implementar login / registro** — P0 — `Mobile, Seguridad, MVP`
+- [0054] **Implementar login / registro** — P0 — `Mobile, Seguridad, MVP` ✅
 - [0055] **Implementar home CUSTOMER** — P1 — `Mobile, Producto, MVP`
 - [0056] **Implementar búsqueda de comercios** — P0 — `Mobile, MVP`
 - [0057] **Implementar mapa** — P1 — `Mobile, MVP`

@@ -40,3 +40,19 @@ mobile/
 - `google_maps_flutter` (módulo geográfico)
 - `geolocator`
 - `geoflutterfire_plus` o equivalente (queries por cercanía)
+
+## Configuración segura de Firebase (API Keys)
+
+Las API keys de Firebase no deben quedar hardcodeadas en el repositorio.
+Este proyecto las toma por `--dart-define` en tiempo de build.
+
+Ejemplo para correr local:
+
+```bash
+flutter run \
+  --dart-define=FIREBASE_WEB_API_KEY=tu_web_key \
+  --dart-define=FIREBASE_ANDROID_API_KEY=tu_android_key \
+  --dart-define=FIREBASE_IOS_API_KEY=tu_ios_key
+```
+
+Para CI/CD, cargá esos valores como secretos del pipeline y pasalos también por `--dart-define`.

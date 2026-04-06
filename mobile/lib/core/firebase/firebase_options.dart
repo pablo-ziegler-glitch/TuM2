@@ -37,8 +37,16 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyD_VccUiSVpwR6yc3IbGyOZ-eOqZThywfo',
+  static String _requiredValue(String key) {
+    final value = String.fromEnvironment(key);
+    if (value.isEmpty) {
+      throw StateError('Missing required dart-define value: $key');
+    }
+    return value;
+  }
+
+  static final FirebaseOptions web = FirebaseOptions(
+    apiKey: _requiredValue('FIREBASE_WEB_API_KEY'),
     appId: '1:967380985108:web:084981eea879c427900e01',
     messagingSenderId: '967380985108',
     projectId: 'tum2-dev-6283d',
@@ -47,16 +55,16 @@ class DefaultFirebaseOptions {
     measurementId: 'G-JGTE65V6YN',
   );
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCASPbLxiopMFVnU32OFJ52PbJ6KUOwTIQ',
+  static final FirebaseOptions android = FirebaseOptions(
+    apiKey: _requiredValue('FIREBASE_ANDROID_API_KEY'),
     appId: '1:967380985108:android:cea417d53a357e5d900e01',
     messagingSenderId: '967380985108',
     projectId: 'tum2-dev-6283d',
     storageBucket: 'tum2-dev-6283d.firebasestorage.app',
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAS0aQpzTWx_G4uAuBwivdYYEvzCJTXOiM',
+  static final FirebaseOptions ios = FirebaseOptions(
+    apiKey: _requiredValue('FIREBASE_IOS_API_KEY'),
     appId: '1:967380985108:ios:c35d6bedbafba846900e01',
     messagingSenderId: '967380985108',
     projectId: 'tum2-dev-6283d',

@@ -40,14 +40,24 @@ abstract class AppRoutes {
   static const adminSignals = '/admin/signals';
 
   // ── Shared Screens ──────────────────────────────────────────────────────────
-  static const commerceDetail = '/commerce/:id';
+  static const commerceDetail = '/commerce/:merchantId';
+  static const commerceProductDetail =
+      '/commerce/:merchantId/product/:productId';
   static const onboardingOwner = '/onboarding/owner';
 
   // ── Pharmacy ─────────────────────────────────────────────────────────────────
   static const pharmacyDutyDetail = '/pharmacy/:id';
 
   /// Construye la ruta concreta de detalle de un comercio.
-  static String commerceDetailPath(String id) => '/commerce/$id';
+  static String commerceDetailPath(String merchantId) =>
+      '/commerce/$merchantId';
+
+  /// Construye la ruta concreta de detalle de un producto del comercio.
+  static String commerceProductDetailPath({
+    required String merchantId,
+    required String productId,
+  }) =>
+      '/commerce/$merchantId/product/$productId';
 
   /// Construye la ruta concreta de detalle de una farmacia de turno.
   static String pharmacyDutyDetailPath(String id) => '/pharmacy/$id';

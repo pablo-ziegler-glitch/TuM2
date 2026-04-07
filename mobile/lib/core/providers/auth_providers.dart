@@ -6,12 +6,14 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../analytics/auth_analytics.dart';
+import '../router/pending_route_provider.dart';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const _kOnboardingSeenKey = 'onboarding_seen';
 const _kPendingEmailLinkKey = 'pending_email_link';
 const _kOnboardingOwnerDraftKey = 'onboarding_owner_draft';
+const _kAndroidApplicationId = 'com.floki.tum2.tum2';
 
 /// URL base para magic links. En producción apunta al dominio real.
 /// En desarrollo se puede usar el emulador de Auth.
@@ -27,11 +29,126 @@ String _resolveMagicLinkUrl() {
   return 'https://tum2.app/auth/verify';
 }
 
+// ── Dependencias inyectables (testeables) ────────────────────────────────────
+
+/// Cliente de Firebase Auth usado por los flujos de autenticación.
+final firebaseAuthProvider = Provider<FirebaseAuth>(
+  (ref) => FirebaseAuth.instance,
+);
+
+/// Cliente de Google Sign-In usado en mobile.
+final googleSignInProvider = Provider<GoogleSignIn>((ref) => GoogleSignIn());
+
+/// Acceso a SharedPreferences para persistencia local del flujo auth.
+final sharedPreferencesProvider = Provider<Future<SharedPreferences>>(
+  (ref) => SharedPreferences.getInstance(),
+);
+
+/// Contrato mínimo de autenticación usado por la capa de lógica.
+/// Permite testear flujos AUTH sin depender de Firebase real.
+abstract class AuthClient {
+  Stream<User?> authStateChanges();
+
+  Future<void> sendSignInLinkToEmail({
+    required String email,
+    required ActionCodeSettings actionCodeSettings,
+  });
+
+  bool isSignInWithEmailLink(String link);
+
+  Future<UserCredential> signInWithEmailLink({
+    required String email,
+    required String emailLink,
+  });
+
+  Future<UserCredential> signInWithPopup(AuthProvider provider);
+
+  Future<UserCredential> signInWithCredential(AuthCredential credential);
+
+  Future<void> signOut();
+}
+
+class FirebaseAuthClient implements AuthClient {
+  FirebaseAuthClient(this._firebaseAuth);
+
+  final FirebaseAuth _firebaseAuth;
+
+  @override
+  Stream<User?> authStateChanges() => _firebaseAuth.authStateChanges();
+
+  @override
+  Future<void> sendSignInLinkToEmail({
+    required String email,
+    required ActionCodeSettings actionCodeSettings,
+  }) {
+    return _firebaseAuth.sendSignInLinkToEmail(
+      email: email,
+      actionCodeSettings: actionCodeSettings,
+    );
+  }
+
+  @override
+  bool isSignInWithEmailLink(String link) {
+    return _firebaseAuth.isSignInWithEmailLink(link);
+  }
+
+  @override
+  Future<UserCredential> signInWithEmailLink({
+    required String email,
+    required String emailLink,
+  }) {
+    return _firebaseAuth.signInWithEmailLink(
+      email: email,
+      emailLink: emailLink,
+    );
+  }
+
+  @override
+  Future<UserCredential> signInWithPopup(AuthProvider provider) {
+    return _firebaseAuth.signInWithPopup(provider);
+  }
+
+  @override
+  Future<UserCredential> signInWithCredential(AuthCredential credential) {
+    return _firebaseAuth.signInWithCredential(credential);
+  }
+
+  @override
+  Future<void> signOut() => _firebaseAuth.signOut();
+}
+
+final authClientProvider = Provider<AuthClient>(
+  (ref) => FirebaseAuthClient(ref.watch(firebaseAuthProvider)),
+);
+
+/// Contrato mínimo para Google Sign-In usado por la capa de lógica.
+abstract class GoogleSignInClient {
+  Future<GoogleSignInAccount?> signIn();
+
+  Future<GoogleSignInAccount?> signOut();
+}
+
+class DefaultGoogleSignInClient implements GoogleSignInClient {
+  DefaultGoogleSignInClient(this._googleSignIn);
+
+  final GoogleSignIn _googleSignIn;
+
+  @override
+  Future<GoogleSignInAccount?> signIn() => _googleSignIn.signIn();
+
+  @override
+  Future<GoogleSignInAccount?> signOut() => _googleSignIn.signOut();
+}
+
+final googleSignInClientProvider = Provider<GoogleSignInClient>(
+  (ref) => DefaultGoogleSignInClient(ref.watch(googleSignInProvider)),
+);
+
 // ── Stream de sesión ──────────────────────────────────────────────────────────
 
 /// Stream del usuario autenticado. null = sin sesión.
 final authStateProvider = StreamProvider<User?>(
-  (ref) => FirebaseAuth.instance.authStateChanges(),
+  (ref) => ref.watch(authClientProvider).authStateChanges(),
 );
 
 /// Retorna el usuario actual o null si no hay sesión.
@@ -114,22 +231,23 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
     state = state.copyWith(isLoading: true, clearError: true, emailSent: false);
 
     try {
+      final authClient = ref.read(authClientProvider);
       final settings = ActionCodeSettings(
         url: _resolveMagicLinkUrl(),
         handleCodeInApp: true,
-        androidPackageName: 'com.tum2.app',
+        androidPackageName: _kAndroidApplicationId,
         androidInstallApp: true,
         androidMinimumVersion: '21',
         iOSBundleId: 'com.tum2.app',
       );
 
-      await FirebaseAuth.instance.sendSignInLinkToEmail(
+      await authClient.sendSignInLinkToEmail(
         email: email,
         actionCodeSettings: settings,
       );
 
       // Persistir el email localmente para usarlo al procesar el link
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await ref.read(sharedPreferencesProvider);
       await prefs.setString(_kPendingEmailLinkKey, email);
 
       AuthAnalytics.logMagicLinkSent().ignore();
@@ -156,7 +274,8 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final authClient = ref.read(authClientProvider);
+      final prefs = await ref.read(sharedPreferencesProvider);
       final email =
           emailOverride ?? prefs.getString(_kPendingEmailLinkKey) ?? '';
 
@@ -168,7 +287,7 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
         return;
       }
 
-      if (!FirebaseAuth.instance.isSignInWithEmailLink(link)) {
+      if (!authClient.isSignInWithEmailLink(link)) {
         state = state.copyWith(
           isLoading: false,
           errorMessage: 'El link no es válido o ya expiró.',
@@ -176,7 +295,7 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
         return;
       }
 
-      final credential = await FirebaseAuth.instance.signInWithEmailLink(
+      final credential = await authClient.signInWithEmailLink(
         email: email,
         emailLink: link,
       );
@@ -215,14 +334,15 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
+      final authClient = ref.read(authClientProvider);
+      final googleSignInClient = ref.read(googleSignInClientProvider);
       UserCredential result;
 
       if (kIsWeb) {
         // En web usamos signInWithPopup (no requiere el paquete google_sign_in)
-        result = await FirebaseAuth.instance
-            .signInWithPopup(GoogleAuthProvider());
+        result = await authClient.signInWithPopup(GoogleAuthProvider());
       } else {
-        final googleUser = await GoogleSignIn().signIn();
+        final googleUser = await googleSignInClient.signIn();
         if (googleUser == null) {
           // Usuario canceló
           state = state.copyWith(isLoading: false);
@@ -235,7 +355,7 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
           idToken: googleAuth.idToken,
         );
 
-        result = await FirebaseAuth.instance.signInWithCredential(credential);
+        result = await authClient.signInWithCredential(credential);
       }
 
       // Programar toast de bienvenida
@@ -270,8 +390,8 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
 
     // Acción 1: cerrar sesión en Firebase Auth
     try {
-      await FirebaseAuth.instance.signOut();
-      await GoogleSignIn().signOut();
+      await ref.read(authClientProvider).signOut();
+      await ref.read(googleSignInClientProvider).signOut();
     } catch (e) {
       // Loguear pero continuar
       // ignore: avoid_print
@@ -280,7 +400,7 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
 
     // Acción 2: limpiar SharedPreferences (no limpiar onboarding_seen)
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = await ref.read(sharedPreferencesProvider);
       await Future.wait([
         prefs.remove(_kPendingEmailLinkKey),
         prefs.remove(_kOnboardingOwnerDraftKey),
@@ -296,6 +416,7 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
       ref.read(displayNameSkippedProvider.notifier).state = false;
       ref.read(pendingMagicLinkProvider.notifier).state = null;
       ref.read(pendingAuthToastProvider.notifier).state = null;
+      ref.read(pendingRouteProvider.notifier).state = null;
     } catch (e) {
       // ignore: avoid_print
       print('[AuthNotifier.signOut] Error invalidando providers: $e');
@@ -305,7 +426,7 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
   /// Retorna true si existe un pending_email_link guardado en SharedPreferences.
   /// Usado para detectar el caso cross-device del magic link.
   Future<bool> hasPendingEmailLink() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await ref.read(sharedPreferencesProvider);
     final email = prefs.getString(_kPendingEmailLinkKey);
     return email != null && email.isNotEmpty;
   }

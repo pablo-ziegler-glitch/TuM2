@@ -4,32 +4,53 @@ import 'app_routes.dart';
 /// Lógica de guards de navegación, extraída del router para ser testeable
 /// de forma independiente sin Firebase ni Riverpod.
 abstract class RouterGuards {
-  /// Rutas accesibles sin sesión activa.
-  static const publicPaths = {
+  /// Rutas del stack de autenticación.
+  static const authPaths = {
     AppRoutes.splash,
     AppRoutes.onboarding,
     AppRoutes.login,
     AppRoutes.emailVerification,
   };
 
+  /// Rutas navegables en modo invitado.
+  static const guestPaths = {
+    AppRoutes.home,
+    AppRoutes.homeAbiertoAhora,
+    AppRoutes.homeFarmacias,
+    AppRoutes.search,
+    AppRoutes.searchResults,
+    AppRoutes.searchMap,
+    AppRoutes.searchFarmacias,
+    AppRoutes.searchLocationFallback,
+  };
+
   /// Devuelve true si el path no requiere sesión activa.
   static bool isPublicPath(String path) {
-    if (publicPaths.contains(path)) return true;
+    path = _pathOnly(path);
+    if (authPaths.contains(path) || guestPaths.contains(path)) return true;
     // /commerce/:id y /pharmacy/:id son públicos (contenido visible sin login)
     if (path.startsWith('/commerce/')) return true;
     if (path.startsWith('/pharmacy/')) return true;
-    // La vista listado de farmacias de turno también es pública
-    if (path == AppRoutes.homeFarmacias) return true;
     return false;
   }
 
   /// Devuelve true si el path pertenece al Auth Stack.
-  static bool isAuthPath(String path) => publicPaths.contains(path);
+  static bool isAuthPath(String path) => authPaths.contains(_pathOnly(path));
+
+  /// Ruta de entrada para usuario sin sesión.
+  static String unauthenticatedEntryPath({required bool isFirstLaunch}) {
+    return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.home;
+  }
 
   /// Verifica si el rol tiene acceso a la ruta dada.
   static bool canAccessRoute(String route, String role) {
+    route = _pathOnly(route);
     if (route.startsWith('/owner') && role == 'customer') return false;
-    if (route.startsWith('/admin') && role != 'admin' && role != 'super_admin') return false;
+    if (route.startsWith('/admin') &&
+        role != 'admin' &&
+        role != 'super_admin') {
+      return false;
+    }
     return true;
   }
 
@@ -47,18 +68,20 @@ abstract class RouterGuards {
     String? pendingRoute,
     void Function()? consumePendingRoute,
   }) {
+    final path = _pathOnly(location);
+
     switch (authState) {
       case AuthLoading():
-        if (location == AppRoutes.splash) return null;
+        if (path == AppRoutes.splash) return null;
         return AppRoutes.splash;
 
       case AuthUnauthenticated():
-        if (isPublicPath(location)) return null;
+        if (isPublicPath(path)) return null;
         return AppRoutes.login;
 
       case AuthAuthenticated(:final role, :final onboardingComplete):
         // Desde ruta de auth → navegar al destino autenticado
-        if (isAuthPath(location)) {
+        if (isAuthPath(path)) {
           return _authenticatedHome(
             role: role,
             onboardingComplete: onboardingComplete,
@@ -70,17 +93,17 @@ abstract class RouterGuards {
         // Owner que no completó el onboarding → redirigir a flujo de alta
         if (role == 'owner' &&
             !onboardingComplete &&
-            !location.startsWith('/onboarding/owner')) {
+            !path.startsWith('/onboarding/owner')) {
           return AppRoutes.onboardingOwner;
         }
 
         // Guard: /owner solo owner o admin
-        if (location.startsWith('/owner') && role == 'customer') {
+        if (path.startsWith('/owner') && role == 'customer') {
           return AppRoutes.profile;
         }
 
         // Guard: /admin solo admin o super_admin
-        if (location.startsWith('/admin') &&
+        if (path.startsWith('/admin') &&
             role != 'admin' &&
             role != 'super_admin') {
           return AppRoutes.home;
@@ -96,13 +119,24 @@ abstract class RouterGuards {
     String? pendingRoute,
     void Function()? consumePendingRoute,
   }) {
-    if (pendingRoute != null && canAccessRoute(pendingRoute, role)) {
-      consumePendingRoute?.call();
-      return pendingRoute;
-    }
     if (role == 'owner' && !onboardingComplete) {
       return AppRoutes.onboardingOwner;
     }
+    if (pendingRoute != null &&
+        !isAuthPath(pendingRoute) &&
+        canAccessRoute(pendingRoute, role)) {
+      consumePendingRoute?.call();
+      return pendingRoute;
+    }
     return AppRoutes.home;
+  }
+
+  /// Extrae solo el path de una ubicación que puede incluir querystring.
+  static String _pathOnly(String location) {
+    try {
+      return Uri.parse(location).path;
+    } catch (_) {
+      return location;
+    }
   }
 }

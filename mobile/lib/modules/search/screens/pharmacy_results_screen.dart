@@ -207,7 +207,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 3))
           ],
@@ -228,7 +228,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
                   children: [
                     Center(
                       child: Icon(Icons.local_pharmacy,
-                          color: Colors.white.withOpacity(0.2), size: 70),
+                          color: Colors.white.withValues(alpha: 0.2), size: 70),
                     ),
                     // Badge de turno
                     Positioned(
@@ -466,7 +466,7 @@ class _PharmacyCardState extends State<_PharmacyCard> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2))
         ],

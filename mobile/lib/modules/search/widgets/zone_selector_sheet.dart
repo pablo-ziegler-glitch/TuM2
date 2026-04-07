@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../models/search_zone_item.dart';
 import '../providers/search_notifier.dart';
 import '../repositories/zone_search_repository.dart';
 

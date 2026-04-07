@@ -6,7 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
 /// HOME-01 — Tab Inicio (Customer).
-/// Muestra sección "Curated Gems" y acceso rápido a búsqueda.
+/// Muestra sección de recomendados y acceso rápido a búsqueda.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -22,19 +22,19 @@ class HomeScreen extends StatelessWidget {
           SliverList(
             delegate: SliverChildListDelegate([
               _CommerceCard(
-                tag: 'DISTRICT 01',
-                name: 'The Paper Atelier',
+                tag: 'ZONA 01',
+                name: 'Taller de Papel',
                 subtitle:
-                    'Hand-pressed stationary and artisan journals for the modern digital nomad.',
+                    'Papelería artesanal y cuadernos hechos a mano para la vida urbana.',
                 rating: 4.8,
                 onTap: () =>
                     context.push(AppRoutes.commerceDetailPath('paper-atelier')),
               ),
               _CommerceCard(
-                tag: 'CENTRAL',
+                tag: 'CENTRO',
                 name: 'Café Aura',
                 subtitle:
-                    'Cafetería Especializada & Pastelería Artesanal en el corazón del barrio.',
+                    'Cafetería especializada y pastelería artesanal en el corazón del barrio.',
                 onTap: () =>
                     context.push(AppRoutes.commerceDetailPath('cafe-aura')),
               ),
@@ -63,14 +63,14 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'WELCOME BACK',
+                  'BIENVENIDO OTRA VEZ',
                   style: AppTextStyles.labelSm.copyWith(
                     color: AppColors.neutral500,
                     letterSpacing: 1.4,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text('Neighborhood', style: AppTextStyles.headingLg),
+                Text('Tu barrio', style: AppTextStyles.headingLg),
               ],
             ),
           ),
@@ -109,9 +109,9 @@ class _SearchBar extends StatelessWidget {
               Icon(Icons.search, color: AppColors.neutral400, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Search curated shops...',
-                style: AppTextStyles.bodyMd
-                    .copyWith(color: AppColors.neutral400),
+                'Buscá comercios del barrio...',
+                style:
+                    AppTextStyles.bodyMd.copyWith(color: AppColors.neutral400),
               ),
             ],
           ),
@@ -131,7 +131,7 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Curated Gems', style: AppTextStyles.headingSm),
+          Text('Elegidos del barrio', style: AppTextStyles.headingSm),
           TextButton(
             onPressed: () {},
             style: TextButton.styleFrom(
@@ -140,7 +140,7 @@ class _SectionHeader extends StatelessWidget {
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: Text(
-              'View all',
+              'Ver todo',
               style:
                   AppTextStyles.labelMd.copyWith(color: AppColors.primary500),
             ),
@@ -179,7 +179,7 @@ class _CommerceCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -261,7 +261,7 @@ class _TagBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.neutral900.withOpacity(0.75),
+        color: AppColors.neutral900.withValues(alpha: 0.75),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(

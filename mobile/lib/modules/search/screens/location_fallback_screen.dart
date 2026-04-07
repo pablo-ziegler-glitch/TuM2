@@ -16,8 +16,7 @@ class LocationFallbackScreen extends StatefulWidget {
   const LocationFallbackScreen({super.key});
 
   @override
-  State<LocationFallbackScreen> createState() =>
-      _LocationFallbackScreenState();
+  State<LocationFallbackScreen> createState() => _LocationFallbackScreenState();
 }
 
 class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
@@ -25,10 +24,30 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
   final _controller = TextEditingController();
 
   static const _suggestedZones = [
-    (name: 'Palermo', sub: 'CABA, ARGENTINA', icon: Icons.location_city_outlined, popular: false),
-    (name: 'Recoleta', sub: 'CABA, ARGENTINA', icon: Icons.location_city_outlined, popular: false),
-    (name: 'Belgrano', sub: 'CABA, ARGENTINA', icon: Icons.park_outlined, popular: true),
-    (name: 'San Telmo', sub: 'Casco Histórico', icon: Icons.museum_outlined, popular: false),
+    (
+      name: 'Palermo',
+      sub: 'CABA, ARGENTINA',
+      icon: Icons.location_city_outlined,
+      popular: false
+    ),
+    (
+      name: 'Recoleta',
+      sub: 'CABA, ARGENTINA',
+      icon: Icons.location_city_outlined,
+      popular: false
+    ),
+    (
+      name: 'Belgrano',
+      sub: 'CABA, ARGENTINA',
+      icon: Icons.park_outlined,
+      popular: true
+    ),
+    (
+      name: 'San Telmo',
+      sub: 'Casco Histórico',
+      icon: Icons.museum_outlined,
+      popular: false
+    ),
   ];
 
   @override
@@ -122,7 +141,7 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
           border: Border.all(color: AppColors.neutral200),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6,
                 offset: const Offset(0, 2))
           ],
@@ -166,9 +185,8 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
                 color: isSelected ? AppColors.primary50 : AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected
-                      ? AppColors.primary400
-                      : AppColors.neutral200,
+                  color:
+                      isSelected ? AppColors.primary400 : AppColors.neutral200,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
@@ -248,8 +266,7 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.help_outline,
-                    size: 18, color: AppColors.neutral600),
+                Icon(Icons.help_outline, size: 18, color: AppColors.neutral600),
                 const SizedBox(width: 8),
                 Text('¿Por qué seleccionar una zona?',
                     style: AppTextStyles.labelMd),
@@ -309,7 +326,7 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Icon(Icons.map_outlined,
-                          color: Colors.white.withOpacity(0.1), size: 80),
+                          color: Colors.white.withValues(alpha: 0.1), size: 80),
                     ),
                     Center(
                       child: Container(
@@ -332,7 +349,7 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 5),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Text(
@@ -361,8 +378,7 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
                       borderRadius: BorderRadius.circular(12)),
                   textStyle: AppTextStyles.labelMd,
                 ),
-                child: Text(
-                    'Confirmar: ${_selectedZone ?? _controller.text}'),
+                child: Text('Confirmar: ${_selectedZone ?? _controller.text}'),
               ),
             ),
             const SizedBox(height: 12),

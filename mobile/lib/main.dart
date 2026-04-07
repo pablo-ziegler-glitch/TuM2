@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/firebase/firebase_options.dart';
 import 'core/router/app_router.dart';
+import 'core/router/deep_link_listener.dart';
 import 'core/theme/app_colors.dart';
 
 Future<void> main() async {
@@ -26,6 +27,7 @@ class TuM2App extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
+    ref.watch(deepLinkListenerProvider);
 
     return MaterialApp.router(
       title: 'TuM2',

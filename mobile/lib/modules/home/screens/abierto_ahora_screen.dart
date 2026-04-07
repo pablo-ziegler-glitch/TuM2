@@ -89,7 +89,7 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
       actionFilled: true,
     ),
     (
-      name: 'Open 26',
+      name: 'Siempre Abierto 26',
       type: 'Kiosco',
       address: 'Thames 1450',
       distance: '690m',
@@ -101,17 +101,18 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
     ),
   ];
 
-  List<({
-    String name,
-    String type,
-    String address,
-    String distance,
-    String zone,
-    double rating,
-    String closesAt,
-    String action,
-    bool actionFilled,
-  })> get _filtered {
+  List<
+      ({
+        String name,
+        String type,
+        String address,
+        String distance,
+        String zone,
+        double rating,
+        String closesAt,
+        String action,
+        bool actionFilled,
+      })> get _filtered {
     if (_selectedCategory == 'Todos') return _mockCommerces.toList();
     return _mockCommerces
         .where((c) => c.type.contains(_selectedCategory.replaceAll('s', '')))
@@ -132,16 +133,13 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
             child: results.isEmpty
                 ? _buildEmpty()
                 : ListView.builder(
-                    padding:
-                        const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     itemCount: results.length,
                     itemBuilder: (_, i) => _CommerceCard(
                       commerce: results[i],
                       onTap: () => context.push(
                         AppRoutes.commerceDetailPath(
-                          results[i].name
-                              .toLowerCase()
-                              .replaceAll(' ', '-'),
+                          results[i].name.toLowerCase().replaceAll(' ', '-'),
                         ),
                       ),
                     ),
@@ -166,8 +164,8 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
             onTap: () => context.pop(),
             child: Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: Icon(Icons.arrow_back,
-                  color: AppColors.neutral700, size: 22),
+              child:
+                  Icon(Icons.arrow_back, color: AppColors.neutral700, size: 22),
             ),
           ),
           Expanded(
@@ -187,8 +185,7 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
           ),
           // Indicador activo
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: AppColors.secondary50,
               borderRadius: BorderRadius.circular(16),
@@ -236,8 +233,7 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
           const Spacer(),
           Text(
             _horaActual(),
-            style: AppTextStyles.labelSm
-                .copyWith(color: AppColors.neutral500),
+            style: AppTextStyles.labelSm.copyWith(color: AppColors.neutral500),
           ),
         ],
       ),
@@ -272,8 +268,7 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
                   final cat = _categories[i];
                   final selected = cat == _selectedCategory;
                   return GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedCategory = cat),
+                    onTap: () => setState(() => _selectedCategory = cat),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 160),
                       padding: const EdgeInsets.symmetric(
@@ -342,12 +337,11 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
             ),
             const SizedBox(height: 16),
             GestureDetector(
-              onTap: () =>
-                  setState(() => _selectedCategory = 'Todos'),
+              onTap: () => setState(() => _selectedCategory = 'Todos'),
               child: Text(
                 'Ver todos los rubros',
-                style: AppTextStyles.labelMd
-                    .copyWith(color: AppColors.primary500),
+                style:
+                    AppTextStyles.labelMd.copyWith(color: AppColors.primary500),
               ),
             ),
           ],
@@ -372,8 +366,7 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
             const SizedBox(width: 8),
             Text(
               'Ver en el mapa',
-              style:
-                  AppTextStyles.labelMd.copyWith(color: Colors.white),
+              style: AppTextStyles.labelMd.copyWith(color: Colors.white),
             ),
           ],
         ),
@@ -413,7 +406,7 @@ class _CommerceCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 6,
                 offset: const Offset(0, 2)),
           ],
@@ -442,8 +435,7 @@ class _CommerceCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
-                  Text('${c.type} · ${c.zone}',
-                      style: AppTextStyles.bodyXs),
+                  Text('${c.type} · ${c.zone}', style: AppTextStyles.bodyXs),
                   const SizedBox(height: 4),
                   Row(
                     children: [
@@ -458,8 +450,8 @@ class _CommerceCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           c.closesAt,
-                          style: AppTextStyles.bodyXs.copyWith(
-                              color: AppColors.secondary700),
+                          style: AppTextStyles.bodyXs
+                              .copyWith(color: AppColors.secondary700),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -504,8 +496,7 @@ class _CommerceCard extends StatelessWidget {
                         onPressed: onTap,
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.primary500,
-                          side: const BorderSide(
-                              color: AppColors.primary300),
+                          side: const BorderSide(color: AppColors.primary300),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 5),
                           minimumSize: Size.zero,

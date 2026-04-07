@@ -6,9 +6,15 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 /// Los parámetros son snake_case según la convención de Firebase Analytics.
 ///
 /// Para verificar en desarrollo: Firebase DebugView con `--dart-define=FIREBASE_DEBUG=true`
-/// o `adb shell setprop debug.firebase.analytics.app com.tum2.app`.
+/// o `adb shell setprop debug.firebase.analytics.app com.floki.tum2.tum2`.
 abstract class AuthAnalytics {
-  static final _analytics = FirebaseAnalytics.instance;
+  static FirebaseAnalytics? get _analytics {
+    try {
+      return FirebaseAnalytics.instance;
+    } catch (_) {
+      return null;
+    }
+  }
 
   // ── Nombres de eventos ──────────────────────────────────────────────────────
 
@@ -30,9 +36,8 @@ abstract class AuthAnalytics {
   // ── Métodos públicos ────────────────────────────────────────────────────────
 
   /// Magic link enviado al email del usuario.
-  static Future<void> logMagicLinkSent() => _analytics.logEvent(
-        name: _kMagicLinkSent,
-      );
+  static Future<void> logMagicLinkSent() =>
+      _safeLogEvent(name: _kMagicLinkSent);
 
   /// Magic link procesado exitosamente — usuario autenticado.
   /// [isNewUser] true si es el primer login.
@@ -41,7 +46,7 @@ abstract class AuthAnalytics {
     required bool isNewUser,
     required bool isCrossDevice,
   }) =>
-      _analytics.logEvent(
+      _safeLogEvent(
         name: _kMagicLinkVerified,
         parameters: {
           _pIsNewUser: isNewUser,
@@ -50,8 +55,7 @@ abstract class AuthAnalytics {
       );
 
   /// Error al procesar el magic link.
-  static Future<void> logMagicLinkError(String errorCode) =>
-      _analytics.logEvent(
+  static Future<void> logMagicLinkError(String errorCode) => _safeLogEvent(
         name: _kMagicLinkError,
         parameters: {_pErrorCode: errorCode},
       );
@@ -59,30 +63,38 @@ abstract class AuthAnalytics {
   /// Inicio de sesión con Google exitoso.
   /// [isNewUser] true si es el primer login.
   static Future<void> logGoogleSignIn({required bool isNewUser}) =>
-      _analytics.logEvent(
+      _safeLogEvent(
         name: _kGoogleSignIn,
         parameters: {_pIsNewUser: isNewUser},
       );
 
   /// Error al iniciar sesión con Google.
-  static Future<void> logGoogleSignInError(String errorCode) =>
-      _analytics.logEvent(
+  static Future<void> logGoogleSignInError(String errorCode) => _safeLogEvent(
         name: _kGoogleSignInError,
         parameters: {_pErrorCode: errorCode},
       );
 
   /// Usuario cerró sesión.
-  static Future<void> logSignOut() => _analytics.logEvent(
-        name: _kSignOut,
-      );
+  static Future<void> logSignOut() => _safeLogEvent(name: _kSignOut);
 
   /// Usuario guardó su displayName en el micro-step AUTH-05.
-  static Future<void> logDisplayNameSet() => _analytics.logEvent(
-        name: _kDisplayNameSet,
-      );
+  static Future<void> logDisplayNameSet() =>
+      _safeLogEvent(name: _kDisplayNameSet);
 
   /// Usuario saltó el micro-step de displayName con "Ahora no".
-  static Future<void> logDisplayNameSkipped() => _analytics.logEvent(
-        name: _kDisplayNameSkipped,
-      );
+  static Future<void> logDisplayNameSkipped() =>
+      _safeLogEvent(name: _kDisplayNameSkipped);
+
+  static Future<void> _safeLogEvent({
+    required String name,
+    Map<String, Object>? parameters,
+  }) async {
+    final analytics = _analytics;
+    if (analytics == null) return;
+    try {
+      await analytics.logEvent(name: name, parameters: parameters);
+    } catch (_) {
+      // No-op: analytics nunca debe romper flujos de auth.
+    }
+  }
 }

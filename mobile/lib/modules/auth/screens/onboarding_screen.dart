@@ -55,13 +55,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      _goToLogin();
+      _continueAsGuest();
     }
   }
 
-  Future<void> _goToLogin() async {
+  Future<void> _continueAsGuest() async {
     await markOnboardingSeen();
-    if (mounted) context.go(AppRoutes.login);
+    if (mounted) context.go(AppRoutes.home);
   }
 
   @override
@@ -84,7 +84,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: _goToLogin,
+                onPressed: _continueAsGuest,
                 child: Text(
                   'Saltar',
                   style: AppTextStyles.labelSm.copyWith(

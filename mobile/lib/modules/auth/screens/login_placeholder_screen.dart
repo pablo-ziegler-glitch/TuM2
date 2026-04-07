@@ -4,9 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../shared/widgets/placeholder_screen.dart';
 
-/// AUTH-03 — Login placeholder.
+/// AUTH-03 — Placeholder de acceso.
 /// Será reemplazada por la pantalla real en TuM2-0054.
 class LoginPlaceholderScreen extends StatelessWidget {
   const LoginPlaceholderScreen({super.key});
@@ -24,7 +23,8 @@ class LoginPlaceholderScreen extends StatelessWidget {
               const SizedBox(height: 24),
               // Header
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.infoBg,
                   borderRadius: BorderRadius.circular(6),
@@ -32,11 +32,12 @@ class LoginPlaceholderScreen extends StatelessWidget {
                 ),
                 child: Text(
                   'AUTH-03',
-                  style: AppTextStyles.labelSm.copyWith(color: AppColors.primary600),
+                  style: AppTextStyles.labelSm
+                      .copyWith(color: AppColors.primary600),
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Login', style: AppTextStyles.headingMd),
+              Text('Inicio de sesión', style: AppTextStyles.headingMd),
               const SizedBox(height: 8),
               Text(
                 'Pantalla en construcción — se implementa en TuM2-0054.',
@@ -55,7 +56,7 @@ class LoginPlaceholderScreen extends StatelessWidget {
                   side: const BorderSide(color: AppColors.primary300),
                   minimumSize: const Size(double.infinity, 44),
                 ),
-                child: const Text('Ir a Onboarding (AUTH-02)'),
+                child: const Text('Ir a bienvenida (AUTH-02)'),
               ),
               const SizedBox(height: 8),
               FilledButton(
@@ -64,7 +65,7 @@ class LoginPlaceholderScreen extends StatelessWidget {
                   backgroundColor: AppColors.primary500,
                   minimumSize: const Size(double.infinity, 44),
                 ),
-                child: const Text('Simular login → HOME-01'),
+                child: const Text('Simular ingreso → INICIO-01'),
               ),
               const SizedBox(height: 24),
             ],

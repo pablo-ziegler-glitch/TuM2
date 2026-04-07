@@ -11,7 +11,7 @@ import '../../../core/theme/app_text_styles.dart';
 /// HOME-01 — Pantalla de inicio del cliente.
 ///
 /// Muestra el saludo personalizado, barra de búsqueda rápida y la sección
-/// "Curated Gems" con comercios destacados de la zona (datos mockeados).
+/// de recomendados con comercios destacados de la zona (datos mockeados).
 class HomePlaceholderScreen extends ConsumerWidget {
   const HomePlaceholderScreen({super.key});
 
@@ -38,14 +38,14 @@ class HomePlaceholderScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'WELCOME BACK',
+                        'BIENVENIDO OTRA VEZ',
                         style: AppTextStyles.labelSm.copyWith(
                           color: AppColors.neutral500,
                           letterSpacing: 1.2,
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text('Neighborhood', style: AppTextStyles.headingLg),
+                      Text('Tu barrio', style: AppTextStyles.headingLg),
                     ],
                   ),
                   CircleAvatar(
@@ -87,7 +87,7 @@ class HomePlaceholderScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Search curated shops...',
+                        'Buscá comercios del barrio...',
                         style: AppTextStyles.bodyMd.copyWith(
                           color: AppColors.neutral400,
                         ),
@@ -98,15 +98,15 @@ class HomePlaceholderScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // Sección Curated Gems
+              // Sección de recomendados
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Curated Gems', style: AppTextStyles.headingSm),
+                  Text('Elegidos del barrio', style: AppTextStyles.headingSm),
                   TextButton(
                     onPressed: () {},
                     child: Text(
-                      'View all',
+                      'Ver todo',
                       style: AppTextStyles.labelSm.copyWith(
                         color: AppColors.primary500,
                       ),
@@ -162,15 +162,15 @@ class _MockCommerce {
 const _mockCommerces = [
   _MockCommerce(
     id: 'paper-atelier',
-    district: 'DISTRICT 01',
-    name: 'The Paper Atelier',
+    district: 'ZONA 01',
+    name: 'Taller de Papel',
     rating: 4.9,
     description:
-        'Hand-pressed stationary and artisan journals for the modern digital nomad.',
+        'Papelería artesanal y cuadernos hechos a mano para la vida urbana.',
   ),
   _MockCommerce(
     id: 'cafe-aura',
-    district: 'CENTRAL',
+    district: 'CENTRO',
     name: 'Café Aura',
     rating: 4.7,
     description:

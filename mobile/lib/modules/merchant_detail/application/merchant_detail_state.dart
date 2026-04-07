@@ -5,56 +5,63 @@ import '../domain/merchant_detail_view_data.dart';
 class MerchantDetailState {
   const MerchantDetailState({
     required this.merchantId,
-    required this.core,
-    required this.products,
+    required this.merchant,
+    required this.badge,
+    required this.pharmacyDuty,
+    required this.featuredProducts,
     required this.schedule,
     required this.signals,
     required this.distanceLabel,
-    required this.isScheduleExpanded,
   });
 
   final String merchantId;
-  final MerchantCoreViewData core;
-  final AsyncValue<List<MerchantProductViewData>> products;
+  final MerchantPublicViewData merchant;
+  final MerchantStatusBadgeViewData badge;
+  final AsyncValue<PharmacyDutyViewData?> pharmacyDuty;
+  final AsyncValue<List<MerchantFeaturedProductViewData>> featuredProducts;
   final AsyncValue<MerchantScheduleViewData?> schedule;
   final AsyncValue<List<MerchantOperationalSignalViewData>> signals;
   final String? distanceLabel;
-  final bool isScheduleExpanded;
 
   factory MerchantDetailState.initial({
     required String merchantId,
-    required MerchantCoreViewData core,
+    required MerchantPublicViewData merchant,
+    required MerchantStatusBadgeViewData badge,
   }) {
     return MerchantDetailState(
       merchantId: merchantId,
-      core: core,
-      products: const AsyncValue<List<MerchantProductViewData>>.loading(),
+      merchant: merchant,
+      badge: badge,
+      pharmacyDuty: merchant.hasPharmacyDutyToday
+          ? const AsyncValue<PharmacyDutyViewData?>.loading()
+          : const AsyncValue<PharmacyDutyViewData?>.data(null),
+      featuredProducts:
+          const AsyncValue<List<MerchantFeaturedProductViewData>>.loading(),
       schedule: const AsyncValue<MerchantScheduleViewData?>.loading(),
-      signals: AsyncValue<List<MerchantOperationalSignalViewData>>.data(
-        core.operationalSignals,
-      ),
+      signals:
+          const AsyncValue<List<MerchantOperationalSignalViewData>>.loading(),
       distanceLabel: null,
-      isScheduleExpanded: false,
     );
   }
 
   MerchantDetailState copyWith({
-    AsyncValue<List<MerchantProductViewData>>? products,
+    AsyncValue<PharmacyDutyViewData?>? pharmacyDuty,
+    AsyncValue<List<MerchantFeaturedProductViewData>>? featuredProducts,
     AsyncValue<MerchantScheduleViewData?>? schedule,
     AsyncValue<List<MerchantOperationalSignalViewData>>? signals,
     String? distanceLabel,
     bool clearDistanceLabel = false,
-    bool? isScheduleExpanded,
   }) {
     return MerchantDetailState(
       merchantId: merchantId,
-      core: core,
-      products: products ?? this.products,
+      merchant: merchant,
+      badge: badge,
+      pharmacyDuty: pharmacyDuty ?? this.pharmacyDuty,
+      featuredProducts: featuredProducts ?? this.featuredProducts,
       schedule: schedule ?? this.schedule,
       signals: signals ?? this.signals,
       distanceLabel:
           clearDistanceLabel ? null : (distanceLabel ?? this.distanceLabel),
-      isScheduleExpanded: isScheduleExpanded ?? this.isScheduleExpanded,
     );
   }
 }

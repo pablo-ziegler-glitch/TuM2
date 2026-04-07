@@ -23,7 +23,7 @@ import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
-import '../../modules/shared/screens/commerce_detail_screen.dart';
+import '../../modules/merchant_detail/presentation/merchant_detail_page.dart';
 import '../../modules/merchant_detail/presentation/product_detail_page.dart';
 import '../../modules/shell/customer_tabs.dart';
 import '../../modules/brand/onboarding_owner/onboarding_owner_flow.dart';
@@ -331,7 +331,7 @@ List<RouteBase> _buildRoutes() {
       path: AppRoutes.commerceDetail,
       builder: (context, state) {
         final merchantId = state.pathParameters['merchantId']!;
-        return CommerceDetailScreen(commerceId: merchantId);
+        return MerchantDetailPage(merchantId: merchantId);
       },
     ),
 

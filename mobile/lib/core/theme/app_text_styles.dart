@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
 abstract class AppTextStyles {
+  static const _headlineFont = 'Plus Jakarta Sans';
+  static const _bodyFont = 'Inter';
+
   // ── Headings ────────────────────────────────────────────────────
   static const headingLg = TextStyle(
+    fontFamily: _headlineFont,
     fontSize: 24,
     fontWeight: FontWeight.w700,
     color: AppColors.neutral900,
@@ -11,6 +15,7 @@ abstract class AppTextStyles {
   );
 
   static const headingMd = TextStyle(
+    fontFamily: _headlineFont,
     fontSize: 20,
     fontWeight: FontWeight.w600,
     color: AppColors.neutral900,
@@ -18,6 +23,7 @@ abstract class AppTextStyles {
   );
 
   static const headingSm = TextStyle(
+    fontFamily: _headlineFont,
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.neutral900,
@@ -26,6 +32,7 @@ abstract class AppTextStyles {
 
   // ── Body ────────────────────────────────────────────────────────
   static const bodyMd = TextStyle(
+    fontFamily: _bodyFont,
     fontSize: 15,
     fontWeight: FontWeight.w400,
     color: AppColors.neutral900,
@@ -33,6 +40,7 @@ abstract class AppTextStyles {
   );
 
   static const bodySm = TextStyle(
+    fontFamily: _bodyFont,
     fontSize: 13,
     fontWeight: FontWeight.w400,
     color: AppColors.neutral700,
@@ -40,6 +48,7 @@ abstract class AppTextStyles {
   );
 
   static const bodyXs = TextStyle(
+    fontFamily: _bodyFont,
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.neutral600,
@@ -48,6 +57,7 @@ abstract class AppTextStyles {
 
   // ── Labels ──────────────────────────────────────────────────────
   static const labelMd = TextStyle(
+    fontFamily: _bodyFont,
     fontSize: 14,
     fontWeight: FontWeight.w500,
     color: AppColors.neutral900,
@@ -55,6 +65,7 @@ abstract class AppTextStyles {
   );
 
   static const labelSm = TextStyle(
+    fontFamily: _bodyFont,
     fontSize: 12,
     fontWeight: FontWeight.w500,
     color: AppColors.neutral700,

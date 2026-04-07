@@ -19,6 +19,25 @@ class MerchantCoreDto {
   }
 }
 
+class PharmacyDutyDto {
+  const PharmacyDutyDto({
+    required this.id,
+    required this.data,
+  });
+
+  final String id;
+  final Map<String, dynamic> data;
+
+  factory PharmacyDutyDto.fromDocument(
+    QueryDocumentSnapshot<Map<String, dynamic>> document,
+  ) {
+    return PharmacyDutyDto(
+      id: document.id,
+      data: document.data(),
+    );
+  }
+}
+
 class MerchantProductDto {
   const MerchantProductDto({
     required this.id,

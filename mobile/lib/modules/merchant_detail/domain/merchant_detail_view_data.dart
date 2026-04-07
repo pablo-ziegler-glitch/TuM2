@@ -1,52 +1,82 @@
 import 'package:flutter/material.dart';
 
 @immutable
-class MerchantCoreViewData {
-  const MerchantCoreViewData({
+class MerchantPublicViewData {
+  const MerchantPublicViewData({
     required this.merchantId,
     required this.name,
+    required this.categoryId,
     required this.categoryLabel,
-    required this.zoneId,
+    required this.coverImageUrl,
+    required this.logoUrl,
     required this.address,
+    required this.phonePrimary,
     required this.lat,
     required this.lng,
+    required this.mapsUrl,
     required this.isOpenNow,
-    required this.isOnDutyToday,
+    required this.hasPharmacyDutyToday,
     required this.openStatusLabel,
-    required this.verificationStatus,
-    required this.operationalBadge,
-    required this.trustBadges,
-    required this.operationalSignals,
+    required this.lastDataRefreshAt,
+    required this.featuredProductIds,
   });
 
   final String merchantId;
   final String name;
+  final String categoryId;
   final String categoryLabel;
-  final String zoneId;
+  final String? coverImageUrl;
+  final String? logoUrl;
   final String address;
+  final String? phonePrimary;
   final double? lat;
   final double? lng;
+  final String? mapsUrl;
   final bool? isOpenNow;
-  final bool isOnDutyToday;
+  final bool hasPharmacyDutyToday;
   final String openStatusLabel;
-  final String verificationStatus;
-  final MerchantOperationalBadgeViewData operationalBadge;
-  final List<MerchantTrustBadgeViewData> trustBadges;
-  final List<MerchantOperationalSignalViewData> operationalSignals;
+  final DateTime? lastDataRefreshAt;
+  final List<String> featuredProductIds;
+
+  bool get hasPhone => (phonePrimary ?? '').trim().isNotEmpty;
+  bool get isPharmacyCategory {
+    final normalized = categoryId.trim().toLowerCase();
+    return normalized == 'pharmacy' || normalized == 'farmacia';
+  }
+}
+
+enum MerchantStatusBadgeType {
+  duty,
+  open,
+  closed,
+  referential,
 }
 
 @immutable
-class MerchantProductViewData {
-  const MerchantProductViewData({
+class MerchantStatusBadgeViewData {
+  const MerchantStatusBadgeViewData({
+    required this.type,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
+
+  final MerchantStatusBadgeType type;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+}
+
+@immutable
+class MerchantFeaturedProductViewData {
+  const MerchantFeaturedProductViewData({
     required this.productId,
-    required this.merchantId,
     required this.name,
     required this.priceLabel,
     required this.imageUrl,
   });
 
   final String productId;
-  final String merchantId;
   final String name;
   final String priceLabel;
   final String? imageUrl;
@@ -55,11 +85,9 @@ class MerchantProductViewData {
 @immutable
 class MerchantScheduleViewData {
   const MerchantScheduleViewData({
-    required this.timezone,
     required this.days,
   });
 
-  final String? timezone;
   final List<MerchantScheduleDayViewData> days;
 }
 
@@ -91,46 +119,11 @@ class MerchantOperationalSignalViewData {
   final bool isAlert;
 }
 
-enum MerchantOperationalBadgeType {
-  onDuty,
-  openNow,
-  closed,
-  referential,
-}
-
 @immutable
-class MerchantOperationalBadgeViewData {
-  const MerchantOperationalBadgeViewData({
-    required this.type,
-    required this.label,
-    required this.backgroundColor,
-    required this.foregroundColor,
+class PharmacyDutyViewData {
+  const PharmacyDutyViewData({
+    required this.endsAt,
   });
 
-  final MerchantOperationalBadgeType type;
-  final String label;
-  final Color backgroundColor;
-  final Color foregroundColor;
-}
-
-enum MerchantTrustBadgeType {
-  verified,
-  claimed,
-  referential,
-  community,
-}
-
-@immutable
-class MerchantTrustBadgeViewData {
-  const MerchantTrustBadgeViewData({
-    required this.type,
-    required this.label,
-    required this.backgroundColor,
-    required this.foregroundColor,
-  });
-
-  final MerchantTrustBadgeType type;
-  final String label;
-  final Color backgroundColor;
-  final Color foregroundColor;
+  final DateTime? endsAt;
 }

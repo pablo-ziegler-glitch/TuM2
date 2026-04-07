@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../pharmacy/services/distance_calculator.dart';
 import '../analytics/merchant_detail_analytics.dart';
+import 'merchant_detail_actions.dart';
+import '../data/dtos/merchant_detail_dto.dart';
 import '../data/mappers/merchant_detail_mappers.dart';
 import '../data/merchant_detail_repository.dart';
-import '../domain/merchant_maps.dart';
 import '../domain/merchant_detail_view_data.dart';
 import 'merchant_detail_state.dart';
 import 'merchant_location_reader.dart';
+import 'merchant_detail_error_mapper.dart';
 
 final merchantDetailControllerProvider = AsyncNotifierProvider.autoDispose
     .family<MerchantDetailController, MerchantDetailState, String>(
@@ -24,32 +26,43 @@ class MerchantDetailController
       ref.read(merchantDetailRepositoryProvider);
   MerchantDetailAnalyticsSink get _analytics =>
       ref.read(merchantDetailAnalyticsProvider);
+  MerchantDetailActions get _actions => ref.read(merchantDetailActionsProvider);
 
   @override
   Future<MerchantDetailState> build(String merchantId) async {
     _merchantId = merchantId;
-
-    final coreDto = await _repository.fetchCore(merchantId);
+    MerchantCoreDto? coreDto;
+    try {
+      coreDto = await _repository.fetchMerchantPublic(merchantId);
+    } catch (error) {
+      _logError('core', error);
+      rethrow;
+    }
     if (coreDto == null) throw const MerchantDetailNotFoundException();
 
     final core = mapCoreDtoToViewData(coreDto);
+    final badge = mapStatusBadge(core);
     final initial = MerchantDetailState.initial(
       merchantId: merchantId,
-      core: core,
+      merchant: core,
+      badge: badge,
     );
 
     unawaited(
-      _analytics.logDetailOpened(
+      _analytics.logDetailView(
         merchantId: merchantId,
-        verificationStatus: core.verificationStatus,
+        categoryId: core.categoryId,
+        hasPharmacyDutyToday: core.hasPharmacyDutyToday,
       ),
     );
 
-    unawaited(_loadProducts(merchantId));
+    unawaited(_loadFeaturedProducts(merchantId, core.featuredProductIds));
     unawaited(_loadSchedule(merchantId));
-    unawaited(
-        _loadSignals(merchantId, fallbackSignals: core.operationalSignals));
+    unawaited(_loadSignals(merchantId));
     unawaited(_loadDistance(core));
+    if (core.hasPharmacyDutyToday) {
+      unawaited(_loadPharmacyDuty(merchantId));
+    }
 
     return initial;
   }
@@ -59,86 +72,94 @@ class MerchantDetailController
     state = await AsyncValue.guard(() => build(_merchantId));
   }
 
-  Future<void> onDirectionsTap() async {
+  Future<void> onCallTap() async {
     final current = state.valueOrNull;
     if (current == null) return;
+    final phone = current.merchant.phonePrimary;
+    if (phone == null || phone.trim().isEmpty) return;
 
-    final intent = buildMerchantMapsIntent(
-      address: current.core.address,
-      lat: current.core.lat,
-      lng: current.core.lng,
-    );
-
-    final opened = await ref.read(merchantMapsLauncherProvider).open(intent);
+    final opened = await _actions.openCall(phone);
     unawaited(
-      _analytics.logDirectionsTapped(
+      _analytics.logCallClick(
         merchantId: current.merchantId,
-        usedCoordinates: intent.usedCoordinates,
         launchSucceeded: opened,
       ),
     );
   }
 
-  void onProductTap(String productId) {
+  Future<void> onDirectionsTap() async {
     final current = state.valueOrNull;
     if (current == null) return;
+
+    final opened = await _actions.openDirections(
+      address: current.merchant.address,
+      lat: current.merchant.lat,
+      lng: current.merchant.lng,
+      mapsUrl: current.merchant.mapsUrl,
+    );
+
     unawaited(
-      _analytics.logProductTapped(
+      _analytics.logDirectionsClick(
         merchantId: current.merchantId,
-        productId: productId,
+        launchSucceeded: opened,
       ),
     );
   }
 
-  void onScheduleExpandedChanged(bool expanded) {
-    _updateLoadedState(
-      (current) => current.copyWith(isScheduleExpanded: expanded),
+  Future<void> onShareTap() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final success = await _actions.shareMerchant(
+      merchantId: current.merchantId,
+      merchantName: current.merchant.name,
     );
 
     unawaited(
-      _analytics.logScheduleExpanded(
-        merchantId: _merchantId,
-        expanded: expanded,
+      _analytics.logShareClick(
+        merchantId: current.merchantId,
+        launchSucceeded: success,
       ),
     );
   }
 
-  Future<void> _loadProducts(String merchantId) async {
+  Future<void> _loadFeaturedProducts(
+    String merchantId,
+    List<String> featuredProductIds,
+  ) async {
     final repository = _repository;
-    final analytics = _analytics;
     try {
-      final productDtos = await repository.fetchProducts(
+      final productDtos = await repository.fetchFeaturedProducts(
         merchantId,
+        preferredProductIds: featuredProductIds,
         limit: 6,
       );
-      final products =
+      final featured =
           productDtos.map(mapProductDtoToViewData).toList(growable: false);
       _updateLoadedState(
         (current) => current.copyWith(
-          products: AsyncValue<List<MerchantProductViewData>>.data(products),
+          featuredProducts:
+              AsyncValue<List<MerchantFeaturedProductViewData>>.data(
+            featured,
+          ),
         ),
       );
     } catch (error, stackTrace) {
       _updateLoadedState(
         (current) => current.copyWith(
-          products: AsyncValue<List<MerchantProductViewData>>.error(
+          featuredProducts:
+              AsyncValue<List<MerchantFeaturedProductViewData>>.error(
             error,
             stackTrace,
           ),
         ),
       );
-      unawaited(
-        analytics.logSecondaryLoadFailed(
-          merchantId: merchantId,
-          section: 'products',
-        ),
-      );
+      _logError('products', error);
     }
   }
 
   Future<void> _loadSchedule(String merchantId) async {
     final repository = _repository;
-    final analytics = _analytics;
     try {
       final scheduleDto = await repository.fetchSchedule(merchantId);
       final schedule =
@@ -157,26 +178,17 @@ class MerchantDetailController
           ),
         ),
       );
-      unawaited(
-        analytics.logSecondaryLoadFailed(
-          merchantId: merchantId,
-          section: 'schedule',
-        ),
-      );
+      _logError('schedule', error);
     }
   }
 
-  Future<void> _loadSignals(
-    String merchantId, {
-    required List<MerchantOperationalSignalViewData> fallbackSignals,
-  }) async {
+  Future<void> _loadSignals(String merchantId) async {
     final repository = _repository;
-    final analytics = _analytics;
     try {
       final dto = await repository.fetchSignals(merchantId);
-      final signals =
-          dto == null ? fallbackSignals : mapSignalsDtoToViewData(dto);
-      final resolvedSignals = signals.isEmpty ? fallbackSignals : signals;
+      final resolvedSignals = dto == null
+          ? const <MerchantOperationalSignalViewData>[]
+          : mapSignalsDtoToViewData(dto);
       _updateLoadedState(
         (current) => current.copyWith(
           signals: AsyncValue<List<MerchantOperationalSignalViewData>>.data(
@@ -193,23 +205,54 @@ class MerchantDetailController
           ),
         ),
       );
-      unawaited(
-        analytics.logSecondaryLoadFailed(
-          merchantId: merchantId,
-          section: 'signals',
-        ),
-      );
+      _logError('signals', error);
     }
   }
 
-  Future<void> _loadDistance(MerchantCoreViewData core) async {
+  Future<void> _loadPharmacyDuty(String merchantId) async {
+    final repository = _repository;
+    try {
+      final dutyDto = await repository.fetchActivePharmacyDuty(merchantId);
+      final duty = dutyDto == null
+          ? const PharmacyDutyViewData(endsAt: null)
+          : mapDutyDtoToViewData(dutyDto);
+      _updateLoadedState(
+        (current) => current.copyWith(
+          pharmacyDuty: AsyncValue<PharmacyDutyViewData?>.data(duty),
+        ),
+      );
+      unawaited(
+        _analytics.logDutyBannerView(
+          merchantId: merchantId,
+          hasEndsAt: duty.endsAt != null,
+        ),
+      );
+    } catch (error) {
+      _updateLoadedState(
+        (current) => current.copyWith(
+          pharmacyDuty: const AsyncValue<PharmacyDutyViewData?>.data(
+            PharmacyDutyViewData(endsAt: null),
+          ),
+        ),
+      );
+      unawaited(
+        _analytics.logDutyBannerView(
+          merchantId: merchantId,
+          hasEndsAt: false,
+        ),
+      );
+      _logError('pharmacy_duties', error);
+    }
+  }
+
+  Future<void> _loadDistance(MerchantPublicViewData core) async {
     if (core.lat == null || core.lng == null) return;
 
     final locationReader = ref.read(merchantLocationReaderProvider);
     final location = await locationReader.getCurrentLocationIfPermitted();
     if (location == null) return;
 
-    // Calculo local, sin bloquear el render critico del hero.
+    // Calculo local, sin bloquear el render critico del shell.
     final meters = DistanceCalculator.haversine(
       lat1: location.lat,
       lng1: location.lng,
@@ -220,6 +263,20 @@ class MerchantDetailController
     _updateLoadedState(
       (current) => current.copyWith(
         distanceLabel: DistanceCalculator.formatDistance(meters),
+      ),
+    );
+  }
+
+  void _logError(String stage, Object error) {
+    final mappedType = classifyMerchantDetailError(error);
+    final errorType = mappedType == MerchantDetailErrorType.connection
+        ? 'connection'
+        : 'generic';
+    unawaited(
+      _analytics.logError(
+        merchantId: _merchantId,
+        stage: stage,
+        errorType: errorType,
       ),
     );
   }

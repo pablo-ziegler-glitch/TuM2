@@ -1,35 +1,46 @@
-import 'dart:async';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:tum2/modules/merchant_detail/analytics/merchant_detail_analytics.dart';
+import 'package:tum2/modules/merchant_detail/application/merchant_detail_actions.dart';
 import 'package:tum2/modules/merchant_detail/application/merchant_location_reader.dart';
 import 'package:tum2/modules/merchant_detail/data/dtos/merchant_detail_dto.dart';
 import 'package:tum2/modules/merchant_detail/data/merchant_detail_repository.dart';
-import 'package:tum2/modules/merchant_detail/domain/merchant_maps.dart';
 
 class FakeMerchantDetailRepository implements MerchantDetailDataSource {
   Future<MerchantCoreDto?> Function(String merchantId)? fetchCoreHandler;
-  Future<List<MerchantProductDto>> Function(String merchantId, int limit)?
-      fetchProductsHandler;
+  Future<PharmacyDutyDto?> Function(String merchantId)? fetchDutyHandler;
+  Future<List<MerchantProductDto>> Function(
+    String merchantId,
+    List<String> preferredProductIds,
+    int limit,
+  )? fetchProductsHandler;
   Future<MerchantScheduleDto?> Function(String merchantId)?
       fetchScheduleHandler;
   Future<MerchantOperationalSignalsDto?> Function(String merchantId)?
       fetchSignalsHandler;
 
   @override
-  Future<MerchantCoreDto?> fetchCore(String merchantId) {
+  Future<MerchantCoreDto?> fetchMerchantPublic(String merchantId) {
     final handler = fetchCoreHandler;
     if (handler == null) return Future.value(null);
     return handler(merchantId);
   }
 
   @override
-  Future<List<MerchantProductDto>> fetchProducts(
+  Future<PharmacyDutyDto?> fetchActivePharmacyDuty(String merchantId) {
+    final handler = fetchDutyHandler;
+    if (handler == null) return Future.value(null);
+    return handler(merchantId);
+  }
+
+  @override
+  Future<List<MerchantProductDto>> fetchFeaturedProducts(
     String merchantId, {
+    List<String> preferredProductIds = const [],
     int limit = 6,
   }) {
     final handler = fetchProductsHandler;
     if (handler == null) return Future.value(const []);
-    return handler(merchantId, limit);
+    return handler(merchantId, preferredProductIds, limit);
   }
 
   @override
@@ -48,82 +59,122 @@ class FakeMerchantDetailRepository implements MerchantDetailDataSource {
 }
 
 class RecordingMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
-  final List<Map<String, Object>> openedEvents = [];
+  final List<Map<String, Object>> detailViewEvents = [];
+  final List<Map<String, Object>> callEvents = [];
   final List<Map<String, Object>> directionsEvents = [];
-  final List<Map<String, Object>> productEvents = [];
-  final List<Map<String, Object>> scheduleEvents = [];
-  final List<Map<String, Object>> secondaryErrorEvents = [];
+  final List<Map<String, Object>> shareEvents = [];
+  final List<Map<String, Object>> dutyBannerEvents = [];
+  final List<Map<String, Object>> errorEvents = [];
 
   @override
-  Future<void> logDetailOpened({
+  Future<void> logDetailView({
     required String merchantId,
-    required String verificationStatus,
+    required String categoryId,
+    required bool hasPharmacyDutyToday,
   }) async {
-    openedEvents.add({
+    detailViewEvents.add({
       'merchantId': merchantId,
-      'verificationStatus': verificationStatus,
+      'categoryId': categoryId,
+      'hasPharmacyDutyToday': hasPharmacyDutyToday,
     });
   }
 
   @override
-  Future<void> logDirectionsTapped({
+  Future<void> logCallClick({
     required String merchantId,
-    required bool usedCoordinates,
     required bool launchSucceeded,
   }) async {
-    directionsEvents.add({
+    callEvents.add({
       'merchantId': merchantId,
-      'usedCoordinates': usedCoordinates,
       'launchSucceeded': launchSucceeded,
     });
   }
 
   @override
-  Future<void> logProductTapped({
+  Future<void> logDirectionsClick({
     required String merchantId,
-    required String productId,
+    required bool launchSucceeded,
   }) async {
-    productEvents.add({
+    directionsEvents.add({
       'merchantId': merchantId,
-      'productId': productId,
+      'launchSucceeded': launchSucceeded,
     });
   }
 
   @override
-  Future<void> logScheduleExpanded({
+  Future<void> logShareClick({
     required String merchantId,
-    required bool expanded,
+    required bool launchSucceeded,
   }) async {
-    scheduleEvents.add({
+    shareEvents.add({
       'merchantId': merchantId,
-      'expanded': expanded,
+      'launchSucceeded': launchSucceeded,
     });
   }
 
   @override
-  Future<void> logSecondaryLoadFailed({
+  Future<void> logDutyBannerView({
     required String merchantId,
-    required String section,
+    required bool hasEndsAt,
   }) async {
-    secondaryErrorEvents.add({
+    dutyBannerEvents.add({
       'merchantId': merchantId,
-      'section': section,
+      'hasEndsAt': hasEndsAt,
+    });
+  }
+
+  @override
+  Future<void> logError({
+    required String merchantId,
+    required String stage,
+    required String errorType,
+  }) async {
+    errorEvents.add({
+      'merchantId': merchantId,
+      'stage': stage,
+      'errorType': errorType,
     });
   }
 }
 
-class RecordingMapsLauncher implements MerchantMapsLauncher {
-  RecordingMapsLauncher({this.openResult = true});
+class FakeMerchantDetailActions implements MerchantDetailActions {
+  FakeMerchantDetailActions({
+    this.callResult = true,
+    this.directionsResult = true,
+    this.shareResult = true,
+  });
 
-  final bool openResult;
+  bool callResult;
+  bool directionsResult;
+  bool shareResult;
   int callCount = 0;
-  MerchantMapsIntent? lastIntent;
+  int directionsCount = 0;
+  int shareCount = 0;
 
   @override
-  Future<bool> open(MerchantMapsIntent intent) async {
+  Future<bool> openCall(String phone) async {
     callCount += 1;
-    lastIntent = intent;
-    return openResult;
+    return callResult;
+  }
+
+  @override
+  Future<bool> openDirections({
+    required String address,
+    required double? lat,
+    required double? lng,
+    required String? mapsUrl,
+  }) async {
+    directionsCount += 1;
+    return directionsResult;
+  }
+
+  @override
+  Future<bool> shareMerchant({
+    required String merchantId,
+    required String merchantName,
+  }) async {
+    shareCount += 1;
+    return shareResult;
   }
 }
 
@@ -143,15 +194,16 @@ MerchantCoreDto buildCoreDto({
   String name = 'Farmacia Central',
   String categoryId = 'pharmacy',
   String categoryLabel = 'Farmacias',
-  String verificationStatus = 'verified',
   String visibilityStatus = 'visible',
   bool? isOpenNow = true,
   bool hasPharmacyDutyToday = false,
   String openStatusLabel = 'Hoy: 09:00-20:00',
   String address = 'Av. Corrientes 1234',
+  String? phonePrimary = '+54 11 4444-5555',
   double lat = -34.6037,
   double lng = -58.3816,
-  Map<String, dynamic>? operationalSignals,
+  List<String> featuredProductIds = const ['product-1'],
+  Timestamp? lastDataRefreshAt,
 }) {
   return MerchantCoreDto(
     id: id,
@@ -160,15 +212,30 @@ MerchantCoreDto buildCoreDto({
       'name': name,
       'categoryId': categoryId,
       'categoryLabel': categoryLabel,
-      'verificationStatus': verificationStatus,
       'visibilityStatus': visibilityStatus,
       'isOpenNow': isOpenNow,
       'hasPharmacyDutyToday': hasPharmacyDutyToday,
       'openStatusLabel': openStatusLabel,
       'address': address,
+      'phonePrimary': phonePrimary,
       'lat': lat,
       'lng': lng,
-      if (operationalSignals != null) 'operationalSignals': operationalSignals,
+      'featuredProductIds': featuredProductIds,
+      'lastDataRefreshAt':
+          lastDataRefreshAt ?? Timestamp.fromDate(DateTime(2026, 4, 7, 12)),
+    },
+  );
+}
+
+PharmacyDutyDto buildDutyDto({
+  String id = 'duty-1',
+  DateTime? endsAt,
+}) {
+  return PharmacyDutyDto(
+    id: id,
+    data: {
+      'merchantId': 'merchant-1',
+      if (endsAt != null) 'endsAt': Timestamp.fromDate(endsAt),
     },
   );
 }
@@ -218,9 +285,4 @@ MerchantOperationalSignalsDto buildSignalsDto({
       },
     },
   );
-}
-
-Future<T> delayResult<T>(Duration duration, T value) async {
-  await Future<void>.delayed(duration);
-  return value;
 }

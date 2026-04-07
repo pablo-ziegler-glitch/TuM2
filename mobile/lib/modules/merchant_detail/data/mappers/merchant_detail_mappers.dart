@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/merchant_detail_view_data.dart';
 import '../dtos/merchant_detail_dto.dart';
@@ -40,178 +42,120 @@ const Map<String, String> _scheduleDayLabelByKey = {
   'sunday': 'Domingo',
 };
 
-MerchantCoreViewData mapCoreDtoToViewData(MerchantCoreDto dto) {
+MerchantPublicViewData mapCoreDtoToViewData(MerchantCoreDto dto) {
   final categoryId = _firstNonEmpty(
     _stringValue(dto.data['categoryId']),
     _stringValue(dto.data['category']),
   );
 
-  final categoryLabel = _firstNonEmpty(
-    _stringValue(dto.data['categoryLabel']),
-    _categoryFallbackLabelById[categoryId],
-    categoryId,
-    'Comercio',
-  );
-
-  final verificationStatus =
-      _stringValue(dto.data['verificationStatus']).toLowerCase();
-  final openStatusLabel = _firstNonEmpty(
-    _stringValue(dto.data['openStatusLabel']),
-    _stringValue(dto.data['todayScheduleLabel']),
-    'Horario referencial',
-  );
-
-  final publicSignalsMap = _mapValue(dto.data['operationalSignals']);
-  final publicSignals = mapOperationalSignalsMapToViewData(publicSignalsMap);
-
-  final isOnDutyToday = _boolValue(dto.data['isOnDutyToday']) ??
-      _boolValue(dto.data['hasPharmacyDutyToday']) ??
-      _boolValue(publicSignalsMap['hasPharmacyDutyToday']) ??
-      false;
-  final isOpenNow = _boolValue(dto.data['isOpenNow']);
-
-  final trustBadge = mapTrustBadgeFromVerificationStatus(verificationStatus);
-
-  return MerchantCoreViewData(
+  return MerchantPublicViewData(
     merchantId: dto.id,
-    name: _firstNonEmpty(
-      _stringValue(dto.data['name']),
-      dto.id,
+    name: _firstNonEmpty(_stringValue(dto.data['name']), dto.id),
+    categoryId: categoryId,
+    categoryLabel: _firstNonEmpty(
+      _stringValue(dto.data['categoryLabel']),
+      _categoryFallbackLabelById[categoryId],
+      categoryId,
+      'Comercio',
     ),
-    categoryLabel: categoryLabel,
-    zoneId: _firstNonEmpty(
-      _stringValue(dto.data['zoneId']),
-      _stringValue(dto.data['zone']),
+    coverImageUrl: _firstNonEmpty(
+      _stringValue(dto.data['coverImageUrl']),
+      _firstImage(dto.data['coverImages']),
     ),
+    logoUrl: _stringValue(dto.data['logoUrl']).isEmpty
+        ? null
+        : _stringValue(dto.data['logoUrl']),
     address: _firstNonEmpty(
       _stringValue(dto.data['address']),
       'Direccion no disponible',
     ),
+    phonePrimary: _nonEmptyOrNull(
+      _firstNonEmpty(
+        _stringValue(dto.data['phonePrimary']),
+        _stringValue(dto.data['phone']),
+      ),
+    ),
     lat: _doubleValue(dto.data['lat']),
     lng: _doubleValue(dto.data['lng']),
-    isOpenNow: isOpenNow,
-    isOnDutyToday: isOnDutyToday,
-    openStatusLabel: openStatusLabel,
-    verificationStatus: verificationStatus,
-    operationalBadge: mapOperationalBadge(
-      isOnDutyToday: isOnDutyToday,
-      isOpenNow: isOpenNow,
+    mapsUrl: _nonEmptyOrNull(_stringValue(dto.data['mapsUrl'])),
+    isOpenNow: _boolValue(dto.data['isOpenNow']),
+    hasPharmacyDutyToday: _boolValue(dto.data['hasPharmacyDutyToday']) ??
+        _boolValue(dto.data['isOnDutyToday']) ??
+        false,
+    openStatusLabel: _firstNonEmpty(
+      _stringValue(dto.data['openStatusLabel']),
+      _stringValue(dto.data['todayScheduleLabel']),
+      'Horario no disponible',
     ),
-    trustBadges: trustBadge == null ? const [] : [trustBadge],
-    operationalSignals: publicSignals,
+    lastDataRefreshAt: _dateTimeValue(dto.data['lastDataRefreshAt']),
+    featuredProductIds: _stringListValue(
+      dto.data['featuredProductIds'] ?? dto.data['featuredProducts'],
+    ),
   );
 }
 
-MerchantOperationalBadgeViewData mapOperationalBadge({
-  required bool isOnDutyToday,
-  required bool? isOpenNow,
-}) {
-  if (isOnDutyToday) {
-    return const MerchantOperationalBadgeViewData(
-      type: MerchantOperationalBadgeType.onDuty,
+MerchantStatusBadgeViewData mapStatusBadge(MerchantPublicViewData merchant) {
+  if (merchant.hasPharmacyDutyToday) {
+    return const MerchantStatusBadgeViewData(
+      type: MerchantStatusBadgeType.duty,
       label: 'Farmacia de turno',
-      backgroundColor: AppColors.secondary50,
-      foregroundColor: AppColors.secondary700,
+      backgroundColor: AppColors.merchantSecondaryFixedDim,
+      foregroundColor: AppColors.merchantOnSecondaryFixed,
     );
   }
 
-  if (isOpenNow == true) {
-    return const MerchantOperationalBadgeViewData(
-      type: MerchantOperationalBadgeType.openNow,
+  if (merchant.isOpenNow == true) {
+    return const MerchantStatusBadgeViewData(
+      type: MerchantStatusBadgeType.open,
       label: 'Abierto ahora',
       backgroundColor: AppColors.successBg,
       foregroundColor: AppColors.successFg,
     );
   }
 
-  if (isOpenNow == false) {
-    return const MerchantOperationalBadgeViewData(
-      type: MerchantOperationalBadgeType.closed,
+  if (merchant.isOpenNow == false) {
+    return const MerchantStatusBadgeViewData(
+      type: MerchantStatusBadgeType.closed,
       label: 'Cerrado',
       backgroundColor: AppColors.errorBg,
       foregroundColor: AppColors.errorFg,
     );
   }
 
-  return const MerchantOperationalBadgeViewData(
-    type: MerchantOperationalBadgeType.referential,
+  return const MerchantStatusBadgeViewData(
+    type: MerchantStatusBadgeType.referential,
     label: 'Horario referencial',
-    backgroundColor: AppColors.infoBg,
-    foregroundColor: AppColors.primary600,
+    backgroundColor: AppColors.merchantSurfaceHighest,
+    foregroundColor: AppColors.merchantOnSurface,
   );
 }
 
-MerchantTrustBadgeViewData? mapTrustBadgeFromVerificationStatus(
-  String rawStatus,
-) {
-  final status = rawStatus.toLowerCase().trim();
-
-  switch (status) {
-    case 'verified':
-      return const MerchantTrustBadgeViewData(
-        type: MerchantTrustBadgeType.verified,
-        label: 'Verificado',
-        backgroundColor: AppColors.successBg,
-        foregroundColor: AppColors.successFg,
-      );
-    case 'validated':
-    case 'claimed':
-      return const MerchantTrustBadgeViewData(
-        type: MerchantTrustBadgeType.claimed,
-        label: 'Reclamado',
-        backgroundColor: AppColors.primary50,
-        foregroundColor: AppColors.primary600,
-      );
-    case 'referential':
-      return const MerchantTrustBadgeViewData(
-        type: MerchantTrustBadgeType.referential,
-        label: 'Dato referencial',
-        backgroundColor: AppColors.tertiary50,
-        foregroundColor: AppColors.tertiary700,
-      );
-    case 'community_submitted':
-      return const MerchantTrustBadgeViewData(
-        type: MerchantTrustBadgeType.community,
-        label: 'Información de la comunidad',
-        backgroundColor: AppColors.warningBg,
-        foregroundColor: AppColors.warningFg,
-      );
-    default:
-      return null;
-  }
-}
-
-MerchantProductViewData mapProductDtoToViewData(MerchantProductDto dto) {
+MerchantFeaturedProductViewData mapProductDtoToViewData(
+    MerchantProductDto dto) {
   final referencePrice = _doubleValue(dto.data['referencePrice']);
   final priceLabel = _firstNonEmpty(
     _stringValue(dto.data['priceLabel']),
     referencePrice == null ? '' : _formatCurrency(referencePrice),
   );
 
-  return MerchantProductViewData(
+  return MerchantFeaturedProductViewData(
     productId: dto.id,
-    merchantId: _firstNonEmpty(
-      _stringValue(dto.data['merchantId']),
-      '',
-    ),
     name: _firstNonEmpty(
       _stringValue(dto.data['name']),
       _stringValue(dto.data['title']),
-      'Producto',
+      'Producto destacado',
     ),
     priceLabel: priceLabel,
-    imageUrl: _firstImage(dto.data['images']),
+    imageUrl: _firstImage(dto.data['images']) ??
+        _nonEmptyOrNull(_stringValue(dto.data['imageUrl'])),
   );
 }
 
-MerchantScheduleViewData? mapScheduleDtoToViewData(
-  MerchantScheduleDto dto,
-) {
+MerchantScheduleViewData? mapScheduleDtoToViewData(MerchantScheduleDto dto) {
   final weeklySchedule = _mapValue(dto.data['weeklySchedule']);
   final legacySchedule = _mapValue(dto.data['schedule']);
   final rawSchedule =
       weeklySchedule.isNotEmpty ? weeklySchedule : legacySchedule;
-
   if (rawSchedule.isEmpty) return null;
 
   final todayKey = _todayScheduleKey();
@@ -235,11 +179,7 @@ MerchantScheduleViewData? mapScheduleDtoToViewData(
   }
 
   if (days.isEmpty) return null;
-
-  return MerchantScheduleViewData(
-    timezone: _stringValue(dto.data['timezone']),
-    days: days,
-  );
+  return MerchantScheduleViewData(days: days);
 }
 
 List<MerchantOperationalSignalViewData> mapSignalsDtoToViewData(
@@ -303,6 +243,12 @@ List<MerchantOperationalSignalViewData> mapOperationalSignalsMapToViewData(
     deduped[signal.id] = signal;
   }
   return deduped.values.toList(growable: false);
+}
+
+PharmacyDutyViewData mapDutyDtoToViewData(PharmacyDutyDto dto) {
+  return PharmacyDutyViewData(
+    endsAt: _dateTimeValue(dto.data['endsAt']),
+  );
 }
 
 String _todayScheduleKey() {
@@ -395,6 +341,14 @@ Map<String, dynamic> _mapValue(dynamic raw) {
   return const {};
 }
 
+List<String> _stringListValue(dynamic raw) {
+  if (raw is! List<dynamic>) return const [];
+  return raw
+      .map((value) => value.toString().trim())
+      .where((value) => value.isNotEmpty)
+      .toList(growable: false);
+}
+
 String _stringValue(dynamic raw) {
   if (raw == null) return '';
   return raw.toString().trim();
@@ -414,6 +368,22 @@ bool? _boolValue(dynamic raw) {
   if (normalized == 'true' || normalized == '1') return true;
   if (normalized == 'false' || normalized == '0') return false;
   return null;
+}
+
+DateTime? _dateTimeValue(dynamic raw) {
+  if (raw == null) return null;
+  if (raw is Timestamp) return raw.toDate().toLocal();
+  if (raw is DateTime) return raw.toLocal();
+  if (raw is String) {
+    return DateTime.tryParse(raw)?.toLocal();
+  }
+  return null;
+}
+
+String? _nonEmptyOrNull(String value) {
+  final normalized = value.trim();
+  if (normalized.isEmpty) return null;
+  return normalized;
 }
 
 String _firstNonEmpty(

@@ -1,14 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tum2/modules/merchant_detail/analytics/merchant_detail_analytics.dart';
+import 'package:tum2/modules/merchant_detail/application/merchant_detail_actions.dart';
 import 'package:tum2/modules/merchant_detail/application/merchant_location_reader.dart';
-import 'package:tum2/modules/merchant_detail/data/dtos/merchant_detail_dto.dart';
 import 'package:tum2/modules/merchant_detail/data/merchant_detail_repository.dart';
-import 'package:tum2/modules/merchant_detail/domain/merchant_maps.dart';
-import 'package:tum2/modules/merchant_detail/presentation/merchant_detail_copy.dart';
 import 'package:tum2/modules/merchant_detail/presentation/merchant_detail_page.dart';
 
 import '../test_fakes.dart';
@@ -20,7 +16,7 @@ void main() {
     WidgetTester tester, {
     required FakeMerchantDetailRepository repository,
     RecordingMerchantDetailAnalytics? analytics,
-    RecordingMapsLauncher? mapsLauncher,
+    FakeMerchantDetailActions? actions,
     FakeLocationReader? locationReader,
   }) {
     return tester.pumpWidget(
@@ -30,8 +26,8 @@ void main() {
           merchantDetailAnalyticsProvider.overrideWithValue(
             analytics ?? RecordingMerchantDetailAnalytics(),
           ),
-          merchantMapsLauncherProvider.overrideWithValue(
-            mapsLauncher ?? RecordingMapsLauncher(),
+          merchantDetailActionsProvider.overrideWithValue(
+            actions ?? FakeMerchantDetailActions(),
           ),
           merchantLocationReaderProvider.overrideWithValue(
             locationReader ?? FakeLocationReader(null),
@@ -44,49 +40,95 @@ void main() {
     );
   }
 
-  group('MerchantDetailPage widget states', () {
-    testWidgets('loading critico', (tester) async {
+  group('MerchantDetailPage', () {
+    testWidgets('farmacia con guardia y endsAt', (tester) async {
       final repository = FakeMerchantDetailRepository();
-      final coreCompleter = Completer<MerchantCoreDto?>();
-      repository.fetchCoreHandler = (_) => coreCompleter.future;
+      repository.fetchCoreHandler = (_) async => buildCoreDto(
+            hasPharmacyDutyToday: true,
+          );
+      repository.fetchDutyHandler = (_) async => buildDutyDto(
+            endsAt: DateTime(2026, 4, 7, 22, 0),
+          );
+      repository.fetchProductsHandler = (_, __, ___) async => [];
+      repository.fetchScheduleHandler = (_) async => buildScheduleDto();
+      repository.fetchSignalsHandler = (_) async => null;
 
       await pumpPage(tester, repository: repository);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('merchant_detail_loading_state')),
+      expect(find.byKey(const Key('pharmacy_duty_banner')), findsOneWidget);
+      expect(find.textContaining('Guardia activa hasta las 22:00'),
           findsOneWidget);
-      expect(find.text(MerchantDetailCopy.loadingPrimary), findsOneWidget);
+      expect(find.byKey(const Key('merchant_cta_call')), findsOneWidget);
     });
 
-    testWidgets('ready sin productos', (tester) async {
+    testWidgets('farmacia con guardia sin endsAt', (tester) async {
       final repository = FakeMerchantDetailRepository();
-      repository.fetchCoreHandler = (_) async => buildCoreDto();
-      repository.fetchProductsHandler = (_, __) async => [];
+      repository.fetchCoreHandler = (_) async => buildCoreDto(
+            hasPharmacyDutyToday: true,
+          );
+      repository.fetchDutyHandler = (_) async => buildDutyDto();
+      repository.fetchProductsHandler = (_, __, ___) async => [];
       repository.fetchScheduleHandler = (_) async => null;
       repository.fetchSignalsHandler = (_) async => null;
 
       await pumpPage(tester, repository: repository);
       await tester.pumpAndSettle();
 
-      expect(find.text('Farmacia Central'), findsOneWidget);
-      expect(find.text(MerchantDetailCopy.emptyProducts), findsOneWidget);
+      expect(find.byKey(const Key('pharmacy_duty_banner')), findsOneWidget);
+      expect(
+          find.text('Horario de finalización no disponible'), findsOneWidget);
     });
 
-    testWidgets('error', (tester) async {
+    testWidgets('comercio estandar', (tester) async {
       final repository = FakeMerchantDetailRepository();
-      repository.fetchCoreHandler = (_) async {
-        throw TimeoutException('network timeout');
-      };
+      repository.fetchCoreHandler = (_) async => buildCoreDto(
+            categoryId: 'kiosk',
+            categoryLabel: 'Kioscos',
+            hasPharmacyDutyToday: false,
+          );
+      repository.fetchProductsHandler = (_, __, ___) async => [];
+      repository.fetchScheduleHandler = (_) async => buildScheduleDto();
+      repository.fetchSignalsHandler = (_) async => null;
 
       await pumpPage(tester, repository: repository);
       await tester.pumpAndSettle();
 
-      expect(
-          find.byKey(const Key('merchant_detail_error_state')), findsOneWidget);
-      expect(find.text(MerchantDetailCopy.connectionError), findsOneWidget);
+      expect(find.text('Kioscos'), findsOneWidget);
+      expect(find.byKey(const Key('pharmacy_duty_banner')), findsNothing);
+      expect(find.textContaining('Hoy: 09:00-20:00'), findsOneWidget);
     });
 
-    testWidgets('not found', (tester) async {
+    testWidgets('comercio sin telefono', (tester) async {
+      final repository = FakeMerchantDetailRepository();
+      repository.fetchCoreHandler = (_) async => buildCoreDto(
+            phonePrimary: null,
+          );
+      repository.fetchProductsHandler = (_, __, ___) async => [];
+      repository.fetchScheduleHandler = (_) async => null;
+      repository.fetchSignalsHandler = (_) async => null;
+      final actions = FakeMerchantDetailActions();
+
+      await pumpPage(
+        tester,
+        repository: repository,
+        actions: actions,
+      );
+      await tester.pumpAndSettle();
+
+      final callCta = find.byKey(const Key('merchant_cta_call'));
+      await tester.scrollUntilVisible(
+        callCta,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(callCta);
+      await tester.pumpAndSettle();
+
+      expect(actions.callCount, 0);
+    });
+
+    testWidgets('comercio no visible/no encontrado', (tester) async {
       final repository = FakeMerchantDetailRepository();
       repository.fetchCoreHandler = (_) async => null;
 
@@ -95,38 +137,6 @@ void main() {
 
       expect(find.byKey(const Key('merchant_detail_not_found_state')),
           findsOneWidget);
-      expect(find.text(MerchantDetailCopy.notFound), findsOneWidget);
-    });
-
-    testWidgets('horarios expandidos', (tester) async {
-      final repository = FakeMerchantDetailRepository();
-      repository.fetchCoreHandler = (_) async => buildCoreDto();
-      repository.fetchProductsHandler = (_, __) async => [];
-      repository.fetchScheduleHandler = (_) async => buildScheduleDto();
-      repository.fetchSignalsHandler = (_) async => null;
-
-      await pumpPage(tester, repository: repository);
-      await tester.pumpAndSettle();
-
-      final expansionTile =
-          find.byKey(const Key('merchant_schedule_expansion_tile'));
-      expect(expansionTile, findsOneWidget);
-
-      await tester.scrollUntilVisible(
-        expansionTile,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(expansionTile);
-      await tester.pumpAndSettle();
-
-      await tester.scrollUntilVisible(
-        find.byKey(const Key('schedule_day_monday')),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Lunes'), findsOneWidget);
-      expect(find.byKey(const Key('schedule_day_monday')), findsOneWidget);
     });
   });
 }

@@ -24,6 +24,7 @@ import '../../modules/profile/screens/profile_screen.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
 import '../../modules/shared/screens/commerce_detail_screen.dart';
+import '../../modules/merchant_detail/presentation/product_detail_page.dart';
 import '../../modules/shell/customer_tabs.dart';
 import '../../modules/brand/onboarding_owner/onboarding_owner_flow.dart';
 import '../../modules/brand/onboarding_owner/models/onboarding_draft.dart';
@@ -316,10 +317,21 @@ List<RouteBase> _buildRoutes() {
     // ── Shared Screens ─────────────────────────────────────────────────────────
     // DETAIL-01: Ficha de comercio — fuera del shell, el tab bar se oculta.
     GoRoute(
-      path: '/commerce/:id',
+      path: AppRoutes.commerceProductDetail,
       builder: (context, state) {
-        final id = state.pathParameters['id']!;
-        return CommerceDetailScreen(commerceId: id);
+        final merchantId = state.pathParameters['merchantId']!;
+        final productId = state.pathParameters['productId']!;
+        return ProductDetailPage(
+          merchantId: merchantId,
+          productId: productId,
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.commerceDetail,
+      builder: (context, state) {
+        final merchantId = state.pathParameters['merchantId']!;
+        return CommerceDetailScreen(commerceId: merchantId);
       },
     ),
 

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_text_styles.dart';
+import '../../merchant_detail/presentation/merchant_detail_page.dart';
 
 // ── Demo data (reemplazar con carga Firestore en TuM2-0058) ──────────────────
 
@@ -329,21 +327,17 @@ class _IconActionButton extends StatelessWidget {
   const _IconActionButton({required this.icon, required this.onTap});
   final IconData icon;
   final VoidCallback onTap;
+/// Wrapper de compatibilidad para mantener la ruta actual /commerce/:id.
+class CommerceDetailScreen extends StatelessWidget {
+  const CommerceDetailScreen({
+    super.key,
+    required this.commerceId,
+  });
+
+  final String commerceId;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.neutral200),
-        ),
-        child: Icon(icon, color: AppColors.neutral700, size: 20),
-      ),
-    );
+    return MerchantDetailPage(merchantId: commerceId);
   }
 }

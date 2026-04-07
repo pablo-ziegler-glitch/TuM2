@@ -5,9 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../providers/search_history_provider.dart';
+import '../models/merchant_search_item.dart';
 import '../providers/search_notifier.dart';
-import '../widgets/category_chips_row.dart';
 import '../widgets/search_filters_sheet.dart';
 import '../widgets/zone_selector_sheet.dart';
 
@@ -32,6 +31,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_controller.text.isEmpty) {
+      final query = ref.read(searchNotifierProvider).query;
+      if (query.isNotEmpty) {
+        _controller.text = query;
+        _controller.selection = TextSelection.collapsed(offset: query.length);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -39,162 +50,458 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _goToResults([String? query]) {
     final q = (query ?? _controller.text).trim();
-    if (q.isEmpty) return;
-    ref.read(searchNotifierProvider.notifier).submitQuery(q);
-    context.push('${AppRoutes.searchResults}?q=${Uri.encodeComponent(q)}');
+    if (q.isNotEmpty) {
+      ref.read(searchNotifierProvider.notifier).submitQuery(q);
+    }
+    final route = q.isEmpty
+        ? AppRoutes.searchResults
+        : '${AppRoutes.searchResults}?q=${Uri.encodeComponent(q)}';
+    context.push(route);
+  }
+
+  void _applyPresetQuery(String value) {
+    _controller.text = value;
+    _controller.selection = TextSelection.collapsed(offset: value.length);
+    _goToResults(value);
+  }
+
+  void _toggleOpenNow() {
+    final notifier = ref.read(searchNotifierProvider.notifier);
+    final current = ref.read(searchNotifierProvider).filters;
+    final nextValue = !current.isOpenNow;
+    notifier.setFilters(current.copyWith(isOpenNow: nextValue));
+    final route = nextValue
+        ? '${AppRoutes.searchResults}?openNow=true'
+        : AppRoutes.searchResults;
+    context.push(route);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(searchNotifierProvider);
-    final history = ref.watch(searchHistoryProvider);
-    final categories = state.corpus
-        .map((e) => e.categoryId)
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-    final hasTyping = state.query.trim().isNotEmpty;
+    final hasTyping = _controller.text.trim().isNotEmpty;
+    String zoneName = 'Tu zona';
+    for (final zone in state.zones) {
+      if (zone.zoneId == state.activeZoneId) {
+        zoneName = zone.name;
+        break;
+      }
+    }
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.neutral50,
       body: SafeArea(
         child: Column(
           children: [
+            _SearchTopBar(zoneName: zoneName),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Column(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: _goToResults,
-                      decoration: InputDecoration(
-                        hintText: 'Buscar comercios',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: hasTyping
-                            ? IconButton(
-                                onPressed: () {
-                                  _controller.clear();
-                                  ref
-                                      .read(searchNotifierProvider.notifier)
-                                      .setQuery('');
-                                },
-                                icon: const Icon(Icons.close),
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                      ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search,
+                            color: AppColors.neutral600, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: _goToResults,
+                            decoration: const InputDecoration(
+                              hintText: 'Farmacia, kiosco o algo abierto...',
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                        if (hasTyping)
+                          IconButton(
+                            onPressed: () {
+                              _controller.clear();
+                              ref
+                                  .read(searchNotifierProvider.notifier)
+                                  .setQuery('');
+                            },
+                            icon: const Icon(Icons.close,
+                                color: AppColors.neutral600, size: 18),
+                          )
+                        else
+                          IconButton(
+                            onPressed: () => SearchFiltersSheet.show(context),
+                            icon: const Icon(Icons.tune_rounded,
+                                color: AppColors.neutral600, size: 18),
+                          ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () => SearchFiltersSheet.show(context),
-                    icon: const Icon(Icons.tune_rounded),
-                  ),
-                  IconButton(
-                    onPressed: () => ZoneSelectorSheet.show(context),
-                    icon: const Icon(Icons.location_on_outlined),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 38,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        _QuickChip(
+                          label: 'Farmacias',
+                          onTap: () => _applyPresetQuery('farmacia'),
+                        ),
+                        const SizedBox(width: 8),
+                        _QuickChip(
+                          label: 'Abierto ahora',
+                          active: state.filters.isOpenNow,
+                          icon: Icons.circle,
+                          onTap: _toggleOpenNow,
+                        ),
+                        const SizedBox(width: 8),
+                        _QuickChip(
+                          label: 'Kioscos',
+                          onTap: () => _applyPresetQuery('kiosco'),
+                        ),
+                        const SizedBox(width: 8),
+                        _QuickChip(
+                          label: 'Veterinarias',
+                          onTap: () => _applyPresetQuery('veterinaria'),
+                        ),
+                        const SizedBox(width: 8),
+                        _QuickChip(
+                          label: 'Zona',
+                          icon: Icons.location_on,
+                          onTap: () => ZoneSelectorSheet.show(context),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            CategoryChipsRow(
-              categories: categories.take(7).toList(),
-              selectedCategoryId: state.filters.categoryId,
-              onSelected: (categoryId) {
-                final next = state.filters.copyWith(
-                  categoryId: categoryId,
-                  clearCategory: categoryId == null,
-                );
-                ref.read(searchNotifierProvider.notifier).setFilters(next);
-              },
-            ),
-            const SizedBox(height: 8),
             Expanded(
-              child: state.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      children: [
-                        Text(
-                          'Zona activa: ${state.activeZoneId.isEmpty ? 'sin definir' : state.activeZoneId}',
-                          style: AppTextStyles.bodySm,
-                        ),
-                        const SizedBox(height: 12),
-                        if (hasTyping) ...[
-                          Text('Sugerencias', style: AppTextStyles.headingSm),
-                          const SizedBox(height: 6),
-                          ...state.suggestions.take(5).map(
-                                (item) => ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Icons.search),
-                                  title: Text(item.name),
-                                  subtitle: Text(item.categoryLabel.isEmpty
-                                      ? item.categoryId
-                                      : item.categoryLabel),
-                                  onTap: () {
-                                    _controller.text = item.name;
-                                    _controller.selection =
-                                        TextSelection.collapsed(
-                                      offset: _controller.text.length,
-                                    );
-                                    _goToResults(item.name);
-                                  },
-                                ),
-                              ),
-                        ] else ...[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Búsquedas recientes',
-                                  style: AppTextStyles.headingSm),
-                              TextButton(
-                                onPressed: () => ref
-                                    .read(searchNotifierProvider.notifier)
-                                    .clearHistory(),
-                                child: const Text('Limpiar'),
-                              ),
-                            ],
-                          ),
-                          ...history.take(5).map(
-                                (term) => ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Icons.history),
-                                  title: Text(term),
-                                  onTap: () {
-                                    _controller.text = term;
-                                    _controller.selection =
-                                        TextSelection.collapsed(
-                                      offset: _controller.text.length,
-                                    );
-                                    _goToResults(term);
-                                  },
-                                ),
-                              ),
-                          if (history.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                'Todavía no tenés búsquedas guardadas.',
-                                style: AppTextStyles.bodySm,
-                              ),
-                            ),
-                        ],
-                      ],
-                    ),
+              child: switch ((state.isLoading, state.initialized, hasTyping)) {
+                (true, false, _) => const _SearchLoadingCanvas(),
+                (_, _, true) => _SearchSuggestions(
+                    suggestions: state.suggestions,
+                    onTapSuggestion: (value) {
+                      _controller.text = value;
+                      _controller.selection =
+                          TextSelection.collapsed(offset: value.length);
+                      _goToResults(value);
+                    },
+                  ),
+                _ => _SearchDiscoverCanvas(
+                    onUrgencyTap: () => _applyPresetQuery('farmacia'),
+                    onSnacksTap: () => _applyPresetQuery('kiosco'),
+                  ),
+              },
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _goToResults,
-        backgroundColor: AppColors.primary500,
-        foregroundColor: AppColors.surface,
-        icon: const Icon(Icons.arrow_forward),
-        label: const Text('Ver resultados'),
+    );
+  }
+}
+
+class _SearchTopBar extends StatelessWidget {
+  const _SearchTopBar({required this.zoneName});
+
+  final String zoneName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Row(
+        children: [
+          const Icon(Icons.location_on, color: AppColors.primary500, size: 20),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'TuM2',
+                style: AppTextStyles.headingSm.copyWith(
+                  color: AppColors.primary500,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                zoneName,
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.notifications, color: AppColors.neutral700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickChip extends StatelessWidget {
+  const _QuickChip({
+    required this.label,
+    required this.onTap,
+    this.active = false,
+    this.icon,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final bool active;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? AppColors.secondary200 : AppColors.neutral100,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 12,
+                color: active ? AppColors.secondary700 : AppColors.neutral700,
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: AppTextStyles.labelSm.copyWith(
+                color: active ? AppColors.secondary700 : AppColors.neutral700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchLoadingCanvas extends StatelessWidget {
+  const _SearchLoadingCanvas();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: const [
+        _SkeletonBox(height: 220),
+        SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(child: _SkeletonBox(height: 110)),
+            SizedBox(width: 12),
+            Expanded(child: _SkeletonBox(height: 110)),
+          ],
+        ),
+        SizedBox(height: 18),
+        _SkeletonBox(height: 90),
+        SizedBox(height: 14),
+        _SkeletonBox(height: 140),
+      ],
+    );
+  }
+}
+
+class _SearchSuggestions extends StatelessWidget {
+  const _SearchSuggestions({
+    required this.suggestions,
+    required this.onTapSuggestion,
+  });
+
+  final List<MerchantSearchItem> suggestions;
+  final void Function(String value) onTapSuggestion;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+      children: [
+        Text('Sugerencias', style: AppTextStyles.headingSm),
+        const SizedBox(height: 8),
+        ...suggestions.take(6).map(
+              (item) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.search, color: AppColors.neutral600),
+                title: Text(item.name),
+                subtitle: Text(
+                  item.categoryLabel.isEmpty
+                      ? item.categoryId
+                      : item.categoryLabel,
+                  style: AppTextStyles.bodySm,
+                ),
+                onTap: () => onTapSuggestion(item.name),
+              ),
+            ),
+      ],
+    );
+  }
+}
+
+class _SearchDiscoverCanvas extends StatelessWidget {
+  const _SearchDiscoverCanvas({
+    required this.onUrgencyTap,
+    required this.onSnacksTap,
+  });
+
+  final VoidCallback onUrgencyTap;
+  final VoidCallback onSnacksTap;
+
+  static const _heroImage =
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCtHpRO1dI3oGzPuss991ocPcESYxG5L2z9yRM8GmUQ_JCoQaOsIFyA06-sXcMfg0zWNdU1OcvVFzsbfECnhWDBlgvnTNEseG41bSM_4qanIUk6XR4GyBCvKcWupB65I4gxBx9JLdTulbQS6Dgw1ZKcw4FkT3J3xOmGzSz0z47buH5pK4pUzC8DSCh27rSobzaz-j4Icvl-IEhkH3M2R8UwjYiLo1vuFoTvzBhLnO-fUPRDANfEg8MNsx9ZLspp7zkA4LZCjE5-uNVq';
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: SizedBox(
+            height: 230,
+            child: Image.network(
+              _heroImage,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF5EBBD4), Color(0xFF5D90CC)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.storefront_outlined,
+                    color: Colors.white,
+                    size: 56,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'Encontrá lo que necesitás\na la vuelta de tu casa',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.headingLg.copyWith(
+            fontSize: 38,
+            height: 1.1,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Explorá los comercios cercanos, verificá horarios y encontrá opciones abiertas ahora mismo.',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodyMd.copyWith(color: AppColors.neutral700),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(
+              child: _ActionCard(
+                icon: Icons.bolt,
+                iconColor: AppColors.tertiary500,
+                title: 'Urgencias',
+                subtitle: 'Farmacias de turno hoy',
+                onTap: onUrgencyTap,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ActionCard(
+                icon: Icons.restaurant,
+                iconColor: AppColors.secondary500,
+                title: 'Antojos',
+                subtitle: 'Kioscos y locales 24h',
+                onTap: onSnacksTap,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Ink(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.neutral100,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style:
+                  AppTextStyles.labelMd.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            Text(subtitle, style: AppTextStyles.bodyXs),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.neutral100,
+        borderRadius: BorderRadius.circular(18),
       ),
     );
   }

@@ -6,6 +6,13 @@ import 'package:flutter/foundation.dart'
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
 class DefaultFirebaseOptions {
+  static const String _webApiKey =
+      String.fromEnvironment('FIREBASE_WEB_API_KEY');
+  static const String _androidApiKey =
+      String.fromEnvironment('FIREBASE_ANDROID_API_KEY');
+  static const String _iosApiKey =
+      String.fromEnvironment('FIREBASE_IOS_API_KEY');
+
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
       return web;
@@ -37,8 +44,10 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static String _requiredValue(String key) {
-    final value = String.fromEnvironment(key);
+  static String _requiredValue({
+    required String key,
+    required String value,
+  }) {
     if (value.isEmpty) {
       throw StateError('Missing required dart-define value: $key');
     }
@@ -46,7 +55,10 @@ class DefaultFirebaseOptions {
   }
 
   static final FirebaseOptions web = FirebaseOptions(
-    apiKey: _requiredValue('FIREBASE_WEB_API_KEY'),
+    apiKey: _requiredValue(
+      key: 'FIREBASE_WEB_API_KEY',
+      value: _webApiKey,
+    ),
     appId: '1:967380985108:web:084981eea879c427900e01',
     messagingSenderId: '967380985108',
     projectId: 'tum2-dev-6283d',
@@ -56,7 +68,10 @@ class DefaultFirebaseOptions {
   );
 
   static final FirebaseOptions android = FirebaseOptions(
-    apiKey: _requiredValue('FIREBASE_ANDROID_API_KEY'),
+    apiKey: _requiredValue(
+      key: 'FIREBASE_ANDROID_API_KEY',
+      value: _androidApiKey,
+    ),
     appId: '1:967380985108:android:cea417d53a357e5d900e01',
     messagingSenderId: '967380985108',
     projectId: 'tum2-dev-6283d',
@@ -64,7 +79,10 @@ class DefaultFirebaseOptions {
   );
 
   static final FirebaseOptions ios = FirebaseOptions(
-    apiKey: _requiredValue('FIREBASE_IOS_API_KEY'),
+    apiKey: _requiredValue(
+      key: 'FIREBASE_IOS_API_KEY',
+      value: _iosApiKey,
+    ),
     appId: '1:967380985108:ios:c35d6bedbafba846900e01',
     messagingSenderId: '967380985108',
     projectId: 'tum2-dev-6283d',

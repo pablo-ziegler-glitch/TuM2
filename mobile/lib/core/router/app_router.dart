@@ -42,6 +42,9 @@ export 'app_routes.dart';
 /// Usa [AuthNotifier] (ChangeNotifier) como [refreshListenable] para re-evaluar
 /// los guards cada vez que el estado de autenticación cambia.
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // Re-evaluar el redirect inicial cuando se resuelve el primer lanzamiento.
+  ref.watch(isFirstLaunchProvider);
+
   // authNotifier aquí es el ChangeNotifier de auth_notifier.dart
   final authNotifier = ref.read(authNotifierProvider);
 
@@ -66,10 +69,14 @@ String? _buildRedirect(Ref ref, GoRouterState state) {
       : '$locationPath?${state.uri.query}';
   var pendingRoute = ref.read(pendingRouteProvider);
 
-  // ── 1. Primer lanzamiento: splash unauthenticated → onboarding o login ──
+  // ── 1. Entrada sin sesión: splash → onboarding o home invitado ──
   if (authState is AuthUnauthenticated && locationPath == AppRoutes.splash) {
-    final isFirstLaunch = ref.read(isFirstLaunchProvider).valueOrNull ?? false;
-    return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.login;
+    final firstLaunchState = ref.read(isFirstLaunchProvider);
+    if (firstLaunchState.isLoading) return null;
+    final isFirstLaunch = firstLaunchState.valueOrNull ?? false;
+    return RouterGuards.unauthenticatedEntryPath(
+      isFirstLaunch: isFirstLaunch,
+    );
   }
 
   // ── 2. Micro-step displayName para usuarios de magic link sin nombre ──

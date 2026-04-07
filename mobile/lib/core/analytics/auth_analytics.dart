@@ -6,7 +6,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 /// Los parámetros son snake_case según la convención de Firebase Analytics.
 ///
 /// Para verificar en desarrollo: Firebase DebugView con `--dart-define=FIREBASE_DEBUG=true`
-/// o `adb shell setprop debug.firebase.analytics.app com.tum2.app`.
+/// o `adb shell setprop debug.firebase.analytics.app com.floki.tum2.tum2`.
 abstract class AuthAnalytics {
   static FirebaseAnalytics? get _analytics {
     try {
@@ -36,7 +36,8 @@ abstract class AuthAnalytics {
   // ── Métodos públicos ────────────────────────────────────────────────────────
 
   /// Magic link enviado al email del usuario.
-  static Future<void> logMagicLinkSent() => _safeLogEvent(name: _kMagicLinkSent);
+  static Future<void> logMagicLinkSent() =>
+      _safeLogEvent(name: _kMagicLinkSent);
 
   /// Magic link procesado exitosamente — usuario autenticado.
   /// [isNewUser] true si es el primer login.
@@ -54,8 +55,7 @@ abstract class AuthAnalytics {
       );
 
   /// Error al procesar el magic link.
-  static Future<void> logMagicLinkError(String errorCode) =>
-      _safeLogEvent(
+  static Future<void> logMagicLinkError(String errorCode) => _safeLogEvent(
         name: _kMagicLinkError,
         parameters: {_pErrorCode: errorCode},
       );
@@ -69,8 +69,7 @@ abstract class AuthAnalytics {
       );
 
   /// Error al iniciar sesión con Google.
-  static Future<void> logGoogleSignInError(String errorCode) =>
-      _safeLogEvent(
+  static Future<void> logGoogleSignInError(String errorCode) => _safeLogEvent(
         name: _kGoogleSignInError,
         parameters: {_pErrorCode: errorCode},
       );

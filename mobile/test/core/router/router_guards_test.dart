@@ -43,11 +43,33 @@ void main() {
     test('/pharmacy/:id es público', () {
       expect(RouterGuards.isPublicPath('/pharmacy/farma-01'), isTrue);
     });
+    test('/home es público para invitado', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.home), isTrue);
+    });
+    test('/home/abierto-ahora es público para invitado', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.homeAbiertoAhora), isTrue);
+    });
     test('/home/farmacias-de-turno es público', () {
       expect(RouterGuards.isPublicPath(AppRoutes.homeFarmacias), isTrue);
     });
-    test('/home es protegido', () {
-      expect(RouterGuards.isPublicPath(AppRoutes.home), isFalse);
+    test('/search es público para invitado', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.search), isTrue);
+    });
+    test('/search/resultados es público para invitado', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.searchResults), isTrue);
+    });
+    test('/search/mapa es público para invitado', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.searchMap), isTrue);
+    });
+    test('/search/farmacias es público para invitado', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.searchFarmacias), isTrue);
+    });
+    test('/search/ubicacion es público para invitado', () {
+      expect(
+          RouterGuards.isPublicPath(AppRoutes.searchLocationFallback), isTrue);
+    });
+    test('/profile es protegido', () {
+      expect(RouterGuards.isPublicPath(AppRoutes.profile), isFalse);
     });
     test('/owner es protegido', () {
       expect(RouterGuards.isPublicPath(AppRoutes.owner), isFalse);
@@ -58,12 +80,37 @@ void main() {
     test('/auth/display-name es protegido', () {
       expect(RouterGuards.isPublicPath(AppRoutes.displayName), isFalse);
     });
-    test('/profile es protegido', () {
-      expect(RouterGuards.isPublicPath(AppRoutes.profile), isFalse);
-    });
     test('/owner con query sigue protegido', () {
       expect(
           RouterGuards.isPublicPath('/owner/products?from=deep-link'), isFalse);
+    });
+  });
+
+  group('isAuthPath', () {
+    test('/login pertenece al stack auth', () {
+      expect(RouterGuards.isAuthPath(AppRoutes.login), isTrue);
+    });
+    test('/home no pertenece al stack auth aunque sea público', () {
+      expect(RouterGuards.isAuthPath(AppRoutes.home), isFalse);
+    });
+    test('/search no pertenece al stack auth aunque sea público', () {
+      expect(RouterGuards.isAuthPath(AppRoutes.search), isFalse);
+    });
+  });
+
+  group('unauthenticatedEntryPath', () {
+    test('primer lanzamiento entra por onboarding', () {
+      expect(
+        RouterGuards.unauthenticatedEntryPath(isFirstLaunch: true),
+        equals(AppRoutes.onboarding),
+      );
+    });
+
+    test('usuario recurrente entra por home invitado', () {
+      expect(
+        RouterGuards.unauthenticatedEntryPath(isFirstLaunch: false),
+        equals(AppRoutes.home),
+      );
     });
   });
 
@@ -139,6 +186,14 @@ void main() {
       AppRoutes.onboarding,
       AppRoutes.emailVerification,
       '${AppRoutes.emailVerification}?cross_device=true',
+      AppRoutes.home,
+      AppRoutes.homeAbiertoAhora,
+      AppRoutes.homeFarmacias,
+      AppRoutes.search,
+      AppRoutes.searchResults,
+      AppRoutes.searchMap,
+      AppRoutes.searchFarmacias,
+      AppRoutes.searchLocationFallback,
       '/commerce/shop1',
       '/pharmacy/farma-01',
     ];
@@ -153,12 +208,20 @@ void main() {
       });
     }
 
-    test('en /home redirige a login', () {
+    test('en /home no redirige por modo invitado', () {
       final result = RouterGuards.evaluate(
         authState: const AuthUnauthenticated(),
         location: '/home',
       );
-      expect(result, equals(AppRoutes.login));
+      expect(result, isNull);
+    });
+
+    test('en /search no redirige por modo invitado', () {
+      final result = RouterGuards.evaluate(
+        authState: const AuthUnauthenticated(),
+        location: '/search',
+      );
+      expect(result, isNull);
     });
 
     test('en /owner redirige a login', () {

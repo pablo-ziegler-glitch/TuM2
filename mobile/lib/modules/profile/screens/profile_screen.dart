@@ -37,7 +37,7 @@ class ProfileScreen extends ConsumerWidget {
             // tarjeta de usuario
             _UserCard(
               name: user?.displayName ?? 'Alex Rivera',
-              email: user?.email ?? 'alex.rivera@example.com',
+              email: user?.email ?? 'alex.rivera@ejemplo.com',
             ),
             // sección PANEL ADMIN — solo si el usuario tiene rol admin
             if (isAdmin) ...[
@@ -180,8 +180,7 @@ class ProfileScreen extends ConsumerWidget {
                   labelColor: AppColors.errorFg,
                   iconColor: AppColors.errorFg,
                   showChevron: false,
-                  onTap: () =>
-                      ref.read(authOpProvider.notifier).signOut(),
+                  onTap: () => _confirmSignOut(context, ref),
                 ),
               ],
             ),
@@ -239,8 +238,8 @@ class _UserCard extends StatelessWidget {
           CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.primary100,
-            child:
-                Icon(Icons.person_outline, color: AppColors.primary500, size: 24),
+            child: Icon(Icons.person_outline,
+                color: AppColors.primary500, size: 24),
           ),
           const SizedBox(width: 12),
           Column(
@@ -274,8 +273,7 @@ class _MenuCard extends StatelessWidget {
             children: [
               items[i],
               if (i < items.length - 1)
-                Divider(
-                    height: 1, color: AppColors.neutral100, indent: 52),
+                Divider(height: 1, color: AppColors.neutral100, indent: 52),
             ],
           );
         }),

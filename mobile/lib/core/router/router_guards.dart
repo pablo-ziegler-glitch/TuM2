@@ -4,28 +4,43 @@ import 'app_routes.dart';
 /// Lógica de guards de navegación, extraída del router para ser testeable
 /// de forma independiente sin Firebase ni Riverpod.
 abstract class RouterGuards {
-  /// Rutas accesibles sin sesión activa.
-  static const publicPaths = {
+  /// Rutas del stack de autenticación.
+  static const authPaths = {
     AppRoutes.splash,
     AppRoutes.onboarding,
     AppRoutes.login,
     AppRoutes.emailVerification,
   };
 
+  /// Rutas navegables en modo invitado.
+  static const guestPaths = {
+    AppRoutes.home,
+    AppRoutes.homeAbiertoAhora,
+    AppRoutes.homeFarmacias,
+    AppRoutes.search,
+    AppRoutes.searchResults,
+    AppRoutes.searchMap,
+    AppRoutes.searchFarmacias,
+    AppRoutes.searchLocationFallback,
+  };
+
   /// Devuelve true si el path no requiere sesión activa.
   static bool isPublicPath(String path) {
     path = _pathOnly(path);
-    if (publicPaths.contains(path)) return true;
+    if (authPaths.contains(path) || guestPaths.contains(path)) return true;
     // /commerce/:id y /pharmacy/:id son públicos (contenido visible sin login)
     if (path.startsWith('/commerce/')) return true;
     if (path.startsWith('/pharmacy/')) return true;
-    // La vista listado de farmacias de turno también es pública
-    if (path == AppRoutes.homeFarmacias) return true;
     return false;
   }
 
   /// Devuelve true si el path pertenece al Auth Stack.
-  static bool isAuthPath(String path) => publicPaths.contains(_pathOnly(path));
+  static bool isAuthPath(String path) => authPaths.contains(_pathOnly(path));
+
+  /// Ruta de entrada para usuario sin sesión.
+  static String unauthenticatedEntryPath({required bool isFirstLaunch}) {
+    return isFirstLaunch ? AppRoutes.onboarding : AppRoutes.home;
+  }
 
   /// Verifica si el rol tiene acceso a la ruta dada.
   static bool canAccessRoute(String route, String role) {

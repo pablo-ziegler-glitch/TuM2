@@ -30,6 +30,21 @@ class PlaceholderScreen extends StatelessWidget {
     this.navActions = const [],
   });
 
+  String _roleLabel(String role) {
+    switch (role) {
+      case 'admin':
+        return 'administración';
+      case 'owner':
+        return 'comercio';
+      case 'customer':
+        return 'cliente';
+      case 'super_admin':
+        return 'superadministración';
+      default:
+        return role;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,7 +63,8 @@ class PlaceholderScreen extends StatelessWidget {
             children: [
               // Badge de identificación
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.infoBg,
                   borderRadius: BorderRadius.circular(6),
@@ -56,7 +72,8 @@ class PlaceholderScreen extends StatelessWidget {
                 ),
                 child: Text(
                   screenId,
-                  style: AppTextStyles.labelSm.copyWith(color: AppColors.primary600),
+                  style: AppTextStyles.labelSm
+                      .copyWith(color: AppColors.primary600),
                 ),
               ),
               const SizedBox(height: 16),
@@ -68,8 +85,9 @@ class PlaceholderScreen extends StatelessWidget {
               // Indicador de rol requerido
               if (roleRequired != null) ...[
                 Text(
-                  'Rol requerido: $roleRequired',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
+                  'Rol requerido: ${_roleLabel(roleRequired!)}',
+                  style: AppTextStyles.bodySm
+                      .copyWith(color: AppColors.neutral500),
                 ),
                 const SizedBox(height: 8),
               ],

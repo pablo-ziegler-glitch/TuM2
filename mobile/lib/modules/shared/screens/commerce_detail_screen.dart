@@ -11,17 +11,17 @@ typedef _CommerceData = ({String name, String subtitle, String address});
 const Map<String, _CommerceData> _demoCommerces = {
   'cafe-aura': (
     name: 'Café Aura',
-    subtitle: 'Cafetería Especializada & Pastelería Artesanal',
+    subtitle: 'Cafetería especializada y pastelería artesanal',
     address: 'Av. Siempre Viva 742, Palermo',
   ),
   'paper-atelier': (
-    name: 'The Paper Atelier',
-    subtitle: 'Papelería artesanal & journals para el nómade moderno',
+    name: 'Taller de Papel',
+    subtitle: 'Papelería artesanal y cuadernos para la vida urbana',
     address: 'Thames 1540, Palermo Soho',
   ),
   'cafe-esquina': (
     name: 'Café de la Esquina',
-    subtitle: 'Artesanal & Orgánico',
+    subtitle: 'Artesanal y orgánico',
     address: 'Gurruchaga 899, Villa Crespo',
   ),
 };
@@ -109,8 +109,8 @@ class CommerceDetailScreen extends StatelessWidget {
         background: Container(
           color: AppColors.neutral200,
           child: Center(
-            child: Icon(Icons.storefront,
-                size: 64, color: AppColors.neutral400),
+            child:
+                Icon(Icons.storefront, size: 64, color: AppColors.neutral400),
           ),
         ),
       ),
@@ -219,8 +219,7 @@ class _ActionButtons extends StatelessWidget {
             icon: const Icon(Icons.directions_outlined, size: 18),
             label: Text(
               'Cómo llegar',
-              style:
-                  AppTextStyles.labelMd.copyWith(color: AppColors.surface),
+              style: AppTextStyles.labelMd.copyWith(color: AppColors.surface),
             ),
           ),
         ),
@@ -296,8 +295,7 @@ class _GallerySection extends StatelessWidget {
                 width: 80,
                 height: 80,
                 color: AppColors.neutral200,
-                child: Icon(Icons.image_outlined,
-                    color: AppColors.neutral400),
+                child: Icon(Icons.image_outlined, color: AppColors.neutral400),
               ),
             ),
           ),

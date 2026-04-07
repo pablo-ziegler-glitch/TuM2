@@ -51,7 +51,8 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
               Text('Filtros', style: AppTextStyles.headingSm),
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
-                value: _filters.categoryId,
+                key: ValueKey('category-${_filters.categoryId ?? 'all'}'),
+                initialValue: _filters.categoryId,
                 decoration: const InputDecoration(labelText: 'Categoría'),
                 items: [
                   const DropdownMenuItem<String?>(
@@ -71,7 +72,10 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
                     setState(() => _filters = _filters.copyWith(isOpenNow: v)),
               ),
               DropdownButtonFormField<String?>(
-                value: _filters.minVerificationStatus,
+                key: ValueKey(
+                  'verification-${_filters.minVerificationStatus ?? 'all'}',
+                ),
+                initialValue: _filters.minVerificationStatus,
                 decoration: const InputDecoration(
                     labelText: 'Nivel mínimo verificación'),
                 items: const [
@@ -95,7 +99,8 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<SearchSortBy>(
-                value: _filters.sortBy,
+                key: ValueKey('sort-${_filters.sortBy.name}'),
+                initialValue: _filters.sortBy,
                 decoration: const InputDecoration(labelText: 'Ordenar por'),
                 items: const [
                   DropdownMenuItem(

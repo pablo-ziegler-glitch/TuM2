@@ -69,6 +69,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
 | **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
 | **[0054]** Implementar login / registro ✅ | Mobile app — AUTH MVP completo: magic link email (same/cross-device con app_links), Google Sign-In, guards/redirects por rol consistentes, pending route post-auth, signOut hardened y tests de auth/router actualizados |
+| **[0056]** Implementar búsqueda de comercios ✅ | Mobile app — búsqueda MVP cerrada: corpus por zona con filtros/ranking, pantallas lista/mapa/empty integradas según mockups, tests de SearchNotifier en verde y documentación actualizada |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
@@ -155,7 +156,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0053] **Implementar shell de app** — P0 — `Mobile, UX/UI, MVP` ✅
 - [0054] **Implementar login / registro** — P0 — `Mobile, Seguridad, MVP` ✅
 - [0055] **Implementar home CUSTOMER** — P1 — `Mobile, Producto, MVP`
-- [0056] **Implementar búsqueda de comercios** — P0 — `Mobile, MVP`
+- [0056] **Implementar búsqueda de comercios** — P0 — `Mobile, MVP` ✅
 - [0057] **Implementar mapa** — P1 — `Mobile, MVP`
 - [0058] **Implementar ficha de comercio** — P0 — `Mobile, Producto, MVP`
 - [0059] **Implementar ficha de producto** — P2 — `Mobile, MVP`
@@ -374,7 +375,9 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - En cada avance de tarjeta, actualizar siempre `docs/storyscards/<tarjeta>.md` y `CLAUDE.md` con estado real.
 
 ## Registro operativo reciente
-- [0056] Implementar bÃºsqueda de comercios: estado actual EN PROGRESO AVANZADO.
-- [0056] Base funcional implementada en Functions + Mobile (SearchNotifier, repositorios, SEARCH-01/02/03 base, buildSearchKeywords y backfill callable).
-- [0056] Pendiente para DoD completo: tests CF/Flutter, analytics y QA de staging con evidencia.
-- [0056] Aclaracion QA: las "capturas pendientes" son screenshots reales de ejecucion (emulador/dispositivo, con datos reales) para evidencia E2E; no son mockups ni rediseno de UI.
+- [0056] Implementar búsqueda de comercios: estado final DONE (cerrada el 2026-04-07).
+- [0056] Mobile quedó recompuesto y compilable: modelos/repositorios de búsqueda, notifier con ranking y filtros MVP, exclusión de panadería/confitería, rutas de búsqueda activas y analytics safe.
+- [0056] Se agregó cobertura unitaria en Flutter para SearchNotifier (inicialización, normalización, filtros open-now, ranking, y consistencia lista/mapa).
+- [0056] Se aplicó integración visual de pantallas search según `stitch_tum2.zip` (inicio, loading, lista, mapa y vacío enriquecido).
+- [0056] Validación local: analyze focalizado en search/router/auth PASS; tests auth/router/search PASS.
+- [0056] Deuda no bloqueante diferida: QA visual completa con set final de capturas y validación web/cross-plataforma.

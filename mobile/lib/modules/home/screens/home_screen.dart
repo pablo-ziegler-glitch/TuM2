@@ -18,6 +18,7 @@ class HomeScreen extends StatelessWidget {
         slivers: [
           SliverToBoxAdapter(child: _Header()),
           SliverToBoxAdapter(child: _SearchBar()),
+          SliverToBoxAdapter(child: _QuickActionsRow()),
           SliverToBoxAdapter(child: _SectionHeader()),
           SliverList(
             delegate: SliverChildListDelegate([
@@ -47,6 +48,90 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
+class _QuickActionsRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: _QuickActionCard(
+              label: 'Abierto ahora',
+              icon: Icons.schedule,
+              color: AppColors.secondary500,
+              onTap: () => context.push(AppRoutes.homeAbiertoAhora),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _QuickActionCard(
+              label: 'Farmacias de turno',
+              icon: Icons.local_pharmacy_outlined,
+              color: AppColors.primary500,
+              onTap: () => context.push(AppRoutes.homeFarmacias),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  const _QuickActionCard({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        height: 68,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.neutral200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.labelMd.copyWith(
+                  color: AppColors.neutral800,
+                ),
+                maxLines: 2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
@@ -70,12 +155,12 @@ class _Header extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text('Tu barrio', style: AppTextStyles.headingLg),
+                const Text('Tu barrio', style: AppTextStyles.headingLg),
               ],
             ),
           ),
           const SizedBox(width: 12),
-          CircleAvatar(
+          const CircleAvatar(
             radius: 20,
             backgroundColor: AppColors.neutral200,
             child: Icon(Icons.person_outline,
@@ -106,7 +191,7 @@ class _SearchBar extends StatelessWidget {
           child: Row(
             children: [
               const SizedBox(width: 12),
-              Icon(Icons.search, color: AppColors.neutral400, size: 20),
+              const Icon(Icons.search, color: AppColors.neutral400, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Buscá comercios del barrio...',
@@ -131,7 +216,7 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Elegidos del barrio', style: AppTextStyles.headingSm),
+          const Text('Elegidos del barrio', style: AppTextStyles.headingSm),
           TextButton(
             onPressed: () {},
             style: TextButton.styleFrom(
@@ -197,7 +282,7 @@ class _CommerceCard extends StatelessWidget {
                 color: AppColors.neutral200,
                 child: Stack(
                   children: [
-                    Center(
+                    const Center(
                       child: Icon(Icons.storefront,
                           size: 52, color: AppColors.neutral400),
                     ),
@@ -222,7 +307,7 @@ class _CommerceCard extends StatelessWidget {
                           child: Text(name, style: AppTextStyles.headingSm)),
                       if (rating != null) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.star_rounded,
+                        const Icon(Icons.star_rounded,
                             size: 15, color: AppColors.tertiary500),
                         const SizedBox(width: 2),
                         Text(

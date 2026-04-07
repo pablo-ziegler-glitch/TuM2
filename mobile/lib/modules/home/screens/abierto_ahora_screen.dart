@@ -1,300 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../models/open_now_models.dart';
+import '../providers/open_now_notifier.dart';
 
-/// HOME-02 — Vista "Abierto ahora".
-///
-/// Muestra todos los comercios de la zona activa que están abiertos en este
-/// momento. Permite filtrar por categoría y acceder al detalle de cada uno.
-///
-/// Fuente: `merchant_public` filtrado `isOpenNow == true` ordenado por
-/// `sortBoost desc` + distancia.
-class AbiertoAhoraScreen extends StatefulWidget {
+class AbiertoAhoraScreen extends ConsumerStatefulWidget {
   const AbiertoAhoraScreen({super.key});
 
   @override
-  State<AbiertoAhoraScreen> createState() => _AbiertoAhoraScreenState();
+  ConsumerState<AbiertoAhoraScreen> createState() => _AbiertoAhoraScreenState();
 }
 
-class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
-  String _selectedCategory = 'Todos';
-
-  static const _categories = [
-    'Todos',
-    'Cafeterías',
-    'Kioscos',
-    'Almacenes',
-    'Panaderías',
-    'Farmacias',
-  ];
-
-  // Datos de ejemplo para el diseño
-  static const _mockCommerces = [
-    (
-      name: 'Café de la Esquina',
-      type: 'Cafetería',
-      address: 'Thames 1820',
-      distance: '180m',
-      zone: 'Palermo',
-      rating: 4.7,
-      closesAt: 'Cierra a las 23hs',
-      action: 'Ver más',
-      actionFilled: false,
-    ),
-    (
-      name: 'MaxiKiosco Javi',
-      type: 'Kiosco',
-      address: 'Honduras 4890',
-      distance: '290m',
-      zone: 'Palermo Viejo',
-      rating: 4.1,
-      closesAt: 'Abierto 24hs',
-      action: 'Ir',
-      actionFilled: true,
-    ),
-    (
-      name: 'La Florería',
-      type: 'Florería',
-      address: 'Gurruchaga 1502',
-      distance: '380m',
-      zone: 'Palermo',
-      rating: 4.9,
-      closesAt: 'Cierra a las 20hs',
-      action: 'Ver más',
-      actionFilled: false,
-    ),
-    (
-      name: 'Mercado Local',
-      type: 'Mercado',
-      address: 'Av. Santa Fe 3200',
-      distance: '540m',
-      zone: 'Palermo',
-      rating: 4.4,
-      closesAt: 'Cierra a las 22hs',
-      action: 'Ver más',
-      actionFilled: false,
-    ),
-    (
-      name: 'Hotel Boutique Soho',
-      type: 'Hotel',
-      address: 'El Salvador 4724',
-      distance: '620m',
-      zone: 'Palermo Soho',
-      rating: 4.6,
-      closesAt: 'Abierto 24hs',
-      action: 'Reservar',
-      actionFilled: true,
-    ),
-    (
-      name: 'Siempre Abierto 26',
-      type: 'Kiosco',
-      address: 'Thames 1450',
-      distance: '690m',
-      zone: 'Palermo',
-      rating: 4.5,
-      closesAt: 'Abierto 24hs',
-      action: 'Ir',
-      actionFilled: true,
-    ),
-  ];
-
-  List<
-      ({
-        String name,
-        String type,
-        String address,
-        String distance,
-        String zone,
-        double rating,
-        String closesAt,
-        String action,
-        bool actionFilled,
-      })> get _filtered {
-    if (_selectedCategory == 'Todos') return _mockCommerces.toList();
-    return _mockCommerces
-        .where((c) => c.type.contains(_selectedCategory.replaceAll('s', '')))
-        .toList();
+class _AbiertoAhoraScreenState extends ConsumerState<AbiertoAhoraScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(openNowNotifierProvider.notifier).ensureInitialized();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final results = _filtered;
+    final state = ref.watch(openNowNotifierProvider);
+    final notifier = ref.read(openNowNotifierProvider.notifier);
+
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.neutral50,
       body: Column(
         children: [
-          _buildHeader(context),
-          _buildStatusBar(results.length),
-          _buildCategoryFilter(),
-          Expanded(
-            child: results.isEmpty
-                ? _buildEmpty()
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                    itemCount: results.length,
-                    itemBuilder: (_, i) => _CommerceCard(
-                      commerce: results[i],
-                      onTap: () => context.push(
-                        AppRoutes.commerceDetailPath(
-                          results[i].name.toLowerCase().replaceAll(' ', '-'),
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
-          _buildMapBar(context),
-        ],
-      ),
-    );
-  }
-
-  // ── Header ────────────────────────────────────────────────────────────────
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      color: AppColors.surface,
-      padding: EdgeInsets.fromLTRB(
-          16, MediaQuery.of(context).padding.top + 12, 16, 12),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => context.pop(),
-            child: Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child:
-                  Icon(Icons.arrow_back, color: AppColors.neutral700, size: 22),
-            ),
+          _OpenNowTopBar(
+            zoneName: state.activeZoneName,
+            zones: state.zones,
+            activeZoneId: state.activeZoneId,
+            onSelectZone: notifier.setZone,
           ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'PALERMO',
-                  style: AppTextStyles.labelSm.copyWith(
-                    color: AppColors.neutral500,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                Text('Abierto ahora', style: AppTextStyles.headingSm),
-              ],
-            ),
-          ),
-          // Indicador activo
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: AppColors.secondary50,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: const BoxDecoration(
-                    color: AppColors.secondary500,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  'En vivo',
-                  style: AppTextStyles.labelSm
-                      .copyWith(color: AppColors.secondary700),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Barra de estado ────────────────────────────────────────────────────────
-
-  Widget _buildStatusBar(int count) {
-    return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        children: [
-          Icon(Icons.storefront_outlined,
-              size: 15, color: AppColors.neutral500),
-          const SizedBox(width: 5),
-          Text(
-            '$count comercios abiertos ahora',
-            style: AppTextStyles.bodySm,
-          ),
-          const Spacer(),
-          Text(
-            _horaActual(),
-            style: AppTextStyles.labelSm.copyWith(color: AppColors.neutral500),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _horaActual() {
-    final now = DateTime.now();
-    final h = now.hour.toString().padLeft(2, '0');
-    final m = now.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
-
-  // ── Filtros de categoría ──────────────────────────────────────────────────
-
-  Widget _buildCategoryFilter() {
-    return Container(
-      color: AppColors.surface,
-      child: Column(
-        children: [
-          const Divider(height: 1, color: AppColors.neutral100),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 0, 10),
-            child: SizedBox(
-              height: 34,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(right: 16),
-                itemCount: _categories.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final cat = _categories[i];
-                  final selected = cat == _selectedCategory;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedCategory = cat),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? AppColors.primary500
-                            : AppColors.scaffoldBg,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: selected
-                              ? AppColors.primary500
-                              : AppColors.neutral300,
-                        ),
-                      ),
-                      child: Text(
-                        cat,
-                        style: AppTextStyles.labelSm.copyWith(
-                          color: selected
-                              ? AppColors.surface
-                              : AppColors.neutral700,
-                        ),
-                      ),
+            child: RefreshIndicator(
+              onRefresh: notifier.refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
+                children: [
+                  if (state.isLoading &&
+                      !state.hasOpenResults &&
+                      !state.hasFallback &&
+                      state.error == null)
+                    const _OpenNowLoadingState()
+                  else if (state.error != null &&
+                      !state.hasOpenResults &&
+                      !state.hasFallback)
+                    _OpenNowErrorState(
+                      onRetry: notifier.refresh,
+                    )
+                  else if (state.hasOpenResults)
+                    _OpenNowResultsState(
+                      state: state,
+                      onCardTap: (merchant, rank, isFallback) {
+                        notifier.logCardClicked(
+                          merchant: merchant,
+                          rank: rank,
+                          isFallback: isFallback,
+                        );
+                        context.push(
+                          AppRoutes.commerceDetailPath(merchant.merchantId),
+                        );
+                      },
+                    )
+                  else
+                    _OpenNowEmptyState(
+                      fallbackMerchants: state.fallbackMerchants,
+                      onPrimaryTap: () => context.go(AppRoutes.search),
+                      onCardTap: (merchant, rank) {
+                        notifier.logCardClicked(
+                          merchant: merchant,
+                          rank: rank,
+                          isFallback: true,
+                        );
+                        context.push(
+                          AppRoutes.commerceDetailPath(merchant.merchantId),
+                        );
+                      },
                     ),
-                  );
-                },
+                  const SizedBox(height: 72),
+                ],
               ),
             ),
           ),
@@ -302,156 +96,804 @@ class _AbiertoAhoraScreenState extends State<AbiertoAhoraScreen> {
       ),
     );
   }
+}
 
-  // ── Lista vacía ───────────────────────────────────────────────────────────
+class _OpenNowTopBar extends StatelessWidget {
+  const _OpenNowTopBar({
+    required this.zoneName,
+    required this.zones,
+    required this.activeZoneId,
+    required this.onSelectZone,
+  });
 
-  Widget _buildEmpty() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: AppColors.neutral100,
-                shape: BoxShape.circle,
+  final String zoneName;
+  final List<OpenNowZone> zones;
+  final String activeZoneId;
+  final Future<void> Function(String zoneId) onSelectZone;
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    return Container(
+      color: AppColors.neutral50.withValues(alpha: 0.93),
+      padding: EdgeInsets.fromLTRB(8, topPadding + 6, 10, 8),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => context.pop(),
+            icon: const Icon(Icons.arrow_back),
+            color: AppColors.primary500,
+          ),
+          Expanded(
+            child: Text(
+              'Abierto ahora',
+              style: AppTextStyles.headingSm.copyWith(
+                color: AppColors.neutral900,
               ),
-              child: Icon(Icons.storefront_outlined,
-                  size: 30, color: AppColors.neutral400),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Sin ${_selectedCategory.toLowerCase()} abiertas',
-              style: AppTextStyles.headingSm,
-              textAlign: TextAlign.center,
+          ),
+          if (zones.length > 1)
+            PopupMenuButton<String>(
+              onSelected: onSelectZone,
+              itemBuilder: (context) {
+                return zones
+                    .map(
+                      (zone) => PopupMenuItem<String>(
+                        value: zone.zoneId,
+                        child: Text(zone.name),
+                      ),
+                    )
+                    .toList(growable: false);
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.neutral100,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _activeZoneLabel(zones, activeZoneId, zoneName),
+                      style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.neutral700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 16,
+                      color: AppColors.neutral700,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _activeZoneLabel(
+    List<OpenNowZone> zones,
+    String activeZoneId,
+    String fallback,
+  ) {
+    for (final zone in zones) {
+      if (zone.zoneId == activeZoneId) return zone.name;
+    }
+    return fallback;
+  }
+}
+
+class _OpenNowResultsState extends StatelessWidget {
+  const _OpenNowResultsState({
+    required this.state,
+    required this.onCardTap,
+  });
+
+  final OpenNowState state;
+  final void Function(OpenNowMerchant merchant, int rank, bool isFallback)
+      onCardTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final rankById = <String, int>{};
+    for (var i = 0; i < state.merchants.length; i++) {
+      rankById[state.merchants[i].merchantId] = i + 1;
+    }
+
+    OpenNowMerchant? special;
+    for (final merchant in state.merchants) {
+      if (merchant.isSpecialOnDutyHealth) {
+        special = merchant;
+        break;
+      }
+    }
+
+    final regular = state.merchants
+        .where((merchant) => merchant.merchantId != special?.merchantId)
+        .toList(growable: false);
+    final grouped = _groupByCategory(regular);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ZoneTitle(
+          zoneName: state.activeZoneName,
+          subtitle: 'Locales que podrian resolverte algo en este momento',
+        ),
+        if (special != null) ...[
+          const SizedBox(height: 14),
+          _UrgentSpecialCard(
+            merchant: special,
+            onTap: () => onCardTap(
+              special!,
+              rankById[special.merchantId] ?? 1,
+              false,
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
+        for (final group in grouped) ...[
+          const SizedBox(height: 8),
+          _CategoryChip(label: group.label),
+          const SizedBox(height: 8),
+          for (final merchant in group.items) ...[
+            _OpenNowCompactCard(
+              merchant: merchant,
+              onTap: () => onCardTap(
+                merchant,
+                rankById[merchant.merchantId] ?? 1,
+                false,
+              ),
             ),
             const SizedBox(height: 8),
-            Text(
-              'No encontramos ${_selectedCategory.toLowerCase()} '
-              'abiertas en este momento cerca de vos.',
-              style: AppTextStyles.bodySm,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () => setState(() => _selectedCategory = 'Todos'),
-              child: Text(
-                'Ver todos los rubros',
-                style:
-                    AppTextStyles.labelMd.copyWith(color: AppColors.primary500),
-              ),
-            ),
           ],
-        ),
-      ),
+        ],
+      ],
     );
   }
 
-  // ── Barra "Ver en mapa" ───────────────────────────────────────────────────
+  List<_CategoryGroup> _groupByCategory(List<OpenNowMerchant> merchants) {
+    final map = <String, List<OpenNowMerchant>>{};
+    final labelMap = <String, String>{};
 
-  Widget _buildMapBar(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push(AppRoutes.searchMap),
-      child: Container(
-        color: AppColors.primary500,
-        padding: EdgeInsets.fromLTRB(
-            20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.map_outlined, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              'Ver en el mapa',
-              style: AppTextStyles.labelMd.copyWith(color: Colors.white),
-            ),
-          ],
+    for (final merchant in merchants) {
+      final label = merchant.categoryName.trim().isEmpty
+          ? 'Comercio'
+          : merchant.categoryName.trim();
+      final key = label.toLowerCase();
+      map.putIfAbsent(key, () => <OpenNowMerchant>[]).add(merchant);
+      labelMap[key] = label;
+    }
+
+    final entries = map.entries.toList(growable: false)
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    return entries
+        .map(
+          (entry) => _CategoryGroup(
+            label: labelMap[entry.key] ?? entry.key,
+            items: entry.value,
+          ),
+        )
+        .toList(growable: false);
+  }
+}
+
+class _ZoneTitle extends StatelessWidget {
+  const _ZoneTitle({
+    required this.zoneName,
+    required this.subtitle,
+  });
+
+  final String zoneName;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          zoneName,
+          style: AppTextStyles.headingLg.copyWith(
+            color: AppColors.neutral900,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          subtitle,
+          style: AppTextStyles.bodySm.copyWith(
+            color: AppColors.neutral700,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+  });
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.neutral200,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: AppTextStyles.bodyXs.copyWith(
+          color: AppColors.neutral700,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.1,
         ),
       ),
     );
   }
 }
 
-// ── Tarjeta de comercio ───────────────────────────────────────────────────────
+class _OpenNowCompactCard extends StatelessWidget {
+  const _OpenNowCompactCard({
+    required this.merchant,
+    required this.onTap,
+  });
 
-class _CommerceCard extends StatelessWidget {
-  final ({
-    String name,
-    String type,
-    String address,
-    String distance,
-    String zone,
-    double rating,
-    String closesAt,
-    String action,
-    bool actionFilled,
-  }) commerce;
+  final OpenNowMerchant merchant;
   final VoidCallback onTap;
-
-  const _CommerceCard({required this.commerce, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final c = commerce;
-    return GestureDetector(
+    final badgeColor = merchant.isSpecialOnDutyHealth
+        ? AppColors.primary500
+        : AppColors.secondary500;
+    final badgeLabel = merchant.isSpecialOnDutyHealth ? 'DE TURNO' : 'ABIERTO';
+
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2)),
-          ],
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            // Thumbnail
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: AppColors.neutral100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(Icons.storefront_outlined,
-                  color: AppColors.neutral400, size: 26),
-            ),
-            const SizedBox(width: 12),
-            // Info
+            _AvatarTile(label: merchant.name),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(c.name,
-                      style: AppTextStyles.labelMd,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text('${c.type} · ${c.zone}', style: AppTextStyles.bodyXs),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          merchant.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.labelMd.copyWith(
+                            color: AppColors.neutral900,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _InlineStatusBadge(
+                        label: badgeLabel,
+                        color: badgeColor,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 3,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _IconText(
+                        icon: Icons.near_me,
+                        text: _distanceText(merchant.distanceMeters),
+                        iconColor: AppColors.primary500,
+                      ),
+                      _IconText(
+                        icon: Icons.schedule,
+                        text: _scheduleText(merchant),
+                        iconColor: AppColors.primary500,
+                      ),
+                      _IconText(
+                        icon: Icons.update,
+                        text: _freshnessText(merchant.lastDataRefreshAt),
+                        iconColor: AppColors.secondary500,
+                        textColor: AppColors.neutral600,
+                        italic: true,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _distanceText(double? meters) {
+    if (meters == null) return 'Sin distancia';
+    if (meters < 1000) return '${meters.round()} m';
+    return '${(meters / 1000).toStringAsFixed(1)} km';
+  }
+
+  String _scheduleText(OpenNowMerchant merchant) {
+    final raw = merchant.effectiveScheduleLabel.trim();
+    if (raw.isEmpty) return 'Horario no disponible';
+    return raw.replaceFirst('hasta las ', '').replaceFirst('Hasta las ', '');
+  }
+
+  String _freshnessText(DateTime? refreshAt) {
+    if (refreshAt == null) return 'sin dato';
+    final diff = DateTime.now().difference(refreshAt);
+    if (diff.inMinutes < 1) return 'ahora';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min';
+    if (diff.inHours < 24) return '${diff.inHours} h';
+    return DateFormat('dd/MM').format(refreshAt);
+  }
+}
+
+class _UrgentSpecialCard extends StatelessWidget {
+  const _UrgentSpecialCard({
+    required this.merchant,
+    required this.onTap,
+  });
+
+  final OpenNowMerchant merchant;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8F8),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: AppColors.primary500.withValues(alpha: 0.45),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: const BoxDecoration(
+              color: AppColors.primary500,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(26),
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: AppColors.surface,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.emergency,
+                        color: AppColors.primary500,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Estado de servicio',
+                            style: AppTextStyles.bodyXs.copyWith(
+                              color: AppColors.surface.withValues(alpha: 0.88),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'DE TURNO HOY',
+                            style: AppTextStyles.labelMd.copyWith(
+                              color: AppColors.surface,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      'Actualizado ${_freshnessText(merchant.lastDataRefreshAt)}',
+                      style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.surface,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onTap,
+                    icon: const Icon(Icons.call, size: 18),
+                    label: Text(
+                      'LLAMAR / VER AHORA',
+                      style: AppTextStyles.labelMd.copyWith(
+                        color: AppColors.primary500,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.surface,
+                      foregroundColor: AppColors.primary500,
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        merchant.name,
+                        style: AppTextStyles.headingMd.copyWith(
+                          color: AppColors.neutral900,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEFEF),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        'DE TURNO',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.primary500,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: AppColors.primary500,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        merchant.addressShort.isEmpty
+                            ? 'Direccion no disponible'
+                            : merchant.addressShort,
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.neutral700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onTap,
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFBEAEA),
+                          side: BorderSide.none,
+                          minimumSize: const Size.fromHeight(46),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.directions,
+                          color: AppColors.neutral700,
+                          size: 18,
+                        ),
+                        label: Text(
+                          'Como llegar',
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.neutral700,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 46,
+                      height: 46,
+                      child: OutlinedButton(
+                        onPressed: onTap,
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFBEAEA),
+                          side: BorderSide.none,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.share,
+                          color: AppColors.neutral700,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _freshnessText(DateTime? refreshAt) {
+    if (refreshAt == null) return 'hace poco';
+    final diff = DateTime.now().difference(refreshAt);
+    if (diff.inMinutes < 1) return 'hace instantes';
+    if (diff.inMinutes < 60) return 'hace ${diff.inMinutes} min';
+    if (diff.inHours < 24) return 'hace ${diff.inHours} h';
+    return DateFormat('dd/MM HH:mm').format(refreshAt);
+  }
+}
+
+class _OpenNowEmptyState extends StatelessWidget {
+  const _OpenNowEmptyState({
+    required this.fallbackMerchants,
+    required this.onPrimaryTap,
+    required this.onCardTap,
+  });
+
+  final List<OpenNowMerchant> fallbackMerchants;
+  final VoidCallback onPrimaryTap;
+  final void Function(OpenNowMerchant merchant, int rank) onCardTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 24),
+        Container(
+          width: 168,
+          height: 168,
+          decoration: const BoxDecoration(
+            color: AppColors.neutral100,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.secondary500,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.location_off,
+                color: AppColors.surface,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Text(
+          'Ahora no encontramos locales\nabiertos en esta zona',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.headingMd.copyWith(
+            color: AppColors.neutral900,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Proba ampliando el radio o volve a consultar\nen unos minutos.',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodyMd.copyWith(
+            color: AppColors.neutral700,
+          ),
+        ),
+        const SizedBox(height: 18),
+        ElevatedButton.icon(
+          onPressed: onPrimaryTap,
+          icon: const Icon(Icons.explore, size: 18),
+          label: Text(
+            'Ampliar radio de busqueda',
+            style: AppTextStyles.labelMd.copyWith(color: AppColors.surface),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary500,
+            foregroundColor: AppColors.surface,
+            minimumSize: const Size(260, 46),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        ),
+        if (fallbackMerchants.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Podrian abrir mas tarde hoy',
+                  style: AppTextStyles.headingSm.copyWith(
+                    color: AppColors.neutral900,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                'PROXIMAMENTE',
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral500,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (var i = 0; i < fallbackMerchants.length; i++) ...[
+            _FallbackCard(
+              merchant: fallbackMerchants[i],
+              onTap: () => onCardTap(fallbackMerchants[i], i + 1),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _FallbackCard extends StatelessWidget {
+  const _FallbackCard({
+    required this.merchant,
+    required this.onTap,
+  });
+
+  final OpenNowMerchant merchant;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.neutral100,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                color: AppColors.neutral300.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.storefront,
+                color: AppColors.neutral500,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          merchant.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.labelMd.copyWith(
+                            color: AppColors.neutral900,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.neutral200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'CERRADO',
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.neutral600,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rubro: ${merchant.categoryName}',
+                    style: AppTextStyles.bodyXs.copyWith(
+                      color: AppColors.neutral700,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.near_me_outlined,
-                          size: 12, color: AppColors.neutral500),
-                      const SizedBox(width: 3),
-                      Text(c.distance, style: AppTextStyles.bodyXs),
-                      const SizedBox(width: 8),
-                      Icon(Icons.access_time_rounded,
-                          size: 12, color: AppColors.secondary500),
-                      const SizedBox(width: 3),
+                      const Icon(
+                        Icons.history_toggle_off,
+                        size: 15,
+                        color: AppColors.primary500,
+                      ),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          c.closesAt,
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.secondary700),
+                          merchant.effectiveScheduleLabel.isEmpty
+                              ? 'Horario de hoy no disponible'
+                              : merchant.effectiveScheduleLabel,
+                          style: AppTextStyles.bodySm.copyWith(
+                            color: AppColors.primary500,
+                            fontWeight: FontWeight.w700,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -461,56 +903,352 @@ class _CommerceCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            // Rating + Acción
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.star_rounded,
-                        size: 13, color: AppColors.tertiary500),
-                    const SizedBox(width: 2),
-                    Text(c.rating.toStringAsFixed(1),
-                        style: AppTextStyles.bodyXs
-                            .copyWith(color: AppColors.neutral800)),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                c.actionFilled
-                    ? ElevatedButton(
-                        onPressed: onTap,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary500,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 5),
-                          minimumSize: Size.zero,
-                          textStyle: AppTextStyles.labelSm,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(7)),
-                        ),
-                        child: Text(c.action),
-                      )
-                    : OutlinedButton(
-                        onPressed: onTap,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary500,
-                          side: const BorderSide(color: AppColors.primary300),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 5),
-                          minimumSize: Size.zero,
-                          textStyle: AppTextStyles.labelSm,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(7)),
-                        ),
-                        child: Text(c.action),
-                      ),
-              ],
-            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _OpenNowErrorState extends StatelessWidget {
+  const _OpenNowErrorState({
+    required this.onRetry,
+  });
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+      child: Column(
+        children: [
+          Container(
+            width: 170,
+            height: 170,
+            decoration: BoxDecoration(
+              color: AppColors.neutral100,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.neutral200,
+                width: 2,
+              ),
+            ),
+            child: Center(
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: AppColors.neutral50,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                child: const Icon(
+                  Icons.cloud_off,
+                  color: AppColors.neutral500,
+                  size: 52,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'No pudimos cargar los\ncomercios abiertos ahora',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.headingLg.copyWith(
+              color: AppColors.neutral900,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Revisa tu conexion o intenta de nuevo.',
+            style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.neutral700,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary500,
+                foregroundColor: AppColors.surface,
+                minimumSize: const Size.fromHeight(46),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: const Text('Reintentar'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => context.pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.neutral200,
+                foregroundColor: AppColors.neutral900,
+                minimumSize: const Size.fromHeight(46),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: const Text('Volver'),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.neutral100,
+              borderRadius: BorderRadius.circular(14),
+              border: const Border(
+                left: BorderSide(
+                  color: AppColors.primary300,
+                  width: 3,
+                ),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info,
+                  color: AppColors.primary500,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Dato de interes\nLa mayoria de los comercios cercanos suelen abrir de 09:00 a 20:00.',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.neutral700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpenNowLoadingState extends StatelessWidget {
+  const _OpenNowLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SkeletonLine(widthFactor: 0.58, height: 34),
+        SizedBox(height: 8),
+        _SkeletonLine(widthFactor: 0.42, height: 13),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            _SkeletonChip(),
+            SizedBox(width: 8),
+            _SkeletonChip(width: 88),
+            SizedBox(width: 8),
+            _SkeletonChip(width: 72),
+          ],
+        ),
+        SizedBox(height: 14),
+        _SkeletonCard(height: 170),
+        SizedBox(height: 14),
+        _SkeletonCard(height: 140),
+        SizedBox(height: 14),
+        _SkeletonCard(height: 140),
+      ],
+    );
+  }
+}
+
+class _SkeletonLine extends StatelessWidget {
+  const _SkeletonLine({
+    required this.widthFactor,
+    required this.height,
+  });
+
+  final double widthFactor;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      widthFactor: widthFactor,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: AppColors.neutral200,
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonChip extends StatelessWidget {
+  const _SkeletonChip({
+    this.width = 66,
+  });
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: 24,
+      decoration: BoxDecoration(
+        color: AppColors.neutral200,
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+}
+
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard({
+    required this.height,
+  });
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+      ),
+    );
+  }
+}
+
+class _AvatarTile extends StatelessWidget {
+  const _AvatarTile({
+    required this.label,
+  });
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary200,
+            AppColors.secondary200,
+          ],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          _initials(label),
+          style: AppTextStyles.bodySm.copyWith(
+            color: AppColors.neutral900,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _initials(String name) {
+    final clean = name.trim();
+    if (clean.isEmpty) return 'L';
+    final parts = clean.split(RegExp(r'\s+'));
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    final first = parts.first.isEmpty ? '' : parts.first[0];
+    final second = parts[1].isEmpty ? '' : parts[1][0];
+    return '$first$second'.toUpperCase();
+  }
+}
+
+class _InlineStatusBadge extends StatelessWidget {
+  const _InlineStatusBadge({
+    required this.label,
+    required this.color,
+  });
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.bodyXs.copyWith(
+          color: AppColors.surface,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.35,
+        ),
+      ),
+    );
+  }
+}
+
+class _IconText extends StatelessWidget {
+  const _IconText({
+    required this.icon,
+    required this.text,
+    required this.iconColor,
+    this.textColor = AppColors.neutral700,
+    this.italic = false,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color iconColor;
+  final Color textColor;
+  final bool italic;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: iconColor),
+        const SizedBox(width: 3),
+        Text(
+          text,
+          style: AppTextStyles.bodyXs.copyWith(
+            color: textColor,
+            fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryGroup {
+  const _CategoryGroup({
+    required this.label,
+    required this.items,
+  });
+
+  final String label;
+  final List<OpenNowMerchant> items;
 }

@@ -29,10 +29,14 @@ class AuthAuthenticated extends AuthState {
   /// Derivado del claim 'onboardingComplete' o de merchantId != null como fallback.
   final bool onboardingComplete;
 
+  /// Claim transitorio para alta de owner en proceso.
+  final bool ownerPending;
+
   const AuthAuthenticated({
     required this.user,
     required this.role,
     this.merchantId,
     this.onboardingComplete = false,
+    this.ownerPending = false,
   });
 }

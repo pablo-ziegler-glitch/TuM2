@@ -45,7 +45,12 @@ abstract class RouterGuards {
   /// Verifica si el rol tiene acceso a la ruta dada.
   static bool canAccessRoute(String route, String role) {
     route = _pathOnly(route);
-    if (route.startsWith('/owner') && role == 'customer') return false;
+    if (route.startsWith('/owner') &&
+        role != 'owner' &&
+        role != 'admin' &&
+        role != 'super_admin') {
+      return false;
+    }
     if (route.startsWith('/admin') &&
         role != 'admin' &&
         role != 'super_admin') {
@@ -79,26 +84,22 @@ abstract class RouterGuards {
         if (isPublicPath(path)) return null;
         return AppRoutes.login;
 
-      case AuthAuthenticated(:final role, :final onboardingComplete):
+      case AuthAuthenticated(:final role, :final ownerPending):
         // Desde ruta de auth → navegar al destino autenticado
         if (isAuthPath(path)) {
           return _authenticatedHome(
             role: role,
-            onboardingComplete: onboardingComplete,
+            ownerPending: ownerPending,
             pendingRoute: pendingRoute,
             consumePendingRoute: consumePendingRoute,
           );
         }
 
-        // Owner que no completó el onboarding → redirigir a flujo de alta
-        if (role == 'owner' &&
-            !onboardingComplete &&
-            !path.startsWith('/onboarding/owner')) {
-          return AppRoutes.onboardingOwner;
-        }
-
         // Guard: /owner solo owner o admin
-        if (path.startsWith('/owner') && role == 'customer') {
+        final isOwnerRoute = path.startsWith('/owner');
+        final canAccessOwnerRoute = role == 'owner' && !ownerPending;
+        final canAccessAsAdmin = role == 'admin' || role == 'super_admin';
+        if (isOwnerRoute && !canAccessOwnerRoute && !canAccessAsAdmin) {
           return AppRoutes.profile;
         }
 
@@ -115,19 +116,19 @@ abstract class RouterGuards {
 
   static String _authenticatedHome({
     required String role,
-    required bool onboardingComplete,
+    required bool ownerPending,
     String? pendingRoute,
     void Function()? consumePendingRoute,
   }) {
-    if (role == 'owner' && !onboardingComplete) {
-      return AppRoutes.onboardingOwner;
-    }
+    final isOwner = role == 'owner' && !ownerPending;
     if (pendingRoute != null &&
         !isAuthPath(pendingRoute) &&
-        canAccessRoute(pendingRoute, role)) {
+        canAccessRoute(pendingRoute, role) &&
+        !(ownerPending && _pathOnly(pendingRoute).startsWith('/owner'))) {
       consumePendingRoute?.call();
       return pendingRoute;
     }
+    if (isOwner) return AppRoutes.ownerResolve;
     return AppRoutes.home;
   }
 

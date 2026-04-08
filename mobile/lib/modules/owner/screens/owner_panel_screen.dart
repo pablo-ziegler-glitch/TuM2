@@ -1,177 +1,548 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../models/owner_merchant_summary.dart';
+import '../providers/owner_providers.dart';
 
-/// OWNER-01 — Panel principal del dueño (modal full-screen).
-/// Accesible desde el tab Perfil con rol owner.
-class OwnerPanelScreen extends StatelessWidget {
+/// OWNER-01 — Pantalla base "Mi comercio" para OWNER.
+class OwnerPanelScreen extends ConsumerStatefulWidget {
   const OwnerPanelScreen({super.key});
 
   @override
+  ConsumerState<OwnerPanelScreen> createState() => _OwnerPanelScreenState();
+}
+
+/// Alias explícito para la nomenclatura sugerida de la tarjeta.
+class OwnerDashboardPage extends OwnerPanelScreen {
+  const OwnerDashboardPage({super.key});
+}
+
+class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
+  bool _redirectedToOnboarding = false;
+
+  @override
   Widget build(BuildContext context) {
+    final ownerMerchantAsync = ref.watch(ownerMerchantProvider);
+
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
+      backgroundColor: AppColors.neutral50,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.neutral50,
         elevation: 0,
         scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
+        leading: CloseButton(
           color: AppColors.neutral900,
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+              return;
+            }
+            context.go(AppRoutes.profile);
+          },
         ),
-        title: Text('Mi comercio', style: AppTextStyles.headingSm),
-        centerTitle: true,
+        title: const Text('Mi comercio', style: AppTextStyles.headingSm),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _StatusSection(),
-          const SizedBox(height: 20),
-          _QuickActions(),
-          const SizedBox(height: 16),
-          _WarningBanner(),
-          const SizedBox(height: 12),
-          _PromoBanner(),
-          const SizedBox(height: 24),
-        ],
+      body: ownerMerchantAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary500),
+        ),
+        error: (_, __) => _OwnerDashboardError(
+          onRetry: () => ref.invalidate(ownerMerchantProvider),
+        ),
+        data: (resolution) {
+          if (!resolution.hasMerchant) {
+            _redirectToOnboarding(context);
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return _OwnerDashboardBody(
+            merchant: resolution.primaryMerchant!,
+            hasMultipleMerchants: resolution.hasMultipleMerchants,
+          );
+        },
       ),
     );
   }
+
+  void _redirectToOnboarding(BuildContext context) {
+    if (_redirectedToOnboarding) return;
+    _redirectedToOnboarding = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.go(AppRoutes.onboardingOwner);
+    });
+  }
 }
 
-// ── Estado actual ─────────────────────────────────────────────────────────────
+class _OwnerDashboardBody extends StatelessWidget {
+  const _OwnerDashboardBody({
+    required this.merchant,
+    required this.hasMultipleMerchants,
+  });
 
-class _StatusSection extends StatelessWidget {
+  final OwnerMerchantSummary merchant;
+  final bool hasMultipleMerchants;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'ESTADO ACTUAL',
-            style: AppTextStyles.labelSm.copyWith(
-              color: AppColors.neutral500,
-              letterSpacing: 1.0,
+    final showScheduleAlert =
+        merchant.status == 'active' && !merchant.hasSchedules;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+      children: [
+        _OwnerMerchantHeader(merchant: merchant),
+        if (hasMultipleMerchants) ...[
+          const SizedBox(height: 12),
+          const _InconsistencyBanner(),
+        ],
+        if (merchant.isReviewPending) ...[
+          const SizedBox(height: 14),
+          const _ReviewPendingCard(),
+        ],
+        if (showScheduleAlert) ...[
+          const SizedBox(height: 14),
+          const _ScheduleAlertCard(),
+        ],
+        const SizedBox(height: 14),
+        _MerchantStatusCard(merchant: merchant),
+        const SizedBox(height: 14),
+        _OwnerQuickActions(merchant: merchant),
+        if (!merchant.hasProducts) ...[
+          const SizedBox(height: 14),
+          const _EmptyProductsCard(),
+        ],
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.center,
+          child: TextButton.icon(
+            onPressed: () =>
+                context.push(AppRoutes.commerceDetailPath(merchant.id)),
+            icon: const Icon(Icons.visibility_outlined),
+            label: const Text('Ver cómo ven tu comercio'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primary600,
+              textStyle: AppTextStyles.labelMd,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.successBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Abierto',
-                  style: AppTextStyles.labelMd
-                      .copyWith(color: AppColors.successFg),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text('Cierra a las 22:00', style: AppTextStyles.bodySm),
-              const Spacer(),
-              GestureDetector(
-                onTap: () {},
-                child: Text(
-                  'Agregar seña →',
-                  style: AppTextStyles.labelSm
-                      .copyWith(color: AppColors.primary500),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Acciones rápidas ──────────────────────────────────────────────────────────
-
-class _QuickActions extends StatelessWidget {
-  static const _actions = [
-    (icon: Icons.person_outline, label: 'Editar perfil', route: AppRoutes.ownerEdit),
-    (icon: Icons.inventory_2_outlined, label: 'Productos', route: AppRoutes.ownerProducts),
-    (icon: Icons.schedule_outlined, label: 'Horarios', route: AppRoutes.ownerSchedules),
-    (icon: Icons.calendar_today_outlined, label: 'Turnos', route: AppRoutes.ownerDuties),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ACCIONES RÁPIDAS',
-          style: AppTextStyles.labelSm.copyWith(
-            color: AppColors.neutral500,
-            letterSpacing: 1.0,
-          ),
-        ),
-        const SizedBox(height: 10),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 2.3,
-          children:
-              _actions.map((a) => _ActionTile(icon: a.icon, label: a.label, route: a.route)).toList(),
         ),
       ],
     );
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({required this.icon, required this.label, required this.route});
-  final IconData icon;
-  final String label;
-  final String route;
+class _OwnerMerchantHeader extends StatelessWidget {
+  const _OwnerMerchantHeader({required this.merchant});
+
+  final OwnerMerchantSummary merchant;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push(route),
-      child: Container(
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.neutral900.withValues(alpha: 0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColors.primary500,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.storefront, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(merchant.name, style: AppTextStyles.headingMd),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: AppColors.neutral600,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        merchant.locationLabel,
+                        style: AppTextStyles.bodySm,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          _VisibilityPill(label: _visibilityLabel(merchant.visibilityStatus)),
+        ],
+      ),
+    );
+  }
+
+  String _visibilityLabel(String visibilityStatus) {
+    switch (visibilityStatus) {
+      case 'visible':
+        return 'Visible';
+      case 'review_pending':
+        return 'En revisión';
+      case 'suppressed':
+        return 'Suprimido';
+      default:
+        return 'Oculto';
+    }
+  }
+}
+
+class _VisibilityPill extends StatelessWidget {
+  const _VisibilityPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.successBg,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelSm.copyWith(color: AppColors.successFg),
+      ),
+    );
+  }
+}
+
+class _ReviewPendingCard extends StatelessWidget {
+  const _ReviewPendingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary600, AppColors.primary500],
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Estamos revisando tu perfil',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Nuestro equipo está validando la información del comercio.',
+            style: TextStyle(color: Color(0xFFDCE7FF)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduleAlertCard extends StatelessWidget {
+  const _ScheduleAlertCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.tertiary50,
+        borderRadius: BorderRadius.circular(16),
+        border: const Border(
+          left: BorderSide(color: AppColors.tertiary500, width: 4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Horario no configurado',
+            style: AppTextStyles.labelSm.copyWith(color: AppColors.tertiary700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Agregá tus horarios para aparecer como abierto.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.tertiary800),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => context.push(AppRoutes.ownerSchedules),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.tertiary500,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.schedule, size: 18),
+            label: const Text('Configurar ahora'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MerchantStatusCard extends StatelessWidget {
+  const _MerchantStatusCard({required this.merchant});
+
+  final OwnerMerchantSummary merchant;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          _StatusRow(
+            icon: Icons.storefront_outlined,
+            title: 'Estado del comercio',
+            badgeLabel: _statusLabel(merchant.status),
+            badgeColor: _statusColor(merchant.status),
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.neutral100),
+          const SizedBox(height: 12),
+          _StatusRow(
+            icon: Icons.verified_outlined,
+            title: 'Estado de confianza',
+            badgeLabel: _verificationLabel(merchant.verificationStatus),
+            badgeColor: AppColors.primary100,
+            textColor: AppColors.primary700,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'active':
+        return 'Activo';
+      case 'draft':
+        return 'Borrador';
+      case 'inactive':
+        return 'Inactivo';
+      case 'archived':
+        return 'Archivado';
+      default:
+        return status;
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'active':
+        return AppColors.successBg;
+      case 'draft':
+        return AppColors.warningBg;
+      case 'archived':
+        return AppColors.neutral200;
+      default:
+        return AppColors.neutral100;
+    }
+  }
+
+  String _verificationLabel(String verificationStatus) {
+    switch (verificationStatus) {
+      case 'verified':
+        return 'Comercio verificado';
+      case 'validated':
+        return 'Comercio validado';
+      case 'claimed':
+        return 'Comercio reclamado';
+      case 'community_submitted':
+        return 'Comunidad';
+      default:
+        return 'Sin verificar';
+    }
+  }
+}
+
+class _StatusRow extends StatelessWidget {
+  const _StatusRow({
+    required this.icon,
+    required this.title,
+    required this.badgeLabel,
+    required this.badgeColor,
+    this.textColor = AppColors.neutral800,
+  });
+
+  final IconData icon;
+  final String title;
+  final String badgeLabel;
+  final Color badgeColor;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.secondary500),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(title, style: AppTextStyles.labelMd),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: badgeColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            badgeLabel,
+            style: AppTextStyles.labelSm.copyWith(color: textColor),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OwnerQuickActions extends StatelessWidget {
+  const _OwnerQuickActions({required this.merchant});
+
+  final OwnerMerchantSummary merchant;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = <_OwnerAction>[
+      const _OwnerAction(
+        label: 'Gestionar productos',
+        subtitle: 'Stock y precios',
+        icon: Icons.inventory_2_outlined,
+        route: AppRoutes.ownerProducts,
+      ),
+      const _OwnerAction(
+        label: 'Editar horarios',
+        subtitle: 'Atención y apertura',
+        icon: Icons.schedule_outlined,
+        route: AppRoutes.ownerSchedules,
+      ),
+      const _OwnerAction(
+        label: 'Señales operativas',
+        subtitle: 'Estados del comercio',
+        icon: Icons.campaign_outlined,
+        route: AppRoutes.ownerSignals,
+      ),
+    ];
+
+    if (merchant.isPharmacy) {
+      actions.add(
+        const _OwnerAction(
+          label: 'Turnos de farmacia',
+          subtitle: 'Guardias y calendario',
+          icon: Icons.medical_services_outlined,
+          route: AppRoutes.ownerDuties,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ACCIONES RÁPIDAS',
+          style: AppTextStyles.labelSm.copyWith(
+            color: AppColors.neutral600,
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: 10),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1.05,
+          ),
+          itemCount: actions.length,
+          itemBuilder: (context, index) =>
+              _OwnerActionCard(action: actions[index]),
+        ),
+      ],
+    );
+  }
+}
+
+class _OwnerActionCard extends StatelessWidget {
+  const _OwnerActionCard({required this.action});
+
+  final _OwnerAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () => context.push(action.route),
+      child: Ink(
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(width: 12),
             Container(
-              width: 36,
-              height: 36,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 color: AppColors.primary50,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppColors.primary500, size: 20),
+              child: Icon(action.icon, color: AppColors.primary600),
             ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(
-                label,
-                style: AppTextStyles.labelMd,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+            const Spacer(),
+            Text(
+              action.label,
+              style: AppTextStyles.labelMd,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              action.subtitle,
+              style: AppTextStyles.bodyXs,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -180,44 +551,68 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-// ── Banner de advertencia ─────────────────────────────────────────────────────
+class _OwnerAction {
+  const _OwnerAction({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+    required this.route,
+  });
 
-class _WarningBanner extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  final String route;
+}
+
+class _EmptyProductsCard extends StatelessWidget {
+  const _EmptyProductsCard();
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.warningBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.tertiary200),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
         children: [
-          Icon(Icons.warning_amber_rounded,
-              color: AppColors.warningFg, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Completá la descripción de tu comercio para aparecer mejor en búsquedas',
-                  style: AppTextStyles.bodySm
-                      .copyWith(color: AppColors.neutral800),
-                ),
-                const SizedBox(height: 6),
-                GestureDetector(
-                  onTap: () => context.push(AppRoutes.ownerEdit),
-                  child: Text(
-                    'Completar →',
-                    style: AppTextStyles.labelSm
-                        .copyWith(color: AppColors.primary500),
-                  ),
-                ),
-              ],
+          Container(
+            width: 62,
+            height: 62,
+            decoration: BoxDecoration(
+              color: AppColors.neutral100,
+              borderRadius: BorderRadius.circular(31),
             ),
+            child: const Icon(
+              Icons.inventory_2_outlined,
+              color: AppColors.neutral700,
+              size: 30,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Tu catálogo está vacío',
+            style: AppTextStyles.headingSm,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Empezá cargando tu primer producto para que los vecinos te encuentren.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: () => context.push(AppRoutes.ownerProducts),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary500,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(46),
+            ),
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Agregar producto'),
           ),
         ],
       ),
@@ -225,57 +620,58 @@ class _WarningBanner extends StatelessWidget {
   }
 }
 
-// ── Banner promocional ────────────────────────────────────────────────────────
+class _InconsistencyBanner extends StatelessWidget {
+  const _InconsistencyBanner();
 
-class _PromoBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 100,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.neutral900,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.warningBg,
+        borderRadius: BorderRadius.circular(12),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'TENDA',
-                  style: AppTextStyles.headingSm.copyWith(
-                    color: AppColors.surface,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                Text(
-                  'Pastelería / Gourmet',
-                  style:
-                      AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Impulsá tus ventas hoy',
-                  style: AppTextStyles.labelMd
-                      .copyWith(color: AppColors.surface),
-                ),
-              ],
+      child: Text(
+        'Detectamos más de un comercio asociado a tu usuario. Mostramos el más reciente.',
+        style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral800),
+      ),
+    );
+  }
+}
+
+class _OwnerDashboardError extends StatelessWidget {
+  const _OwnerDashboardError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'No pudimos cargar tu comercio.',
+              style: AppTextStyles.headingSm,
             ),
-          ),
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.neutral700,
-              borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 8),
+            const Text(
+              'Verificá tu conexión e intentá otra vez.',
+              style: AppTextStyles.bodySm,
             ),
-            child: Icon(Icons.storefront,
-                color: AppColors.neutral500, size: 28),
-          ),
-        ],
+            const SizedBox(height: 18),
+            ElevatedButton(
+              onPressed: onRetry,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary500,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
       ),
     );
   }

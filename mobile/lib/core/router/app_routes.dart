@@ -28,10 +28,14 @@ abstract class AppRoutes {
   static const profileProposals = '/profile/propuestas';
 
   // ── OwnerStack (modal full-screen) ──────────────────────────────────────────
-  static const owner = '/owner';
+  static const ownerRoot = '/owner';
+  static const ownerResolve = '/owner/resolve';
+  static const ownerDashboard = '/owner/dashboard';
+  static const owner = ownerRoot;
   static const ownerEdit = '/owner/edit';
   static const ownerProducts = '/owner/products';
   static const ownerSchedules = '/owner/schedules';
+  static const ownerSignals = '/owner/signals';
   static const ownerDuties = '/owner/duties';
 
   // ── AdminStack (modal full-screen) ──────────────────────────────────────────

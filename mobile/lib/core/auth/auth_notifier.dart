@@ -37,26 +37,19 @@ class AuthNotifier extends ChangeNotifier {
     }
 
     try {
-      // Intentar leer custom claims del token actual
-      var tokenResult = await user.getIdTokenResult(false);
-      String? role = tokenResult.claims?['role'] as String?;
+      // Forzar refresh para garantizar claims actualizados post-login.
+      final tokenResult = await user.getIdTokenResult(true);
+      String? role = (tokenResult.claims?['role'] as String?)?.toLowerCase();
       String? merchantId = tokenResult.claims?['merchantId'] as String?;
       bool? onboardingComplete =
           tokenResult.claims?['onboardingComplete'] as bool?;
-
-      // Race condition post-registro: si el claim no existe, forzar refresh
-      if (role == null) {
-        tokenResult = await user.getIdTokenResult(true);
-        role = tokenResult.claims?['role'] as String?;
-        merchantId = tokenResult.claims?['merchantId'] as String?;
-        onboardingComplete =
-            tokenResult.claims?['onboardingComplete'] as bool?;
-      }
+      final ownerPending =
+          _parseOwnerPending(tokenResult.claims?['owner_pending']);
 
       // Fallback a Firestore si los claims siguen sin estar presentes
       if (role == null) {
         final data = await _fetchUserDataFromFirestore(user.uid);
-        role = data.role;
+        role = data.role?.toLowerCase();
         merchantId = data.merchantId;
       }
 
@@ -70,6 +63,7 @@ class AuthNotifier extends ChangeNotifier {
         role: role ?? 'customer',
         merchantId: merchantId,
         onboardingComplete: onboardingComplete ?? (merchantId != null),
+        ownerPending: ownerPending,
       );
     } catch (_) {
       if (version != _eventVersion) return;
@@ -79,6 +73,7 @@ class AuthNotifier extends ChangeNotifier {
         role: 'customer',
         merchantId: null,
         onboardingComplete: false,
+        ownerPending: false,
       );
     }
 
@@ -91,7 +86,7 @@ class AuthNotifier extends ChangeNotifier {
     try {
       final doc = await FirebaseFirestore.instance.doc('users/$uid').get();
       if (!doc.exists) return (role: null, merchantId: null);
-      final data = doc.data() as Map<String, dynamic>?;
+      final data = doc.data();
       return (
         role: data?['role'] as String?,
         merchantId: data?['merchantId'] as String?,
@@ -99,6 +94,14 @@ class AuthNotifier extends ChangeNotifier {
     } catch (_) {
       return (role: null, merchantId: null);
     }
+  }
+
+  bool _parseOwnerPending(Object? rawValue) {
+    if (rawValue is bool) return rawValue;
+    if (rawValue is String) {
+      return rawValue.toLowerCase() == 'true';
+    }
+    return false;
   }
 
   /// Fuerza el estado a [AuthUnauthenticated] e invalida cualquier lookup

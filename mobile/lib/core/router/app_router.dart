@@ -22,6 +22,7 @@ import '../../modules/search/screens/pharmacy_results_screen.dart';
 import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
+import '../../modules/owner/screens/owner_schedule_screen.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
 import '../../modules/merchant_detail/presentation/merchant_detail_page.dart';
 import '../../modules/merchant_detail/presentation/product_detail_page.dart';
@@ -269,11 +270,7 @@ List<RouteBase> _buildRoutes() {
         ),
         GoRoute(
           path: 'schedules',
-          builder: (_, __) => const PlaceholderScreen(
-            screenId: 'OWNER-06',
-            label: 'Horarios y señales',
-            roleRequired: 'owner',
-          ),
+          builder: (_, __) => const OwnerScheduleScreen(),
         ),
         GoRoute(
           path: 'duties',

@@ -119,8 +119,6 @@ export const onboardingOwnerSubmit = onCall(
     // ── Atomic write (transaction) ──────────────────────────────────────────
     const merchantRef = db().doc(`merchants/${draftMerchantId}`);
     const schedulesRef = db().doc(`merchant_schedules/${draftMerchantId}`);
-    const step3 = progress.step3 as OnboardingStep3Data | null;
-    const step3Skipped = progress.step3Skipped ?? false;
 
     await db().runTransaction(async (tx) => {
       // Re-read user inside transaction to avoid stale data

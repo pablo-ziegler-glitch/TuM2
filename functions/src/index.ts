@@ -16,6 +16,11 @@ export { assignOwnerRole } from "./callables/assignOwnerRole";
 
 export { onMerchantWriteSyncPublic } from "./triggers/merchants";
 export { onScheduleWriteRecalculateOpenNow } from "./triggers/schedules";
+export {
+  onOwnerWeeklyScheduleWrite,
+  onOwnerScheduleExceptionWrite,
+  onOwnerScheduleRangeWrite,
+} from "./triggers/ownerSchedules";
 export { onSignalsWriteSyncPublic } from "./triggers/signals";
 export { onPharmacyDutyWriteSyncMerchant } from "./triggers/duties";
 export { onClaimApprovedPromoteMerchant } from "./triggers/claims";

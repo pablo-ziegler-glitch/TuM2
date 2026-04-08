@@ -102,6 +102,26 @@ service cloud.firestore {
         && !('visibilityStatus' in request.resource.data.diff(resource.data).affectedKeys())
         && !('ownerUserId' in request.resource.data.diff(resource.data).affectedKeys());
       allow delete: if isAdmin();
+
+      // ─── Subcolecciones privadas de horarios OWNER ────────────────────────
+      match /schedule_config/{docId} {
+        allow read: if isOwnerRole() && merchantBelongsToUser(merchantId);
+        allow read, write: if isAdmin();
+        allow create, update: if isOwnerRole() && merchantBelongsToUser(merchantId);
+        allow delete: if isAdmin();
+      }
+
+      match /schedule_exceptions/{date} {
+        allow read: if isOwnerRole() && merchantBelongsToUser(merchantId);
+        allow read, write: if isAdmin();
+        allow create, update, delete: if isOwnerRole() && merchantBelongsToUser(merchantId);
+      }
+
+      match /schedule_exceptions_ranges/{rangeId} {
+        allow read: if isOwnerRole() && merchantBelongsToUser(merchantId);
+        allow read, write: if isAdmin();
+        allow create, update, delete: if isOwnerRole() && merchantBelongsToUser(merchantId);
+      }
     }
 
     // ─── merchant_public/{merchantId} ────────────────────────────────────────

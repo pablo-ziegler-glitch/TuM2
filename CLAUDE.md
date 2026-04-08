@@ -76,6 +76,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0057]** Implementar mapa ✅ | Mobile app — SEARCH-03 migrado a Google Maps con sistema de markers por estado, selección visual, z-index por prioridad y clustering por grilla desacoplado |
 | **[0058]** Implementar ficha de comercio ✅ | Mobile app — DETAIL-01 implementado con navegación real desde search/home/deep links |
 | **[0060]** Implementar vista Abierto ahora ✅ | Mobile app — HOME-02 implementado con filtros por rubro MVP y navegación al mapa |
+| **[0066]** Implementar carga de horarios ✅ | Mobile app — OWNER-06 implementado con UI Stitch completa, validaciones, excepciones/cierres, persistencia en subcolecciones, triggers backend de recompute, feature flag Remote Config y analytics de módulo |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
@@ -86,10 +87,10 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ---
 
-## Indicador de avance MVP (snapshot 2026-04-07)
+## Indicador de avance MVP (snapshot 2026-04-08)
 
-- Método A (prioridad P0/P1 con tags `MVP` o `Fundacional`, excluyendo `Post-MVP` y `MVP+`): **43 / 89 = 48.31%**
-- Método B (todas las prioridades con tags `MVP` o `Fundacional`, excluyendo `Post-MVP` y `MVP+`): **43 / 97 = 44.33%**
+- Método A (prioridad P0/P1 con tags `MVP` o `Fundacional`, excluyendo `Post-MVP` y `MVP+`): **44 / 89 = 49.44%**
+- Método B (todas las prioridades con tags `MVP` o `Fundacional`, excluyendo `Post-MVP` y `MVP+`): **44 / 97 = 45.36%**
 - Este indicador mide cierre de tarjetas del backlog maestro; no reemplaza criterios de release (QA/legal/datos piloto).
 
 ---
@@ -180,7 +181,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
 - [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP`
 - [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP`
-- [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP`
+- [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` ✅
 - [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP`
 - [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP`
 - [0069] **Implementar módulo de propuestas y votos** — P1 — `Mobile, Growth, MVP`
@@ -401,3 +402,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - [0058] DETAIL-01 consolidado con navegación desde mapa/lista/home y deep links `/commerce/:id`.
 - [0060] HOME-02 consolidado en flujo productivo con navegación a SEARCH-03.
 - [0061] Farmacias de turno consolidado con flujo público y deep links de detalle.
+- [0066] OWNER-06 consolidado con pantalla completa de horarios (corrido/cortado/cerrado), preview y validaciones inline.
+- [0066] Implementadas excepciones por fecha y cierres temporales por rango con alta/edición/eliminación.
+- [0066] Integración Firestore sobre `schedule_config/weekly`, `schedule_exceptions` y `schedule_exceptions_ranges`, con reglas y triggers backend para recompute de proyección pública.
+- [0066] Integrado feature flag `owner_schedule_editor_enabled` vía Firebase Remote Config + eventos analytics `owner_schedule_*` para seguimiento de adopción y errores.

@@ -83,6 +83,22 @@ flutter pub get
 flutter run
 ```
 
+### Portal Admin Web (TuM2-0122)
+```bash
+cd web
+flutter pub get
+flutter run -d chrome \
+  --dart-define=FIREBASE_API_KEY=... \
+  --dart-define=FIREBASE_APP_ID=... \
+  --dart-define=FIREBASE_MESSAGING_SENDER_ID=... \
+  --dart-define=FIREBASE_PROJECT_ID=...
+```
+
+Opcional para emuladores locales:
+```bash
+--dart-define=USE_FIREBASE_EMULATORS=true
+```
+
 ---
 
 ## Documentación

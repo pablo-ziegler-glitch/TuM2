@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../data/import_data_repository.dart';
 import '../models/import_batch_ui.dart';
 
 /// Pantalla principal de importaciones — Import Overview Dashboard.
@@ -16,12 +17,18 @@ class ImportListScreen extends StatefulWidget {
 }
 
 class _ImportListScreenState extends State<ImportListScreen> {
+  final _repository = ImportDataRepository();
   String _activeFilter = 'All';
-  static const _filters = ['All', 'Official Dataset', 'Master Catalog', 'Generic'];
+  static const _filters = [
+    'All',
+    'Official Dataset',
+    'Master Catalog',
+    'Generic'
+  ];
 
-  List<ImportBatchUi> get _filteredBatches {
-    if (_activeFilter == 'All') return mockBatches;
-    return mockBatches.where((b) {
+  List<ImportBatchUi> _filteredBatches(List<ImportBatchUi> batches) {
+    if (_activeFilter == 'All') return batches;
+    return batches.where((b) {
       return switch (_activeFilter) {
         'Official Dataset' => b.importType == ImportType.officialDataset,
         'Master Catalog' => b.importType == ImportType.masterCatalog,
@@ -35,26 +42,49 @@ class _ImportListScreenState extends State<ImportListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 24),
-            _buildKpiRow(),
-            const SizedBox(height: 20),
-            _buildQuickFilters(),
-            const SizedBox(height: 24),
-            if (mockBatches.isEmpty)
-              _buildEmptyState(context)
-            else ...[
-              _buildBatchesPanel(context),
-              const SizedBox(height: 24),
-              _buildRecentAuditTrail(context),
-            ],
-          ],
-        ),
+      body: StreamBuilder<List<ImportBatchUi>>(
+        stream: _repository.watchBatches(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'No se pudo cargar import_batches.\n${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySm.copyWith(color: AppColors.errorFg),
+              ),
+            );
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final batches = snapshot.data!;
+          final filtered = _filteredBatches(batches);
+          final kpis = ImportOverviewKpis.fromBatches(batches);
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 24),
+                _buildKpiRow(kpis),
+                const SizedBox(height: 20),
+                _buildQuickFilters(),
+                const SizedBox(height: 24),
+                if (batches.isEmpty)
+                  _buildEmptyState(context)
+                else ...[
+                  _buildBatchesPanel(context, filtered),
+                  const SizedBox(height: 24),
+                  _buildRecentAuditTrail(context, batches),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -100,21 +130,44 @@ class _ImportListScreenState extends State<ImportListScreen> {
     );
   }
 
-  Widget _buildKpiRow() {
-    final kpis = mockOverviewKpis;
+  Widget _buildKpiRow(ImportOverviewKpis kpis) {
     return Row(
       children: [
-        _KpiCard(label: 'Total Imports', value: '${kpis.totalImports}', icon: Icons.upload_file_outlined, color: AppColors.primary500),
+        _KpiCard(
+            label: 'Total Imports',
+            value: '${kpis.totalImports}',
+            icon: Icons.upload_file_outlined,
+            color: AppColors.primary500),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Success Rate', value: '${(kpis.successRate * 100).toStringAsFixed(1)}%', icon: Icons.check_circle_outline, color: AppColors.successFg),
+        _KpiCard(
+            label: 'Success Rate',
+            value: '${(kpis.successRate * 100).toStringAsFixed(1)}%',
+            icon: Icons.check_circle_outline,
+            color: AppColors.successFg),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Failed Batches', value: '${kpis.failedBatches}', icon: Icons.error_outline, color: AppColors.errorFg),
+        _KpiCard(
+            label: 'Failed Batches',
+            value: '${kpis.failedBatches}',
+            icon: Icons.error_outline,
+            color: AppColors.errorFg),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Rows Processed', value: NumberFormat.compact().format(kpis.rowsProcessed), icon: Icons.table_rows_outlined, color: AppColors.secondary500),
+        _KpiCard(
+            label: 'Rows Processed',
+            value: NumberFormat.compact().format(kpis.rowsProcessed),
+            icon: Icons.table_rows_outlined,
+            color: AppColors.secondary500),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Pending Conflicts', value: '${kpis.pendingConflicts}', icon: Icons.merge_type_outlined, color: AppColors.warningFg),
+        _KpiCard(
+            label: 'Pending Conflicts',
+            value: '${kpis.pendingConflicts}',
+            icon: Icons.merge_type_outlined,
+            color: AppColors.warningFg),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Active Templates', value: '${kpis.activeTemplates}', icon: Icons.description_outlined, color: AppColors.neutral600),
+        _KpiCard(
+            label: 'Active Templates',
+            value: '${kpis.activeTemplates}',
+            icon: Icons.description_outlined,
+            color: AppColors.neutral600),
       ],
     );
   }
@@ -150,7 +203,8 @@ class _ImportListScreenState extends State<ImportListScreen> {
     );
   }
 
-  Widget _buildBatchesPanel(BuildContext context) {
+  Widget _buildBatchesPanel(
+      BuildContext context, List<ImportBatchUi> filteredBatches) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -164,7 +218,8 @@ class _ImportListScreenState extends State<ImportListScreen> {
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
             child: Row(
               children: [
-                Text('Recent Batches', style: AppTextStyles.headingSm.copyWith(fontSize: 14)),
+                Text('Recent Batches',
+                    style: AppTextStyles.headingSm.copyWith(fontSize: 14)),
                 const Spacer(),
                 TextButton(
                   onPressed: () => context.go('/imports/history'),
@@ -181,17 +236,18 @@ class _ImportListScreenState extends State<ImportListScreen> {
           const Divider(height: 1, color: AppColors.neutral100),
           _TableHeader(),
           const Divider(height: 1, color: AppColors.neutral100),
-          ..._filteredBatches.map((batch) => _BatchTableRow(
-            batch: batch,
-            onTap: () => context.go('/imports/${batch.id}'),
-          )),
+          ...filteredBatches.map((batch) => _BatchTableRow(
+                batch: batch,
+                onTap: () => context.go('/imports/${batch.id}'),
+              )),
         ],
       ),
     );
   }
 
-  Widget _buildRecentAuditTrail(BuildContext context) {
-    final batch = mockBatches.first;
+  Widget _buildRecentAuditTrail(
+      BuildContext context, List<ImportBatchUi> batches) {
+    final batch = batches.first;
     if (batch.auditTrail.isEmpty) return const SizedBox.shrink();
 
     return Container(
@@ -206,7 +262,8 @@ class _ImportListScreenState extends State<ImportListScreen> {
         children: [
           Row(
             children: [
-              Text('Recent Audit Trail', style: AppTextStyles.headingSm.copyWith(fontSize: 14)),
+              Text('Recent Audit Trail',
+                  style: AppTextStyles.headingSm.copyWith(fontSize: 14)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -214,7 +271,9 @@ class _ImportListScreenState extends State<ImportListScreen> {
                   color: AppColors.neutral100,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text('Batch #${batch.batchNumber}', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600)),
+                child: Text('Batch #${batch.batchNumber}',
+                    style: AppTextStyles.bodyXs
+                        .copyWith(color: AppColors.neutral600)),
               ),
               const Spacer(),
               TextButton(
@@ -229,7 +288,9 @@ class _ImportListScreenState extends State<ImportListScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          ...batch.auditTrail.take(4).map((event) => _AuditTrailRow(event: event)),
+          ...batch.auditTrail
+              .take(4)
+              .map((event) => _AuditTrailRow(event: event)),
         ],
       ),
     );
@@ -248,7 +309,8 @@ class _ImportListScreenState extends State<ImportListScreen> {
                 color: AppColors.primary500.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.upload_file_outlined, size: 32, color: AppColors.primary500),
+              child: const Icon(Icons.upload_file_outlined,
+                  size: 32, color: AppColors.primary500),
             ),
             const SizedBox(height: 20),
             Text('No imports yet', style: AppTextStyles.headingSm),
@@ -265,18 +327,28 @@ class _ImportListScreenState extends State<ImportListScreen> {
               label: const Text('New Import'),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary500,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
             ),
             const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _FeatureCard(icon: Icons.source_outlined, title: 'Official Datasets', description: 'REPES, WiFi, municipal data'),
+                _FeatureCard(
+                    icon: Icons.source_outlined,
+                    title: 'Official Datasets',
+                    description: 'REPES, WiFi, municipal data'),
                 const SizedBox(width: 16),
-                _FeatureCard(icon: Icons.inventory_2_outlined, title: 'Master Catalog', description: 'Products with barcode + brand'),
+                _FeatureCard(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Master Catalog',
+                    description: 'Products with barcode + brand'),
                 const SizedBox(width: 16),
-                _FeatureCard(icon: Icons.tune_outlined, title: 'Smart Mapping', description: 'AI-assisted field detection'),
+                _FeatureCard(
+                    icon: Icons.tune_outlined,
+                    title: 'Smart Mapping',
+                    description: 'AI-assisted field detection'),
               ],
             ),
           ],
@@ -289,7 +361,11 @@ class _ImportListScreenState extends State<ImportListScreen> {
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _KpiCard extends StatelessWidget {
-  const _KpiCard({required this.label, required this.value, required this.icon, required this.color});
+  const _KpiCard(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.color});
   final String label;
   final String value;
   final IconData icon;
@@ -315,14 +391,17 @@ class _KpiCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500, fontSize: 11),
+                    style: AppTextStyles.bodyXs
+                        .copyWith(color: AppColors.neutral500, fontSize: 11),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(value, style: AppTextStyles.headingSm.copyWith(fontSize: 20, color: AppColors.neutral900)),
+            Text(value,
+                style: AppTextStyles.headingSm
+                    .copyWith(fontSize: 20, color: AppColors.neutral900)),
           ],
         ),
       ),
@@ -389,14 +468,16 @@ class _BatchTableRowState extends State<_BatchTableRow> {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 child: Row(
                   children: [
                     Expanded(
                       flex: 1,
                       child: Text(
                         '#${widget.batch.batchNumber}',
-                        style: AppTextStyles.labelSm.copyWith(color: AppColors.primary500, fontSize: 12),
+                        style: AppTextStyles.labelSm.copyWith(
+                            color: AppColors.primary500, fontSize: 12),
                       ),
                     ),
                     Expanded(
@@ -404,8 +485,12 @@ class _BatchTableRowState extends State<_BatchTableRow> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.batch.importType.label, style: AppTextStyles.labelSm.copyWith(fontSize: 12)),
-                          Text(widget.batch.datasetType.label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400)),
+                          Text(widget.batch.importType.label,
+                              style:
+                                  AppTextStyles.labelSm.copyWith(fontSize: 12)),
+                          Text(widget.batch.datasetType.label,
+                              style: AppTextStyles.bodyXs
+                                  .copyWith(color: AppColors.neutral400)),
                         ],
                       ),
                     ),
@@ -421,12 +506,18 @@ class _BatchTableRowState extends State<_BatchTableRow> {
                       flex: 2,
                       child: Row(
                         children: [
-                          _MetricChip(value: widget.batch.processedCount, color: AppColors.neutral600),
+                          _MetricChip(
+                              value: widget.batch.processedCount,
+                              color: AppColors.neutral600),
                           const SizedBox(width: 4),
-                          _MetricChip(value: widget.batch.createdCount, color: AppColors.successFg),
+                          _MetricChip(
+                              value: widget.batch.createdCount,
+                              color: AppColors.successFg),
                           const SizedBox(width: 4),
                           if (widget.batch.errorCount > 0)
-                            _MetricChip(value: widget.batch.errorCount, color: AppColors.errorFg),
+                            _MetricChip(
+                                value: widget.batch.errorCount,
+                                color: AppColors.errorFg),
                         ],
                       ),
                     ),
@@ -437,8 +528,10 @@ class _BatchTableRowState extends State<_BatchTableRow> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        DateFormat('dd MMM yyyy · HH:mm', 'es').format(widget.batch.createdAt),
-                        style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+                        DateFormat('dd MMM yyyy · HH:mm', 'es')
+                            .format(widget.batch.createdAt),
+                        style: AppTextStyles.bodyXs
+                            .copyWith(color: AppColors.neutral500),
                       ),
                     ),
                     Expanded(
@@ -450,7 +543,8 @@ class _BatchTableRowState extends State<_BatchTableRow> {
                           borderRadius: BorderRadius.circular(4),
                           child: const Padding(
                             padding: EdgeInsets.all(4),
-                            child: Icon(Icons.open_in_new, size: 14, color: AppColors.neutral400),
+                            child: Icon(Icons.open_in_new,
+                                size: 14, color: AppColors.neutral400),
                           ),
                         ),
                       ),
@@ -482,7 +576,8 @@ class _MetricChip extends StatelessWidget {
       ),
       child: Text(
         '$value',
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+        style:
+            TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
       ),
     );
   }
@@ -495,21 +590,60 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, bg, label) = switch (status) {
-      ImportBatchStatus.completed => (AppColors.successFg, AppColors.successFg.withValues(alpha: 0.1), 'Completed'),
-      ImportBatchStatus.running => (AppColors.primary500, AppColors.primary500.withValues(alpha: 0.1), 'Running'),
-      ImportBatchStatus.failed => (AppColors.errorFg, AppColors.errorFg.withValues(alpha: 0.1), 'Failed'),
-      ImportBatchStatus.hidden => (AppColors.neutral500, AppColors.neutral200, 'Staged'),
-      ImportBatchStatus.rolledBack => (AppColors.warningFg, AppColors.warningFg.withValues(alpha: 0.1), 'Rolled Back'),
-      ImportBatchStatus.validated => (AppColors.secondary500, AppColors.secondary500.withValues(alpha: 0.1), 'Validated'),
-      ImportBatchStatus.partial => (AppColors.warningFg, AppColors.warningFg.withValues(alpha: 0.1), 'Partial'),
-      ImportBatchStatus.draft => (AppColors.neutral500, AppColors.neutral100, 'Draft'),
-      ImportBatchStatus.archived => (AppColors.neutral400, AppColors.neutral100, 'Archived'),
+      ImportBatchStatus.completed => (
+          AppColors.successFg,
+          AppColors.successFg.withValues(alpha: 0.1),
+          'Completed'
+        ),
+      ImportBatchStatus.running => (
+          AppColors.primary500,
+          AppColors.primary500.withValues(alpha: 0.1),
+          'Running'
+        ),
+      ImportBatchStatus.failed => (
+          AppColors.errorFg,
+          AppColors.errorFg.withValues(alpha: 0.1),
+          'Failed'
+        ),
+      ImportBatchStatus.hidden => (
+          AppColors.neutral500,
+          AppColors.neutral200,
+          'Staged'
+        ),
+      ImportBatchStatus.rolledBack => (
+          AppColors.warningFg,
+          AppColors.warningFg.withValues(alpha: 0.1),
+          'Rolled Back'
+        ),
+      ImportBatchStatus.validated => (
+          AppColors.secondary500,
+          AppColors.secondary500.withValues(alpha: 0.1),
+          'Validated'
+        ),
+      ImportBatchStatus.partial => (
+          AppColors.warningFg,
+          AppColors.warningFg.withValues(alpha: 0.1),
+          'Partial'
+        ),
+      ImportBatchStatus.draft => (
+          AppColors.neutral500,
+          AppColors.neutral100,
+          'Draft'
+        ),
+      ImportBatchStatus.archived => (
+          AppColors.neutral400,
+          AppColors.neutral100,
+          'Archived'
+        ),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
-      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.w600, color: color)),
     );
   }
 }
@@ -547,19 +681,26 @@ class _AuditTrailRow extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(event.label, style: AppTextStyles.labelSm.copyWith(fontSize: 12)),
+                    Text(event.label,
+                        style: AppTextStyles.labelSm.copyWith(fontSize: 12)),
                     const SizedBox(width: 8),
-                    Text('· ${event.actor}', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400)),
+                    Text('· ${event.actor}',
+                        style: AppTextStyles.bodyXs
+                            .copyWith(color: AppColors.neutral400)),
                     const Spacer(),
                     Text(
-                      DateFormat('dd MMM · HH:mm', 'es').format(event.timestamp),
-                      style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400),
+                      DateFormat('dd MMM · HH:mm', 'es')
+                          .format(event.timestamp),
+                      style: AppTextStyles.bodyXs
+                          .copyWith(color: AppColors.neutral400),
                     ),
                   ],
                 ),
                 if (event.detail != null) ...[
                   const SizedBox(height: 2),
-                  Text(event.detail!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500)),
+                  Text(event.detail!,
+                      style: AppTextStyles.bodyXs
+                          .copyWith(color: AppColors.neutral500)),
                 ],
               ],
             ),
@@ -571,7 +712,8 @@ class _AuditTrailRow extends StatelessWidget {
 }
 
 class _FeatureCard extends StatelessWidget {
-  const _FeatureCard({required this.icon, required this.title, required this.description});
+  const _FeatureCard(
+      {required this.icon, required this.title, required this.description});
   final IconData icon;
   final String title;
   final String description;
@@ -590,9 +732,13 @@ class _FeatureCard extends StatelessWidget {
         children: [
           Icon(icon, size: 28, color: AppColors.primary500),
           const SizedBox(height: 8),
-          Text(title, style: AppTextStyles.labelMd.copyWith(fontSize: 13), textAlign: TextAlign.center),
+          Text(title,
+              style: AppTextStyles.labelMd.copyWith(fontSize: 13),
+              textAlign: TextAlign.center),
           const SizedBox(height: 4),
-          Text(description, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500), textAlign: TextAlign.center),
+          Text(description,
+              style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+              textAlign: TextAlign.center),
         ],
       ),
     );

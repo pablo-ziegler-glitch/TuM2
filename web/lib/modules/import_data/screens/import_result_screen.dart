@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../data/import_data_repository.dart';
 import '../models/import_batch_ui.dart';
 import '../widgets/revert_confirm_dialog.dart';
 
@@ -21,18 +22,15 @@ class ImportResultScreen extends StatefulWidget {
 
 class _ImportResultScreenState extends State<ImportResultScreen>
     with SingleTickerProviderStateMixin {
+  final _repository = ImportDataRepository();
   late final TabController _tabController;
-  ImportBatchUi? _batch;
+  bool _isPublishing = false;
+  bool _isReverting = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    try {
-      _batch = mockBatches.firstWhere((b) => b.id == widget.batchId);
-    } catch (_) {
-      _batch = null;
-    }
   }
 
   @override
@@ -43,80 +41,89 @@ class _ImportResultScreenState extends State<ImportResultScreen>
 
   @override
   Widget build(BuildContext context) {
-    if (_batch == null) {
-      return Scaffold(
-        backgroundColor: AppColors.scaffoldBg,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.search_off_outlined, size: 40, color: AppColors.neutral400),
-              const SizedBox(height: 16),
-              Text('Import not found', style: AppTextStyles.headingSm),
-              const SizedBox(height: 8),
-              Text('Batch ID: ${widget.batchId}', style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500)),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => context.go('/imports'),
-                icon: const Icon(Icons.arrow_back, size: 16),
-                label: const Text('Back to imports'),
-                style: FilledButton.styleFrom(backgroundColor: AppColors.primary500),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final batch = _batch!;
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildBreadcrumb(context, batch),
-            const SizedBox(height: 20),
-            _buildHeaderRow(context, batch),
-            const SizedBox(height: 20),
-            // Fila de KPIs
-            _buildKpiRow(batch),
-            const SizedBox(height: 24),
-            // Dos columnas: Timeline + Info lateral
-            Row(
+      body: StreamBuilder<ImportBatchUi?>(
+        stream: _repository.watchBatch(widget.batchId),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'No se pudo cargar el batch.\n${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySm.copyWith(color: AppColors.errorFg),
+              ),
+            );
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final batch = snapshot.data;
+          if (batch == null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.search_off_outlined,
+                      size: 40, color: AppColors.neutral400),
+                  const SizedBox(height: 16),
+                  Text('Import not found', style: AppTextStyles.headingSm),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Batch ID: ${widget.batchId}',
+                    style: AppTextStyles.bodySm
+                        .copyWith(color: AppColors.neutral500),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(28),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Columna izquierda — Processing Timeline
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildProcessingTimeline(batch),
-                      const SizedBox(height: 20),
-                      _buildValidationIssuesPanel(batch),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 20),
-                // Columna derecha — File Intelligence + Actor Context + Conflict Logic
-                SizedBox(
-                  width: 280,
-                  child: Column(
-                    children: [
-                      _buildFileIntelligenceCard(batch),
-                      const SizedBox(height: 16),
-                      _buildActorContextCard(batch),
-                      const SizedBox(height: 16),
-                      _buildConflictLogicCard(batch),
-                    ],
-                  ),
+                _buildBreadcrumb(context, batch),
+                const SizedBox(height: 20),
+                _buildHeaderRow(context, batch),
+                const SizedBox(height: 20),
+                _buildKpiRow(batch),
+                const SizedBox(height: 24),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildProcessingTimeline(batch),
+                          const SizedBox(height: 20),
+                          _buildValidationIssuesPanel(batch),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    SizedBox(
+                      width: 280,
+                      child: Column(
+                        children: [
+                          _buildFileIntelligenceCard(batch),
+                          const SizedBox(height: 16),
+                          _buildActorContextCard(batch),
+                          const SizedBox(height: 16),
+                          _buildConflictLogicCard(batch),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -131,9 +138,12 @@ class _ImportResultScreenState extends State<ImportResultScreen>
             padding: const EdgeInsets.all(2),
             child: Row(
               children: [
-                const Icon(Icons.arrow_back, size: 15, color: AppColors.neutral500),
+                const Icon(Icons.arrow_back,
+                    size: 15, color: AppColors.neutral500),
                 const SizedBox(width: 5),
-                Text('Import Management', style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500)),
+                Text('Import Management',
+                    style: AppTextStyles.bodySm
+                        .copyWith(color: AppColors.neutral500)),
               ],
             ),
           ),
@@ -141,7 +151,8 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         const SizedBox(width: 8),
         const Text('/', style: TextStyle(color: AppColors.neutral300)),
         const SizedBox(width: 8),
-        Text('Batch #${batch.batchNumber}', style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700)),
+        Text('Batch #${batch.batchNumber}',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700)),
       ],
     );
   }
@@ -155,7 +166,8 @@ class _ImportResultScreenState extends State<ImportResultScreen>
           children: [
             Row(
               children: [
-                Text('Batch #${batch.batchNumber}', style: AppTextStyles.headingMd),
+                Text('Batch #${batch.batchNumber}',
+                    style: AppTextStyles.headingMd),
                 const SizedBox(width: 12),
                 _StatusBadge(status: batch.status),
               ],
@@ -169,11 +181,13 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         ),
         const Spacer(),
         // Acciones
-        if (batch.status == ImportBatchStatus.completed || batch.status == ImportBatchStatus.hidden)
+        if (batch.status == ImportBatchStatus.completed ||
+            batch.status == ImportBatchStatus.hidden)
           OutlinedButton.icon(
-            onPressed: () => _showRevertDialog(context, batch),
+            onPressed:
+                _isReverting ? null : () => _showRevertDialog(context, batch),
             icon: const Icon(Icons.undo, size: 15),
-            label: const Text('Revert'),
+            label: Text(_isReverting ? 'Reverting...' : 'Revert'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.errorFg,
               side: BorderSide(color: AppColors.errorFg.withValues(alpha: 0.4)),
@@ -184,9 +198,9 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         const SizedBox(width: 10),
         if (batch.status == ImportBatchStatus.hidden)
           FilledButton.icon(
-            onPressed: () {},
+            onPressed: _isPublishing ? null : () => _publishBatch(batch),
             icon: const Icon(Icons.visibility, size: 15),
-            label: const Text('Publish'),
+            label: Text(_isPublishing ? 'Publishing...' : 'Publish'),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary500,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -200,21 +214,43 @@ class _ImportResultScreenState extends State<ImportResultScreen>
   Widget _buildKpiRow(ImportBatchUi batch) {
     return Row(
       children: [
-        _KpiCard(label: 'Total Rows', value: '${batch.processedCount}', icon: Icons.table_rows_outlined, color: AppColors.neutral600),
+        _KpiCard(
+            label: 'Total Rows',
+            value: '${batch.processedCount}',
+            icon: Icons.table_rows_outlined,
+            color: AppColors.neutral600),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Created', value: '${batch.createdCount}', icon: Icons.add_circle_outline, color: AppColors.successFg),
+        _KpiCard(
+            label: 'Created',
+            value: '${batch.createdCount}',
+            icon: Icons.add_circle_outline,
+            color: AppColors.successFg),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Duplicates', value: '${batch.duplicatedCount}', icon: Icons.copy_outlined, color: AppColors.secondary500),
+        _KpiCard(
+            label: 'Duplicates',
+            value: '${batch.duplicatedCount}',
+            icon: Icons.copy_outlined,
+            color: AppColors.secondary500),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Errors', value: '${batch.errorCount}', icon: Icons.error_outline, color: AppColors.errorFg),
+        _KpiCard(
+            label: 'Errors',
+            value: '${batch.errorCount}',
+            icon: Icons.error_outline,
+            color: AppColors.errorFg),
         const SizedBox(width: 12),
-        _KpiCard(label: 'Pending Review', value: '${batch.pendingReviewCount}', icon: Icons.pending_outlined, color: AppColors.warningFg),
+        _KpiCard(
+            label: 'Pending Review',
+            value: '${batch.pendingReviewCount}',
+            icon: Icons.pending_outlined,
+            color: AppColors.warningFg),
         const SizedBox(width: 12),
         _KpiCard(
           label: 'Success Rate',
           value: '${(batch.successRate * 100).toStringAsFixed(1)}%',
           icon: Icons.trending_up_outlined,
-          color: batch.successRate >= 0.9 ? AppColors.successFg : AppColors.warningFg,
+          color: batch.successRate >= 0.9
+              ? AppColors.successFg
+              : AppColors.warningFg,
         ),
       ],
     );
@@ -231,10 +267,13 @@ class _ImportResultScreenState extends State<ImportResultScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Processing Timeline', style: AppTextStyles.headingSm.copyWith(fontSize: 14)),
+          Text('Processing Timeline',
+              style: AppTextStyles.headingSm.copyWith(fontSize: 14)),
           const SizedBox(height: 16),
           if (batch.auditTrail.isEmpty)
-            Text('No timeline available', style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral400))
+            Text('No timeline available',
+                style:
+                    AppTextStyles.bodySm.copyWith(color: AppColors.neutral400))
           else
             ...batch.auditTrail.asMap().entries.map((entry) {
               final i = entry.key;
@@ -261,15 +300,21 @@ class _ImportResultScreenState extends State<ImportResultScreen>
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
             child: Row(
               children: [
-                Text('Validation Issues', style: AppTextStyles.headingSm.copyWith(fontSize: 14)),
+                Text('Validation Issues',
+                    style: AppTextStyles.headingSm.copyWith(fontSize: 14)),
                 const SizedBox(width: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.errorFg.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text('${batch.errors.length}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.errorFg)),
+                  child: Text('${batch.errors.length}',
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.errorFg)),
                 ),
               ],
             ),
@@ -280,9 +325,12 @@ class _ImportResultScreenState extends State<ImportResultScreen>
               padding: EdgeInsets.all(20),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_outline, size: 16, color: AppColors.successFg),
+                  Icon(Icons.check_circle_outline,
+                      size: 16, color: AppColors.successFg),
                   SizedBox(width: 8),
-                  Text('No validation issues', style: TextStyle(color: AppColors.successFg, fontSize: 13)),
+                  Text('No validation issues',
+                      style:
+                          TextStyle(color: AppColors.successFg, fontSize: 13)),
                 ],
               ),
             )
@@ -291,7 +339,8 @@ class _ImportResultScreenState extends State<ImportResultScreen>
               children: [
                 // Encabezados
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
                   child: Row(
                     children: const [
                       _HeaderCell('ROW', flex: 1),
@@ -323,22 +372,27 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.insert_drive_file_outlined, size: 15, color: AppColors.neutral500),
+              const Icon(Icons.insert_drive_file_outlined,
+                  size: 15, color: AppColors.neutral500),
               const SizedBox(width: 8),
-              Text('File Intelligence', style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
+              Text('File Intelligence',
+                  style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
             ],
           ),
           const SizedBox(height: 14),
           _InfoRow(label: 'File name', value: batch.fileName ?? '—'),
           _InfoRow(label: 'File size', value: batch.fileSize ?? '—'),
           if (batch.fileHash != null)
-            _InfoRow(label: 'SHA-256', value: '${batch.fileHash!.substring(0, 12)}…'),
+            _InfoRow(
+                label: 'SHA-256',
+                value: '${batch.fileHash!.substring(0, 12)}…'),
           _InfoRow(label: 'Template', value: batch.templateName ?? '—'),
           _InfoRow(label: 'Import type', value: batch.importType.label),
           if (batch.finishedAt != null)
             _InfoRow(
               label: 'Duration',
-              value: '${batch.finishedAt!.difference(batch.createdAt).inMinutes}m ${batch.finishedAt!.difference(batch.createdAt).inSeconds % 60}s',
+              value:
+                  '${batch.finishedAt!.difference(batch.createdAt).inMinutes}m ${batch.finishedAt!.difference(batch.createdAt).inSeconds % 60}s',
             ),
         ],
       ),
@@ -358,9 +412,11 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.person_outline, size: 15, color: AppColors.neutral500),
+              const Icon(Icons.person_outline,
+                  size: 15, color: AppColors.neutral500),
               const SizedBox(width: 8),
-              Text('Actor Context', style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
+              Text('Actor Context',
+                  style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
             ],
           ),
           const SizedBox(height: 14),
@@ -370,17 +426,25 @@ class _ImportResultScreenState extends State<ImportResultScreen>
                 radius: 18,
                 backgroundColor: AppColors.secondary500.withValues(alpha: 0.15),
                 child: Text(
-                  batch.createdBy.isNotEmpty ? batch.createdBy[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.secondary500),
+                  batch.createdBy.isNotEmpty
+                      ? batch.createdBy[0].toUpperCase()
+                      : '?',
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.secondary500),
                 ),
               ),
               const SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(batch.createdBy, style: AppTextStyles.labelMd.copyWith(fontSize: 13)),
+                  Text(batch.createdBy,
+                      style: AppTextStyles.labelMd.copyWith(fontSize: 13)),
                   if (batch.actorRole != null)
-                    Text(batch.actorRole!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500)),
+                    Text(batch.actorRole!,
+                        style: AppTextStyles.bodyXs
+                            .copyWith(color: AppColors.neutral500)),
                 ],
               ),
             ],
@@ -388,12 +452,14 @@ class _ImportResultScreenState extends State<ImportResultScreen>
           const SizedBox(height: 12),
           _InfoRow(
             label: 'Started',
-            value: DateFormat('dd MMM yyyy HH:mm', 'es').format(batch.createdAt),
+            value:
+                DateFormat('dd MMM yyyy HH:mm', 'es').format(batch.createdAt),
           ),
           if (batch.finishedAt != null)
             _InfoRow(
               label: 'Finished',
-              value: DateFormat('dd MMM yyyy HH:mm', 'es').format(batch.finishedAt!),
+              value: DateFormat('dd MMM yyyy HH:mm', 'es')
+                  .format(batch.finishedAt!),
             ),
         ],
       ),
@@ -413,15 +479,26 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         children: [
           Row(
             children: [
-              const Icon(Icons.merge_type_outlined, size: 15, color: AppColors.neutral500),
+              const Icon(Icons.merge_type_outlined,
+                  size: 15, color: AppColors.neutral500),
               const SizedBox(width: 8),
-              Text('Conflict Logic', style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
+              Text('Conflict Logic',
+                  style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
             ],
           ),
           const SizedBox(height: 14),
-          _ConflictRow(label: 'Strict colliders', value: batch.duplicatedCount, color: AppColors.errorFg),
-          _ConflictRow(label: 'Merge candidates', value: batch.mergeCandidateCount, color: AppColors.warningFg),
-          _ConflictRow(label: 'Pending review', value: batch.pendingReviewCount, color: AppColors.secondary500),
+          _ConflictRow(
+              label: 'Strict colliders',
+              value: batch.duplicatedCount,
+              color: AppColors.errorFg),
+          _ConflictRow(
+              label: 'Merge candidates',
+              value: batch.mergeCandidateCount,
+              color: AppColors.warningFg),
+          _ConflictRow(
+              label: 'Pending review',
+              value: batch.pendingReviewCount,
+              color: AppColors.secondary500),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -445,16 +522,51 @@ class _ImportResultScreenState extends State<ImportResultScreen>
     showDialog(
       context: context,
       builder: (_) => RevertConfirmDialog(
-        batchId: batch.id,
-        batchNumber: batch.batchNumber,
-        createdCount: batch.createdCount,
-        onConfirm: () {
+        batch: batch,
+        onConfirm: () async {
           Navigator.of(context).pop();
-          context.go('/imports');
+          await _revertBatch(batch);
         },
         onCancel: () => Navigator.of(context).pop(),
       ),
     );
+  }
+
+  Future<void> _publishBatch(ImportBatchUi batch) async {
+    setState(() => _isPublishing = true);
+    try {
+      await _repository.publishBatch(batch);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Batch publicado correctamente.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al publicar batch: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isPublishing = false);
+    }
+  }
+
+  Future<void> _revertBatch(ImportBatchUi batch) async {
+    setState(() => _isReverting = true);
+    try {
+      await _repository.revertBatch(batch);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Batch revertido correctamente.')),
+      );
+      context.go('/imports');
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al revertir batch: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isReverting = false);
+    }
   }
 }
 
@@ -488,12 +600,16 @@ class _TimelineRow extends StatelessWidget {
                   child: Icon(
                     event.result ? Icons.check : Icons.close,
                     size: 13,
-                    color: event.result ? AppColors.successFg : AppColors.errorFg,
+                    color:
+                        event.result ? AppColors.successFg : AppColors.errorFg,
                   ),
                 ),
                 if (!isLast)
                   Expanded(
-                    child: Container(width: 1, color: AppColors.neutral200, margin: const EdgeInsets.symmetric(vertical: 4)),
+                    child: Container(
+                        width: 1,
+                        color: AppColors.neutral200,
+                        margin: const EdgeInsets.symmetric(vertical: 4)),
                   ),
               ],
             ),
@@ -508,21 +624,29 @@ class _TimelineRow extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(event.label, style: AppTextStyles.labelMd.copyWith(fontSize: 13)),
+                      Text(event.label,
+                          style: AppTextStyles.labelMd.copyWith(fontSize: 13)),
                       const Spacer(),
                       Text(
-                        DateFormat('dd MMM · HH:mm', 'es').format(event.timestamp),
-                        style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400),
+                        DateFormat('dd MMM · HH:mm', 'es')
+                            .format(event.timestamp),
+                        style: AppTextStyles.bodyXs
+                            .copyWith(color: AppColors.neutral400),
                       ),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Text('${event.actor} · ', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400)),
+                      Text('${event.actor} · ',
+                          style: AppTextStyles.bodyXs
+                              .copyWith(color: AppColors.neutral400)),
                       if (event.detail != null)
                         Expanded(
-                          child: Text(event.detail!, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500), overflow: TextOverflow.ellipsis),
+                          child: Text(event.detail!,
+                              style: AppTextStyles.bodyXs
+                                  .copyWith(color: AppColors.neutral500),
+                              overflow: TextOverflow.ellipsis),
                         ),
                     ],
                   ),
@@ -537,7 +661,11 @@ class _TimelineRow extends StatelessWidget {
 }
 
 class _KpiCard extends StatelessWidget {
-  const _KpiCard({required this.label, required this.value, required this.icon, required this.color});
+  const _KpiCard(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.color});
   final String label;
   final String value;
   final IconData icon;
@@ -559,7 +687,9 @@ class _KpiCard extends StatelessWidget {
             Icon(icon, size: 15, color: color),
             const SizedBox(height: 8),
             Text(value, style: AppTextStyles.headingSm.copyWith(fontSize: 18)),
-            Text(label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500, fontSize: 11)),
+            Text(label,
+                style: AppTextStyles.bodyXs
+                    .copyWith(color: AppColors.neutral500, fontSize: 11)),
           ],
         ),
       ),
@@ -574,21 +704,60 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, bg, label) = switch (status) {
-      ImportBatchStatus.completed => (AppColors.successFg, AppColors.successFg.withValues(alpha: 0.1), 'Completed'),
-      ImportBatchStatus.running => (AppColors.primary500, AppColors.primary500.withValues(alpha: 0.1), 'Running'),
-      ImportBatchStatus.failed => (AppColors.errorFg, AppColors.errorFg.withValues(alpha: 0.1), 'Failed'),
-      ImportBatchStatus.hidden => (AppColors.neutral500, AppColors.neutral200, 'Staged'),
-      ImportBatchStatus.rolledBack => (AppColors.warningFg, AppColors.warningFg.withValues(alpha: 0.1), 'Rolled Back'),
-      ImportBatchStatus.validated => (AppColors.secondary500, AppColors.secondary500.withValues(alpha: 0.1), 'Validated'),
-      ImportBatchStatus.partial => (AppColors.warningFg, AppColors.warningFg.withValues(alpha: 0.1), 'Partial'),
-      ImportBatchStatus.draft => (AppColors.neutral500, AppColors.neutral100, 'Draft'),
-      ImportBatchStatus.archived => (AppColors.neutral400, AppColors.neutral100, 'Archived'),
+      ImportBatchStatus.completed => (
+          AppColors.successFg,
+          AppColors.successFg.withValues(alpha: 0.1),
+          'Completed'
+        ),
+      ImportBatchStatus.running => (
+          AppColors.primary500,
+          AppColors.primary500.withValues(alpha: 0.1),
+          'Running'
+        ),
+      ImportBatchStatus.failed => (
+          AppColors.errorFg,
+          AppColors.errorFg.withValues(alpha: 0.1),
+          'Failed'
+        ),
+      ImportBatchStatus.hidden => (
+          AppColors.neutral500,
+          AppColors.neutral200,
+          'Staged'
+        ),
+      ImportBatchStatus.rolledBack => (
+          AppColors.warningFg,
+          AppColors.warningFg.withValues(alpha: 0.1),
+          'Rolled Back'
+        ),
+      ImportBatchStatus.validated => (
+          AppColors.secondary500,
+          AppColors.secondary500.withValues(alpha: 0.1),
+          'Validated'
+        ),
+      ImportBatchStatus.partial => (
+          AppColors.warningFg,
+          AppColors.warningFg.withValues(alpha: 0.1),
+          'Partial'
+        ),
+      ImportBatchStatus.draft => (
+          AppColors.neutral500,
+          AppColors.neutral100,
+          'Draft'
+        ),
+      ImportBatchStatus.archived => (
+          AppColors.neutral400,
+          AppColors.neutral100,
+          'Archived'
+        ),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(5)),
-      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(5)),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w700, color: color)),
     );
   }
 }
@@ -607,10 +776,15 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 80,
-            child: Text(label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400)),
+            child: Text(label,
+                style:
+                    AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400)),
           ),
           Expanded(
-            child: Text(value, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral800), overflow: TextOverflow.ellipsis),
+            child: Text(value,
+                style:
+                    AppTextStyles.bodyXs.copyWith(color: AppColors.neutral800),
+                overflow: TextOverflow.ellipsis),
           ),
         ],
       ),
@@ -619,7 +793,8 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _ConflictRow extends StatelessWidget {
-  const _ConflictRow({required this.label, required this.value, required this.color});
+  const _ConflictRow(
+      {required this.label, required this.value, required this.color});
   final String label;
   final int value;
   final Color color;
@@ -630,10 +805,18 @@ class _ConflictRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 8),
-          Expanded(child: Text(label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600))),
-          Text('$value', style: AppTextStyles.labelSm.copyWith(fontSize: 12, color: color)),
+          Expanded(
+              child: Text(label,
+                  style: AppTextStyles.bodyXs
+                      .copyWith(color: AppColors.neutral600))),
+          Text('$value',
+              style:
+                  AppTextStyles.labelSm.copyWith(fontSize: 12, color: color)),
         ],
       ),
     );
@@ -649,7 +832,12 @@ class _HeaderCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       flex: flex,
-      child: Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.neutral400, letterSpacing: 0.7)),
+      child: Text(text,
+          style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: AppColors.neutral400,
+              letterSpacing: 0.7)),
     );
   }
 }
@@ -662,7 +850,8 @@ class _IssueTableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCritical = error.severity == ImportIssueSeverity.critical;
     final isError = error.severity == ImportIssueSeverity.error;
-    final color = isCritical || isError ? AppColors.errorFg : AppColors.warningFg;
+    final color =
+        isCritical || isError ? AppColors.errorFg : AppColors.warningFg;
 
     return Column(
       children: [
@@ -670,20 +859,36 @@ class _IssueTableRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(
             children: [
-              Expanded(flex: 1, child: Text('#${error.row}', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500))),
-              Expanded(flex: 3, child: Text(error.establishmentName, style: AppTextStyles.bodySm.copyWith(fontSize: 12), overflow: TextOverflow.ellipsis)),
-              Expanded(flex: 4, child: Text(error.reason, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600))),
+              Expanded(
+                  flex: 1,
+                  child: Text('#${error.row}',
+                      style: AppTextStyles.bodyXs
+                          .copyWith(color: AppColors.neutral500))),
+              Expanded(
+                  flex: 3,
+                  child: Text(error.establishmentName,
+                      style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                      overflow: TextOverflow.ellipsis)),
+              Expanded(
+                  flex: 4,
+                  child: Text(error.reason,
+                      style: AppTextStyles.bodyXs
+                          .copyWith(color: AppColors.neutral600))),
               Expanded(
                 flex: 2,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     error.severity.label,
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: color),
                   ),
                 ),
               ),

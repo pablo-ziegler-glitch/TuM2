@@ -29,16 +29,7 @@ class WizardStepConfig extends StatefulWidget {
 }
 
 class _WizardStepConfigState extends State<WizardStepConfig> {
-  static const _tum2Fields = [
-    'Nombre del Negocio',
-    'Teléfono Principal',
-    'Dirección Completa',
-    'Horario de Atención',
-    'Categoría Principal',
-    'Descripción',
-    'Sitio Web',
-    'Email de Contacto',
-  ];
+  static const _tum2Fields = tum2AssignableFields;
 
   @override
   Widget build(BuildContext context) {
@@ -76,11 +67,14 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
                           _MappingRow(
                             mapping: m,
                             tum2Fields: _tum2Fields,
-                            onToggle: (enabled) => _updateMapping(i, enabled: enabled),
-                            onFieldChanged: (field) => _updateMapping(i, tum2Field: field),
+                            onToggle: (enabled) =>
+                                _updateMapping(i, enabled: enabled),
+                            onFieldChanged: (field) =>
+                                _updateMapping(i, tum2Field: field),
                           ),
                           if (i < widget.mappings.length - 1)
-                            const Divider(height: 1, color: AppColors.neutral100),
+                            const Divider(
+                                height: 1, color: AppColors.neutral100),
                         ],
                       );
                     }),
@@ -104,7 +98,8 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
             Expanded(
               child: _SettingsCard(
                 title: 'Deduplication',
-                description: 'Prevent duplicate entries by comparing Name and Address before creating new records.',
+                description:
+                    'Prevent duplicate entries by comparing Name and Address before creating new records.',
                 child: Row(
                   children: [
                     Switch(
@@ -125,13 +120,15 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
             Expanded(
               child: _SettingsCard(
                 title: 'Visibility after import',
-                description: 'Records imported as hidden require review before becoming public in the app.',
+                description:
+                    'Records imported as hidden require review before becoming public in the app.',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _RadioOption(
                       label: 'Hidden (staging)',
-                      description: 'Records will be staged and not visible to users',
+                      description:
+                          'Records will be staged and not visible to users',
                       value: 'hidden',
                       groupValue: widget.visibilityAfterImport,
                       onChanged: widget.onVisibilityChanged,
@@ -139,7 +136,8 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
                     const SizedBox(height: 8),
                     _RadioOption(
                       label: 'Visible',
-                      description: 'Records will be publicly visible immediately',
+                      description:
+                          'Records will be publicly visible immediately',
                       value: 'visible',
                       groupValue: widget.visibilityAfterImport,
                       onChanged: widget.onVisibilityChanged,
@@ -169,40 +167,14 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.number, required this.title});
-  final String number;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: const BoxDecoration(
-            color: AppColors.primary500,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(
-              number,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(title, style: AppTextStyles.headingSm),
-      ],
-    );
-  }
-}
-
 class _MappingTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    const style = TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.neutral500, letterSpacing: 0.6);
+    const style = TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        color: AppColors.neutral500,
+        letterSpacing: 0.6);
     return Container(
       color: AppColors.neutral50,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -259,7 +231,9 @@ class _MappingRow extends StatelessWidget {
               child: Text(
                 mapping.csvColumn,
                 style: AppTextStyles.bodySm.copyWith(
-                  color: mapping.enabled ? AppColors.neutral900 : AppColors.neutral500,
+                  color: mapping.enabled
+                      ? AppColors.neutral900
+                      : AppColors.neutral500,
                 ),
               ),
             ),
@@ -270,44 +244,54 @@ class _MappingRow extends StatelessWidget {
             child: Icon(
               Icons.arrow_forward,
               size: 16,
-              color: mapping.enabled ? AppColors.neutral600 : AppColors.neutral300,
+              color:
+                  mapping.enabled ? AppColors.neutral600 : AppColors.neutral300,
             ),
           ),
           // Campo TuM2
           Expanded(
             child: mapping.enabled
-              ? Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.neutral200),
-                    borderRadius: BorderRadius.circular(6),
-                    color: AppColors.surface,
+                ? Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.neutral200),
+                      borderRadius: BorderRadius.circular(6),
+                      color: AppColors.surface,
+                    ),
+                    child: DropdownButton<String>(
+                      value: tum2Fields.contains(mapping.tum2Field)
+                          ? mapping.tum2Field
+                          : null,
+                      isExpanded: true,
+                      underline: const SizedBox(),
+                      hint: Text('Seleccionar campo...',
+                          style: AppTextStyles.bodyXs
+                              .copyWith(color: AppColors.neutral500)),
+                      items: tum2Fields
+                          .map((f) => DropdownMenuItem(
+                                value: f,
+                                child: Text(f, style: AppTextStyles.bodySm),
+                              ))
+                          .toList(),
+                      onChanged: onFieldChanged,
+                      style: AppTextStyles.bodySm
+                          .copyWith(color: AppColors.neutral900),
+                    ),
+                  )
+                : Container(
+                    height: 36,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Center(
+                      child: Text('—',
+                          style: AppTextStyles.bodyXs
+                              .copyWith(color: AppColors.neutral400)),
+                    ),
                   ),
-                  child: DropdownButton<String>(
-                    value: tum2Fields.contains(mapping.tum2Field) ? mapping.tum2Field : null,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    hint: Text('Seleccionar campo...', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500)),
-                    items: tum2Fields.map((f) => DropdownMenuItem(
-                      value: f,
-                      child: Text(f, style: AppTextStyles.bodySm),
-                    )).toList(),
-                    onChanged: onFieldChanged,
-                    style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral900),
-                  ),
-                )
-              : Container(
-                  height: 36,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.neutral50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Center(
-                    child: Text('—', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400)),
-                  ),
-                ),
           ),
           // AI Confidence
           SizedBox(
@@ -315,8 +299,10 @@ class _MappingRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: mapping.aiConfidence != null
-                ? _ConfidenceBar(confidence: mapping.aiConfidence!)
-                : Text('—', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400)),
+                  ? _ConfidenceBar(confidence: mapping.aiConfidence!)
+                  : Text('—',
+                      style: AppTextStyles.bodyXs
+                          .copyWith(color: AppColors.neutral400)),
             ),
           ),
           // Estado
@@ -325,25 +311,38 @@ class _MappingRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: mapping.required
-                ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.errorBg,
-                      borderRadius: BorderRadius.circular(12),
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorBg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text('Required',
+                          style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.errorFg)),
+                    )
+                  : Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: mapping.enabled
+                            ? AppColors.successBg
+                            : AppColors.neutral100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        mapping.enabled ? 'Optional' : 'Ignored',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: mapping.enabled
+                                ? AppColors.successFg
+                                : AppColors.neutral500),
+                      ),
                     ),
-                    child: Text('Required', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.errorFg)),
-                  )
-                : Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: mapping.enabled ? AppColors.successBg : AppColors.neutral100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      mapping.enabled ? 'Optional' : 'Ignored',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: mapping.enabled ? AppColors.successFg : AppColors.neutral500),
-                    ),
-                  ),
             ),
           ),
         ],
@@ -455,7 +454,8 @@ class _ConfidenceBar extends StatelessWidget {
       children: [
         Text(
           '${(confidence * 100).toStringAsFixed(0)}%',
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+          style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.w600, color: color),
         ),
         const SizedBox(height: 3),
         SizedBox(
@@ -484,7 +484,8 @@ class _SourceInsightPanel extends StatelessWidget {
   double get _avgConfidence {
     final withConf = mappings.where((m) => m.aiConfidence != null).toList();
     if (withConf.isEmpty) return 0;
-    return withConf.fold<double>(0, (s, m) => s + m.aiConfidence!) / withConf.length;
+    return withConf.fold<double>(0, (s, m) => s + m.aiConfidence!) /
+        withConf.length;
   }
 
   @override
@@ -501,9 +502,11 @@ class _SourceInsightPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome_outlined, size: 14, color: AppColors.primary500),
+              const Icon(Icons.auto_awesome_outlined,
+                  size: 14, color: AppColors.primary500),
               const SizedBox(width: 6),
-              Text('Source Insight', style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
+              Text('Source Insight',
+                  style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
             ],
           ),
           const SizedBox(height: 14),
@@ -512,27 +515,36 @@ class _SourceInsightPanel extends StatelessWidget {
           _InsightRow(
             label: 'Avg AI confidence',
             value: '${(_avgConfidence * 100).toStringAsFixed(0)}%',
-            valueColor: _avgConfidence >= 0.85 ? AppColors.successFg : AppColors.warningFg,
+            valueColor: _avgConfidence >= 0.85
+                ? AppColors.successFg
+                : AppColors.warningFg,
           ),
           const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.neutral100),
           const SizedBox(height: 12),
-          Text('Sample values', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400, fontWeight: FontWeight.w600)),
+          Text('Sample values',
+              style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral400, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          ...mappings.where((m) => m.sampleValue != null && m.enabled).map((m) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(m.csvColumn, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400)),
-                Text(
-                  m.sampleValue!,
-                  style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          )),
+          ...mappings
+              .where((m) => m.sampleValue != null && m.enabled)
+              .map((m) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(m.csvColumn,
+                            style: AppTextStyles.bodyXs
+                                .copyWith(color: AppColors.neutral400)),
+                        Text(
+                          m.sampleValue!,
+                          style: AppTextStyles.bodyXs
+                              .copyWith(color: AppColors.neutral700),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  )),
         ],
       ),
     );
@@ -540,7 +552,8 @@ class _SourceInsightPanel extends StatelessWidget {
 }
 
 class _InsightRow extends StatelessWidget {
-  const _InsightRow({required this.label, required this.value, this.valueColor});
+  const _InsightRow(
+      {required this.label, required this.value, this.valueColor});
   final String label;
   final String value;
   final Color? valueColor;
@@ -551,10 +564,14 @@ class _InsightRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500))),
+          Expanded(
+              child: Text(label,
+                  style: AppTextStyles.bodyXs
+                      .copyWith(color: AppColors.neutral500))),
           Text(
             value,
-            style: AppTextStyles.labelSm.copyWith(fontSize: 11, color: valueColor ?? AppColors.neutral800),
+            style: AppTextStyles.labelSm.copyWith(
+                fontSize: 11, color: valueColor ?? AppColors.neutral800),
           ),
         ],
       ),

@@ -24,6 +24,14 @@ final ownerMerchantProvider =
     );
   }
 
+  // Admin/super_admin no dependen de merchant propio para navegar OWNER.
+  if (_isAdminRole(authState.role)) {
+    return const OwnerMerchantResolution(
+      primaryMerchant: null,
+      allMerchants: [],
+    );
+  }
+
   if (authState.role != 'owner' || authState.ownerPending) {
     return const OwnerMerchantResolution(
       primaryMerchant: null,
@@ -34,3 +42,5 @@ final ownerMerchantProvider =
   final repository = ref.watch(ownerRepositoryProvider);
   return repository.resolveOwnerMerchant(authState.user.uid);
 });
+
+bool _isAdminRole(String role) => role == 'admin' || role == 'super_admin';

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_notifier.dart';
+import '../../../core/auth/auth_state.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -26,6 +28,33 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider).authState;
+    final isAdminSession =
+        authState is AuthAuthenticated ? _isAdminRole(authState.role) : false;
+
+    if (isAdminSession) {
+      return Scaffold(
+        backgroundColor: AppColors.neutral50,
+        appBar: AppBar(
+          backgroundColor: AppColors.neutral50,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: CloseButton(
+            color: AppColors.neutral900,
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+                return;
+              }
+              context.go(AppRoutes.profile);
+            },
+          ),
+          title: const Text('Mi comercio', style: AppTextStyles.headingSm),
+        ),
+        body: const _AdminOwnerDashboard(),
+      );
+    }
+
     final ownerMerchantAsync = ref.watch(ownerMerchantProvider);
 
     return Scaffold(
@@ -75,6 +104,101 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
       if (!mounted) return;
       context.go(AppRoutes.onboardingOwner);
     });
+  }
+}
+
+class _AdminOwnerDashboard extends StatelessWidget {
+  const _AdminOwnerDashboard();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.infoBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.primary200),
+          ),
+          child: Text(
+            'Vista OWNER en modo administración. No requiere comercio asociado al admin.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.primary700),
+          ),
+        ),
+        const SizedBox(height: 14),
+        const _AdminOwnerActionCard(
+          title: 'Gestionar Productos',
+          route: AppRoutes.ownerProducts,
+          icon: Icons.inventory_2_outlined,
+        ),
+        const SizedBox(height: 10),
+        const _AdminOwnerActionCard(
+          title: 'Editar Horarios',
+          route: AppRoutes.ownerSchedules,
+          icon: Icons.schedule_outlined,
+        ),
+        const SizedBox(height: 10),
+        const _AdminOwnerActionCard(
+          title: 'Señales Operativas',
+          route: AppRoutes.ownerSignals,
+          icon: Icons.campaign_outlined,
+        ),
+        const SizedBox(height: 10),
+        const _AdminOwnerActionCard(
+          title: 'Turnos de farmacia',
+          route: AppRoutes.ownerDuties,
+          icon: Icons.medical_services_outlined,
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminOwnerActionCard extends StatelessWidget {
+  const _AdminOwnerActionCard({
+    required this.title,
+    required this.route,
+    required this.icon,
+  });
+
+  final String title;
+  final String route;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => context.push(route),
+      child: Ink(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.neutral100),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.primary50,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.primary600),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(title, style: AppTextStyles.labelMd),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.neutral500),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -676,3 +800,5 @@ class _OwnerDashboardError extends StatelessWidget {
     );
   }
 }
+
+bool _isAdminRole(String role) => role == 'admin' || role == 'super_admin';

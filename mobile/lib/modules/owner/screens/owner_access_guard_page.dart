@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_notifier.dart';
+import '../../../core/auth/auth_state.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -30,6 +32,13 @@ class _OwnerAccessGuardState extends ConsumerState<OwnerAccessGuardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider).authState;
+    final isAdminSession =
+        authState is AuthAuthenticated ? _isAdminRole(authState.role) : false;
+    if (isAdminSession) {
+      return widget.child;
+    }
+
     final resolution = ref.watch(ownerMerchantProvider);
     return resolution.when(
       loading: () => _GuardScaffold(
@@ -66,6 +75,8 @@ class _OwnerAccessGuardState extends ConsumerState<OwnerAccessGuardPage> {
     });
   }
 }
+
+bool _isAdminRole(String role) => role == 'admin' || role == 'super_admin';
 
 class _GuardScaffold extends StatelessWidget {
   const _GuardScaffold({

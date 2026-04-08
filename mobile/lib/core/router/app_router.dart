@@ -321,10 +321,10 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: AppRoutes.ownerDuties,
       builder: (_, __) => const OwnerAccessGuardPage(
-        title: 'Señales Operativas',
+        title: 'Turnos de farmacia',
         child: PlaceholderScreen(
-          screenId: 'TuM2-0067',
-          label: 'Señales Operativas',
+          screenId: 'OWNER-09',
+          label: 'Turnos de farmacia',
           roleRequired: 'owner',
         ),
       ),

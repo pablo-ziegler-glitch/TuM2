@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_notifier.dart';
+import '../../../core/auth/auth_state.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -27,16 +29,22 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider).authState;
+    final isAdminSession =
+        authState is AuthAuthenticated ? _isAdminRole(authState.role) : false;
+
+    if (isAdminSession) {
+      _scheduleAdminNavigation(context);
+      return const _ResolveScaffold(
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.primary500),
+        ),
+      );
+    }
+
     final resolution = ref.watch(ownerMerchantProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: const Text('Mi comercio', style: AppTextStyles.headingSm),
-      ),
+    return _ResolveScaffold(
       body: resolution.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary500),
@@ -55,6 +63,16 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
         },
       ),
     );
+  }
+
+  void _scheduleAdminNavigation(BuildContext context) {
+    if (_didNavigate) return;
+    _didNavigate = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _sanitizeOwnerTarget(widget.targetLocation);
+      context.replace(target);
+    });
   }
 
   void _scheduleNavigation(BuildContext context, bool hasMerchant) {
@@ -102,6 +120,27 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
   }
 }
 
+class _ResolveScaffold extends StatelessWidget {
+  const _ResolveScaffold({this.body, this.child});
+
+  final Widget? body;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: const Text('Mi comercio', style: AppTextStyles.headingSm),
+      ),
+      body: body ?? child,
+    );
+  }
+}
+
 class _ResolveErrorState extends StatelessWidget {
   const _ResolveErrorState({required this.onRetry});
 
@@ -139,3 +178,5 @@ class _ResolveErrorState extends StatelessWidget {
     );
   }
 }
+
+bool _isAdminRole(String role) => role == 'admin' || role == 'super_admin';

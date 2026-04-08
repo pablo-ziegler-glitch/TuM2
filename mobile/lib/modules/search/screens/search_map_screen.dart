@@ -30,6 +30,7 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(searchNotifierProvider);
+    final notifier = ref.read(searchNotifierProvider.notifier);
     final selectedMerchantId = _selectedMerchantId ?? state.selectedMerchantId;
 
     String zoneName = 'Tu zona';
@@ -100,6 +101,10 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
                         });
                       },
                       onMerchantOpen: (merchantId) {
+                        notifier.logResultOpened(
+                          merchantId: merchantId,
+                          fromMap: true,
+                        );
                         context.push(AppRoutes.commerceDetailPath(merchantId));
                       },
                       onListTap: () {

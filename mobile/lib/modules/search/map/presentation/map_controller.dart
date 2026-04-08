@@ -224,7 +224,15 @@ class SearchMapController {
       final openHash = item.isOpenNow.hashCode;
       final dutyHash = item.isOnDutyToday.hashCode;
       final h24Hash = item.is24h.hashCode;
-      return (hash * 31) ^ idHash ^ openHash ^ dutyHash ^ h24Hash;
+      final latHash = item.lat.hashCode;
+      final lngHash = item.lng.hashCode;
+      return (hash * 31) ^
+          idHash ^
+          openHash ^
+          dutyHash ^
+          h24Hash ^
+          latHash ^
+          lngHash;
     });
   }
 }

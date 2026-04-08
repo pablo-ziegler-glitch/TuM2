@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
+import '../theme/app_theme.dart';
 
 /// Botón primario de TuM2.
 ///
@@ -30,29 +29,39 @@ class PrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !isLoading;
+    final theme = Theme.of(context);
+    final baseStyle = theme.elevatedButtonTheme.style;
+    final style = backgroundColor == null
+        ? baseStyle
+        : baseStyle?.copyWith(
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.disabled)) {
+                return AppColors.disabled;
+              }
+              if (states.contains(WidgetState.pressed)) {
+                return Color.alphaBlend(
+                  const Color(0x26000000),
+                  backgroundColor!,
+                );
+              }
+              return backgroundColor!;
+            }),
+          );
 
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.primary500,
-          disabledBackgroundColor: AppColors.neutral200,
-          foregroundColor: Colors.white,
-          disabledForegroundColor: AppColors.neutral500,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
+        style: style,
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                  valueColor:
+                      AlwaysStoppedAnimation(theme.colorScheme.onPrimary),
                 ),
               )
             : Row(
@@ -64,11 +73,8 @@ class PrimaryButton extends StatelessWidget {
                   ],
                   Text(
                     label,
-                    style: AppTextStyles.labelMd.copyWith(
-                      color: enabled ? Colors.white : AppColors.neutral500,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

@@ -22,6 +22,7 @@ import '../../modules/search/screens/pharmacy_results_screen.dart';
 import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
+import '../../modules/owner/screens/owner_operational_signals_screen.dart';
 import '../../modules/owner/screens/owner_schedule_screen.dart';
 import '../../modules/owner/screens/owner_resolve_page.dart';
 import '../../modules/owner/screens/owner_access_guard_page.dart';
@@ -294,31 +295,20 @@ List<RouteBase> _buildRoutes() {
           label: 'Gestionar Productos',
           roleRequired: 'owner',
         ),
-        GoRoute(
-          path: 'schedules',
-          builder: (_, __) => const OwnerScheduleScreen(),
       ),
     ),
     GoRoute(
       path: AppRoutes.ownerSchedules,
       builder: (_, __) => const OwnerAccessGuardPage(
         title: 'Editar Horarios',
-        child: PlaceholderScreen(
-          screenId: 'TuM2-0066',
-          label: 'Editar Horarios',
-          roleRequired: 'owner',
-        ),
+        child: OwnerScheduleScreen(),
       ),
     ),
     GoRoute(
       path: AppRoutes.ownerSignals,
       builder: (_, __) => const OwnerAccessGuardPage(
         title: 'Señales Operativas',
-        child: PlaceholderScreen(
-          screenId: 'TuM2-0067',
-          label: 'Señales Operativas',
-          roleRequired: 'owner',
-        ),
+        child: OwnerOperationalSignalsScreen(),
       ),
     ),
     // Compatibilidad temporal con path histórico.

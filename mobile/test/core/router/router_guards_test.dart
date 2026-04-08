@@ -260,7 +260,7 @@ void main() {
       expect(result, equals(AppRoutes.home));
     });
 
-    test('owner con comercio completado desde /login va a /home', () {
+    test('owner con comercio completado desde /login va a /owner/resolve', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(
           user: fakeUser,
@@ -270,10 +270,10 @@ void main() {
         ),
         location: AppRoutes.login,
       );
-      expect(result, equals(AppRoutes.home));
+      expect(result, equals(AppRoutes.ownerResolve));
     });
 
-    test('owner sin comercio desde /login va a onboarding', () {
+    test('owner sin comercio desde /login va a /owner/resolve', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(
           user: fakeUser,
@@ -282,7 +282,7 @@ void main() {
         ),
         location: AppRoutes.login,
       );
-      expect(result, equals(AppRoutes.onboardingOwner));
+      expect(result, equals(AppRoutes.ownerResolve));
     });
 
     test('admin desde /login va a /home', () {
@@ -291,6 +291,26 @@ void main() {
         location: AppRoutes.login,
       );
       expect(result, equals(AppRoutes.home));
+    });
+
+    test('owner_pending desde /login va a /home', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(
+          user: fakeUser,
+          role: 'owner',
+          ownerPending: true,
+        ),
+        location: AppRoutes.login,
+      );
+      expect(result, equals(AppRoutes.home));
+    });
+
+    test('owner desde splash va a /owner/resolve', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
+        location: AppRoutes.splash,
+      );
+      expect(result, equals(AppRoutes.ownerResolve));
     });
 
     test('customer desde splash va a /home', () {
@@ -366,28 +386,40 @@ void main() {
       expect(result, isNull);
     });
 
-    test('owner sin onboarding en /home redirige a /onboarding/owner', () {
+    test('owner sin onboarding en /home no redirige', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
         location: '/home',
       );
-      expect(result, equals(AppRoutes.onboardingOwner));
+      expect(result, isNull);
     });
 
-    test('owner sin onboarding en /search redirige a /onboarding/owner', () {
+    test('owner sin onboarding en /search no redirige', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
         location: '/search',
       );
-      expect(result, equals(AppRoutes.onboardingOwner));
+      expect(result, isNull);
     });
 
-    test('owner sin onboarding en /onboarding/owner no redirige', () {
+    test('owner sin onboarding en /owner no redirige', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
-        location: '/onboarding/owner',
+        location: '/owner',
       );
       expect(result, isNull);
+    });
+
+    test('owner_pending en /owner redirige a /profile', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(
+          user: fakeUser,
+          role: 'owner',
+          ownerPending: true,
+        ),
+        location: '/owner',
+      );
+      expect(result, equals(AppRoutes.profile));
     });
 
     test('owner con onboarding en /admin redirige a /home', () {
@@ -492,22 +524,17 @@ void main() {
       expect(result, equals(AppRoutes.home));
     });
 
-    test('owner sin onboarding ignora pending route y va a /onboarding/owner',
+    test('owner sin onboarding restaura pending route pública si tiene acceso',
         () {
       bool consumed = false;
-      // Owner que todavía no terminó el alta no debería saltar a otra ruta
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
         location: AppRoutes.login,
         pendingRoute: '/commerce/shop-1',
         consumePendingRoute: () => consumed = true,
       );
-      // La pending route '/commerce/shop-1' es accesible para owner,
-      // pero el guard de onboarding tiene prioridad en _authenticatedHome.
-      // Esperamos que vaya a onboardingOwner (la pending route no restaura
-      // cuando el owner aún no completó su alta).
-      expect(result, equals(AppRoutes.onboardingOwner));
-      expect(consumed, isFalse);
+      expect(result, equals('/commerce/shop-1'));
+      expect(consumed, isTrue);
     });
   });
 }

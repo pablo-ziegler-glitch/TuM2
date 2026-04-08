@@ -13,20 +13,20 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    function roleFromClaims() {
+      return isAuthenticated() ? request.auth.token.role : null;
     }
 
     function isAdmin() {
-      return isAuthenticated() && getUserRole() in ['admin', 'super_admin'];
+      return isAuthenticated() && roleFromClaims() in ['admin', 'super_admin'];
     }
 
     function isSuperAdmin() {
-      return isAuthenticated() && getUserRole() == 'super_admin';
+      return isAuthenticated() && roleFromClaims() == 'super_admin';
     }
 
     function isOwnerRole() {
-      return isAuthenticated() && getUserRole() == 'owner';
+      return isAuthenticated() && roleFromClaims() == 'owner';
     }
 
     function merchantBelongsToUser(merchantId) {
@@ -64,8 +64,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId)
-        && !('role' in request.resource.data)
-            || request.resource.data.role == 'customer';
+        && (
+          !('role' in request.resource.data)
+          || request.resource.data.role == 'customer'
+        );
       allow update: if isOwner(userId)
         && !('role' in request.resource.data.diff(resource.data).affectedKeys())
         && (!onboardingProgressExists() || draftMerchantIdUnchanged());
@@ -87,21 +89,46 @@ service cloud.firestore {
     // Admins can read/write all.
 
     match /merchants/{merchantId} {
-      allow read: if resource.data.visibilityStatus == 'visible'
-                     && resource.data.status == 'active';
-      allow read: if isAuthenticated()
-                     && merchantBelongsToUser(merchantId);
-      allow read: if isAdmin();
+      function isPublicMerchant() {
+        return resource.data.visibilityStatus == 'visible'
+          && resource.data.status == 'active';
+      }
 
-      allow create: if isAdmin()
-        || (isOwnerRole() && request.resource.data.sourceType == 'owner_created');
+      function isOwnerOfThisMerchant() {
+        return isAuthenticated()
+          && resource.data.ownerUserId == request.auth.uid;
+      }
+
+      function ownerCreatePayloadIsValid() {
+        return request.resource.data.ownerUserId == request.auth.uid
+          && request.resource.data.sourceType == 'owner_created'
+          && request.resource.data.visibilityStatus in ['hidden', 'review_pending']
+          && request.resource.data.verificationStatus == 'unverified'
+          && request.resource.data.status in ['draft', 'active'];
+      }
+
+      function ownerUpdatePayloadIsValid() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return request.resource.data.ownerUserId == request.auth.uid
+          && !('ownerUserId' in changed)
+          && !('verificationStatus' in changed)
+          && !('visibilityStatus' in changed)
+          && !('sourceType' in changed)
+          && !('createdAt' in changed);
+      }
+
+      allow get, list: if isPublicMerchant() || isOwnerOfThisMerchant() || isAdmin();
+
+      allow create: if isAdmin();
+      allow create: if isOwnerRole() && ownerCreatePayloadIsValid();
+
       allow update: if isAdmin();
       allow update: if isOwnerRole()
-        && merchantBelongsToUser(merchantId)
-        && !('verificationStatus' in request.resource.data.diff(resource.data).affectedKeys())
-        && !('visibilityStatus' in request.resource.data.diff(resource.data).affectedKeys())
-        && !('ownerUserId' in request.resource.data.diff(resource.data).affectedKeys());
+        && isOwnerOfThisMerchant()
+        && ownerUpdatePayloadIsValid();
+
       allow delete: if isAdmin();
+      allow delete: if isOwnerRole() && isOwnerOfThisMerchant();
     }
 
     // ─── merchant_public/{merchantId} ────────────────────────────────────────

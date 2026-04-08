@@ -22,6 +22,8 @@ import '../../modules/search/screens/pharmacy_results_screen.dart';
 import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
+import '../../modules/owner/screens/owner_resolve_page.dart';
+import '../../modules/owner/screens/owner_access_guard_page.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
 import '../../modules/merchant_detail/presentation/merchant_detail_page.dart';
 import '../../modules/merchant_detail/presentation/product_detail_page.dart';
@@ -244,46 +246,88 @@ List<RouteBase> _buildRoutes() {
 
     // ── OwnerStack (modal full-screen) ────────────────────────────────────────
     GoRoute(
+      path: AppRoutes.ownerResolve,
+      pageBuilder: (context, state) => MaterialPage(
+        key: state.pageKey,
+        fullscreenDialog: true,
+        child: OwnerResolvePage(
+          targetLocation: state.uri.queryParameters['target'],
+        ),
+      ),
+    ),
+    GoRoute(
       path: AppRoutes.owner,
+      pageBuilder: (context, state) => MaterialPage(
+        key: state.pageKey,
+        fullscreenDialog: true,
+        child: OwnerResolvePage(
+          targetLocation: state.uri.queryParameters['target'],
+        ),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerDashboard,
       pageBuilder: (context, state) => MaterialPage(
         key: state.pageKey,
         fullscreenDialog: true,
         child: const OwnerPanelScreen(),
       ),
-      routes: [
-        GoRoute(
-          path: 'edit',
-          builder: (_, __) => const PlaceholderScreen(
-            screenId: 'OWNER-02',
-            label: 'Editar perfil del comercio',
-            roleRequired: 'owner',
-          ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerEdit,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Editar comercio',
+        child: PlaceholderScreen(
+          screenId: 'OWNER-02',
+          label: 'Editar perfil del comercio',
+          roleRequired: 'owner',
         ),
-        GoRoute(
-          path: 'products',
-          builder: (_, __) => const PlaceholderScreen(
-            screenId: 'OWNER-03',
-            label: 'Productos',
-            roleRequired: 'owner',
-          ),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerProducts,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Gestionar Productos',
+        child: PlaceholderScreen(
+          screenId: 'TuM2-0065',
+          label: 'Gestionar Productos',
+          roleRequired: 'owner',
         ),
-        GoRoute(
-          path: 'schedules',
-          builder: (_, __) => const PlaceholderScreen(
-            screenId: 'OWNER-06',
-            label: 'Horarios y señales',
-            roleRequired: 'owner',
-          ),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerSchedules,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Editar Horarios',
+        child: PlaceholderScreen(
+          screenId: 'TuM2-0066',
+          label: 'Editar Horarios',
+          roleRequired: 'owner',
         ),
-        GoRoute(
-          path: 'duties',
-          builder: (_, __) => const PlaceholderScreen(
-            screenId: 'OWNER-09',
-            label: 'Turnos de farmacia',
-            roleRequired: 'owner',
-          ),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerSignals,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Señales Operativas',
+        child: PlaceholderScreen(
+          screenId: 'TuM2-0067',
+          label: 'Señales Operativas',
+          roleRequired: 'owner',
         ),
-      ],
+      ),
+    ),
+    // Compatibilidad temporal con path histórico.
+    GoRoute(
+      path: AppRoutes.ownerDuties,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Turnos de farmacia',
+        child: PlaceholderScreen(
+          screenId: 'OWNER-09',
+          label: 'Turnos de farmacia',
+          roleRequired: 'owner',
+        ),
+      ),
     ),
 
     // ── AdminStack (modal full-screen) ────────────────────────────────────────
@@ -352,7 +396,7 @@ List<RouteBase> _buildRoutes() {
         final extra = state.extra as OnboardingDraft?;
         return OnboardingOwnerFlow(
           existingDraft: extra,
-          onComplete: () => context.go(AppRoutes.owner),
+          onComplete: () => context.go(AppRoutes.ownerResolve),
           onExit: () => context.go(AppRoutes.home),
         );
       },

@@ -412,7 +412,9 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
 
     // Acción 3: invalidar providers de estado de usuario en Riverpod
     try {
+      ref.invalidate(authClaimsProvider);
       ref.invalidate(isOwnerProvider);
+      ref.invalidate(isAdminProvider);
       ref.read(displayNameSkippedProvider.notifier).state = false;
       ref.read(pendingMagicLinkProvider.notifier).state = null;
       ref.read(pendingAuthToastProvider.notifier).state = null;
@@ -480,22 +482,53 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
 final authOpProvider =
     NotifierProvider<AuthOpNotifier, AuthOpState>(AuthOpNotifier.new);
 
+class AuthClaimsSnapshot {
+  const AuthClaimsSnapshot({
+    required this.role,
+    required this.ownerPending,
+    required this.merchantId,
+    required this.onboardingComplete,
+  });
+
+  final String? role;
+  final bool ownerPending;
+  final String? merchantId;
+  final bool onboardingComplete;
+}
+
+/// Claims de autenticación leídos desde el ID token con force refresh.
+final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return null;
+
+  final result = await user.getIdTokenResult(true);
+  final role = (result.claims?['role'] as String?)?.toLowerCase();
+  final ownerPendingRaw = result.claims?['owner_pending'];
+  final ownerPending = ownerPendingRaw == true ||
+      (ownerPendingRaw is String && ownerPendingRaw.toLowerCase() == 'true');
+
+  return AuthClaimsSnapshot(
+    role: role,
+    ownerPending: ownerPending,
+    merchantId: result.claims?['merchantId'] as String?,
+    onboardingComplete: result.claims?['onboardingComplete'] == true,
+  );
+});
+
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
 /// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
 final isOwnerProvider = FutureProvider<bool>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return false;
-  final result = await user.getIdTokenResult(true);
-  return result.claims?['role'] == 'owner';
+  final claims = await ref.watch(authClaimsProvider.future);
+  if (claims == null) return false;
+  return claims.role == 'owner' && !claims.ownerPending;
 });
 
 /// true si el usuario autenticado tiene el claim role='admin' o 'super_admin'.
 /// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
 final isAdminProvider = FutureProvider<bool>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return false;
-  final result = await user.getIdTokenResult(true);
-  final role = result.claims?['role'] as String?;
+  final claims = await ref.watch(authClaimsProvider.future);
+  if (claims == null) return false;
+  final role = claims.role;
   return role == 'admin' || role == 'super_admin';
 });
 

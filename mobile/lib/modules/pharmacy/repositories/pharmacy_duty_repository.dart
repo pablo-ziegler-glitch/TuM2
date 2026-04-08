@@ -1,82 +1,322 @@
+import 'dart:developer' as developer;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/pharmacy_duty_item.dart';
-import '../services/distance_calculator.dart';
 
-/// Repositorio de turnos de farmacia.
-///
-/// Solo lectura: esta vista no escribe en Firestore.
-///
-/// Flujo de datos:
-///   1. Query pharmacy_duties: zoneId + date (hoy en AR) + status='published'
-///   2. Dedup por merchantId (evita mostrar el mismo merchant dos veces si hay datos duplicados)
-///   3. Batch-get merchant_public para los merchantIds resultantes
-///   4. Combinar ambos documentos en [PharmacyDutyItem]
-///   5. Filtrar silenciosamente entradas sin merchant_public (dato huérfano)
-class PharmacyDutyRepository {
-  final FirebaseFirestore _firestore;
+class PharmacyDutyRecord {
+  const PharmacyDutyRecord({
+    required this.id,
+    required this.merchantId,
+    required this.zoneId,
+    required this.date,
+  });
 
-  static const Duration _queryTimeout = Duration(seconds: 5);
+  final String id;
+  final String merchantId;
+  final String zoneId;
+  final String date;
+}
 
-  PharmacyDutyRepository({FirebaseFirestore? firestore})
+class MerchantPublicRecord {
+  const MerchantPublicRecord({
+    required this.id,
+    required this.data,
+  });
+
+  final String id;
+  final Map<String, dynamic> data;
+}
+
+abstract interface class PharmacyDutyDataSource {
+  Future<List<PharmacyDutyRecord>> fetchPublishedDuties({
+    required String zoneId,
+    required String dateKey,
+  });
+
+  Future<List<MerchantPublicRecord>> fetchMerchantsByIds(List<String> ids);
+}
+
+class FirestorePharmacyDutyDataSource implements PharmacyDutyDataSource {
+  FirestorePharmacyDutyDataSource({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
-  /// Retorna los turnos publicados para [zoneId] en la fecha de hoy (timezone Argentina).
-  ///
-  /// Lanza [TimeoutException] si Firestore no responde en 5 segundos.
-  /// Lanza [FirebaseException] si hay un error de Firestore subyacente.
-  Future<List<PharmacyDutyItem>> getDutiesForZone(String zoneId) async {
-    final today = todayArgentina();
+  final FirebaseFirestore _firestore;
+  static const Duration _timeout = Duration(seconds: 6);
 
-    // 1. Query principal
-    final dutiesSnap = await _firestore
+  @override
+  Future<List<PharmacyDutyRecord>> fetchPublishedDuties({
+    required String zoneId,
+    required String dateKey,
+  }) async {
+    final snap = await _firestore
         .collection('pharmacy_duties')
         .where('zoneId', isEqualTo: zoneId)
-        .where('date', isEqualTo: today)
+        .where('date', isEqualTo: dateKey)
         .where('status', isEqualTo: 'published')
         .get()
-        .timeout(_queryTimeout);
+        .timeout(_timeout);
+    return snap.docs
+        .map((doc) => PharmacyDutyRecord(
+              id: doc.id,
+              merchantId: (doc.data()['merchantId'] as String?)?.trim() ?? '',
+              zoneId: (doc.data()['zoneId'] as String?)?.trim() ?? zoneId,
+              date: (doc.data()['date'] as String?)?.trim() ?? dateKey,
+            ))
+        .where((record) => record.merchantId.isNotEmpty)
+        .toList();
+  }
 
-    if (dutiesSnap.docs.isEmpty) return [];
-
-    // 2. Dedup por merchantId (tomar el primer turno de cada merchant)
-    final seen = <String>{};
-    final dedupedDuties = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
-    for (final doc in dutiesSnap.docs) {
-      final merchantId = doc.data()['merchantId'] as String?;
-      if (merchantId == null || merchantId.isEmpty) continue;
-      if (seen.add(merchantId)) {
-        dedupedDuties.add(doc);
-      }
+  @override
+  Future<List<MerchantPublicRecord>> fetchMerchantsByIds(
+      List<String> ids) async {
+    if (ids.isEmpty) return const [];
+    final chunks = PharmacyDutyRepository.chunkIds(ids);
+    final all = <MerchantPublicRecord>[];
+    for (final chunk in chunks) {
+      final snap = await _firestore
+          .collection('merchant_public')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get()
+          .timeout(_timeout);
+      all.addAll(
+        snap.docs.map(
+          (doc) => MerchantPublicRecord(id: doc.id, data: doc.data()),
+        ),
+      );
     }
+    return all;
+  }
+}
 
-    if (dedupedDuties.isEmpty) return [];
+class PharmacyDutyInconsistency {
+  const PharmacyDutyInconsistency({
+    required this.code,
+    required this.merchantId,
+    required this.zoneId,
+    required this.dateKey,
+    this.extra = const {},
+  });
 
-    // 3. Batch-get merchant_public en paralelo (N ≤ 5 para zona piloto)
-    final merchantIds = dedupedDuties.map((d) => d.data()['merchantId'] as String).toList();
-    final merchantFutures = merchantIds.map((id) =>
-        _firestore.doc('merchant_public/$id').get().timeout(_queryTimeout));
-    final merchantSnaps = await Future.wait(merchantFutures);
+  final String code;
+  final String merchantId;
+  final String zoneId;
+  final String dateKey;
+  final Map<String, Object?> extra;
+}
 
-    // 4. Mapear a PharmacyDutyItem, filtrar huérfanos silenciosamente
+abstract interface class PharmacyDutyInconsistencyLogger {
+  void log(PharmacyDutyInconsistency inconsistency);
+}
+
+class ConsolePharmacyDutyInconsistencyLogger
+    implements PharmacyDutyInconsistencyLogger {
+  @override
+  void log(PharmacyDutyInconsistency inconsistency) {
+    developer.log(
+      'pharmacy_duty_inconsistency',
+      name: 'PharmacyDutyRepository',
+      error: {
+        'code': inconsistency.code,
+        'merchantId': inconsistency.merchantId,
+        'zoneId': inconsistency.zoneId,
+        'date': inconsistency.dateKey,
+        ...inconsistency.extra,
+      },
+    );
+  }
+}
+
+class PharmacyDutyRepository implements PharmacyDutySource {
+  PharmacyDutyRepository({
+    PharmacyDutyDataSource? dataSource,
+    PharmacyDutyInconsistencyLogger? inconsistencyLogger,
+  })  : _dataSource = dataSource ?? FirestorePharmacyDutyDataSource(),
+        _inconsistencyLogger =
+            inconsistencyLogger ?? ConsolePharmacyDutyInconsistencyLogger();
+
+  final PharmacyDutyDataSource _dataSource;
+  final PharmacyDutyInconsistencyLogger _inconsistencyLogger;
+
+  @override
+  Future<List<PharmacyDutyItem>> getPublishedDuties({
+    required String zoneId,
+    required String dateKey,
+  }) async {
+    final duties = await _dataSource.fetchPublishedDuties(
+      zoneId: zoneId,
+      dateKey: dateKey,
+    );
+    if (duties.isEmpty) return const [];
+
+    final deduped = <String, PharmacyDutyRecord>{};
+    for (final duty in duties) {
+      if (deduped.containsKey(duty.merchantId)) {
+        _logInconsistency(
+          code: 'duplicate_duty_published',
+          merchantId: duty.merchantId,
+          zoneId: zoneId,
+          dateKey: dateKey,
+        );
+        continue;
+      }
+      deduped[duty.merchantId] = duty;
+    }
+    if (deduped.isEmpty) return const [];
+
+    final merchants = await _dataSource
+        .fetchMerchantsByIds(deduped.keys.toList(growable: false));
+    final merchantsById = {for (final m in merchants) m.id: m.data};
+
     final items = <PharmacyDutyItem>[];
-    for (var i = 0; i < dedupedDuties.length; i++) {
-      final dutyDoc = dedupedDuties[i];
-      final merchantDoc = merchantSnaps[i];
-
-      if (!merchantDoc.exists) {
-        // Dato huérfano: pharmacy_duty sin merchant_public correspondiente.
-        // Se descarta silenciosamente para no romper la lista.
+    for (final duty in deduped.values) {
+      final merchant = merchantsById[duty.merchantId];
+      if (merchant == null) {
+        _logInconsistency(
+          code: 'missing_merchant_public',
+          merchantId: duty.merchantId,
+          zoneId: zoneId,
+          dateKey: dateKey,
+        );
         continue;
       }
 
-      items.add(PharmacyDutyItem.fromFirestore(
-        dutyId: dutyDoc.id,
-        dutyData: dutyDoc.data(),
-        merchantData: merchantDoc.data()!,
-      ));
-    }
+      final visibility = (merchant['visibilityStatus'] as String?) ?? '';
+      if (visibility != 'visible') {
+        _logInconsistency(
+          code: 'merchant_not_visible',
+          merchantId: duty.merchantId,
+          zoneId: zoneId,
+          dateKey: dateKey,
+          extra: {'visibilityStatus': visibility},
+        );
+        continue;
+      }
 
+      final categoryId = (merchant['categoryId'] as String?)?.trim();
+      if (!_isPharmacyCategory(categoryId)) {
+        _logInconsistency(
+          code: 'merchant_category_mismatch',
+          merchantId: duty.merchantId,
+          zoneId: zoneId,
+          dateKey: dateKey,
+          extra: {'categoryId': categoryId},
+        );
+        continue;
+      }
+
+      final phone = (merchant['phone'] as String?)?.trim();
+      final name = (merchant['name'] as String?)?.trim() ?? '';
+      final addressLine = (merchant['addressLine'] as String?)?.trim() ?? '';
+      final geo = _extractGeo(merchant);
+      final canCall = PharmacyDutyItem.isValidPhone(phone);
+      final canNavigate = geo != null;
+
+      if (name.isEmpty || (!canCall && !canNavigate)) {
+        _logInconsistency(
+          code: 'missing_critical_fields',
+          merchantId: duty.merchantId,
+          zoneId: zoneId,
+          dateKey: dateKey,
+          extra: {
+            'hasName': name.isNotEmpty,
+            'hasPhone': canCall,
+            'hasGeo': canNavigate,
+          },
+        );
+        continue;
+      }
+
+      final merchantZoneId = (merchant['zoneId'] as String?)?.trim();
+      if (merchantZoneId != null &&
+          merchantZoneId.isNotEmpty &&
+          merchantZoneId != duty.zoneId) {
+        _logInconsistency(
+          code: 'zone_mismatch',
+          merchantId: duty.merchantId,
+          zoneId: zoneId,
+          dateKey: dateKey,
+          extra: {'merchantZoneId': merchantZoneId, 'dutyZoneId': duty.zoneId},
+        );
+      }
+
+      items.add(
+        PharmacyDutyItem(
+          dutyId: duty.id,
+          merchantId: duty.merchantId,
+          merchantName: name,
+          addressLine: addressLine,
+          phone: phone,
+          latitude: geo?.$1,
+          longitude: geo?.$2,
+          zoneId: duty.zoneId,
+          dutyDate: duty.date,
+          isOnDuty: true,
+          isOpenNow: merchant['isOpenNow'] == true,
+          is24Hours: merchant['is24Hours'] == true,
+          verificationStatus:
+              (merchant['verificationStatus'] as String?) ?? 'unverified',
+          sortBoost: (merchant['sortBoost'] as num?)?.toInt() ?? 0,
+        ),
+      );
+    }
     return items;
   }
+
+  static List<List<String>> chunkIds(List<String> ids, {int chunkSize = 10}) {
+    if (ids.isEmpty) return const [];
+    final chunks = <List<String>>[];
+    for (var i = 0; i < ids.length; i += chunkSize) {
+      final end = (i + chunkSize < ids.length) ? i + chunkSize : ids.length;
+      chunks.add(ids.sublist(i, end));
+    }
+    return chunks;
+  }
+
+  void _logInconsistency({
+    required String code,
+    required String merchantId,
+    required String zoneId,
+    required String dateKey,
+    Map<String, Object?> extra = const {},
+  }) {
+    _inconsistencyLogger.log(
+      PharmacyDutyInconsistency(
+        code: code,
+        merchantId: merchantId,
+        zoneId: zoneId,
+        dateKey: dateKey,
+        extra: extra,
+      ),
+    );
+  }
+}
+
+abstract interface class PharmacyDutySource {
+  Future<List<PharmacyDutyItem>> getPublishedDuties({
+    required String zoneId,
+    required String dateKey,
+  });
+}
+
+bool _isPharmacyCategory(String? categoryId) {
+  if (categoryId == null || categoryId.isEmpty) return true;
+  final normalized = categoryId.toLowerCase();
+  return normalized.contains('farmacia') || normalized.contains('pharmacy');
+}
+
+(double, double)? _extractGeo(Map<String, dynamic> merchantData) {
+  final geoRaw = merchantData['geo'];
+  if (geoRaw is GeoPoint) {
+    return (geoRaw.latitude, geoRaw.longitude);
+  }
+  if (geoRaw is Map<String, dynamic>) {
+    final lat = (geoRaw['lat'] as num?)?.toDouble();
+    final lng = (geoRaw['lng'] as num?)?.toDouble();
+    if (lat != null && lng != null) return (lat, lng);
+  }
+  final lat = (merchantData['lat'] as num?)?.toDouble();
+  final lng = (merchantData['lng'] as num?)?.toDouble();
+  if (lat != null && lng != null) return (lat, lng);
+  return null;
 }

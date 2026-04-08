@@ -18,9 +18,9 @@ void main() {
         lat2: -31.4201,
         lng2: -64.1888,
       );
-      // Distancia real aproximada: ~697 km
-      expect(dist, greaterThan(690000));
-      expect(dist, lessThan(710000));
+      // Distancia lineal aproximada: ~647 km
+      expect(dist, greaterThan(640000));
+      expect(dist, lessThan(660000));
     });
 
     test('misma posición → 0 metros', () {

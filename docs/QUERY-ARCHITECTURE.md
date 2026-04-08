@@ -26,7 +26,7 @@ No requieren query propia; disparan subsecciones o navegación:
 - Abierto ahora
 - Farmacias de turno
 - Kioscos cerca
-- Panaderías cerca
+- Gomerías cerca
 
 #### Resultados inmediatos
 Query principal a `merchant_public` ordenada en cliente por:

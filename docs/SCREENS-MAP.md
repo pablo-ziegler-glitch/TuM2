@@ -106,7 +106,7 @@ TuM2 App
 - **Propósito:** mostrar valor en menos de 5 segundos.
 - **Bloques UI:**
   - Barra de zona activa (con opción de cambiar zona).
-  - Quick actions: Abierto ahora, Farmacias de turno, Kioscos cerca, Panaderías cerca.
+  - Quick actions: Abierto ahora, Farmacias de turno, Kioscos cerca, Gomerías cerca.
   - Sección "Farmacias de turno hoy" (si hay turnos activos).
   - Feed principal: listado de comercios de la zona (`merchant_public`).
 - **Ordenamiento:** `sortBoost desc` → `isOpenNow desc` → distancia.
@@ -119,7 +119,7 @@ TuM2 App
 - **UI implementada:**
   - Header: zona activa ("PALERMO") + título "Abierto ahora" + chip "En vivo" con indicador verde pulsante.
   - Barra de estado: ícono storefront + contador de resultados + hora actual.
-  - Filtro por categoría: chips horizontales animados (Todos / Cafeterías / Kioscos / Almacenes / Panaderías / Farmacias).
+  - Filtro por categoría: chips horizontales animados (Todos / Farmacias / Kioscos / Almacenes / Veterinarias / Comida al paso / Rotiserías / Gomerías).
   - Lista de comercios: `_CommerceCard` con thumbnail, nombre, tipo·zona, distancia, horario de cierre, rating, botón filled/outline.
   - Estado vacío: ícono + mensaje + CTA "Ver todos los rubros".
   - Barra inferior fija "Ver en el mapa" → SEARCH-03.
@@ -166,10 +166,16 @@ TuM2 App
 - **Bloques:** input manual, lista sugerencias, FAQ zona, mapa interactivo, "Explorar toda la ciudad".
 - **Archivo:** `modules/search/screens/location_fallback_screen.dart`
 
-### SEARCH-03 — Mapa
+### SEARCH-03 — Mapa ✅ implementado (Google Maps + marker system)
 - **Propósito:** ver comercios de la zona en mapa interactivo.
 - **Fuente:** misma query de SEARCH-02 o HOME-01 según contexto de entrada.
-- **UI:** pins de colores por estado (`isOpenNow`, `isOnDutyToday`), bottom sheet con ficha reducida al tocar pin.
+- **UI/estado operativo implementado:**
+  - Markers con resolución de prioridad: `guardia > open24h > open > closed > default`.
+  - Variantes visuales seleccionadas (`selected*`) para foco de comercio sin alterar estado de negocio.
+  - Z-index consistente: guardia por encima del resto y markers seleccionados por encima de no seleccionados.
+  - Clustering por grilla para densidad alta (más de 20 comercios visibles) con tap para zoom in automático.
+  - Cache de bitmaps por `visualType + pixelRatio` para evitar regeneración en cada rebuild.
+  - Fallback web para `BitmapDescriptor` cuando no aplica render custom.
 - **Salida:** → DETAIL-01 desde bottom sheet.
 
 ---

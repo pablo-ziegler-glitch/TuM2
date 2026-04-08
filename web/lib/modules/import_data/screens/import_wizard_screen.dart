@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
 
+import '../../../core/files/file_downloader.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/import_data_repository.dart';
+import '../data/import_template_service.dart';
 import '../models/import_batch_ui.dart';
 import '../widgets/wizard_step_type.dart';
 import '../widgets/wizard_step_template.dart';
@@ -260,6 +263,8 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
           onDatasetTypeChanged: (value) => setState(() => _datasetType = value),
           onZoneChanged: (z) => setState(() => _zoneId = z ?? ''),
           onFileSelected: _pickFileAndParse,
+          onDownloadCsvTemplate: _downloadCsvTemplate,
+          onDownloadExcelTemplate: _downloadExcelTemplate,
         ),
       3 => WizardStepConfig(
           mappings: _mappings,
@@ -432,6 +437,54 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
         _zonesError = 'No se pudieron cargar zonas: $error';
       });
     }
+  }
+
+  Future<void> _downloadCsvTemplate() async {
+    if (_importType == null) {
+      _showMessage('Seleccioná el tipo de importación antes de descargar.');
+      return;
+    }
+    final definition = ImportTemplateService.build(
+      importType: _importType!,
+      datasetType: _datasetType,
+    );
+    final bytes = ImportTemplateService.buildCsvBytes(definition);
+    downloadBytesFile(
+      fileName: '${definition.filePrefix}.csv',
+      bytes: bytes,
+      mimeType: 'text/csv;charset=utf-8;',
+    );
+    _showMessage('Plantilla CSV descargada.');
+  }
+
+  Future<void> _downloadExcelTemplate() async {
+    if (_importType == null) {
+      _showMessage('Seleccioná el tipo de importación antes de descargar.');
+      return;
+    }
+    final definition = ImportTemplateService.build(
+      importType: _importType!,
+      datasetType: _datasetType,
+    );
+    final bytes = ImportTemplateService.buildExcelBytes(definition);
+    if (bytes.isEmpty) {
+      _showMessage('No se pudo generar la plantilla Excel.');
+      return;
+    }
+    downloadBytesFile(
+      fileName: '${definition.filePrefix}.xlsx',
+      bytes: Uint8List.fromList(bytes),
+      mimeType:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    _showMessage('Plantilla Excel descargada.');
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 }
 

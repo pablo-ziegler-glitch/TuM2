@@ -18,6 +18,8 @@ class WizardStepArchivo extends StatefulWidget {
     required this.onDatasetTypeChanged,
     required this.onZoneChanged,
     required this.onFileSelected,
+    required this.onDownloadCsvTemplate,
+    required this.onDownloadExcelTemplate,
   });
 
   final DatasetType? selectedDatasetType;
@@ -29,6 +31,8 @@ class WizardStepArchivo extends StatefulWidget {
   final ValueChanged<DatasetType?> onDatasetTypeChanged;
   final ValueChanged<String?> onZoneChanged;
   final VoidCallback onFileSelected;
+  final VoidCallback onDownloadCsvTemplate;
+  final VoidCallback onDownloadExcelTemplate;
 
   @override
   State<WizardStepArchivo> createState() => _WizardStepArchivoState();
@@ -252,6 +256,39 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: widget.onDownloadCsvTemplate,
+                    icon: const Icon(Icons.download_outlined, size: 16),
+                    label: const Text('Plantilla CSV'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary500,
+                      side: const BorderSide(color: AppColors.primary500),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  OutlinedButton.icon(
+                    onPressed: widget.onDownloadExcelTemplate,
+                    icon: const Icon(Icons.grid_on_outlined, size: 16),
+                    label: const Text('Plantilla Excel'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary500,
+                      side: const BorderSide(color: AppColors.primary500),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

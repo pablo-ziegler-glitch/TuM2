@@ -22,6 +22,7 @@ import '../../modules/search/screens/pharmacy_results_screen.dart';
 import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
+import '../../modules/owner/screens/owner_schedule_screen.dart';
 import '../../modules/owner/screens/owner_resolve_page.dart';
 import '../../modules/owner/screens/owner_access_guard_page.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
@@ -293,6 +294,9 @@ List<RouteBase> _buildRoutes() {
           label: 'Gestionar Productos',
           roleRequired: 'owner',
         ),
+        GoRoute(
+          path: 'schedules',
+          builder: (_, __) => const OwnerScheduleScreen(),
       ),
     ),
     GoRoute(

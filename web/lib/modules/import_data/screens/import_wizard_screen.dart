@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../data/import_data_repository.dart';
 import '../models/import_batch_ui.dart';
 import '../widgets/wizard_step_type.dart';
 import '../widgets/wizard_step_template.dart';
@@ -26,18 +28,21 @@ class ImportWizardScreen extends StatefulWidget {
 }
 
 class _ImportWizardScreenState extends State<ImportWizardScreen> {
+  final _repository = ImportDataRepository();
   int _step = 0;
+  bool _isSubmitting = false;
+  bool _zonesLoading = false;
+  String? _zonesError;
+  List<ZoneOption> _zones = const <ZoneOption>[];
 
-  // ── Estado del wizard ──────────────────────────────────────────────────────
   ImportType? _importType;
+  DatasetType? _datasetType;
   String? _templateName;
-  String _zone = '';
+  String _zoneId = '';
   String? _fileName;
-  List<FieldMapping> _mappings = List.from(
-    mockBatches.first.fieldMappings.isNotEmpty
-        ? mockBatches.first.fieldMappings
-        : const <FieldMapping>[],
-  );
+  ParsedImportData? _parsedData;
+  List<FieldMapping> _mappings = const <FieldMapping>[];
+  List<CsvPreviewRow> _previewRows = const <CsvPreviewRow>[];
   bool _deduplicationEnabled = true;
   String _visibilityAfterImport = 'hidden';
 
@@ -51,14 +56,28 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
   ];
 
   bool get _canGoNext => switch (_step) {
-    0 => _importType != null,
-    1 => _templateName != null,
-    2 => _fileName != null || true, // archivo opcional en mock
-    3 => _mappings.any((m) => m.enabled),
-    4 => true,
-    5 => true,
-    _ => false,
-  };
+        0 => _importType != null,
+        1 => _templateName != null,
+        2 => _datasetType != null && _zoneId.isNotEmpty && _parsedData != null,
+        3 => _mappings.any((m) => m.enabled),
+        4 => _previewRows.isNotEmpty,
+        5 => true,
+        _ => false,
+      };
+
+  String get _zoneLabel {
+    final found = _zones.where((zone) => zone.zoneId == _zoneId);
+    if (found.isEmpty) return _zoneId;
+    return found.first.label;
+  }
+
+  ImportValidationResult? get _validation {
+    if (_parsedData == null) return null;
+    return _repository.validateRows(
+      rows: _parsedData!.rows,
+      mappings: _mappings,
+    );
+  }
 
   void _next() {
     if (_step < _steps.length - 1) {
@@ -73,9 +92,13 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
   }
 
   void _submitImport() {
-    // En producción aquí se dispara la Cloud Function de importación.
-    // En mock navegamos al detalle del primer batch.
-    context.go('/imports/batch_482');
+    _runSubmitImport();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadZones();
   }
 
   @override
@@ -115,9 +138,12 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: Row(
                 children: [
-                  const Icon(Icons.arrow_back, size: 16, color: AppColors.neutral500),
+                  const Icon(Icons.arrow_back,
+                      size: 16, color: AppColors.neutral500),
                   const SizedBox(width: 6),
-                  Text('Import Management', style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500)),
+                  Text('Import Management',
+                      style: AppTextStyles.bodySm
+                          .copyWith(color: AppColors.neutral500)),
                 ],
               ),
             ),
@@ -134,7 +160,9 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
                 color: AppColors.primary500.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(_importType!.label, style: AppTextStyles.labelSm.copyWith(color: AppColors.primary500, fontSize: 12)),
+              child: Text(_importType!.label,
+                  style: AppTextStyles.labelSm
+                      .copyWith(color: AppColors.primary500, fontSize: 12)),
             ),
         ],
       ),
@@ -196,7 +224,8 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
                     child: Container(
                       height: 1,
                       margin: const EdgeInsets.symmetric(horizontal: 6),
-                      color: isDone ? AppColors.successFg : AppColors.neutral200,
+                      color:
+                          isDone ? AppColors.successFg : AppColors.neutral200,
                     ),
                   ),
               ],
@@ -219,40 +248,39 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
       1 => WizardStepTemplate(
           importType: _importType ?? ImportType.officialDataset,
           selectedTemplate: _templateName,
-          onSelect: (t) => setState(() {
-            _templateName = t;
-            // Si seleccionó un template conocido, pre-cargar los mappings del mock
-            if (mockBatches.first.fieldMappings.isNotEmpty) {
-              _mappings = List.from(mockBatches.first.fieldMappings);
-            }
-          }),
+          onSelect: (t) => setState(() => _templateName = t),
         ),
       2 => WizardStepArchivo(
-          selectedDatasetType: null,
-          selectedZone: _zone.isEmpty ? null : _zone,
+          selectedDatasetType: _datasetType,
+          selectedZoneId: _zoneId.isEmpty ? null : _zoneId,
+          zoneOptions: _zones,
+          zonesLoading: _zonesLoading,
+          zonesError: _zonesError,
           fileName: _fileName,
-          onDatasetTypeChanged: (_) {},
-          onZoneChanged: (z) => setState(() => _zone = z ?? ''),
-          onFileSelected: () => setState(() => _fileName = 'dataset_import.csv'),
+          onDatasetTypeChanged: (value) => setState(() => _datasetType = value),
+          onZoneChanged: (z) => setState(() => _zoneId = z ?? ''),
+          onFileSelected: _pickFileAndParse,
         ),
       3 => WizardStepConfig(
           mappings: _mappings,
           deduplicationEnabled: _deduplicationEnabled,
           visibilityAfterImport: _visibilityAfterImport,
           onMappingsChanged: (m) => setState(() => _mappings = m),
-          onDeduplicationChanged: (v) => setState(() => _deduplicationEnabled = v),
-          onVisibilityChanged: (v) => setState(() => _visibilityAfterImport = v),
+          onDeduplicationChanged: (v) =>
+              setState(() => _deduplicationEnabled = v),
+          onVisibilityChanged: (v) =>
+              setState(() => _visibilityAfterImport = v),
         ),
-      4 => WizardStepValidation(previewRows: mockCsvPreview),
+      4 => WizardStepValidation(previewRows: _previewRows),
       5 => WizardStepConfirm(
           importType: _importType ?? ImportType.officialDataset,
           templateName: _templateName,
-          zone: _zone,
+          zone: _zoneLabel,
           fileName: _fileName,
-          totalRows: mockCsvPreview.length,
-          validRows: mockCsvPreview.where((r) => !r.hasError && !r.hasWarning).length,
-          warningRows: mockCsvPreview.where((r) => r.hasWarning && !r.hasError).length,
-          errorRows: mockCsvPreview.where((r) => r.hasError).length,
+          totalRows: _parsedData?.rows.length ?? 0,
+          validRows: _validation?.validRows ?? 0,
+          warningRows: _validation?.warningRows ?? 0,
+          errorRows: _validation?.errorRows ?? 0,
           fieldMappings: _mappings,
           deduplicationEnabled: _deduplicationEnabled,
           visibilityAfterImport: _visibilityAfterImport,
@@ -285,25 +313,125 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.neutral700,
                 side: const BorderSide(color: AppColors.neutral300),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 textStyle: AppTextStyles.labelSm,
               ),
               child: const Text('Back'),
             ),
           const SizedBox(width: 12),
           FilledButton(
-            onPressed: _canGoNext ? _next : null,
+            onPressed: (_canGoNext && !_isSubmitting) ? _next : null,
             style: FilledButton.styleFrom(
-              backgroundColor: isLastStep ? AppColors.successFg : AppColors.primary500,
+              backgroundColor:
+                  isLastStep ? AppColors.successFg : AppColors.primary500,
               disabledBackgroundColor: AppColors.neutral200,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               textStyle: AppTextStyles.labelSm,
             ),
-            child: Text(isLastStep ? 'Start Import' : 'Continue'),
+            child: Text(
+              isLastStep
+                  ? (_isSubmitting ? 'Importing...' : 'Start Import')
+                  : 'Continue',
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _pickFileAndParse() async {
+    final picked = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: const ['csv', 'json'],
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final file = picked.files.first;
+    final bytes = file.bytes;
+    if (bytes == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No se pudieron leer los bytes del archivo.')),
+      );
+      return;
+    }
+
+    try {
+      final parsed = await _repository.parseImportFile(
+        fileName: file.name,
+        bytes: bytes,
+      );
+      if (!mounted) return;
+      setState(() {
+        _parsedData = parsed;
+        _fileName = parsed.fileName;
+        _mappings = parsed.suggestedMappings;
+        _previewRows = parsed.previewRows;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error parseando archivo: $error')),
+      );
+    }
+  }
+
+  Future<void> _runSubmitImport() async {
+    if (_parsedData == null || _datasetType == null || _importType == null) {
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    try {
+      final batchId = await _repository.submitImport(
+        ImportSubmissionInput(
+          importType: _importType!,
+          datasetType: _datasetType!,
+          zoneId: _zoneId,
+          zoneLabel: _zoneLabel,
+          templateName: _templateName,
+          parsedData: _parsedData!,
+          fieldMappings: _mappings,
+          deduplicationEnabled: _deduplicationEnabled,
+          visibilityAfterImport: _visibilityAfterImport,
+        ),
+      );
+      if (!mounted) return;
+      context.go('/imports/$batchId');
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error ejecutando importación: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _loadZones() async {
+    setState(() {
+      _zonesLoading = true;
+      _zonesError = null;
+    });
+    try {
+      final zones = await _repository.fetchAvailableZones();
+      if (!mounted) return;
+      setState(() {
+        _zones = zones;
+        _zonesLoading = false;
+        if (_zoneId.isEmpty && zones.isNotEmpty) {
+          _zoneId = zones.first.zoneId;
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _zonesLoading = false;
+        _zonesError = 'No se pudieron cargar zonas: $error';
+      });
+    }
   }
 }
 

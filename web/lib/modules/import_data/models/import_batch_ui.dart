@@ -1,15 +1,21 @@
-/// Modelo UI para un batch de importación de dataset.
-/// Extiende el contrato de Firestore import_batches/{batchId}.
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ── Enumeraciones ─────────────────────────────────────────────────────────────
+enum ImportBatchStatus {
+  draft,
+  running,
+  validated,
+  completed,
+  failed,
+  partial,
+  archived,
+  rolledBack,
+  hidden
+}
 
-enum ImportBatchStatus { draft, running, validated, completed, failed, partial, archived, rolledBack, hidden }
-
-/// Tipo de importación — determina columnas, validaciones y destino.
 enum ImportType {
-  officialDataset,   // Dataset oficial (ej: REPES, puntos WiFi municipales)
-  masterCatalog,     // Catálogo maestro de productos (barcode + nombre + marca)
-  genericInternal,   // Fuente genérica/interna personalizada
+  officialDataset,
+  masterCatalog,
+  genericInternal,
 }
 
 extension ImportTypeLabel on ImportType {
@@ -61,44 +67,6 @@ extension DatasetTypeLabel on DatasetType {
   }
 }
 
-// ── Modelos de soporte ────────────────────────────────────────────────────────
-
-/// Mapeo de un campo CSV a un campo TuM2.
-class FieldMapping {
-  const FieldMapping({
-    required this.csvColumn,
-    required this.tum2Field,
-    required this.enabled,
-    required this.required,
-    this.aiConfidence,
-    this.sampleValue,
-  });
-
-  final String csvColumn;
-  final String tum2Field;
-  final bool enabled;
-  final bool required;
-  /// Confianza IA en el mapeo automático (0.0 – 1.0).
-  final double? aiConfidence;
-  /// Valor de ejemplo del CSV para la columna.
-  final String? sampleValue;
-}
-
-/// Error de fila durante la importación.
-class ImportRowError {
-  const ImportRowError({
-    required this.row,
-    required this.establishmentName,
-    required this.reason,
-    this.severity = ImportIssueSeverity.error,
-  });
-
-  final int row;
-  final String establishmentName;
-  final String reason;
-  final ImportIssueSeverity severity;
-}
-
 enum ImportIssueSeverity { critical, error, warning, info }
 
 extension ImportIssueSeverityLabel on ImportIssueSeverity {
@@ -116,7 +84,120 @@ extension ImportIssueSeverityLabel on ImportIssueSeverity {
   }
 }
 
-/// Evento en la línea de tiempo de auditoría de un batch.
+const tum2FieldName = 'Nombre del Negocio';
+const tum2FieldPhone = 'Teléfono Principal';
+const tum2FieldAddress = 'Dirección Completa';
+const tum2FieldHours = 'Horario de Atención';
+const tum2FieldCategory = 'Categoría Principal';
+const tum2FieldDescription = 'Descripción';
+const tum2FieldWebsite = 'Sitio Web';
+const tum2FieldEmail = 'Email de Contacto';
+const tum2FieldLatitude = 'Latitud';
+const tum2FieldLongitude = 'Longitud';
+const tum2FieldLocality = 'Localidad';
+
+const tum2AssignableFields = <String>[
+  tum2FieldName,
+  tum2FieldPhone,
+  tum2FieldAddress,
+  tum2FieldHours,
+  tum2FieldCategory,
+  tum2FieldDescription,
+  tum2FieldWebsite,
+  tum2FieldEmail,
+  tum2FieldLatitude,
+  tum2FieldLongitude,
+  tum2FieldLocality,
+];
+
+class FieldMapping {
+  const FieldMapping({
+    required this.csvColumn,
+    required this.tum2Field,
+    required this.enabled,
+    required this.required,
+    this.aiConfidence,
+    this.sampleValue,
+  });
+
+  final String csvColumn;
+  final String tum2Field;
+  final bool enabled;
+  final bool required;
+  final double? aiConfidence;
+  final String? sampleValue;
+
+  FieldMapping copyWith({String? tum2Field, bool? enabled}) {
+    return FieldMapping(
+      csvColumn: csvColumn,
+      tum2Field: tum2Field ?? this.tum2Field,
+      enabled: enabled ?? this.enabled,
+      required: required,
+      aiConfidence: aiConfidence,
+      sampleValue: sampleValue,
+    );
+  }
+
+  Map<String, Object?> toMap() {
+    return {
+      'csvColumn': csvColumn,
+      'tum2Field': tum2Field,
+      'enabled': enabled,
+      'required': required,
+      'aiConfidence': aiConfidence,
+      'sampleValue': sampleValue,
+    };
+  }
+
+  factory FieldMapping.fromMap(Map<String, dynamic> map) {
+    return FieldMapping(
+      csvColumn: map['csvColumn']?.toString() ?? '',
+      tum2Field: map['tum2Field']?.toString() ?? '',
+      enabled: map['enabled'] == true,
+      required: map['required'] == true,
+      aiConfidence: _toDoubleOrNull(map['aiConfidence']),
+      sampleValue: map['sampleValue']?.toString(),
+    );
+  }
+}
+
+class ImportRowError {
+  const ImportRowError({
+    required this.row,
+    required this.establishmentName,
+    required this.reason,
+    this.severity = ImportIssueSeverity.error,
+  });
+
+  final int row;
+  final String establishmentName;
+  final String reason;
+  final ImportIssueSeverity severity;
+
+  Map<String, Object?> toMap() {
+    return {
+      'row': row,
+      'establishmentName': establishmentName,
+      'reason': reason,
+      'severity': severity.name,
+    };
+  }
+
+  factory ImportRowError.fromMap(Map<String, dynamic> map) {
+    final severityRaw =
+        map['severity']?.toString() ?? ImportIssueSeverity.error.name;
+    return ImportRowError(
+      row: _toInt(map['row']),
+      establishmentName: map['establishmentName']?.toString() ?? '',
+      reason: map['reason']?.toString() ?? 'Validation error',
+      severity: ImportIssueSeverity.values.firstWhere(
+        (value) => value.name == severityRaw,
+        orElse: () => ImportIssueSeverity.error,
+      ),
+    );
+  }
+}
+
 class AuditTimelineEvent {
   const AuditTimelineEvent({
     required this.stage,
@@ -133,17 +214,37 @@ class AuditTimelineEvent {
   final String actor;
   final bool result;
   final String? detail;
+
+  Map<String, Object?> toMap() {
+    return {
+      'stage': stage,
+      'label': label,
+      'timestamp': Timestamp.fromDate(timestamp),
+      'actor': actor,
+      'result': result,
+      'detail': detail,
+    };
+  }
+
+  factory AuditTimelineEvent.fromMap(Map<String, dynamic> map) {
+    return AuditTimelineEvent(
+      stage: map['stage']?.toString() ?? '',
+      label: map['label']?.toString() ?? '',
+      timestamp: _toDateTime(map['timestamp']) ?? DateTime.now(),
+      actor: map['actor']?.toString() ?? 'system',
+      result: map['result'] != false,
+      detail: map['detail']?.toString(),
+    );
+  }
 }
 
-// ── Modelo principal ──────────────────────────────────────────────────────────
-
-/// Modelo completo de un batch de importación para la UI.
 class ImportBatchUi {
   const ImportBatchUi({
     required this.id,
     required this.batchNumber,
     required this.datasetType,
     required this.zone,
+    this.zoneId,
     required this.status,
     required this.processedCount,
     required this.createdCount,
@@ -176,6 +277,7 @@ class ImportBatchUi {
   final int batchNumber;
   final DatasetType datasetType;
   final String zone;
+  final String? zoneId;
   final ImportBatchStatus status;
   final ImportType importType;
   final int processedCount;
@@ -194,11 +296,11 @@ class ImportBatchUi {
   final List<ImportRowError> errors;
   final List<FieldMapping> fieldMappings;
   final bool deduplicationEnabled;
-  final String visibilityAfterImport; // 'hidden' | 'visible'
+  final String visibilityAfterImport;
   final String? fileUrl;
   final String? fileName;
-  final String? fileSize;  // ej: "2.4 MB"
-  final String? fileHash;  // SHA-256 para evitar reprocesamiento
+  final String? fileSize;
+  final String? fileHash;
   final double estimatedCost;
   final String? templateName;
   final List<AuditTimelineEvent> auditTrail;
@@ -230,122 +332,62 @@ class ImportBatchUi {
     if (processedCount == 0) return 0;
     return createdCount / processedCount;
   }
+
+  static ImportBatchUi fromDoc(String id, Map<String, dynamic> map) {
+    final importType = parseImportType(map['importType']?.toString());
+    final datasetType = parseDatasetType(map['datasetType']?.toString());
+    final status = parseStatus(map['status']?.toString());
+    final createdAt = _toDateTime(map['createdAt']) ?? DateTime.now();
+
+    final errorsRaw = (map['errors'] as List<dynamic>? ?? const []);
+    final mappingsRaw = (map['fieldMappings'] as List<dynamic>? ?? const []);
+    final trailRaw = (map['auditTrail'] as List<dynamic>? ?? const []);
+
+    return ImportBatchUi(
+      id: id,
+      batchNumber: _toInt(map['batchNumber']),
+      datasetType: datasetType,
+      zone: map['zone']?.toString() ?? '',
+      zoneId: map['zoneId']?.toString(),
+      status: status,
+      importType: importType,
+      processedCount: _toInt(map['processedCount']),
+      createdCount: _toInt(map['createdCount']),
+      duplicatedCount: _toInt(map['duplicatedCount']),
+      errorCount: _toInt(map['errorCount']),
+      pendingReviewCount: _toInt(map['pendingReviewCount']),
+      validRows: _toInt(map['validRows']),
+      warningRows: _toInt(map['warningRows']),
+      stagingCount: _toInt(map['stagingCount']),
+      mergeCandidateCount: _toInt(map['mergeCandidateCount']),
+      createdAt: createdAt,
+      createdBy: map['createdBy']?.toString() ?? 'unknown',
+      actorRole: map['actorRole']?.toString(),
+      finishedAt: _toDateTime(map['finishedAt']),
+      errors: errorsRaw
+          .whereType<Map<String, dynamic>>()
+          .map(ImportRowError.fromMap)
+          .toList(),
+      fieldMappings: mappingsRaw
+          .whereType<Map<String, dynamic>>()
+          .map(FieldMapping.fromMap)
+          .toList(),
+      deduplicationEnabled: map['deduplicationEnabled'] != false,
+      visibilityAfterImport:
+          map['visibilityAfterImport']?.toString() ?? 'hidden',
+      fileUrl: map['fileUrl']?.toString(),
+      fileName: map['fileName']?.toString(),
+      fileSize: map['fileSize']?.toString(),
+      fileHash: map['fileHash']?.toString(),
+      estimatedCost: _toDoubleOrNull(map['estimatedCost']) ?? 0,
+      templateName: map['templateName']?.toString(),
+      auditTrail: trailRaw
+          .whereType<Map<String, dynamic>>()
+          .map(AuditTimelineEvent.fromMap)
+          .toList(),
+    );
+  }
 }
-
-// ── Mock data para desarrollo ─────────────────────────────────────────────────
-
-final mockBatches = <ImportBatchUi>[
-  ImportBatchUi(
-    id: 'batch_482',
-    batchNumber: 482,
-    datasetType: DatasetType.farmaciasRepes,
-    importType: ImportType.officialDataset,
-    zone: 'Córdoba — Marcos Juárez',
-    status: ImportBatchStatus.completed,
-    processedCount: 1259,
-    createdCount: 1108,
-    duplicatedCount: 82,
-    errorCount: 12,
-    pendingReviewCount: 57,
-    validRows: 1202,
-    warningRows: 45,
-    stagingCount: 1108,
-    mergeCandidateCount: 24,
-    createdAt: DateTime(2026, 3, 23, 14, 32),
-    createdBy: 'Marcos P.',
-    actorRole: 'Data Ops Admin',
-    finishedAt: DateTime(2026, 3, 23, 14, 47),
-    fileName: 'farmacias_repes_cordoba_2026_03.csv',
-    fileSize: '2.4 MB',
-    fileHash: 'a3f5c9d1e7b2f648a3f5c9d1e7b2f648',
-    templateName: 'REPES Official v2.1',
-    errors: [
-      const ImportRowError(row: 18, establishmentName: 'Farmacia del Sol', reason: 'Latitud fuera de rango', severity: ImportIssueSeverity.error),
-      const ImportRowError(row: 62, establishmentName: 'Botica del Boulevard', reason: 'GPS inválido', severity: ImportIssueSeverity.error),
-      const ImportRowError(row: 91, establishmentName: 'Farmacia Central Norte', reason: 'Dirección duplicada en zona', severity: ImportIssueSeverity.warning),
-      const ImportRowError(row: 124, establishmentName: 'Droguería San Marcos', reason: 'Nombre demasiado largo (>120 chars)', severity: ImportIssueSeverity.warning),
-    ],
-    fieldMappings: [
-      const FieldMapping(csvColumn: 'business_name', tum2Field: 'Nombre del Negocio', enabled: true, required: true, aiConfidence: 0.98, sampleValue: 'Farmacia del Sol'),
-      const FieldMapping(csvColumn: 'phone_number', tum2Field: 'Teléfono Principal', enabled: true, required: false, aiConfidence: 0.95, sampleValue: '+54 351 421-0000'),
-      const FieldMapping(csvColumn: 'full_address', tum2Field: 'Dirección Completa', enabled: true, required: true, aiConfidence: 0.97, sampleValue: 'Av. Colón 1200, Córdoba'),
-      const FieldMapping(csvColumn: 'opening_hours', tum2Field: 'Horario de Atención', enabled: false, required: false, aiConfidence: 0.72, sampleValue: 'L-V 8-20'),
-    ],
-    auditTrail: [
-      AuditTimelineEvent(stage: 'upload', label: 'File Uploaded', timestamp: DateTime(2026, 3, 23, 14, 32), actor: 'Marcos P.', result: true, detail: 'farmacias_repes_cordoba_2026_03.csv · 2.4 MB'),
-      AuditTimelineEvent(stage: 'parse', label: 'CSV Parsed', timestamp: DateTime(2026, 3, 23, 14, 33), actor: 'system', result: true, detail: '1,259 rows · UTF-8 · 12 columns detected'),
-      AuditTimelineEvent(stage: 'map', label: 'Fields Mapped', timestamp: DateTime(2026, 3, 23, 14, 34), actor: 'Marcos P.', result: true, detail: '4 fields mapped · 1 disabled'),
-      AuditTimelineEvent(stage: 'validate', label: 'Validation Complete', timestamp: DateTime(2026, 3, 23, 14, 36), actor: 'system', result: true, detail: '1,202 valid · 45 warnings · 12 errors'),
-      AuditTimelineEvent(stage: 'stage', label: 'Staged to Firestore', timestamp: DateTime(2026, 3, 23, 14, 40), actor: 'system', result: true, detail: '1,108 records staged (hidden)'),
-      AuditTimelineEvent(stage: 'confirm', label: 'Import Confirmed', timestamp: DateTime(2026, 3, 23, 14, 47), actor: 'Marcos P.', result: true, detail: 'Batch marked as completed'),
-    ],
-  ),
-  ImportBatchUi(
-    id: 'batch_481',
-    batchNumber: 481,
-    datasetType: DatasetType.puntosWifi,
-    importType: ImportType.officialDataset,
-    zone: 'CABA — Comunas 1, 2, 3',
-    status: ImportBatchStatus.running,
-    processedCount: 490,
-    createdCount: 400,
-    duplicatedCount: 12,
-    errorCount: 2,
-    pendingReviewCount: 76,
-    validRows: 450,
-    warningRows: 38,
-    stagingCount: 400,
-    mergeCandidateCount: 12,
-    createdAt: DateTime(2026, 3, 22, 9, 15),
-    createdBy: 'Admin',
-    actorRole: 'System Admin',
-    fileName: 'badata_wifi_comunas_1_2_3.csv',
-    fileSize: '890 KB',
-    fileHash: 'b7e4a2c8f1d3e9b7e4a2c8f1d3e9b7e4',
-  ),
-  ImportBatchUi(
-    id: 'batch_480',
-    batchNumber: 480,
-    datasetType: DatasetType.clubesDeBarrio,
-    importType: ImportType.officialDataset,
-    zone: 'Buenos Aires — Lomas',
-    status: ImportBatchStatus.failed,
-    processedCount: 52,
-    createdCount: 0,
-    duplicatedCount: 0,
-    errorCount: 12,
-    pendingReviewCount: 0,
-    validRows: 40,
-    warningRows: 0,
-    createdAt: DateTime(2026, 3, 21, 18, 0),
-    createdBy: 'Admin',
-    fileName: 'clubes_lomas_2026.xlsx',
-    fileSize: '124 KB',
-  ),
-  ImportBatchUi(
-    id: 'batch_479',
-    batchNumber: 479,
-    datasetType: DatasetType.mercadosMunicipales,
-    importType: ImportType.genericInternal,
-    zone: 'Salta — Capital',
-    status: ImportBatchStatus.hidden,
-    processedCount: 59,
-    createdCount: 47,
-    duplicatedCount: 8,
-    errorCount: 4,
-    pendingReviewCount: 0,
-    validRows: 55,
-    warningRows: 4,
-    stagingCount: 47,
-    mergeCandidateCount: 2,
-    createdAt: DateTime(2026, 3, 20, 7, 20),
-    createdBy: 'Admin',
-    fileName: 'mercados_salta_capital_export.csv',
-    fileSize: '320 KB',
-  ),
-];
-
-// ── Mock global KPIs ──────────────────────────────────────────────────────────
 
 class ImportOverviewKpis {
   const ImportOverviewKpis({
@@ -363,20 +405,35 @@ class ImportOverviewKpis {
   final int rowsProcessed;
   final int pendingConflicts;
   final int activeTemplates;
+
+  factory ImportOverviewKpis.fromBatches(List<ImportBatchUi> batches) {
+    final totalImports = batches.length;
+    final completed =
+        batches.where((b) => b.status == ImportBatchStatus.completed).length;
+    final failedBatches =
+        batches.where((b) => b.status == ImportBatchStatus.failed).length;
+    final rowsProcessed =
+        batches.fold<int>(0, (sum, b) => sum + b.processedCount);
+    final pendingConflicts =
+        batches.fold<int>(0, (sum, b) => sum + b.pendingReviewCount);
+    final activeTemplates = batches
+        .map((batch) => batch.templateName)
+        .whereType<String>()
+        .where((value) => value.trim().isNotEmpty)
+        .toSet()
+        .length;
+
+    return ImportOverviewKpis(
+      totalImports: totalImports,
+      successRate: totalImports == 0 ? 0 : (completed / totalImports),
+      failedBatches: failedBatches,
+      rowsProcessed: rowsProcessed,
+      pendingConflicts: pendingConflicts,
+      activeTemplates: activeTemplates,
+    );
+  }
 }
 
-const mockOverviewKpis = ImportOverviewKpis(
-  totalImports: 482,
-  successRate: 0.947,
-  failedBatches: 3,
-  rowsProcessed: 48291,
-  pendingConflicts: 139,
-  activeTemplates: 7,
-);
-
-// ── Mock CSV preview ──────────────────────────────────────────────────────────
-
-/// Fila de preview CSV para el paso de previsualización.
 class CsvPreviewRow {
   const CsvPreviewRow({
     required this.name,
@@ -401,16 +458,74 @@ class CsvPreviewRow {
   final bool hasWarning;
 }
 
-/// Mock de preview del CSV.
-final mockCsvPreview = <CsvPreviewRow>[
-  const CsvPreviewRow(name: 'Café Los Gallegos', locality: 'CABA', typology: 'GAST', address: 'Av. Rivadavia 3480', longitude: '-58.4123', latitude: '-34.6111', state: '●', hasError: false, hasWarning: false),
-  const CsvPreviewRow(name: 'Panadería Del', locality: 'Córdoba', typology: 'COM', address: 'Belgrano 320', longitude: '4/0', latitude: '4/0', state: '▲', hasError: true, hasWarning: false),
-  const CsvPreviewRow(name: 'Farmacia Central', locality: 'Rosario', typology: 'FAI', address: 'Uruguay 906', longitude: '-60.6394', latitude: '-32.9468', state: '●', hasError: false, hasWarning: false),
-  const CsvPreviewRow(name: 'Librería & Ateneos', locality: 'CABA', typology: 'COM', address: 'Av. Santa fe 1860', longitude: '-58.3965', latitude: '-34.5969', state: '●', hasError: false, hasWarning: false),
-  const CsvPreviewRow(name: 'Mercado San Juan', locality: 'Mendoza', typology: 'COM', address: 'San Martín 900', longitude: 'invalid_format', latitude: '-32.8895', state: '▲', hasError: false, hasWarning: true),
-  const CsvPreviewRow(name: '1er Notable de Billares', locality: 'CABA', typology: 'GASI', address: 'Av. de Mayo 7271', longitude: '-58.3868', latitude: '-34.6094', state: '●', hasError: false, hasWarning: false),
-  const CsvPreviewRow(name: 'Hotel Alvear', locality: 'CABA', typology: 'HOT', address: 'Av. Alvear 1891', longitude: '-58.3892', latitude: '-34.5692', state: '●', hasError: false, hasWarning: false),
-  const CsvPreviewRow(name: 'Teatro Colón', locality: 'CABA', typology: 'CULT', address: 'Cerrito 822', longitude: '-58.3831', latitude: '-34.6011', state: '●', hasError: false, hasWarning: false),
-  const CsvPreviewRow(name: 'Resta Puerto', locality: 'Mar del Plata', typology: 'GAST', address: 'Juan B. Justo 200', longitude: '-57.5342', latitude: '-38.0345', state: '●', hasError: false, hasWarning: false),
-  const CsvPreviewRow(name: 'Kiosco Central', locality: 'Tucumán', typology: 'COM', address: 'B de Julio 122', longitude: '-65.2038', latitude: '-26.8327', state: '●', hasError: false, hasWarning: false),
-];
+ImportType parseImportType(String? raw) {
+  switch (raw) {
+    case 'masterCatalog':
+      return ImportType.masterCatalog;
+    case 'genericInternal':
+      return ImportType.genericInternal;
+    case 'officialDataset':
+    default:
+      return ImportType.officialDataset;
+  }
+}
+
+DatasetType parseDatasetType(String? raw) {
+  switch (raw) {
+    case 'puntosWifi':
+      return DatasetType.puntosWifi;
+    case 'clubesDeBarrio':
+      return DatasetType.clubesDeBarrio;
+    case 'mercadosMunicipales':
+      return DatasetType.mercadosMunicipales;
+    case 'custom':
+      return DatasetType.custom;
+    case 'farmaciasRepes':
+    default:
+      return DatasetType.farmaciasRepes;
+  }
+}
+
+ImportBatchStatus parseStatus(String? raw) {
+  switch (raw) {
+    case 'draft':
+      return ImportBatchStatus.draft;
+    case 'running':
+      return ImportBatchStatus.running;
+    case 'validated':
+      return ImportBatchStatus.validated;
+    case 'completed':
+      return ImportBatchStatus.completed;
+    case 'failed':
+      return ImportBatchStatus.failed;
+    case 'partial':
+      return ImportBatchStatus.partial;
+    case 'archived':
+      return ImportBatchStatus.archived;
+    case 'rolledBack':
+      return ImportBatchStatus.rolledBack;
+    case 'hidden':
+      return ImportBatchStatus.hidden;
+    default:
+      return ImportBatchStatus.running;
+  }
+}
+
+int _toInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double? _toDoubleOrNull(Object? value) {
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '');
+}
+
+DateTime? _toDateTime(Object? value) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  return null;
+}

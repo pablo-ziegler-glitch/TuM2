@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -36,12 +37,24 @@ class AdminShell extends StatelessWidget {
 
 class _AdminSidebar extends StatelessWidget {
   static const _navItems = [
-    _NavItem(icon: Icons.grid_view_outlined, label: 'Dashboard', path: '/dashboard'),
-    _NavItem(icon: Icons.storefront_outlined, label: 'Businesses', path: '/businesses'),
-    _NavItem(icon: Icons.storage_outlined, label: 'Import Management', path: '/imports'),
-    _NavItem(icon: Icons.description_outlined, label: 'Templates', path: '/templates'),
-    _NavItem(icon: Icons.bar_chart_outlined, label: 'Analytics', path: '/analytics'),
-    _NavItem(icon: Icons.settings_outlined, label: 'Settings', path: '/settings'),
+    _NavItem(
+        icon: Icons.grid_view_outlined, label: 'Dashboard', path: '/dashboard'),
+    _NavItem(
+        icon: Icons.storefront_outlined,
+        label: 'Businesses',
+        path: '/businesses'),
+    _NavItem(
+        icon: Icons.storage_outlined,
+        label: 'Import Management',
+        path: '/imports'),
+    _NavItem(
+        icon: Icons.description_outlined,
+        label: 'Templates',
+        path: '/templates'),
+    _NavItem(
+        icon: Icons.bar_chart_outlined, label: 'Analytics', path: '/analytics'),
+    _NavItem(
+        icon: Icons.settings_outlined, label: 'Settings', path: '/settings'),
   ];
 
   @override
@@ -69,12 +82,14 @@ class _AdminSidebar extends StatelessWidget {
                         color: AppColors.primary500,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Icon(Icons.location_on, color: Colors.white, size: 16),
+                      child: const Icon(Icons.location_on,
+                          color: Colors.white, size: 16),
                     ),
                     const SizedBox(width: 10),
                     Text(
                       'TuM2 Admin',
-                      style: AppTextStyles.headingSm.copyWith(color: AppColors.surface),
+                      style: AppTextStyles.headingSm
+                          .copyWith(color: AppColors.surface),
                     ),
                   ],
                 ),
@@ -96,7 +111,8 @@ class _AdminSidebar extends StatelessWidget {
           ...(_navItems.map((item) {
             // Import Management activo para todas las rutas /imports*
             final isActive = item.path == '/imports'
-                ? location.startsWith('/imports') || location.startsWith('/datasets')
+                ? location.startsWith('/imports') ||
+                    location.startsWith('/datasets')
                 : location.startsWith(item.path);
             return _SidebarNavItem(item: item, isActive: isActive);
           })),
@@ -114,7 +130,11 @@ class _AdminSidebar extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
-                    child: Text('AU', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                    child: Text('AU',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -122,10 +142,13 @@ class _AdminSidebar extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Admin User', style: AppTextStyles.labelSm.copyWith(color: AppColors.surface)),
+                      Text('Admin User',
+                          style: AppTextStyles.labelSm
+                              .copyWith(color: AppColors.surface)),
                       Text(
                         'System Overseer',
-                        style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600),
+                        style: AppTextStyles.bodyXs
+                            .copyWith(color: AppColors.neutral600),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -160,9 +183,13 @@ class _SidebarNavItem extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.primary500.withValues(alpha: 0.18) : Colors.transparent,
+          color: isActive
+              ? AppColors.primary500.withValues(alpha: 0.18)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: isActive ? Border.all(color: AppColors.primary500.withValues(alpha: 0.3)) : null,
+          border: isActive
+              ? Border.all(color: AppColors.primary500.withValues(alpha: 0.3))
+              : null,
         ),
         child: Row(
           children: [
@@ -194,6 +221,7 @@ class _SidebarNavItem extends StatelessWidget {
 class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     return Container(
       height: 52,
       color: AppColors.surface,
@@ -215,7 +243,8 @@ class _TopBar extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'Search imports, logs or entities...',
-                    style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400),
+                    style: AppTextStyles.bodyXs
+                        .copyWith(color: AppColors.neutral400),
                   ),
                 ],
               ),
@@ -232,6 +261,20 @@ class _TopBar extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           IconButton(
+            icon: const Icon(Icons.logout),
+            color: AppColors.neutral600,
+            iconSize: 18,
+            onPressed: () => FirebaseAuth.instance.signOut(),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            user?.email ?? 'admin',
+            style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
             icon: const Icon(Icons.help_outline),
             color: AppColors.neutral600,
             iconSize: 18,
@@ -240,7 +283,9 @@ class _TopBar extends StatelessWidget {
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
           const SizedBox(width: 8),
-          Text('TuM2 Portal', style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600)),
+          Text('TuM2 Portal',
+              style:
+                  AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600)),
           const SizedBox(width: 8),
           Container(
             width: 28,
@@ -250,7 +295,11 @@ class _TopBar extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: const Center(
-              child: Text('AU', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+              child: Text('AU',
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white)),
             ),
           ),
         ],

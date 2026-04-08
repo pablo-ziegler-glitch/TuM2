@@ -5,6 +5,12 @@
 - **Descripciones, comentarios y documentación**: siempre en **español**
 - **Código fuente**: siempre en **inglés** (variables, funciones, clases, archivos, etc.)
 
+## Regla anti-mocks (obligatoria)
+
+- Para cualquier tarjeta marcada como implementada/completada, la solución debe estar **100% funcional** sin datos mock.
+- En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
+- Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
+
 ---
 
 ## Convención de nombres de conversación y PR

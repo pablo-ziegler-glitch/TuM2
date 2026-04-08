@@ -943,6 +943,9 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     setState(() {
       _hasUnsavedChanges = true;
       _feedbackMessage = null;
+      // Si se recrea una excepción con una fecha previamente eliminada
+      // en este draft, no debe persistirse su borrado al guardar.
+      _deletedExceptionIds.remove(created.id);
       _exceptions = [
         ..._exceptions.where((item) => item.id != created.id),
         created
@@ -956,6 +959,11 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     setState(() {
       _hasUnsavedChanges = true;
       _feedbackMessage = null;
+      if (updated.id != exception.id) {
+        // Si cambió la fecha (doc id), borrar el documento previo al guardar.
+        _deletedExceptionIds.add(exception.id);
+      }
+      _deletedExceptionIds.remove(updated.id);
       _exceptions = _exceptions
           .map((item) => item.id == exception.id ? updated : item)
           .toList(growable: false)

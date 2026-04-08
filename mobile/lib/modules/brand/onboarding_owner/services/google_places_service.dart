@@ -70,13 +70,17 @@ class ZoneNotFoundException implements Exception {
 /// - getPlaceDetails: obtiene lat/lng y dirección formateada del placeId.
 /// - resolveZone: dado lat/lng, busca la zona en Firestore por proximidad geográfica.
 class GooglePlacesService {
-  static const String _apiKey =
-      String.fromEnvironment('GOOGLE_PLACES_API_KEY');
+  static const String _apiKey = String.fromEnvironment('GOOGLE_PLACES_API_KEY');
 
   static const String _autocompleteBaseUrl =
       'https://maps.googleapis.com/maps/api/place/autocomplete/json';
   static const String _detailsBaseUrl =
       'https://maps.googleapis.com/maps/api/place/details/json';
+  static const List<String> _zoneCollectionCandidates = <String>[
+    'zones',
+    'zonas',
+    'ZONAS',
+  ];
 
   final http.Client _httpClient;
   final FirebaseFirestore _firestore;
@@ -106,9 +110,11 @@ class GooglePlacesService {
 
     try {
       final response = await _httpClient.get(uri).timeout(
-        const Duration(seconds: 8),
-        onTimeout: () => throw PlacesNetworkException('Timeout en Places Autocomplete'),
-      );
+            const Duration(seconds: 8),
+            onTimeout: () => throw const PlacesNetworkException(
+              'Timeout en Places Autocomplete',
+            ),
+          );
 
       if (response.statusCode != 200) {
         throw PlacesNetworkException('HTTP ${response.statusCode}');
@@ -124,11 +130,13 @@ class GooglePlacesService {
       final predictions = (body['predictions'] as List<dynamic>?) ?? [];
       return predictions.map((p) {
         final map = p as Map<String, dynamic>;
-        final structured = map['structured_formatting'] as Map<String, dynamic>? ?? {};
+        final structured =
+            map['structured_formatting'] as Map<String, dynamic>? ?? {};
         return PlaceSuggestion(
           placeId: map['place_id'] as String,
           description: map['description'] as String,
-          mainText: structured['main_text'] as String? ?? map['description'] as String,
+          mainText: structured['main_text'] as String? ??
+              map['description'] as String,
           secondaryText: structured['secondary_text'] as String? ?? '',
         );
       }).toList();
@@ -154,9 +162,10 @@ class GooglePlacesService {
 
     try {
       final response = await _httpClient.get(uri).timeout(
-        const Duration(seconds: 8),
-        onTimeout: () => throw PlacesNetworkException('Timeout en Places Details'),
-      );
+            const Duration(seconds: 8),
+            onTimeout: () =>
+                throw const PlacesNetworkException('Timeout en Places Details'),
+          );
 
       if (response.statusCode != 200) {
         throw PlacesNetworkException('HTTP ${response.statusCode}');
@@ -188,33 +197,70 @@ class GooglePlacesService {
   /// La colección `zones` tiene campos: zoneId, cityId, provinceId, lat, lng, radiusKm.
   /// Retorna la zona más cercana dentro de su radio. Lanza [ZoneNotFoundException] si no hay.
   Future<ZoneResolution> resolveZone(double lat, double lng) async {
-    // Obtener todas las zonas (colección pequeña, cacheable)
-    final zonesSnap = await _firestore.collection('zones').get();
-
     ZoneResolution? best;
     double bestDistance = double.infinity;
 
-    for (final doc in zonesSnap.docs) {
-      final data = doc.data();
-      final zoneLat = (data['lat'] as num?)?.toDouble();
-      final zoneLng = (data['lng'] as num?)?.toDouble();
-      final radiusKm = (data['radiusKm'] as num?)?.toDouble() ?? 2.0;
+    for (final collectionName in _zoneCollectionCandidates) {
+      final zonesSnap = await _firestore.collection(collectionName).get();
+      for (final doc in zonesSnap.docs) {
+        final data = doc.data();
+        final centroid = _readMap(data, const ['centroid', 'centroide']);
+        final zoneLat = _readNum(centroid, const ['lat']) ??
+            _readNum(data, const ['lat', 'latitude']);
+        final zoneLng = _readNum(centroid, const ['lng']) ??
+            _readNum(data, const ['lng', 'longitude']);
+        final radiusKm = _readNum(data, const ['radiusKm', 'radioKm']) ?? 2.0;
 
-      if (zoneLat == null || zoneLng == null) continue;
+        if (zoneLat == null || zoneLng == null) continue;
 
-      final distKm = _haversineKm(lat, lng, zoneLat, zoneLng);
-      if (distKm <= radiusKm && distKm < bestDistance) {
-        bestDistance = distKm;
-        best = ZoneResolution(
-          zoneId: doc.id,
-          cityId: data['cityId'] as String? ?? '',
-          provinceId: data['provinceId'] as String? ?? '',
-        );
+        final distKm = _haversineKm(lat, lng, zoneLat, zoneLng);
+        if (distKm <= radiusKm && distKm < bestDistance) {
+          bestDistance = distKm;
+          best = ZoneResolution(
+            zoneId: doc.id,
+            cityId:
+                _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
+            provinceId: _readText(
+                  data,
+                  const ['provinceId', 'provinciaId', 'province_id'],
+                ) ??
+                '',
+          );
+        }
       }
     }
 
     if (best == null) throw const ZoneNotFoundException();
     return best;
+  }
+
+  static String? _readText(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  static Map<String, dynamic>? _readMap(
+    Map<String, dynamic> data,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is Map<String, dynamic>) return value;
+      if (value is Map) return Map<String, dynamic>.from(value);
+    }
+    return null;
+  }
+
+  static double? _readNum(Map<String, dynamic>? data, List<String> keys) {
+    if (data == null) return null;
+    for (final key in keys) {
+      final value = data[key];
+      if (value is num) return value.toDouble();
+    }
+    return null;
   }
 
   double _haversineKm(double lat1, double lng1, double lat2, double lng2) {

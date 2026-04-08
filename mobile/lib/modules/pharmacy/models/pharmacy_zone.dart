@@ -28,13 +28,44 @@ class PharmacyZone {
 
   factory PharmacyZone.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    final centroid = data['centroid'] as Map<String, dynamic>?;
+    final centroid = _readMap(data, const ['centroid', 'centroide']);
     return PharmacyZone(
       zoneId: doc.id,
-      name: data['name'] as String? ?? doc.id,
-      cityId: data['cityId'] as String? ?? '',
-      centroidLat: (centroid?['lat'] as num?)?.toDouble(),
-      centroidLng: (centroid?['lng'] as num?)?.toDouble(),
+      name: _readText(data, const ['name', 'nombre']) ?? doc.id,
+      cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
+      centroidLat: _readNum(centroid, const ['lat']) ??
+          _readNum(data, const ['lat', 'latitude']),
+      centroidLng: _readNum(centroid, const ['lng']) ??
+          _readNum(data, const ['lng', 'longitude']),
     );
+  }
+
+  static String? _readText(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  static Map<String, dynamic>? _readMap(
+    Map<String, dynamic> data,
+    List<String> keys,
+  ) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is Map<String, dynamic>) return value;
+      if (value is Map) return Map<String, dynamic>.from(value);
+    }
+    return null;
+  }
+
+  static double? _readNum(Map<String, dynamic>? data, List<String> keys) {
+    if (data == null) return null;
+    for (final key in keys) {
+      final value = data[key];
+      if (value is num) return value.toDouble();
+    }
+    return null;
   }
 }

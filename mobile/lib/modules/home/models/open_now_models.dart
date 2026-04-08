@@ -19,12 +19,24 @@ class OpenNowZone {
     final data = doc.data();
     return OpenNowZone(
       zoneId: doc.id,
-      name: (data['name'] as String?)?.trim().isNotEmpty == true
-          ? (data['name'] as String).trim()
-          : doc.id,
-      cityId: (data['cityId'] as String?)?.trim() ?? '',
-      priorityLevel: (data['priorityLevel'] as num?)?.toInt(),
+      name: _readText(data, const ['name', 'nombre']) ?? doc.id,
+      cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
+      priorityLevel: _readPriority(data),
     );
+  }
+
+  static String? _readText(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key]?.toString().trim();
+      if (value != null && value.isNotEmpty) return value;
+    }
+    return null;
+  }
+
+  static int? _readPriority(Map<String, dynamic> data) {
+    final value =
+        data['priorityLevel'] ?? data['priority'] ?? data['prioridad'];
+    return value is num ? value.toInt() : null;
   }
 }
 

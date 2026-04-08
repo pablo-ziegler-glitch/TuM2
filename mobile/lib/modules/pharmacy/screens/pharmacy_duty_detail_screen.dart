@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,87 +19,198 @@ class PharmacyDutyDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final duty = item;
+    if (item != null) return _DetailScaffold(duty: item!);
+    return FutureBuilder<PharmacyDutyItem?>(
+      future: _loadFromMerchantPublic(pharmacyId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingScaffold();
+        }
+        final duty = snapshot.data;
+        if (snapshot.hasError || duty == null) {
+          return const _NotFoundScaffold();
+        }
+        return _DetailScaffold(duty: duty);
+      },
+    );
+  }
+}
+
+class _DetailScaffold extends StatelessWidget {
+  const _DetailScaffold({
+    required this.duty,
+  });
+
+  final PharmacyDutyItem duty;
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            IconButton(
-              onPressed: context.pop,
-              icon: const Icon(Icons.arrow_back),
-            ),
-            if (duty == null)
-              const Expanded(
-                child: Center(
-                  child: Text('No se encontró información de la farmacia.'),
-                ),
-              )
-            else
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.errorFg,
-                          borderRadius: BorderRadius.circular(30),
+            const _BackButtonHeader(),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.errorFg,
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Text(
+                        'GUARDIA',
+                        style: AppTextStyles.labelSm.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
                         ),
-                        child: Text(
-                          'GUARDIA',
-                          style: AppTextStyles.labelSm.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(duty.merchantName, style: AppTextStyles.headingMd),
+                    const SizedBox(height: 4),
+                    Text(duty.addressLine, style: AppTextStyles.bodyMd),
+                    const Spacer(),
+                    if (duty.canNavigate)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _launchMaps(duty),
+                          icon: const Icon(Icons.directions_outlined, size: 18),
+                          label: const Text('Cómo llegar'),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(44),
+                            backgroundColor: AppColors.primary500,
+                            foregroundColor: Colors.white,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Text(duty.merchantName, style: AppTextStyles.headingMd),
-                      const SizedBox(height: 4),
-                      Text(duty.addressLine, style: AppTextStyles.bodyMd),
-                      const Spacer(),
-                      if (duty.canNavigate)
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _launchMaps(duty),
-                            icon:
-                                const Icon(Icons.directions_outlined, size: 18),
-                            label: const Text('Cómo llegar'),
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(44),
-                              backgroundColor: AppColors.primary500,
-                              foregroundColor: Colors.white,
-                            ),
+                    if (duty.canNavigate) const SizedBox(height: 10),
+                    if (duty.canCall)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _launchPhone(duty.phone!),
+                          icon: const Icon(Icons.phone_outlined, size: 18),
+                          label: const Text('Llamar'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(44),
                           ),
                         ),
-                      if (duty.canNavigate) const SizedBox(height: 10),
-                      if (duty.canCall)
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () => _launchPhone(duty.phone!),
-                            icon: const Icon(Icons.phone_outlined, size: 18),
-                            label: const Text('Llamar'),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(44),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _LoadingScaffold extends StatelessWidget {
+  const _LoadingScaffold();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _BackButtonHeader(),
+            Expanded(child: Center(child: CircularProgressIndicator())),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NotFoundScaffold extends StatelessWidget {
+  const _NotFoundScaffold();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _BackButtonHeader(),
+            Expanded(
+              child: Center(
+                child: Text('No se encontró información de la farmacia.'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BackButtonHeader extends StatelessWidget {
+  const _BackButtonHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: IconButton(
+        onPressed: context.pop,
+        icon: const Icon(Icons.arrow_back),
+      ),
+    );
+  }
+}
+
+Future<PharmacyDutyItem?> _loadFromMerchantPublic(String pharmacyId) async {
+  final doc =
+      await FirebaseFirestore.instance.doc('merchant_public/$pharmacyId').get();
+  if (!doc.exists) return null;
+  final data = doc.data();
+  if (data == null) return null;
+
+  final geo = _extractGeo(data);
+  return PharmacyDutyItem(
+    dutyId: '',
+    merchantId: pharmacyId,
+    merchantName: (data['name'] as String?)?.trim() ?? '',
+    addressLine: (data['addressLine'] as String?)?.trim() ?? '',
+    phone: (data['phone'] as String?)?.trim(),
+    latitude: geo?.$1,
+    longitude: geo?.$2,
+    zoneId: (data['zoneId'] as String?)?.trim() ?? '',
+    dutyDate: '',
+    isOnDuty: false,
+    isOpenNow: data['isOpenNow'] == true,
+    is24Hours: data['is24Hours'] == true,
+    verificationStatus: (data['verificationStatus'] as String?) ?? 'unverified',
+    sortBoost: (data['sortBoost'] as num?)?.toInt() ?? 0,
+  );
+}
+
+(double, double)? _extractGeo(Map<String, dynamic> data) {
+  final rawGeo = data['geo'];
+  if (rawGeo is GeoPoint) return (rawGeo.latitude, rawGeo.longitude);
+  if (rawGeo is Map<String, dynamic>) {
+    final lat = (rawGeo['lat'] as num?)?.toDouble();
+    final lng = (rawGeo['lng'] as num?)?.toDouble();
+    if (lat != null && lng != null) return (lat, lng);
+  }
+  final lat = (data['lat'] as num?)?.toDouble();
+  final lng = (data['lng'] as num?)?.toDouble();
+  if (lat != null && lng != null) return (lat, lng);
+  return null;
 }
 
 Future<void> _launchPhone(String phone) async {
@@ -110,9 +222,16 @@ Future<void> _launchPhone(String phone) async {
 }
 
 Future<void> _launchMaps(PharmacyDutyItem item) async {
-  final uri = Uri.parse(
-    'https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}',
-  );
+  Uri uri;
+  if (item.latitude != null && item.longitude != null) {
+    uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${item.latitude},${item.longitude}',
+    );
+  } else {
+    final encodedAddress = Uri.encodeComponent(item.addressLine);
+    uri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$encodedAddress');
+  }
   if (await canLaunchUrl(uri)) {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }

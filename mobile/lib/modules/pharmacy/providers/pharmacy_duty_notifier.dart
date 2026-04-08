@@ -114,8 +114,8 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
   int _requestSerial = 0;
   bool _hasLoggedOpenedEvent = false;
 
-  Future<void> initialize() async {
-    if (state.zones.isNotEmpty || !state.isLoadingInitial) return;
+  Future<void> initialize({bool force = false}) async {
+    if (!force && (state.zones.isNotEmpty || !state.isLoadingInitial)) return;
 
     final positionResult = await _geoLocationService.getPosition();
     if (positionResult is GeoPositionOk) {
@@ -172,6 +172,14 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
   }
 
   Future<void> retry() async {
+    if (state.selectedZoneId.isEmpty) {
+      state = state.copyWith(
+        isLoadingInitial: true,
+        errorType: PharmacyDutyErrorType.none,
+      );
+      await initialize(force: true);
+      return;
+    }
     await _loadForCurrentSelection(forceRefresh: true);
   }
 

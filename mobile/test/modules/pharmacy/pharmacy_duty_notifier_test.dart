@@ -101,6 +101,32 @@ void main() {
       expect(notifier.state.isUsingCachedData, isTrue);
       expect(notifier.state.errorType, PharmacyDutyErrorType.none);
     });
+
+    test(
+      'retry vuelve a inicializar cuando la zona no pudo resolverse',
+      () async {
+        final zonesSource = _FlakyZonesSource();
+        final notifier = PharmacyDutyNotifier(
+          dutyRepository: _FakeDutySource(
+            itemsByDate: {
+              '2026-04-07': const [],
+            },
+          ),
+          zonesRepository: zonesSource,
+          geoLocationService: _FakeGeoLocationService.denied(),
+          analytics: _FakeAnalytics(),
+        );
+
+        await notifier.initialize();
+        expect(notifier.state.selectedZoneId, isEmpty);
+        expect(notifier.state.errorType, PharmacyDutyErrorType.technical);
+
+        await notifier.retry();
+        expect(zonesSource.calls, 2);
+        expect(notifier.state.selectedZoneId, 'z1');
+        expect(notifier.state.errorType, PharmacyDutyErrorType.none);
+      },
+    );
   });
 }
 
@@ -125,6 +151,27 @@ class _FakeDutySource implements PharmacyDutySource {
 class _FakeZonesSource implements ZonesSource {
   @override
   Future<List<PharmacyZone>> getActiveZones() async {
+    return const [
+      PharmacyZone(
+        zoneId: 'z1',
+        name: 'Centro',
+        cityId: 'caba',
+        centroidLat: -34.6037,
+        centroidLng: -58.3816,
+      ),
+    ];
+  }
+}
+
+class _FlakyZonesSource implements ZonesSource {
+  int calls = 0;
+
+  @override
+  Future<List<PharmacyZone>> getActiveZones() async {
+    calls++;
+    if (calls == 1) {
+      throw Exception('temporary zones error');
+    }
     return const [
       PharmacyZone(
         zoneId: 'z1',

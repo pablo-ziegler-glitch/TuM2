@@ -12,8 +12,11 @@ Nota de alcance QA: las capturas pendientes de SEARCH son evidencia visual de ej
 - [x] Seguridad: rechazo no-admin (`permission-denied`) cubierto por test.
 - [x] Seguridad: `merchant_public` sigue read-only en reglas (`allow write: if false`).
 - [x] SEARCH-03: modo mapa usa el mismo dataset que lista (`state.results`).
-- [x] SEARCH-03: pins con estado `isOpenNow == true/false/null`.
+- [x] SEARCH-03: sistema de markers por prioridad operativa (`guardia`, `open24h`, `open`, `closed`, `default`) con variantes seleccionadas.
 - [x] SEARCH-03: tap pin -> card reducida; tap card -> navega a DETAIL.
+- [x] SEARCH-03: clustering por grilla activo con más de 20 comercios visibles.
+- [x] SEARCH-03: tap en cluster realiza zoom in automático y recentra.
+- [x] SEARCH-03: cache de bitmap descriptor por `visualType + pixelRatio`.
 - [x] SEARCH-02: filtro `openNow` excluye `isOpenNow == null` (test unitario).
 - [ ] SEARCH-01/02 E2E visual con capturas reales de emulador.
 
@@ -105,21 +108,27 @@ Captura sugerida:
 - `search-results-empty.png`
 - `search-results-error.png`
 
-### Pasos SEARCH-03 (mapa real)
+### Pasos SEARCH-03 (mapa real + clustering)
 
 1. En resultados tocar `Ver mapa`.
-2. Validar pins:
-   - verde: abierto
-   - rojo: cerrado
-   - gris: sin horario
+2. Validar pins por estado:
+   - guardia (rojo dominante)
+   - abierto (verde)
+   - 24h (azul)
+   - cerrado (gris neutro)
+   - default (oscuro)
 3. Tocar pin y validar card reducida del comercio seleccionado.
-4. Tocar card y validar navegacion a `/commerce/:id`.
-5. Volver a lista y validar mismo set de resultados.
+4. Validar que el pin seleccionado usa variante visual destacada.
+5. Con zoom out y >20 visibles, validar aparición de clusters y contador.
+6. Tocar cluster y validar zoom in automático.
+7. Tocar card y validar navegacion a `/commerce/:id`.
+8. Volver a lista y validar mismo set de resultados.
 
 Captura sugerida:
 
 - `search-map-pins.png`
 - `search-map-selected-card.png`
+- `search-map-clusters.png`
 
 ## Backfill operativo
 

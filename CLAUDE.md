@@ -41,9 +41,11 @@ El usuario pasa las tarjetas de a una. Estado actual:
 |---|---|
 | **[0001]** Definir propuesta de valor final ✅ | Dirección del producto — propuesta de valor final definida y documentada |
 | **[0003]** Cerrar alcance real del MVP ✅ | Dirección del producto — scope MVP congelado, documentado en docs/MVP-SCOPE.md: IN/OUT, guardrails, decisiones clave, BDD, analytics, roadmap y rollout |
+| **[0004]** Cerrar segmentos principales ✅ | Producto / Seguridad — segmentos CUSTOMER, OWNER y ADMIN cerrados con límites de acceso y responsabilidades |
 | **[0005]** Mantener actualizado VISION.md ✅ | Documentación maestra — VISION.md actualizado y vigente |
 | **[0006]** Mantener actualizado PRD-MVP.md ✅ | Documentación maestra — PRD-MVP.md actualizado y vigente |
 | **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
+| **[0010]** Definir identidad visual base ✅ | Branding — paleta y tokens base definidos (color system inicial TuM2) |
 | **[0014]** Definir tono de microcopy ✅ | Branding / UX/UI — guía de microcopy MVP Fase 3 documentada en docs/TuM2-0014-MICROCOPY.md |
 | **[0019]** Diseñar modelo de usuarios ✅ | Modelo de datos — modelo de usuarios definido con roles y atributos |
 | **[0020]** Diseñar modelo de comercios ✅ | Modelo de datos — modelo de comercios definido con campos públicos y operativos |
@@ -56,6 +58,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0044]** Configurar Authentication ✅ | Backend / Firebase — autenticación configurada con proveedores y roles |
 | **[0045]** Configurar Firestore base ✅ | Backend / Firebase — Firestore configurado con colecciones base |
 | **[0046]** Definir Firestore Rules iniciales ✅ | Backend / Firebase — reglas de seguridad iniciales definidas por rol |
+| **[0047]** Configurar Storage ✅ | Backend / Firebase — Storage rules y configuración base de storage integradas |
 | **[0048]** Implementar Cloud Functions base ✅ | Backend / Firebase — funciones base implementadas y desplegadas |
 | **[0049]** Implementar campos derivados operativos ✅ | Backend / Firebase — isOpenNow, isOnDutyToday y otros campos derivados implementados |
 | **[0050]** Implementar agregados públicos ✅ | Backend / Firebase — agregados públicos implementados para consumo mobile y web |
@@ -70,13 +73,24 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
 | **[0054]** Implementar login / registro ✅ | Mobile app — AUTH MVP completo: magic link email (same/cross-device con app_links), Google Sign-In, guards/redirects por rol consistentes, pending route post-auth, signOut hardened y tests de auth/router actualizados |
 | **[0056]** Implementar búsqueda de comercios ✅ | Mobile app — búsqueda MVP cerrada: corpus por zona con filtros/ranking, pantallas lista/mapa/empty integradas según mockups, tests de SearchNotifier en verde y documentación actualizada |
+| **[0057]** Implementar mapa ✅ | Mobile app — SEARCH-03 migrado a Google Maps con sistema de markers por estado, selección visual, z-index por prioridad y clustering por grilla desacoplado |
+| **[0058]** Implementar ficha de comercio ✅ | Mobile app — DETAIL-01 implementado con navegación real desde search/home/deep links |
+| **[0060]** Implementar vista Abierto ahora ✅ | Mobile app — HOME-02 implementado con filtros por rubro MVP y navegación al mapa |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
 | **[0036]** Diseñar vista Abierto ahora ✅ | UX/UI — HOME-02 implementado: header con zona activa + indicador en vivo, filtro por categoría (6 rubros), lista de comercios con horario de cierre y action buttons, barra "Ver en el mapa" |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 diseñado por Stitches e implementado: listado con badges de turno y confianza, 4 estados (sin ubicación, cargando, resultados, vacío), detalle con verificación, mapa, CTAs y reporte |
-| **[0061]** Implementar vista Farmacias de turno ✅ | Mobile app — PharmacyDutyScreen y PharmacyDutyDetailScreen implementados con datos demo; ruta /pharmacy/:id fuera del shell; integración Firestore pendiente en fase siguiente |
+| **[0061]** Implementar vista Farmacias de turno ✅ | Mobile app — PharmacyDutyScreen y PharmacyDutyDetailScreen integrados con datos reales, estados operativos y deep links de detalle |
+
+---
+
+## Indicador de avance MVP (snapshot 2026-04-07)
+
+- Método A (prioridad P0/P1 con tags `MVP` o `Fundacional`, excluyendo `Post-MVP` y `MVP+`): **43 / 89 = 48.31%**
+- Método B (todas las prioridades con tags `MVP` o `Fundacional`, excluyendo `Post-MVP` y `MVP+`): **43 / 97 = 44.33%**
+- Este indicador mide cierre de tarjetas del backlog maestro; no reemplaza criterios de release (QA/legal/datos piloto).
 
 ---
 
@@ -87,7 +101,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0002] **Definir claim principal de marca** — P1 — `Branding, Producto, Fundacional`
   - Opciones: "Lo que necesitás, en tu zona" / "Todo lo que pasa en tu metro cuadrado" / "Comercios reales, cerca tuyo"
 - [0003] **Cerrar alcance real del MVP** — P0 — `Producto, Fundacional` ✅
-- [0004] **Cerrar segmentos principales** — P0 — `Producto, Seguridad, Fundacional`
+- [0004] **Cerrar segmentos principales** — P0 — `Producto, Seguridad, Fundacional` ✅
   - OWNER, CUSTOMER y ADMIN con sus objetivos
 
 ### ÉPICA 2: Documentación maestra
@@ -98,7 +112,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0009] **Mantener actualizado PROMPT-PLAYBOOK.md** — P1 — `Producto, Operaciones, Fundacional`
 
 ### ÉPICA 3: Branding de TuM2
-- [0010] **Definir identidad visual base** — P0 — `Branding, UX/UI, Fundacional`
+- [0010] **Definir identidad visual base** — P0 — `Branding, UX/UI, Fundacional` ✅
 - [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional`
 - [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional`
 - [0013] **Definir sistema de sellos** — P1 — `Branding, Producto, MVP`
@@ -144,7 +158,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0044] **Configurar Authentication** — P0 — `Backend, Seguridad, Fundacional` ✅
 - [0045] **Configurar Firestore base** — P0 — `Backend, Data, Fundacional` ✅
 - [0046] **Definir Firestore Rules iniciales** — P0 — `Seguridad, Backend, Fundacional` ✅
-- [0047] **Configurar Storage** — P1 — `Backend, Seguridad, MVP`
+- [0047] **Configurar Storage** — P1 — `Backend, Seguridad, MVP` ✅
 - [0048] **Implementar Cloud Functions base** — P1 — `Backend, MVP` ✅
 - [0049] **Implementar campos derivados operativos** — P0 — `Backend, Data, Operaciones, MVP` ✅
   - isOpenNow, isOnDutyToday, etc.
@@ -157,10 +171,10 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0054] **Implementar login / registro** — P0 — `Mobile, Seguridad, MVP` ✅
 - [0055] **Implementar home CUSTOMER** — P1 — `Mobile, Producto, MVP`
 - [0056] **Implementar búsqueda de comercios** — P0 — `Mobile, MVP` ✅
-- [0057] **Implementar mapa** — P1 — `Mobile, MVP`
-- [0058] **Implementar ficha de comercio** — P0 — `Mobile, Producto, MVP`
+- [0057] **Implementar mapa** — P1 — `Mobile, MVP` ✅
+- [0058] **Implementar ficha de comercio** — P0 — `Mobile, Producto, MVP` ✅
 - [0059] **Implementar ficha de producto** — P2 — `Mobile, MVP`
-- [0060] **Implementar vista Abierto ahora** — P0 — `Mobile, MVP`
+- [0060] **Implementar vista Abierto ahora** — P0 — `Mobile, MVP` ✅
 - [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` ✅
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
@@ -290,7 +304,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### Fase D — Expansión MVP+
 - TuM2-0029 / 0032 / 0034 / 0041
 - TuM2-0122 ✅ (completado adelantado)
-- TuM2-0055 / 0057 / 0059 / 0062 / 0063 / 0069
+- TuM2-0055 / 0059 / 0062 / 0063 / 0069 (TuM2-0057 ✅ completado adelantado)
 - TuM2-0076
 - TuM2-0077 a 0081
 - TuM2-0084 / 0085 / 0086
@@ -346,7 +360,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Backend:** TuM2-0042, 0043, 0044, 0045, 0046, 0048, 0049, 0050
 
-**Mobile:** TuM2-0052, 0053, 0054, 0056, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068
+**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068
 
 **Web:** TuM2-0070, 0071, 0072, 0074, 0075
 
@@ -364,7 +378,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Claramente Post-MVP:** TuM2-0026, 0108, 0109, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117, 0118, 0119, 0120
 
-**MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0047, 0055, 0057, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107
+**MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
 
 ---
 
@@ -381,3 +395,9 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - [0056] Se aplicó integración visual de pantallas search según `stitch_tum2.zip` (inicio, loading, lista, mapa y vacío enriquecido).
 - [0056] Validación local: analyze focalizado en search/router/auth PASS; tests auth/router/search PASS.
 - [0056] Deuda no bloqueante diferida: QA visual completa con set final de capturas y validación web/cross-plataforma.
+- [0057] SEARCH-03 actualizado a Google Maps con arquitectura separada de `marker/` y `cluster/`, cache de bitmaps por visualType+pixelRatio y fallback web.
+- [0057] Implementado clustering por grilla (activación >20 visibles), prioridad por estado operativo y tap en cluster con zoom in automático.
+- [0057] Review fixes aplicados: recuperación de analytics `search_result_opened` en apertura desde mapa + fingerprint de recomputación incluyendo lat/lng para evitar posiciones stale.
+- [0058] DETAIL-01 consolidado con navegación desde mapa/lista/home y deep links `/commerce/:id`.
+- [0060] HOME-02 consolidado en flujo productivo con navegación a SEARCH-03.
+- [0061] Farmacias de turno consolidado con flujo público y deep links de detalle.

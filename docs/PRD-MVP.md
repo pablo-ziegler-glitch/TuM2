@@ -68,7 +68,7 @@ Un OWNER mantiene **todas** las capacidades de CUSTOMER más su panel operativo.
 | F-C03 | Ver farmacias de turno hoy | P0 | pharmacy_duties + isOnDutyToday |
 | F-C04 | Buscar por categoría | P0 | Chips de categoría en SEARCH-01 |
 | F-C05 | Buscar por texto libre | P0 | Client-side en MVP (searchKeywords) |
-| F-C06 | Ver mapa de comercios | P1 | SEARCH-03, pins por estado |
+| F-C06 | Ver mapa de comercios | P1 | SEARCH-03 implementado en Google Maps: markers por estado + selección + clustering por grilla |
 | F-C07 | Ver ficha pública de comercio | P0 | DETAIL-01 |
 | F-C08 | Ver ficha de producto | P1 | DETAIL-02, bottom sheet |
 | F-C09 | Acción "Cómo llegar" | P0 | Link nativo a Maps |
@@ -145,7 +145,7 @@ Un OWNER mantiene **todas** las capacidades de CUSTOMER más su panel operativo.
 ### Técnicas
 - Firebase (Auth, Firestore, Functions, Storage) como backend exclusivo.
 - No hay búsqueda full-text server-side en MVP (se usa `searchKeywords` en cliente).
-- Mapas: google_maps_flutter (Google Maps SDK) en mobile, embed estático en web en MVP.
+- Mapas: `google_maps_flutter` (Google Maps SDK) en mobile y web Flutter.
 - Sin pagos, sin carrito, sin checkout.
 
 ### De negocio
@@ -205,8 +205,8 @@ Un OWNER mantiene **todas** las capacidades de CUSTOMER más su panel operativo.
 | Web | Flutter Web |
 | Storage | Firebase Storage |
 | Analytics | Firebase Analytics + Crashlytics |
-| Mapas mobile | react-native-maps (Google Maps) |
-| Mapas web | Google Maps Embed API |
+| Mapas mobile | google_maps_flutter |
+| Mapas web | google_maps_flutter_web |
 
 ---
 

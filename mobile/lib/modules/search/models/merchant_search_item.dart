@@ -12,6 +12,8 @@ class MerchantSearchItem {
   final String verificationStatus;
   final String visibilityStatus;
   final bool? isOpenNow;
+  final bool? isOnDutyToday;
+  final bool? is24h;
   final String openStatusLabel;
   final double sortBoost;
   final List<String> searchKeywords;
@@ -29,6 +31,8 @@ class MerchantSearchItem {
     required this.verificationStatus,
     required this.visibilityStatus,
     required this.isOpenNow,
+    this.isOnDutyToday,
+    this.is24h,
     required this.openStatusLabel,
     required this.sortBoost,
     required this.searchKeywords,
@@ -37,6 +41,8 @@ class MerchantSearchItem {
 
   MerchantSearchItem copyWith({
     double? distanceMeters,
+    bool? isOnDutyToday,
+    bool? is24h,
   }) {
     return MerchantSearchItem(
       merchantId: merchantId,
@@ -50,6 +56,8 @@ class MerchantSearchItem {
       verificationStatus: verificationStatus,
       visibilityStatus: visibilityStatus,
       isOpenNow: isOpenNow,
+      isOnDutyToday: isOnDutyToday ?? this.isOnDutyToday,
+      is24h: is24h ?? this.is24h,
       openStatusLabel: openStatusLabel,
       sortBoost: sortBoost,
       searchKeywords: searchKeywords,
@@ -79,6 +87,9 @@ class MerchantSearchItem {
           (data['verificationStatus'] as String?) ?? 'unverified',
       visibilityStatus: (data['visibilityStatus'] as String?) ?? 'visible',
       isOpenNow: data['isOpenNow'] as bool?,
+      isOnDutyToday: (data['isOnDutyToday'] as bool?) ??
+          (data['hasPharmacyDutyToday'] as bool?),
+      is24h: data['is24h'] as bool?,
       openStatusLabel: (data['openStatusLabel'] as String?) ??
           (data['todayScheduleLabel'] as String?) ??
           '',

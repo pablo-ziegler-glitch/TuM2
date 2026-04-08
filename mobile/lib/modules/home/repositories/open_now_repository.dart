@@ -19,8 +19,6 @@ abstract interface class OpenNowDataSource {
 class OpenNowRepository implements OpenNowDataSource {
   static const List<String> _zoneCollectionCandidates = <String>[
     'zones',
-    'zonas',
-    'ZONAS',
   ];
   static const Set<String> _inactiveZoneStatuses = <String>{
     'draft',

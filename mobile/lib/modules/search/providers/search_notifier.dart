@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import '../analytics/search_analytics.dart';
 import '../models/merchant_search_item.dart';
 import '../models/search_filters.dart';
-import '../models/search_zone_item.dart';
 import '../repositories/merchant_search_repository.dart';
 import '../repositories/zone_search_repository.dart';
 import 'search_history_provider.dart';

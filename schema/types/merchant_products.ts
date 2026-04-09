@@ -2,7 +2,8 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type ProductStatus = 'active' | 'inactive';
 export type ProductVisibilityStatus = 'hidden' | 'visible';
-export type ProductStockStatus = 'unknown' | 'available' | 'out_of_stock';
+export type ProductStockStatus = 'available' | 'out_of_stock';
+export type ProductImageUploadStatus = 'pending' | 'ready' | 'failed';
 
 /**
  * Collection: merchant_products/{productId}
@@ -12,20 +13,23 @@ export interface MerchantProductDocument {
   // Required
   id: string;
   merchantId: string;
+  ownerUserId: string;
   name: string;
   normalizedName: string;
-  categoryId: string;
-  status: ProductStatus;
+  priceLabel: string;
+  stockStatus: ProductStockStatus;
   visibilityStatus: ProductVisibilityStatus;
+  status: ProductStatus;
+  sourceType: 'owner_created';
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  createdBy: string;
+  updatedBy: string;
 
   // Optional
-  /** Human-readable price string, e.g. "$1.200" */
-  priceLabel?: string | null;
-  /** Numeric price for sorting/filtering */
-  referencePrice?: number | null;
-  stockStatus?: ProductStockStatus;
-  images?: string[];
+  imageUrl?: string;
+  imagePath?: string;
+  imageUploadStatus?: ProductImageUploadStatus;
+  sortOrder?: number;
   searchKeywords?: string[];
 }

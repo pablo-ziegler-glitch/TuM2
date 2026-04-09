@@ -74,6 +74,26 @@ export interface MerchantDoc {
   updatedAt?: FirebaseFirestore.Timestamp;
 }
 
+export interface MerchantProductDoc {
+  id?: string;
+  merchantId: string;
+  ownerUserId: string;
+  name: string;
+  normalizedName: string;
+  priceLabel: string;
+  stockStatus: "available" | "out_of_stock";
+  visibilityStatus: "visible" | "hidden";
+  status: "active" | "inactive";
+  imageUrl?: string;
+  imagePath?: string;
+  imageUploadStatus?: "pending" | "ready" | "failed";
+  sourceType: "owner_created";
+  createdBy: string;
+  updatedBy: string;
+  createdAt?: FirebaseFirestore.Timestamp;
+  updatedAt?: FirebaseFirestore.Timestamp;
+}
+
 // ─── Onboarding Owner Types ─────────────────────────────────────────────────
 
 export type OnboardingOwnerStep =

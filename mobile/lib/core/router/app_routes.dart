@@ -34,6 +34,9 @@ abstract class AppRoutes {
   static const owner = ownerRoot;
   static const ownerEdit = '/owner/edit';
   static const ownerProducts = '/owner/products';
+  static const ownerProductsNew = '/owner/products/new';
+  static const ownerProductsEdit = '/owner/products/:productId/edit';
+  static const ownerProductsSaved = '/owner/products/saved';
   static const ownerSchedules = '/owner/schedules';
   static const ownerSignals = '/owner/signals';
   static const ownerDuties = '/owner/duties';
@@ -62,6 +65,9 @@ abstract class AppRoutes {
     required String productId,
   }) =>
       '/commerce/$merchantId/product/$productId';
+
+  static String ownerProductsEditPath(String productId) =>
+      '/owner/products/$productId/edit';
 
   /// Construye la ruta concreta de detalle de una farmacia de turno.
   static String pharmacyDutyDetailPath(String id) => '/pharmacy/$id';

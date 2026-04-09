@@ -30,7 +30,10 @@ service cloud.firestore {
     }
 
     function merchantBelongsToUser(merchantId) {
-      return get(/databases/$(database)/documents/merchants/$(merchantId)).data.ownerUserId == request.auth.uid;
+      let merchant = get(/databases/$(database)/documents/merchants/$(merchantId));
+      return isAuthenticated()
+        && merchant.data != null
+        && merchant.data.ownerUserId == request.auth.uid;
     }
 
     // ─── users/{userId} ─────────────────────────────────────────────────────
@@ -45,15 +48,19 @@ service cloud.firestore {
     function draftMerchantIdUnchanged() {
       let progress = 'onboardingOwnerProgress';
       let incoming = request.resource.data.get(progress, null);
+      let existingProgress = resource.data.get(progress, null);
+      let existingId = existingProgress == null
+        ? null
+        : existingProgress.get('draftMerchantId', null);
+      let newId = incoming == null
+        ? null
+        : incoming.get('draftMerchantId', null);
       // Si el update elimina onboardingOwnerProgress, solo se permite
       // si aún no había un draftMerchantId asignado (no hay nada que proteger)
-      if (incoming == null) {
-        return resource.data[progress].get('draftMerchantId', null) == null;
-      }
-      let existingId = resource.data[progress].draftMerchantId;
-      let newId = incoming.draftMerchantId;
-      // Allow if it was null/unset before, or if it stays the same
-      return existingId == null || existingId == newId;
+      return incoming == null
+        ? existingId == null
+        // Allow if it was null/unset before, or if it stays the same
+        : existingId == null || existingId == newId;
     }
 
     function onboardingProgressExists() {
@@ -182,20 +189,191 @@ service cloud.firestore {
     // Admins write all.
 
     match /merchant_products/{productId} {
-      allow read: if resource.data.visibilityStatus == 'visible';
-      allow read: if isAuthenticated()
-                     && merchantBelongsToUser(resource.data.merchantId);
+      function requiredProductKeys() {
+        return [
+          'id',
+          'merchantId',
+          'ownerUserId',
+          'name',
+          'normalizedName',
+          'priceLabel',
+          'stockStatus',
+          'visibilityStatus',
+          'status',
+          'sourceType',
+          'createdAt',
+          'updatedAt',
+          'createdBy',
+          'updatedBy',
+        ];
+      }
+
+      function allowedProductKeys() {
+        return [
+          'id',
+          'merchantId',
+          'ownerUserId',
+          'name',
+          'normalizedName',
+          'priceLabel',
+          'stockStatus',
+          'visibilityStatus',
+          'status',
+          'sourceType',
+          'createdAt',
+          'updatedAt',
+          'createdBy',
+          'updatedBy',
+          'imageUrl',
+          'imagePath',
+          'imageUploadStatus',
+          'searchKeywords',
+          'sortOrder',
+        ];
+      }
+
+      function hasValidProductKeys() {
+        let keys = request.resource.data.keys();
+        return keys.hasAll(requiredProductKeys()) && keys.hasOnly(allowedProductKeys());
+      }
+
+      function isValidProductStockStatus(value) {
+        return value in ['available', 'out_of_stock'];
+      }
+
+      function isValidProductVisibilityStatus(value) {
+        return value in ['visible', 'hidden'];
+      }
+
+      function isValidProductStatus(value) {
+        return value in ['active', 'inactive'];
+      }
+
+      function isValidImageUploadStatus(value) {
+        return value in ['pending', 'ready', 'failed'];
+      }
+
+      function hasValidProductTextFields() {
+        return request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.normalizedName is string
+          && request.resource.data.normalizedName.size() >= 2
+          && request.resource.data.normalizedName.size() <= 120
+          && request.resource.data.priceLabel is string
+          && request.resource.data.priceLabel.size() >= 1
+          && request.resource.data.priceLabel.size() <= 60;
+      }
+
+      function hasValidProductOptionalFields() {
+        return (!('imageUrl' in request.resource.data)
+            || (
+              request.resource.data.imageUrl is string
+              && request.resource.data.imageUrl.size() <= 1500
+            ))
+          && (!('imagePath' in request.resource.data)
+            || (
+              request.resource.data.imagePath is string
+              && request.resource.data.imagePath.size() <= 400
+              && (
+                request.resource.data.imagePath == 'merchant-products/' + request.resource.data.merchantId + '/' + productId + '/cover.jpg'
+                || (
+                  resource != null
+                  && ('imagePath' in resource.data)
+                  && request.resource.data.imagePath == resource.data.imagePath
+                )
+              )
+            ))
+          && (!('imageUploadStatus' in request.resource.data)
+            || (
+              request.resource.data.imageUploadStatus is string
+              && isValidImageUploadStatus(request.resource.data.imageUploadStatus)
+            ))
+          && (!('searchKeywords' in request.resource.data)
+            || (
+              request.resource.data.searchKeywords is list
+              && request.resource.data.searchKeywords.size() <= 40
+            ))
+          && (!('sortOrder' in request.resource.data)
+            || request.resource.data.sortOrder is int);
+      }
+
+      function productCreatePayloadIsValid() {
+        return hasValidProductKeys()
+          && request.resource.data.id == productId
+          && request.resource.data.merchantId is string
+          && request.resource.data.ownerUserId == request.auth.uid
+          && merchantBelongsToUser(request.resource.data.merchantId)
+          && request.resource.data.sourceType == 'owner_created'
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.updatedAt is timestamp
+          && request.resource.data.stockStatus is string
+          && isValidProductStockStatus(request.resource.data.stockStatus)
+          && request.resource.data.visibilityStatus is string
+          && isValidProductVisibilityStatus(request.resource.data.visibilityStatus)
+          && request.resource.data.status is string
+          && isValidProductStatus(request.resource.data.status)
+          && hasValidProductTextFields()
+          && hasValidProductOptionalFields();
+      }
+
+      function productUpdatePayloadIsValid() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return hasValidProductKeys()
+          && request.resource.data.id == productId
+          && (
+            !('id' in resource.data)
+            || request.resource.data.id == resource.data.id
+          )
+          && request.resource.data.merchantId == resource.data.merchantId
+          && request.resource.data.ownerUserId == resource.data.ownerUserId
+          && request.resource.data.sourceType == resource.data.sourceType
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.createdBy == resource.data.createdBy
+          && !('merchantId' in changed)
+          && !('ownerUserId' in changed)
+          && !('sourceType' in changed)
+          && !('createdAt' in changed)
+          && !('createdBy' in changed)
+          && request.resource.data.updatedAt is timestamp
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.stockStatus is string
+          && isValidProductStockStatus(request.resource.data.stockStatus)
+          && request.resource.data.visibilityStatus is string
+          && isValidProductVisibilityStatus(request.resource.data.visibilityStatus)
+          && request.resource.data.status is string
+          && isValidProductStatus(request.resource.data.status)
+          && hasValidProductTextFields()
+          && hasValidProductOptionalFields();
+      }
+
+      function isPublicProduct() {
+        return resource.data.status == 'active'
+          && resource.data.visibilityStatus == 'visible';
+      }
+
+      function isProductOwner() {
+        return isOwnerRole()
+          && isAuthenticated()
+          && resource.data.ownerUserId == request.auth.uid
+          && merchantBelongsToUser(resource.data.merchantId);
+      }
+
+      allow read: if isPublicProduct();
+      allow read: if isProductOwner();
       allow read: if isAdmin();
 
       allow create: if isAdmin();
       allow create: if isOwnerRole()
-        && merchantBelongsToUser(request.resource.data.merchantId);
+        && productCreatePayloadIsValid();
+
       allow update: if isAdmin();
-      allow update: if isOwnerRole()
-        && merchantBelongsToUser(resource.data.merchantId);
+      allow update: if isProductOwner()
+        && productUpdatePayloadIsValid();
+
       allow delete: if isAdmin();
-      allow delete: if isOwnerRole()
-        && merchantBelongsToUser(resource.data.merchantId);
     }
 
     // ─── pharmacy_duties/{dutyId} ────────────────────────────────────────────

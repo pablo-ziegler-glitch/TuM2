@@ -1,8 +1,5 @@
 {
   "indexes": [
-
-    // ── merchant_public ──────────────────────────────────────────────────────
-
     {
       "collectionGroup": "merchant_public",
       "queryScope": "COLLECTION",
@@ -56,9 +53,6 @@
         { "fieldPath": "sortBoost", "order": "DESCENDING" }
       ]
     },
-
-    // ── pharmacy_duties ──────────────────────────────────────────────────────
-
     {
       "collectionGroup": "pharmacy_duties",
       "queryScope": "COLLECTION",
@@ -76,9 +70,6 @@
         { "fieldPath": "date", "order": "ASCENDING" }
       ]
     },
-
-    // ── merchant_products ────────────────────────────────────────────────────
-
     {
       "collectionGroup": "merchant_products",
       "queryScope": "COLLECTION",
@@ -95,9 +86,32 @@
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
-
-    // ── external_places ──────────────────────────────────────────────────────
-
+    {
+      "collectionGroup": "merchant_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "merchantId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "visibilityStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "merchant_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "merchantId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "merchant_products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "merchantId", "order": "ASCENDING" },
+        { "fieldPath": "stockStatus", "order": "ASCENDING" },
+        { "fieldPath": "visibilityStatus", "order": "ASCENDING" }
+      ]
+    },
     {
       "collectionGroup": "external_places",
       "queryScope": "COLLECTION",
@@ -114,9 +128,6 @@
         { "fieldPath": "importStatus", "order": "ASCENDING" }
       ]
     },
-
-    // ── merchants ────────────────────────────────────────────────────────────
-
     {
       "collectionGroup": "merchants",
       "queryScope": "COLLECTION",
@@ -135,9 +146,6 @@
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
-
-    // ── merchant_claims ──────────────────────────────────────────────────────
-
     {
       "collectionGroup": "merchant_claims",
       "queryScope": "COLLECTION",
@@ -154,9 +162,6 @@
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     },
-
-    // ── reports ──────────────────────────────────────────────────────────────
-
     {
       "collectionGroup": "reports",
       "queryScope": "COLLECTION",
@@ -174,7 +179,6 @@
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
     }
-
   ],
   "fieldOverrides": []
 }

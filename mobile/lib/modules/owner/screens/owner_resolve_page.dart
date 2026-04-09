@@ -114,6 +114,9 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
   bool _isAllowedOwnerPath(String path) {
     return path == AppRoutes.ownerDashboard ||
         path == AppRoutes.ownerProducts ||
+        path == AppRoutes.ownerProductsNew ||
+        path == AppRoutes.ownerProductsSaved ||
+        (path.startsWith('/owner/products/') && path.endsWith('/edit')) ||
         path == AppRoutes.ownerSchedules ||
         path == AppRoutes.ownerSignals ||
         path == AppRoutes.ownerDuties;

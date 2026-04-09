@@ -12,8 +12,6 @@ abstract interface class ZonesSource {
 class ZonesRepository implements ZonesSource {
   static const List<String> _zoneCollectionCandidates = <String>[
     'zones',
-    'zonas',
-    'ZONAS',
   ];
   static const Set<String> _inactiveZoneStatuses = <String>{
     'draft',

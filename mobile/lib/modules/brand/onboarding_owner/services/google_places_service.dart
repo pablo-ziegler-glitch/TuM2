@@ -78,8 +78,6 @@ class GooglePlacesService {
       'https://maps.googleapis.com/maps/api/place/details/json';
   static const List<String> _zoneCollectionCandidates = <String>[
     'zones',
-    'zonas',
-    'ZONAS',
   ];
 
   final http.Client _httpClient;

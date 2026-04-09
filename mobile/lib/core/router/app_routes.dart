@@ -39,6 +39,8 @@ abstract class AppRoutes {
   static const ownerProductsSaved = '/owner/products/saved';
   static const ownerSchedules = '/owner/schedules';
   static const ownerSignals = '/owner/signals';
+  static const ownerPharmacyDuties = '/owner/pharmacy-duties';
+  static const ownerPharmacyDutiesBulk = '/owner/pharmacy-duties/bulk-upload';
   static const ownerDuties = '/owner/duties';
 
   // ── AdminStack (modal full-screen) ──────────────────────────────────────────

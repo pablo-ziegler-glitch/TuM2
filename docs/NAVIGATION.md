@@ -105,7 +105,8 @@ OwnerStack (Modal / Full-screen Stack)
 │   └── SenalOperativa    → OWNER-08  (modal sheet)
 └── TurnosFarmacia        → OWNER-09
     ├── CalendarioTurnos  → OWNER-10
-    └── CargarTurno       → OWNER-11
+    ├── CargarTurno       → OWNER-11
+    └── CargaMasivaTurnos → OWNER-12
 ```
 
 **OWNER-08 — SenalOperativa** se presenta como **bottom sheet modal** sobre OWNER-06, no como pantalla full.

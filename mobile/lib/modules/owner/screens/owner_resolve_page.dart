@@ -119,6 +119,7 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
         (path.startsWith('/owner/products/') && path.endsWith('/edit')) ||
         path == AppRoutes.ownerSchedules ||
         path == AppRoutes.ownerSignals ||
+        path == AppRoutes.ownerPharmacyDuties ||
         path == AppRoutes.ownerDuties;
   }
 }

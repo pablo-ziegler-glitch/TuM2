@@ -54,7 +54,8 @@ TuM2 App
 │   │   └── OWNER-08  Señal operativa especial (modal)
 │   └── OWNER-09  Turnos de farmacia
 │       ├── OWNER-10  Ver calendario de turnos
-│       └── OWNER-11  Cargar / confirmar turno
+│       ├── OWNER-11  Cargar / confirmar turno
+│       └── OWNER-12  Carga masiva de turnos
 │
 ├── DETALLE (accesibles desde múltiples contextos)
 │   ├── DETAIL-01  Ficha pública de comercio
@@ -207,7 +208,7 @@ TuM2 App
   - Accesos rápidos: editar horario, agregar señal, ver productos.
   - Alertas: si falta completar datos del perfil.
 - **Fuente:** `merchants/{merchantId}` (lectura directa, rol owner).
-- **Salida:** → OWNER-02, OWNER-03, OWNER-06, OWNER-09.
+- **Salida:** → OWNER-02, OWNER-03, OWNER-06, OWNER-09, OWNER-12.
 
 ### OWNER-02 — Perfil del comercio (edición)
 - **Campos:** nombre, dirección, teléfono, descripción, categorías, redes sociales, logo/foto.
@@ -256,6 +257,13 @@ TuM2 App
 ### OWNER-11 — Cargar / confirmar turno
 - **Flujo:** seleccionar fecha → confirmar guardia → guardado en `pharmacy_duties`.
 - **Validación:** solo un turno activo por fecha por zona.
+
+### OWNER-12 — Carga masiva de turnos
+- **Propósito:** importar turnos por archivo para farmacias propias y farmacias de red.
+- **Flujo:** descargar plantilla → completar filas → subir archivo → validar por fila → importar.
+- **Template:** `fecha`, `hora_desde`, `hora_hasta`, `farmacia_origen_id`, `farmacia_turno_id`, `tipo_turno`, `observaciones`.
+- **Validación:** pertenencia a red, formato horario/fecha, no solapamiento, no duplicados.
+- **Resultado:** resumen con filas aceptadas/rechazadas y detalle de errores por fila.
 
 ---
 
@@ -308,6 +316,7 @@ Flujo multi-paso para registrar un comercio nuevo.
 | `tum2://abierto-ahora/{zoneId}` | HOME-02 |
 | `tum2://owner/comercio/{merchantId}` | OWNER-01 |
 | `tum2://owner/turno` | OWNER-09 |
+| `tum2://owner/turnos-masivos` | OWNER-12 |
 | `tum2://admin` | ADMIN-01 |
 
 ---
@@ -354,6 +363,11 @@ OWNER-01 → tap "Agregar señal" → OWNER-08 (modal) → selecciona "Vacacione
 ### Flujo 4: OWNER carga turno de farmacia
 ```
 OWNER-01 → tap "Turnos" → OWNER-09 → OWNER-10 (calendario) → selecciona fecha → OWNER-11 → Confirmar → vuelve a OWNER-10 con día marcado
+```
+
+### Flujo 6: OWNER carga turnos en lote para su red
+```
+OWNER-01 → tap "Carga masiva de turnos" → OWNER-12 → descargar plantilla → subir archivo → validar/importar → OWNER-10
 ```
 
 ### Flujo 5: OWNER nuevo se registra

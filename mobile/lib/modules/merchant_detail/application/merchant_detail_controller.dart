@@ -30,6 +30,21 @@ class MerchantDetailController
 
   @override
   Future<MerchantDetailState> build(String merchantId) async {
+    final link = ref.keepAlive();
+    Timer? disposeTimer;
+    const keepAliveTtl = Duration(minutes: 3);
+    ref.onCancel(() {
+      disposeTimer?.cancel();
+      disposeTimer = Timer(keepAliveTtl, link.close);
+    });
+    ref.onResume(() {
+      disposeTimer?.cancel();
+      disposeTimer = null;
+    });
+    ref.onDispose(() {
+      disposeTimer?.cancel();
+    });
+
     _merchantId = merchantId;
     MerchantCoreDto? coreDto;
     try {
@@ -42,11 +57,20 @@ class MerchantDetailController
 
     final core = mapCoreDtoToViewData(coreDto);
     final badge = mapStatusBadge(core);
-    final initial = MerchantDetailState.initial(
+    final projectedSignals = _projectedSignalsFromCore(coreDto);
+    var initial = MerchantDetailState.initial(
       merchantId: merchantId,
       merchant: core,
       badge: badge,
     );
+    if (projectedSignals.isNotEmpty) {
+      initial = initial.copyWith(
+        signals:
+            AsyncValue<List<MerchantOperationalSignalViewData>>.data(
+          projectedSignals,
+        ),
+      );
+    }
 
     unawaited(
       _analytics.logDetailView(
@@ -58,13 +82,28 @@ class MerchantDetailController
 
     unawaited(_loadFeaturedProducts(merchantId, core.featuredProductIds));
     unawaited(_loadSchedule(merchantId));
-    unawaited(_loadSignals(merchantId));
+    if (projectedSignals.isEmpty) {
+      unawaited(_loadSignals(merchantId));
+    }
     unawaited(_loadDistance(core));
     if (core.hasPharmacyDutyToday) {
       unawaited(_loadPharmacyDuty(merchantId));
     }
 
     return initial;
+  }
+
+  List<MerchantOperationalSignalViewData> _projectedSignalsFromCore(
+    MerchantCoreDto coreDto,
+  ) {
+    final rawSignals = coreDto.data['operationalSignals'];
+    if (rawSignals is! Map) return const [];
+    final normalized = <String, dynamic>{};
+    for (final entry in rawSignals.entries) {
+      normalized[entry.key.toString()] = entry.value;
+    }
+    if (normalized.isEmpty) return const [];
+    return mapOperationalSignalsMapToViewData(normalized);
   }
 
   Future<void> retry() async {

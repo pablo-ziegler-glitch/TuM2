@@ -7,6 +7,11 @@ const db = () => getFirestore();
 
 type ProductWriteAction = "create" | "update" | "delete";
 
+function isActiveVisible(product: Partial<MerchantProductDoc> | undefined): boolean {
+  if (!product) return false;
+  return product.status === "active" && product.visibilityStatus === "visible";
+}
+
 export const onMerchantProductWriteRecalculateHasProducts = onDocumentWritten(
   "merchant_products/{productId}",
   async (event) => {
@@ -20,11 +25,31 @@ export const onMerchantProductWriteRecalculateHasProducts = onDocumentWritten(
         ? "delete"
         : "update";
 
+    const beforeProduct = beforeExists
+      ? (event.data?.before.data() as MerchantProductDoc | undefined)
+      : undefined;
+    const afterProduct = afterExists
+      ? (event.data?.after.data() as MerchantProductDoc | undefined)
+      : undefined;
+
+    if (
+      action === "update" &&
+      beforeProduct &&
+      afterProduct &&
+      (beforeProduct.merchantId ?? "") === (afterProduct.merchantId ?? "") &&
+      (beforeProduct.status ?? "") === (afterProduct.status ?? "") &&
+      (beforeProduct.visibilityStatus ?? "") === (afterProduct.visibilityStatus ?? "")
+    ) {
+      return;
+    }
+    if (action === "create" && !isActiveVisible(afterProduct)) return;
+    if (action === "delete" && !isActiveVisible(beforeProduct)) return;
+
     const beforeMerchantId = (
-      event.data?.before.data() as MerchantProductDoc | undefined
+      beforeProduct
     )?.merchantId;
     const afterMerchantId = (
-      event.data?.after.data() as MerchantProductDoc | undefined
+      afterProduct
     )?.merchantId;
 
     const merchantIds = new Set<string>();

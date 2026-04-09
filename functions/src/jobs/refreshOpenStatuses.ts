@@ -1,10 +1,24 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { getFirestore, FieldValue, WriteBatch } from "firebase-admin/firestore";
+import {
+  getFirestore,
+  FieldPath,
+  FieldValue,
+  WriteBatch,
+} from "firebase-admin/firestore";
 import { isOpenNow, todayScheduleLabel } from "../lib/schedules";
 import { MerchantScheduleDoc } from "../lib/types";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
+const READ_CHUNK_SIZE = 30;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size));
+  }
+  return out;
+}
 
 /**
  * nightlyRefreshOpenStatuses
@@ -32,20 +46,28 @@ export const nightlyRefreshOpenStatuses = onSchedule(
     }
 
     const merchantIds = merchantsSnap.docs.map((d) => d.id);
+    const merchantPublicById = new Map<string, FirebaseFirestore.DocumentData>();
+    let scheduleReads = 0;
+    for (const doc of merchantsSnap.docs) {
+      merchantPublicById.set(doc.id, doc.data());
+    }
     console.log(`[nightlyRefreshOpenStatuses] Processing ${merchantIds.length} merchants`);
 
-    // Fetch all schedules in parallel to avoid N+1 sequential reads
-    const scheduleSnaps = await Promise.all(
-      merchantIds.map((id) => db().doc(`merchant_schedules/${id}`).get())
-    );
     const scheduleMap = new Map<string, MerchantScheduleDoc>();
-    for (let i = 0; i < merchantIds.length; i++) {
-      if (scheduleSnaps[i].exists) {
-        scheduleMap.set(merchantIds[i], scheduleSnaps[i].data() as MerchantScheduleDoc);
+    for (const idsChunk of chunk(merchantIds, READ_CHUNK_SIZE)) {
+      const schedulesSnap = await db()
+        .collection("merchant_schedules")
+        .where(FieldPath.documentId(), "in", idsChunk)
+        .get();
+      scheduleReads += schedulesSnap.size;
+
+      for (const scheduleDoc of schedulesSnap.docs) {
+        scheduleMap.set(scheduleDoc.id, scheduleDoc.data() as MerchantScheduleDoc);
       }
     }
 
     let updated = 0;
+    let skippedUnchanged = 0;
     const batches: WriteBatch[] = [];
     let currentBatch = db().batch();
     let batchOps = 0;
@@ -55,19 +77,18 @@ export const nightlyRefreshOpenStatuses = onSchedule(
       if (!scheduleDoc) continue;
       const openNow = isOpenNow(scheduleDoc);
       const label = todayScheduleLabel(scheduleDoc);
+      const currentPublic = merchantPublicById.get(merchantId) ?? {};
+      const currentOpenNow = currentPublic["isOpenNow"] === true;
+      const currentLabel = typeof currentPublic["todayScheduleLabel"] === "string"
+        ? (currentPublic["todayScheduleLabel"] as string)
+        : "";
+      if (currentOpenNow === openNow && currentLabel === label) {
+        skippedUnchanged++;
+        continue;
+      }
 
-      const publicRef = db().doc(`merchant_public/${merchantId}`);
       const signalRef = db().doc(`merchant_operational_signals/${merchantId}`);
 
-      currentBatch.set(
-        publicRef,
-        {
-          isOpenNow: openNow,
-          todayScheduleLabel: label,
-          syncedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
       currentBatch.set(
         signalRef,
         {
@@ -77,7 +98,7 @@ export const nightlyRefreshOpenStatuses = onSchedule(
         },
         { merge: true }
       );
-      batchOps += 2;
+      batchOps += 1;
       updated++;
 
       if (batchOps >= BATCH_SIZE - 1) {
@@ -89,7 +110,20 @@ export const nightlyRefreshOpenStatuses = onSchedule(
 
     if (batchOps > 0) batches.push(currentBatch);
 
-    await Promise.all(batches.map((b) => b.commit()));
-    console.log(`[nightlyRefreshOpenStatuses] Done. Updated ${updated} merchants.`);
+    if (batches.length > 0) {
+      await Promise.all(batches.map((b) => b.commit()));
+    }
+    console.log(
+      `[nightlyRefreshOpenStatuses] Done. Updated ${updated} merchants, skippedUnchanged=${skippedUnchanged}.`
+    );
+    console.log(
+      JSON.stringify({
+        job: "nightlyRefreshOpenStatuses",
+        merchantPublicReads: merchantsSnap.size,
+        merchantScheduleReads: scheduleReads,
+        signalWrites: updated,
+        skippedUnchanged,
+      })
+    );
   }
 );

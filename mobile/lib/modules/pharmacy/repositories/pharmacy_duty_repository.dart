@@ -43,6 +43,7 @@ class FirestorePharmacyDutyDataSource implements PharmacyDutyDataSource {
 
   final FirebaseFirestore _firestore;
   static const Duration _timeout = Duration(seconds: 6);
+  static const int _maxDutyDocsPerQuery = 120;
 
   @override
   Future<List<PharmacyDutyRecord>> fetchPublishedDuties({
@@ -54,6 +55,7 @@ class FirestorePharmacyDutyDataSource implements PharmacyDutyDataSource {
         .where('zoneId', isEqualTo: zoneId)
         .where('date', isEqualTo: dateKey)
         .where('status', isEqualTo: 'published')
+        .limit(_maxDutyDocsPerQuery)
         .get()
         .timeout(_timeout);
     return snap.docs

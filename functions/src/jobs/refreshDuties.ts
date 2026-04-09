@@ -27,34 +27,14 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
     const today = todayDateString();
     console.log(`[nightlyRefreshPharmacyDutyFlags] Starting for date=${today}`);
 
-    // Get all visible pharmacies and reset their flags first
-    const pharmaciesSnap = await db()
-      .collection("merchant_public")
-      .where("isPharmacy", "==", true)
-      .where("visibilityStatus", "==", "visible")
+    // Leer solo señales actualmente en true (más barato que barrer merchant_public completo).
+    const currentSignalsSnap = await db()
+      .collection("merchant_operational_signals")
+      .where("hasPharmacyDutyToday", "==", true)
       .get();
-
-    const batches: WriteBatch[] = [];
-    let currentBatch = db().batch();
-    let batchOps = 0;
-
-    // Reset all pharmacy duty flags
-    for (const doc of pharmaciesSnap.docs) {
-      currentBatch.set(
-        doc.ref,
-        {
-          hasPharmacyDutyToday: false,
-          syncedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      batchOps++;
-
-      if (batchOps >= BATCH_SIZE) {
-        batches.push(currentBatch);
-        currentBatch = db().batch();
-        batchOps = 0;
-      }
+    const currentFlagByMerchantId = new Map<string, boolean>();
+    for (const doc of currentSignalsSnap.docs) {
+      currentFlagByMerchantId.set(doc.id, true);
     }
 
     // Get today's published duties
@@ -73,28 +53,42 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
       }
     }
 
-    // Set duty flag for today's merchants
+    const desiredFlagByMerchantId = new Map<string, boolean>();
+    for (const merchantId of currentFlagByMerchantId.keys()) {
+      if (!todayMerchantIds.has(merchantId)) {
+        desiredFlagByMerchantId.set(merchantId, false);
+      }
+    }
     for (const merchantId of todayMerchantIds) {
-      const publicRef = db().doc(`merchant_public/${merchantId}`);
+      if (!currentFlagByMerchantId.has(merchantId)) {
+        desiredFlagByMerchantId.set(merchantId, true);
+      }
+    }
+
+    if (desiredFlagByMerchantId.size === 0) {
+      console.log(
+        `[nightlyRefreshPharmacyDutyFlags] Done. No changes needed. currentlyFlagged=${currentSignalsSnap.size} dutiesToday=${todayMerchantIds.size}.`
+      );
+      return;
+    }
+
+    const batches: WriteBatch[] = [];
+    let currentBatch = db().batch();
+    let batchOps = 0;
+
+    // Write only changed flags
+    for (const [merchantId, hasDutyToday] of desiredFlagByMerchantId.entries()) {
       const signalRef = db().doc(`merchant_operational_signals/${merchantId}`);
 
       currentBatch.set(
-        publicRef,
-        {
-          hasPharmacyDutyToday: true,
-          syncedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-      currentBatch.set(
         signalRef,
         {
-          hasPharmacyDutyToday: true,
+          hasPharmacyDutyToday: hasDutyToday,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
-      batchOps += 2;
+      batchOps += 1;
 
       if (batchOps >= BATCH_SIZE - 1) {
         batches.push(currentBatch);
@@ -108,7 +102,15 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
     await Promise.all(batches.map((b) => b.commit()));
 
     console.log(
-      `[nightlyRefreshPharmacyDutyFlags] Done. Reset ${pharmaciesSnap.size} pharmacies, set ${todayMerchantIds.size} on-duty.`
+      `[nightlyRefreshPharmacyDutyFlags] Done. updated=${desiredFlagByMerchantId.size} currentlyFlagged=${currentSignalsSnap.size} dutiesToday=${todayMerchantIds.size}.`
+    );
+    console.log(
+      JSON.stringify({
+        job: "nightlyRefreshPharmacyDutyFlags",
+        signalReads: currentSignalsSnap.size,
+        dutyReads: dutiesSnap.size,
+        signalWrites: desiredFlagByMerchantId.size,
+      })
     );
   }
 );

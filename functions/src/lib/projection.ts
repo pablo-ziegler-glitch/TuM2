@@ -144,6 +144,14 @@ function resolveCategoryTokens(category: string | undefined): string[] {
   ];
 }
 
+function resolveCategoryId(merchant: MerchantDoc): string {
+  return (merchant.categoryId ?? merchant.category ?? "").trim();
+}
+
+function resolveZoneId(merchant: MerchantDoc): string {
+  return (merchant.zoneId ?? merchant.zone ?? "").trim();
+}
+
 function expandHonorifics(tokens: string[]): string[] {
   const expansions = tokens.flatMap((token) => HONORIFIC_EQUIVALENTS[token] ?? []);
   return [...tokens, ...expansions];
@@ -170,7 +178,7 @@ function buildAddressTokens(address: string | undefined): string[] {
  * Builds a normalized keyword corpus for client-side search on merchant_public.
  */
 export function buildSearchKeywords(merchant: MerchantDoc): string[] {
-  const categoryId = merchant.category;
+  const categoryId = resolveCategoryId(merchant);
   const nameTokens = expandHonorifics(tokenize(merchant.name, { minLen: 2 }));
   const categoryTokens = resolveCategoryTokens(categoryId);
   const addressTokens = buildAddressTokens(merchant.address);
@@ -194,14 +202,16 @@ export function computeMerchantPublicProjection(
   signals?: OperationalSignals
 ): Omit<MerchantPublicDoc, "syncedAt"> {
   const sortBoost = computeSortBoost(merchant);
+  const categoryId = resolveCategoryId(merchant);
+  const zoneId = resolveZoneId(merchant);
 
   const projection: Omit<MerchantPublicDoc, "syncedAt"> = {
     merchantId: merchant.merchantId,
     name: merchant.name,
-    category: merchant.category,
-    categoryId: merchant.category,
-    zone: merchant.zone,
-    zoneId: merchant.zoneId ?? merchant.zone,
+    category: categoryId,
+    categoryId: categoryId,
+    zone: zoneId,
+    zoneId: zoneId,
     verificationStatus: merchant.verificationStatus,
     visibilityStatus: merchant.visibilityStatus,
     sortBoost,

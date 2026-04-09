@@ -2,6 +2,53 @@
 
 Scripts operativos para tareas de datos y mantenimiento.
 
+## `firestore_cost_guard.js`
+
+Gate de regresión de costo para Firestore basado en métricas reales de Cloud Monitoring.
+
+### Qué controla
+
+- `firestore.googleapis.com/document/read_ops_count`
+- `firestore.googleapis.com/document/write_ops_count`
+- `firestore.googleapis.com/document/delete_ops_count`
+- `firestore.googleapis.com/network/snapshot_listeners` (máximo de la ventana)
+- `firestore.googleapis.com/rules/evaluation_count`
+
+Compara contra umbrales por ambiente definidos en:
+`docs/ops/firestore_cost_thresholds.json`.
+
+### Ejecución
+
+```bash
+cd functions
+
+# Staging (24h), falla solo en umbral crítico
+npm run cost:guard -- \
+  --project tum2-staging-45c83 \
+  --env staging \
+  --window-hours 24
+
+# Prod (24h), falla en warning o critical
+npm run cost:guard -- \
+  --project tum2-prod-bc9b4 \
+  --env prod \
+  --window-hours 24 \
+  --fail-on-warn \
+  --out ../docs/ops/generated/cost-guard-prod.json
+```
+
+### Requisitos
+
+- `gcloud` instalado y autenticado.
+- Permiso para leer métricas de Monitoring del proyecto objetivo.
+
+### Códigos de salida
+
+- `0`: OK.
+- `2`: se superó umbral crítico.
+- `3`: se superó warning y se pasó `--fail-on-warn`.
+- `1`: error de ejecución/configuración.
+
 ## `seed_zones_from_csv.js`
 
 Carga/actualiza (`upsert`) documentos en `zones` desde un CSV de localidades.

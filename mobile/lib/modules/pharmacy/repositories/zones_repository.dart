@@ -25,6 +25,7 @@ class ZonesRepository implements ZonesSource {
   final FirebaseFirestore _firestore;
 
   static const Duration _queryTimeout = Duration(seconds: 5);
+  static const int _maxZonesPerQuery = 300;
 
   ZonesRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance;
@@ -42,6 +43,7 @@ class ZonesRepository implements ZonesSource {
     for (final collectionName in _zoneCollectionCandidates) {
       final snapshot = await _firestore
           .collection(collectionName)
+          .limit(_maxZonesPerQuery)
           .get()
           .timeout(_queryTimeout);
       final docs = snapshot.docs.where(_isActiveZoneDoc).toList();

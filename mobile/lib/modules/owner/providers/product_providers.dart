@@ -9,23 +9,46 @@ import '../repositories/product_repository.dart';
 import '../screens/product_form_controller.dart';
 import 'owner_providers.dart';
 
+const _kOwnerProductsProviderTtl = Duration(minutes: 4);
+const _kOwnerProductByIdProviderTtl = Duration(minutes: 3);
+
 final productRepositoryProvider = Provider<ProductRepository>((ref) {
   return FirebaseProductRepository();
 });
 
 final merchantProductsProvider =
-    StreamProvider.autoDispose.family<List<MerchantProduct>, String>((
+    FutureProvider.autoDispose.family<List<MerchantProduct>, String>((
   ref,
   merchantId,
-) {
+) async {
+  final link = ref.keepAlive();
+  Timer? disposeTimer;
+  void scheduleDispose() {
+    disposeTimer?.cancel();
+    disposeTimer = Timer(_kOwnerProductsProviderTtl, link.close);
+  }
+  ref.onCancel(scheduleDispose);
+  ref.onResume(() => disposeTimer?.cancel());
+  ref.onDispose(() => disposeTimer?.cancel());
+
   final repository = ref.watch(productRepositoryProvider);
-  return repository.watchOwnerProducts(merchantId: merchantId);
+  return repository.fetchOwnerProducts(merchantId: merchantId);
 });
 
-final merchantProductByIdProvider = StreamProvider.autoDispose
-    .family<MerchantProduct?, String>((ref, productId) {
+final merchantProductByIdProvider = FutureProvider.autoDispose
+    .family<MerchantProduct?, String>((ref, productId) async {
+  final link = ref.keepAlive();
+  Timer? disposeTimer;
+  void scheduleDispose() {
+    disposeTimer?.cancel();
+    disposeTimer = Timer(_kOwnerProductByIdProviderTtl, link.close);
+  }
+  ref.onCancel(scheduleDispose);
+  ref.onResume(() => disposeTimer?.cancel());
+  ref.onDispose(() => disposeTimer?.cancel());
+
   final repository = ref.watch(productRepositoryProvider);
-  return repository.watchProductById(productId);
+  return repository.getProductById(productId);
 });
 
 final publicMerchantProductsProvider =
@@ -97,6 +120,7 @@ class ProductMutationController extends StateNotifier<ProductMutationState> {
 
   final ProductRepository _repository;
   final Ref _ref;
+  Timer? _ownerMerchantInvalidateTimer;
 
   Future<bool> toggleVisibility({
     required MerchantProduct product,
@@ -209,11 +233,19 @@ class ProductMutationController extends StateNotifier<ProductMutationState> {
     _ref.invalidate(merchantProductsProvider(product.merchantId));
     _ref.invalidate(merchantProductByIdProvider(product.id));
     _ref.invalidate(publicMerchantProductsProvider(product.merchantId));
-    // Trigger backend recalcula hasProducts; invalidamos para refrescar panel OWNER.
-    unawaited(Future<void>.delayed(
-      const Duration(milliseconds: 400),
+    // Debounce para evitar ráfagas de lecturas sobre `merchants` por múltiples
+    // mutaciones consecutivas en el catálogo.
+    _ownerMerchantInvalidateTimer?.cancel();
+    _ownerMerchantInvalidateTimer = Timer(
+      const Duration(milliseconds: 900),
       () => _ref.invalidate(ownerMerchantProvider),
-    ));
+    );
+  }
+
+  @override
+  void dispose() {
+    _ownerMerchantInvalidateTimer?.cancel();
+    super.dispose();
   }
 }
 

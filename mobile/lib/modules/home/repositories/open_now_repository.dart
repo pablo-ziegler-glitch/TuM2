@@ -35,6 +35,7 @@ class OpenNowRepository implements OpenNowDataSource {
   final FirebaseFirestore _firestore;
 
   static const Duration _queryTimeout = Duration(seconds: 6);
+  static const int _maxZonesPerQuery = 300;
   static const int _openNowLimit = 200;
   static const int _fallbackLimit = 40;
 
@@ -49,6 +50,7 @@ class OpenNowRepository implements OpenNowDataSource {
     for (final collectionName in _zoneCollectionCandidates) {
       final snapshot = await _firestore
           .collection(collectionName)
+          .limit(_maxZonesPerQuery)
           .get()
           .timeout(_queryTimeout);
       final docs = snapshot.docs.where(_isActiveZoneDoc).toList();

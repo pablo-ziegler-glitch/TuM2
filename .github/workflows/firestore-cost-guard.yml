@@ -1,0 +1,100 @@
+name: firestore-cost-guard
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente objetivo"
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - dev
+          - staging
+          - prod
+      window_hours:
+        description: "Ventana de evaluación en horas"
+        required: false
+        default: "24"
+      fail_on_warn:
+        description: "Fallar también en warning"
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    - cron: "15 */6 * * *"
+
+jobs:
+  cost-guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      TARGET_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'all' }}
+      WINDOW_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.window_hours || '24' }}
+      FAIL_ON_WARN: ${{ github.event_name == 'workflow_dispatch' && inputs.fail_on_warn || 'false' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Auth GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_MONITORING_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install functions deps
+        working-directory: functions
+        run: npm ci
+
+      - name: Run Firestore cost guard
+        working-directory: functions
+        run: |
+          set -euo pipefail
+          mkdir -p ../docs/ops/generated
+
+          targets=(
+            "dev:tum2-dev-6283d"
+            "staging:tum2-staging-45c83"
+            "prod:tum2-prod-bc9b4"
+          )
+
+          for target in "${targets[@]}"; do
+            env_name="${target%%:*}"
+            project_id="${target##*:}"
+
+            if [[ "${TARGET_ENV}" != "all" && "${TARGET_ENV}" != "${env_name}" ]]; then
+              continue
+            fi
+
+            args=(
+              --project "${project_id}"
+              --env "${env_name}"
+              --window-hours "${WINDOW_HOURS}"
+              --out "../docs/ops/generated/cost-guard-${env_name}.json"
+            )
+
+            if [[ "${FAIL_ON_WARN}" == "true" || "${env_name}" == "prod" ]]; then
+              args+=(--fail-on-warn)
+            fi
+
+            echo "Running cost guard for ${env_name} (${project_id})"
+            npm run cost:guard -- "${args[@]}"
+          done
+
+      - name: Upload guardrail reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: firestore-cost-guard-reports
+          path: docs/ops/generated/cost-guard-*.json

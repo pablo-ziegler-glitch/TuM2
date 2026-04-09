@@ -28,7 +28,7 @@ interface BootstrapRequest {
  * - Records import_batches document with full audit trail
  */
 export const runZoneBootstrapBatch = onCall(
-  { enforceAppCheck: false },
+  { enforceAppCheck: true },
   async (request) => {
     // Auth check
     if (!request.auth) {

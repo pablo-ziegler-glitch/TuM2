@@ -20,7 +20,7 @@ interface RebuildRequest {
  * Useful for debugging, data migrations, and feature rollouts.
  */
 export const adminRebuildMerchantPublic = onCall(
-  { enforceAppCheck: false },
+  { enforceAppCheck: true },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Authentication required.");

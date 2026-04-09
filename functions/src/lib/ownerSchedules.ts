@@ -21,6 +21,22 @@ type EffectiveDay = {
   source: "weekly" | "exception" | "closure";
 };
 
+type ScheduleExceptionDoc = {
+  date?: string;
+  type?: string;
+  blocks?: unknown;
+};
+
+type ScheduleClosureRangeDoc = {
+  startDate?: string;
+  endDate?: string;
+};
+
+type ClosureRange = {
+  startDate: string;
+  endDate: string;
+};
+
 const db = () => getFirestore();
 
 const DAY_KEYS: DayKey[] = [
@@ -143,29 +159,23 @@ function nextOpeningForDay(blocks: TimeBlock[], minuteOfDay: number): string | n
   return null;
 }
 
-async function resolveDay(
-  merchantId: string,
+function dateFallsInClosureRange(dateKey: string, range: ClosureRange): boolean {
+  return dateKey >= range.startDate && dateKey <= range.endDate;
+}
+
+function resolveDayFromPrefetchedData(
   dateKey: string,
   dayKey: DayKey,
   weeklySchedule: Record<string, unknown>,
-): Promise<EffectiveDay> {
-  const merchantRef = db().collection("merchants").doc(merchantId);
-  const closureSnap = await merchantRef
-    .collection("schedule_exceptions_ranges")
-    .where("startDate", "<=", dateKey)
-    .where("endDate", ">=", dateKey)
-    .limit(1)
-    .get();
-  if (!closureSnap.empty) {
+  exceptionsByDate: Map<string, Record<string, unknown>>,
+  closureRanges: ClosureRange[],
+): EffectiveDay {
+  if (closureRanges.some((range) => dateFallsInClosureRange(dateKey, range))) {
     return { mode: "closed", blocks: [], source: "closure" };
   }
 
-  const exceptionSnap = await merchantRef
-    .collection("schedule_exceptions")
-    .doc(dateKey)
-    .get();
-  if (exceptionSnap.exists) {
-    const exceptionData = exceptionSnap.data() as Record<string, unknown>;
+  const exceptionData = exceptionsByDate.get(dateKey);
+  if (exceptionData) {
     const exceptionType =
       typeof exceptionData.type === "string" ? exceptionData.type : "closed";
     if (exceptionType === "closed") {
@@ -210,20 +220,22 @@ function computeOpenState(day: EffectiveDay, minuteOfDay: number): {
   };
 }
 
-async function findNextWeeklyOpening(
-  merchantId: string,
+function findNextWeeklyOpening(
   timezone: string,
   now: Date,
   weeklySchedule: Record<string, unknown>,
-): Promise<string | undefined> {
+  exceptionsByDate: Map<string, Record<string, unknown>>,
+  closureRanges: ClosureRange[],
+): string | undefined {
   for (let i = 1; i <= 7; i += 1) {
     const future = new Date(now.getTime() + (i * 24 * 60 * 60 * 1000));
     const parts = getLocalTimeParts(future, timezone);
-    const resolved = await resolveDay(
-      merchantId,
+    const resolved = resolveDayFromPrefetchedData(
       parts.date,
       parts.dayKey,
       weeklySchedule,
+      exceptionsByDate,
+      closureRanges,
     );
     if (resolved.blocks.length > 0) {
       return `${parts.date} ${resolved.blocks[0].open}`;
@@ -243,19 +255,37 @@ export async function recomputeMerchantOperationalProjection(
       hasScheduleConfigured: false,
       isOpenNow: false,
       todayScheduleLabel: "Horarios no configurados",
+      closesAt: null,
+      opensNextAt: null,
       updatedAt: FieldValue.serverTimestamp(),
     };
-    await Promise.all([
-      db().doc(`merchant_operational_signals/${merchantId}`).set(payload, { merge: true }),
-      db().doc(`merchant_public/${merchantId}`).set(
-        {
-          ...payload,
-          syncedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      ),
-    ]);
+    await db().doc(`merchant_operational_signals/${merchantId}`).set(payload, { merge: true });
     return;
+  }
+
+  const [exceptionsSnap, closuresSnap] = await Promise.all([
+    merchantRef.collection("schedule_exceptions").get(),
+    merchantRef.collection("schedule_exceptions_ranges").get(),
+  ]);
+
+  const exceptionsByDate = new Map<string, Record<string, unknown>>();
+  for (const doc of exceptionsSnap.docs) {
+    const data = doc.data() as ScheduleExceptionDoc;
+    const dateKeyRaw = typeof data.date === "string" && data.date.trim().length > 0
+      ? data.date
+      : doc.id;
+    const dateKey = dateKeyRaw.trim();
+    if (!dateKey) continue;
+    exceptionsByDate.set(dateKey, data as Record<string, unknown>);
+  }
+
+  const closureRanges: ClosureRange[] = [];
+  for (const doc of closuresSnap.docs) {
+    const data = doc.data() as ScheduleClosureRangeDoc;
+    const startDate = typeof data.startDate === "string" ? data.startDate.trim() : "";
+    const endDate = typeof data.endDate === "string" ? data.endDate.trim() : "";
+    if (!startDate || !endDate) continue;
+    closureRanges.push({ startDate, endDate });
   }
 
   const weeklyData = weeklySnap.data() as Record<string, unknown>;
@@ -267,11 +297,12 @@ export async function recomputeMerchantOperationalProjection(
   const now = new Date();
   const local = getLocalTimeParts(now, timezone);
 
-  const effectiveToday = await resolveDay(
-    merchantId,
+  const effectiveToday = resolveDayFromPrefetchedData(
     local.date,
     local.dayKey,
     weeklySchedule,
+    exceptionsByDate,
+    closureRanges,
   );
   const status = computeOpenState(effectiveToday, local.minuteOfDay);
   const hasScheduleConfigured = WEEKLY_DAY_KEYS.some((dayKey) => {
@@ -280,7 +311,13 @@ export async function recomputeMerchantOperationalProjection(
     return blocks.length > 0;
   });
   const opensNextAt = status.opensNextAt ??
-    await findNextWeeklyOpening(merchantId, timezone, now, weeklySchedule);
+    findNextWeeklyOpening(
+      timezone,
+      now,
+      weeklySchedule,
+      exceptionsByDate,
+      closureRanges,
+    );
 
   const payload = {
     hasScheduleConfigured,
@@ -291,16 +328,7 @@ export async function recomputeMerchantOperationalProjection(
     updatedAt: FieldValue.serverTimestamp(),
   };
 
-  await Promise.all([
-    db().doc(`merchant_operational_signals/${merchantId}`).set(payload, { merge: true }),
-    db().doc(`merchant_public/${merchantId}`).set(
-      {
-        ...payload,
-        syncedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    ),
-  ]);
+  await db().doc(`merchant_operational_signals/${merchantId}`).set(payload, { merge: true });
 }
 
 export function isSupportedDayKey(value: string): value is DayKey {

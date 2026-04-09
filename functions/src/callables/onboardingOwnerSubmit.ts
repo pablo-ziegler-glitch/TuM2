@@ -28,7 +28,7 @@ interface OnboardingOwnerSubmitResponse {
  * { status: 'already_submitted' } without error.
  */
 export const onboardingOwnerSubmit = onCall(
-  { enforceAppCheck: false },
+  { enforceAppCheck: true },
   async (request): Promise<OnboardingOwnerSubmitResponse> => {
     // ── Auth guard ──────────────────────────────────────────────────────────
     if (!request.auth) {
@@ -151,6 +151,7 @@ export const onboardingOwnerSubmit = onCall(
         merchantId: draftMerchantId,
         name: freshStep1!.name.trim(),
         category: freshStep1!.categoryId,
+        categoryId: freshStep1!.categoryId,
         zone: freshStep2!.zoneId,
         zoneId: freshStep2!.zoneId,
         address: freshStep2!.address,

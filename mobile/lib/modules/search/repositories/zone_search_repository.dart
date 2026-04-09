@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-export '../models/search_zone_item.dart';
 import '../models/search_zone_item.dart';
 
 abstract interface class ZoneSearchDataSource {

@@ -4,6 +4,7 @@ import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
 const TTL_HOURS = 72;
+const MAX_EXPIRED_DRAFTS_PER_RUN = 2000;
 
 const ACTIVE_STEPS = ["step_1", "step_2", "step_3", "confirmation"];
 
@@ -28,10 +29,12 @@ export const nightlyCleanupExpiredDrafts = onSchedule(
     const cutoff = new Date(Date.now() - TTL_HOURS * 60 * 60 * 1000);
     const cutoffTimestamp = Timestamp.fromDate(cutoff);
 
-    // Query users with active drafts older than TTL
+    // Query acotada para evitar barridos amplios de users.
     const usersSnap = await db()
       .collection("users")
+      .where("onboardingOwnerProgress.currentStep", "in", ACTIVE_STEPS)
       .where("onboardingOwnerProgress.updatedAt", "<", cutoffTimestamp)
+      .limit(MAX_EXPIRED_DRAFTS_PER_RUN)
       .get();
 
     if (usersSnap.empty) {
@@ -39,16 +42,17 @@ export const nightlyCleanupExpiredDrafts = onSchedule(
       return;
     }
 
-    // Filter client-side for active steps (Firestore doesn't support
-    // array-contains on non-array fields combined with range queries)
-    const expiredDocs = usersSnap.docs.filter((doc) => {
-      const step = doc.data()?.onboardingOwnerProgress?.currentStep;
-      return step && ACTIVE_STEPS.includes(step);
-    });
+    const expiredDocs = usersSnap.docs;
 
     if (expiredDocs.length === 0) {
       console.log("[nightlyCleanupExpiredDrafts] No active expired drafts found.");
       return;
+    }
+
+    if (usersSnap.size >= MAX_EXPIRED_DRAFTS_PER_RUN) {
+      console.warn(
+        `[nightlyCleanupExpiredDrafts] Hit scan cap (${MAX_EXPIRED_DRAFTS_PER_RUN}). Remaining drafts will be processed in next runs.`
+      );
     }
 
     console.log(`[nightlyCleanupExpiredDrafts] Marking ${expiredDocs.length} drafts as abandoned`);
@@ -77,5 +81,13 @@ export const nightlyCleanupExpiredDrafts = onSchedule(
     }
 
     console.log(`[nightlyCleanupExpiredDrafts] Done. Purged ${purged} expired drafts.`);
+    console.log(
+      JSON.stringify({
+        job: "nightlyCleanupExpiredDrafts",
+        scanned: usersSnap.size,
+        updated: purged,
+        scanCap: MAX_EXPIRED_DRAFTS_PER_RUN,
+      })
+    );
   }
 );

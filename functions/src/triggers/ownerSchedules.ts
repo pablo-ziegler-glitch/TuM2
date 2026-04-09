@@ -4,6 +4,8 @@ import { recomputeMerchantOperationalProjection } from "../lib/ownerSchedules";
 export const onOwnerWeeklyScheduleWrite = onDocumentWritten(
   "merchants/{merchantId}/schedule_config/{docId}",
   async (event) => {
+    const docId = event.params.docId;
+    if (docId !== "weekly") return;
     const merchantId = event.params.merchantId;
     await recomputeMerchantOperationalProjection(merchantId);
   },

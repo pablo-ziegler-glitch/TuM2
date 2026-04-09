@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "notes": "Umbrales iniciales para gate de regresión de costo Firestore (ventana 24h). Ajustar con baseline real semanal.",
+  "environments": {
+    "dev": {
+      "readOps": { "warn": 250000, "critical": 450000 },
+      "writeOps": { "warn": 80000, "critical": 140000 },
+      "deleteOps": { "warn": 30000, "critical": 50000 },
+      "snapshotListeners": { "warn": 250, "critical": 450 },
+      "rulesEvaluations": { "warn": 450000, "critical": 800000 }
+    },
+    "staging": {
+      "readOps": { "warn": 500000, "critical": 850000 },
+      "writeOps": { "warn": 160000, "critical": 280000 },
+      "deleteOps": { "warn": 60000, "critical": 100000 },
+      "snapshotListeners": { "warn": 500, "critical": 900 },
+      "rulesEvaluations": { "warn": 900000, "critical": 1600000 }
+    },
+    "prod": {
+      "readOps": { "warn": 4000000, "critical": 6000000 },
+      "writeOps": { "warn": 1000000, "critical": 1500000 },
+      "deleteOps": { "warn": 300000, "critical": 450000 },
+      "snapshotListeners": { "warn": 3000, "critical": 4500 },
+      "rulesEvaluations": { "warn": 6500000, "critical": 9000000 }
+    }
+  }
+}

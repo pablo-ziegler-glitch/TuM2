@@ -56,4 +56,23 @@ class OwnerRepository {
     if (bUpdated == null) return -1;
     return bUpdated.compareTo(aUpdated);
   }
+
+  Future<void> updateMerchantProfile({
+    required String merchantId,
+    required String razonSocial,
+    required String nombreFantasia,
+  }) async {
+    final trimmedRazonSocial = razonSocial.trim();
+    final trimmedNombreFantasia = nombreFantasia.trim();
+    final visibleName = trimmedNombreFantasia.isNotEmpty
+        ? trimmedNombreFantasia
+        : trimmedRazonSocial;
+
+    await _firestore.collection('merchants').doc(merchantId).update({
+      'name': visibleName,
+      'razonSocial': trimmedRazonSocial,
+      'nombreFantasia': trimmedNombreFantasia,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

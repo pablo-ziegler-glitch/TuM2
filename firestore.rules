@@ -29,11 +29,23 @@ service cloud.firestore {
       return isAuthenticated() && roleFromClaims() == 'owner';
     }
 
-    function merchantBelongsToUser(merchantId) {
+    function merchantBelongsToUserByDoc(merchantId) {
       let merchant = get(/databases/$(database)/documents/merchants/$(merchantId));
       return isAuthenticated()
         && merchant.data != null
         && merchant.data.ownerUserId == request.auth.uid;
+    }
+
+    function merchantBelongsToUser(merchantId) {
+      let claimMerchantId = isAuthenticated()
+        && request.auth.token.merchantId is string
+        ? request.auth.token.merchantId
+        : null;
+      return isAuthenticated()
+        && (
+          (claimMerchantId != null && claimMerchantId == merchantId)
+          || (claimMerchantId == null && merchantBelongsToUserByDoc(merchantId))
+        );
     }
 
     // ─── users/{userId} ─────────────────────────────────────────────────────

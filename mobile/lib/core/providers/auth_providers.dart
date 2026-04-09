@@ -535,11 +535,18 @@ final isAdminProvider = FutureProvider<bool>((ref) async {
 // ── Provider de merchantId del owner ─────────────────────────────────────────
 
 /// merchantId del comercio del owner autenticado.
-/// Lee desde Firestore merchants collection (query por ownerUserId).
+/// Prioriza custom claims (sin lecturas Firestore).
+/// Solo usa fallback a Firestore merchants por ownerUserId si el claim no está.
 /// Null si el usuario no es owner o aún no completó el onboarding.
 final ownerMerchantIdProvider = FutureProvider<String?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
+
+  final claims = await ref.watch(authClaimsProvider.future);
+  final merchantIdFromClaims = claims?.merchantId?.trim();
+  if (merchantIdFromClaims != null && merchantIdFromClaims.isNotEmpty) {
+    return merchantIdFromClaims;
+  }
 
   try {
     final snapshot = await FirebaseFirestore.instance

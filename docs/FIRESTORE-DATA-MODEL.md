@@ -120,14 +120,21 @@ Capa de turno/guardia para farmacias. Separada de `merchants` para no contaminar
 | Campo | Tipo | Notas |
 |-------|------|-------|
 | `merchantId` | string | FK a merchants |
+| `zoneId` | string | Resuelto server-side desde merchant |
 | `date` | string | YYYY-MM-DD |
+| `startsAt` | timestamp | Inicio del turno |
+| `endsAt` | timestamp | Fin del turno (puede cruzar medianoche) |
 | `status` | PharmacyDutyStatus | draft / published / cancelled |
-| `confidenceScore` | number | 0–100 |
-| `confidenceLevel` | ConfidenceLevel | |
-| `reportedClosedCount` | number | Reportes "está cerrada" |
-| `reportInconsistencyCount` | number | Reportes de inconsistencia |
+| `sourceType` | string | owner_created / admin_created / external_seed |
+| `createdBy` | string | uid creador |
+| `updatedBy` | string | uid último editor |
+| `createdAt` | timestamp | serverTimestamp |
+| `updatedAt` | timestamp | serverTimestamp |
+| `notes` | string? | opcional |
 
-**Query pública típica:** comercios categoría farmacia cercanos → cruzar con `pharmacy_duties` activos para priorizar turno vigente.
+**Escritura:** solo mediante Cloud Functions callables (`upsertPharmacyDuty`, `changePharmacyDutyStatus`) para ownership, conflicto y auditoría.
+
+**Query pública típica:** comercios categoría farmacia cercanos → cruzar con `pharmacy_duties` `status=published` para priorizar turno vigente.
 
 ---
 

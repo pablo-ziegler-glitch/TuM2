@@ -5,10 +5,9 @@ import { todayDateString } from "../lib/schedules";
 const db = () => getFirestore();
 
 interface PharmacyDutyDoc {
-  dutyId: string;
   merchantId: string;
   date: string; // "YYYY-MM-DD"
-  isActive?: boolean;
+  status: "draft" | "published" | "cancelled";
 }
 
 /**
@@ -29,20 +28,35 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
     if (!snap?.exists) return;
 
     const duty = snap.data() as PharmacyDutyDoc;
-    const { merchantId, date } = duty;
+    const { merchantId } = duty;
+    const beforeDate = beforeSnap?.exists
+      ? ((beforeSnap.data() as PharmacyDutyDoc).date ?? "")
+      : "";
+    const afterDate = afterSnap?.exists
+      ? ((afterSnap.data() as PharmacyDutyDoc).date ?? "")
+      : "";
 
-    if (!merchantId || !date) return;
+    if (!merchantId) return;
 
     const today = todayDateString();
-    const isToday = date === today;
-    const isActiveToday = isToday && (duty.isActive !== false) && afterSnap?.exists;
+    const touchesToday = beforeDate === today || afterDate === today;
+    if (!touchesToday) return;
+
+    const publishedTodaySnap = await db()
+      .collection("pharmacy_duties")
+      .where("merchantId", "==", merchantId)
+      .where("date", "==", today)
+      .where("status", "==", "published")
+      .limit(1)
+      .get();
+    const hasDutyToday = !publishedTodaySnap.empty;
 
     await Promise.all([
       db()
         .doc(`merchant_public/${merchantId}`)
         .set(
           {
-            hasPharmacyDutyToday: isActiveToday,
+            hasPharmacyDutyToday: hasDutyToday,
             syncedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -51,7 +65,7 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
         .doc(`merchant_operational_signals/${merchantId}`)
         .set(
           {
-            hasPharmacyDutyToday: isActiveToday,
+            hasPharmacyDutyToday: hasDutyToday,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
@@ -59,7 +73,7 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
     ]);
 
     console.log(
-      `[onPharmacyDutyWriteSyncMerchant] ${merchantId} hasPharmacyDutyToday=${isActiveToday}`
+      `[onPharmacyDutyWriteSyncMerchant] ${merchantId} hasPharmacyDutyToday=${hasDutyToday}`
     );
   }
 );

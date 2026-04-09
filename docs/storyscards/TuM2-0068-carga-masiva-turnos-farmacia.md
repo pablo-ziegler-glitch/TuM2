@@ -1,9 +1,13 @@
 # TuM2-0068 — Carga masiva de turnos de farmacia (OWNER-12)
 
-Estado: IN PROGRESS  
+Estado: DEFERRED (Post-MVP)  
 Fecha: 2026-04-08
 
 ## Objetivo
+
+> Nota de alcance:
+> Esta capacidad queda explícitamente fuera del alcance de TuM2-0068 MVP de carga manual.
+> No debe exponerse en navegación productiva hasta contar con backend de importación seguro.
 
 Agregar una capacidad de carga masiva de turnos para farmacias, permitiendo que una farmacia cargue:
 
@@ -146,3 +150,11 @@ Microcopy clave:
 - validaciones de red y ownership aplicadas,
 - test unitarios de parsing/validación y test de integración de callable,
 - evento de analytics en puntos críticos del flujo.
+
+## TODOs de reactivación
+
+- Implementar callables `pharmacyDutiesDownloadTemplate` y `pharmacyDutiesBulkUpload` con `enforceAppCheck: true`.
+- Agregar validación de pertenencia de red entre origen/destino por fila en backend.
+- Incorporar storage temporal firmado para archivos y limpieza automática.
+- Añadir rate limiting por uid + merchantId para evitar abuso.
+- Exponer ruta UI solo detrás de feature flag explícito `owner_pharmacy_duties_bulk_enabled`.

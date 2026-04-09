@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/router/app_routes.dart';
 import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -93,14 +91,6 @@ class _OwnerPharmacyDutiesScreenState
                 elevation: 0,
                 title: const Text('Turnos de farmacia',
                     style: AppTextStyles.headingSm),
-                actions: [
-                  IconButton(
-                    tooltip: 'Carga masiva',
-                    onPressed: () =>
-                        context.push(AppRoutes.ownerPharmacyDutiesBulk),
-                    icon: const Icon(Icons.upload_file_outlined),
-                  ),
-                ],
               ),
               body: Column(
                 children: [
@@ -149,13 +139,6 @@ class _OwnerPharmacyDutiesScreenState
         backgroundColor: AppColors.surface,
         elevation: 0,
         title: const Text('Turnos de farmacia', style: AppTextStyles.headingSm),
-        actions: [
-          IconButton(
-            tooltip: 'Carga masiva',
-            onPressed: () => context.push(AppRoutes.ownerPharmacyDutiesBulk),
-            icon: const Icon(Icons.upload_file_outlined),
-          ),
-        ],
       ),
       body: const Center(
         child: CircularProgressIndicator(color: AppColors.primary500),
@@ -170,13 +153,6 @@ class _OwnerPharmacyDutiesScreenState
         backgroundColor: AppColors.surface,
         elevation: 0,
         title: const Text('Turnos de farmacia', style: AppTextStyles.headingSm),
-        actions: [
-          IconButton(
-            tooltip: 'Carga masiva',
-            onPressed: () => context.push(AppRoutes.ownerPharmacyDutiesBulk),
-            icon: const Icon(Icons.upload_file_outlined),
-          ),
-        ],
       ),
       body: Center(
         child: Padding(
@@ -252,18 +228,6 @@ class _OwnerPharmacyDutiesScreenState
             'Cargá y publicá tus turnos para que tus vecinos te encuentren cuando más te necesitan.',
             style: AppTextStyles.bodySm.copyWith(
               color: Colors.white.withValues(alpha: 0.92),
-            ),
-          ),
-          const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: () => context.push(AppRoutes.ownerPharmacyDutiesBulk),
-            icon: const Icon(Icons.upload_file_outlined, size: 18),
-            label: const Text('Carga masiva'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: BorderSide(
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
             ),
           ),
         ],
@@ -791,10 +755,12 @@ class _OwnerPharmacyDutiesScreenState
 
   Widget _buildConflictCard(OwnerDutyConflict conflict) {
     final hasTimes = conflict.startsAtMillis > 0 && conflict.endsAtMillis > 0;
-    final starts =
-        hasTimes ? DateTime.fromMillisecondsSinceEpoch(conflict.startsAtMillis) : null;
-    final ends =
-        hasTimes ? DateTime.fromMillisecondsSinceEpoch(conflict.endsAtMillis) : null;
+    final starts = hasTimes
+        ? DateTime.fromMillisecondsSinceEpoch(conflict.startsAtMillis)
+        : null;
+    final ends = hasTimes
+        ? DateTime.fromMillisecondsSinceEpoch(conflict.endsAtMillis)
+        : null;
     final label = hasTimes
         ? '${_timeFormat.format(starts!)} - ${_timeFormat.format(ends!)} (${conflict.date})'
         : conflict.date;

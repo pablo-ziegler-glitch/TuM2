@@ -54,8 +54,9 @@ TuM2 App
 │   │   └── OWNER-08  Señal operativa especial (modal)
 │   └── OWNER-09  Turnos de farmacia
 │       ├── OWNER-10  Ver calendario de turnos
-│       ├── OWNER-11  Cargar / confirmar turno
-│       └── OWNER-12  Carga masiva de turnos
+│       └── OWNER-11  Cargar / confirmar turno
+│
+│   (OWNER-12 Carga masiva: reservado Post-MVP)
 │
 ├── DETALLE (accesibles desde múltiples contextos)
 │   ├── DETAIL-01  Ficha pública de comercio
@@ -208,7 +209,7 @@ TuM2 App
   - Accesos rápidos: editar horario, agregar señal, ver productos.
   - Alertas: si falta completar datos del perfil.
 - **Fuente:** `merchants/{merchantId}` (lectura directa, rol owner).
-- **Salida:** → OWNER-02, OWNER-03, OWNER-06, OWNER-09, OWNER-12.
+- **Salida:** → OWNER-02, OWNER-03, OWNER-06, OWNER-09.
 
 ### OWNER-02 — Perfil del comercio (edición)
 - **Campos:** nombre, dirección, teléfono, descripción, categorías, redes sociales, logo/foto.
@@ -252,18 +253,15 @@ TuM2 App
 
 ### OWNER-10 — Ver calendario de turnos
 - **UI:** calendario mensual con días de turno marcados.
-- **Fuente:** `pharmacy_duties/{zone}/{year-month}`.
+- **Fuente:** query privada por `merchantId` + rango mensual en `pharmacy_duties`.
 
 ### OWNER-11 — Cargar / confirmar turno
-- **Flujo:** seleccionar fecha → confirmar guardia → guardado en `pharmacy_duties`.
-- **Validación:** solo un turno activo por fecha por zona.
+- **Flujo:** seleccionar fecha → confirmar guardia → callable `upsertPharmacyDuty`.
+- **Validación:** conflicto horario/ownership/rubro farmacia server-side.
 
 ### OWNER-12 — Carga masiva de turnos
-- **Propósito:** importar turnos por archivo para farmacias propias y farmacias de red.
-- **Flujo:** descargar plantilla → completar filas → subir archivo → validar por fila → importar.
-- **Template:** `fecha`, `hora_desde`, `hora_hasta`, `farmacia_origen_id`, `farmacia_turno_id`, `tipo_turno`, `observaciones`.
-- **Validación:** pertenencia a red, formato horario/fecha, no solapamiento, no duplicados.
-- **Resultado:** resumen con filas aceptadas/rechazadas y detalle de errores por fila.
+- **Estado:** Post-MVP (deshabilitado en runtime).
+- **Nota:** fuera de alcance de TuM2-0068; requiere backend de importación dedicado.
 
 ---
 
@@ -316,7 +314,6 @@ Flujo multi-paso para registrar un comercio nuevo.
 | `tum2://abierto-ahora/{zoneId}` | HOME-02 |
 | `tum2://owner/comercio/{merchantId}` | OWNER-01 |
 | `tum2://owner/turno` | OWNER-09 |
-| `tum2://owner/turnos-masivos` | OWNER-12 |
 | `tum2://admin` | ADMIN-01 |
 
 ---
@@ -367,7 +364,7 @@ OWNER-01 → tap "Turnos" → OWNER-09 → OWNER-10 (calendario) → selecciona 
 
 ### Flujo 6: OWNER carga turnos en lote para su red
 ```
-OWNER-01 → tap "Carga masiva de turnos" → OWNER-12 → descargar plantilla → subir archivo → validar/importar → OWNER-10
+OWNER-12 queda reservado para una fase posterior con backend de importación.
 ```
 
 ### Flujo 5: OWNER nuevo se registra

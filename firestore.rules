@@ -377,21 +377,17 @@ service cloud.firestore {
     }
 
     // ─── pharmacy_duties/{dutyId} ────────────────────────────────────────────
-    // Public read of published duties. Owners write their merchant duties.
-    // Admins write all.
+    // Public read of published duties.
+    // Escrituras sensibles solo por backend (Admin SDK) o admin.
 
     match /pharmacy_duties/{dutyId} {
-      allow read: if resource.data.isActive != false;
+      allow read: if resource.data.status == 'published';
       allow read: if isAuthenticated()
                      && merchantBelongsToUser(resource.data.merchantId);
       allow read: if isAdmin();
 
       allow create: if isAdmin();
-      allow create: if isOwnerRole()
-        && merchantBelongsToUser(request.resource.data.merchantId);
       allow update: if isAdmin();
-      allow update: if isOwnerRole()
-        && merchantBelongsToUser(resource.data.merchantId);
       allow delete: if isAdmin();
     }
 

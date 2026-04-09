@@ -134,6 +134,11 @@ archived             suppressed              claimed
 ```
 functions/src/
 ├── index.ts              — Exports centralizados
+├── callables/            — Mutaciones sensibles por HTTPS callable
+│   ├── pharmacyDuties.ts        — upsert/status con ownership + conflicto + App Check
+│   ├── onboardingOwnerSubmit.ts
+│   ├── checkMerchantDuplicates.ts
+│   └── assignOwnerRole.ts
 ├── triggers/             — Reaccionan a escrituras en Firestore
 │   ├── merchants.ts      — Sync merchants → merchant_public
 │   ├── schedules.ts      — Recalcular isOpenNow en cambio de horario
@@ -164,7 +169,7 @@ functions/src/
 | Campo | Colección | Quién lo calcula | Cuándo |
 |-------|-----------|-----------------|--------|
 | `isOpenNow` | merchant_public | schedules.ts trigger + nightly job | Cambio de horario / señal / cada noche |
-| `isOnDutyToday` | merchant_public | duties.ts trigger + nightly job | Cambio de turno / cada noche |
+| `hasPharmacyDutyToday` | merchant_public | duties.ts trigger + nightly job | Cambio de turno / cada noche |
 | `sortBoost` | merchant_public | projection.ts | Cambio de verificación |
 | `badges` | merchant_public | projection.ts | Cambio de datos del comercio |
 | `searchKeywords` | merchant_public | projection.ts | Cambio de nombre/categoría |
@@ -184,7 +189,7 @@ Las reglas siguen el principio de **mínimo privilegio**:
 | `merchant_schedules` | ✅ | Solo su comercio | ✅ |
 | `merchant_operational_signals` | ✅ | Solo su comercio | ✅ |
 | `merchant_products` | Solo visibles | Solo su comercio | ✅ |
-| `pharmacy_duties` | Solo publicados | Solo su comercio | ✅ |
+| `pharmacy_duties` | Solo publicados | ❌ (vía callable) | ✅ |
 | `external_places` | ❌ | ❌ | ✅ |
 | `import_batches` | ❌ | ❌ | ✅ |
 | `merchant_claims` | Solo propio | Crear (propio) | ✅ |

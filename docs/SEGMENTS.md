@@ -96,7 +96,7 @@ Durante la revisión del ADMIN:
 | `merchant_schedules` | Read + Write su propio comercio |
 | `merchant_operational_signals` | Read + Write su propio comercio |
 | `merchant_products` | Read + Write su propio comercio |
-| `pharmacy_duties` | Write solo si `categoryId = pharmacy` |
+| `pharmacy_duties` | Read propio + mutación vía callable segura |
 
 ### 4.4 Restricciones
 
@@ -188,7 +188,7 @@ CUSTOMER
 | `merchant_schedules` | ❌ | ❌ | R+W own | R+W all | |
 | `merchant_operational_signals` | ❌ | ❌ | R+W own | R+W all | |
 | `merchant_products` | ❌ | Read visible | R+W own | R+W all | |
-| `pharmacy_duties` | Read published | Read published | Write si farmacia propia | R+W all | |
+| `pharmacy_duties` | Read published | Read published | Read propio + mutate vía callable | R+W all | |
 | `reports` | Create | Create | Create | R+W all | Auth requerida para Customer con cuenta |
 | `merchant_claims` | ❌ | Create own | Create own | R+W all | |
 | `zones` | Read público | Read | Read | R+W all | |
@@ -265,7 +265,7 @@ CUSTOMER
 - **OWNER cambia su email en Firebase Auth:** custom claims se mantienen atados al `uid`, no al email. Sin impacto.
 - **ADMIN elimina un comercio cuyo OWNER tiene claim activo:** CF notifica al owner, custom claim vuelve a `customer`, `merchants/{id}` archivado.
 - **Usuario anónimo sugiere un comercio que ya existe (visible):** el sistema detecta duplicado y redirige al formulario de reporte, no crea un nuevo `merchants`.
-- **OWNER intenta cargar `pharmacy_duties` sin `categoryId = pharmacy`:** Firestore Rules rechazan con `PERMISSION_DENIED`. La UI no debe mostrar esa opción (guard de UI en OWNER-09).
+- **OWNER intenta cargar `pharmacy_duties` sin `categoryId = pharmacy`:** callable rechaza con `failed-precondition`. La UI no debe mostrar esa opción (guard de UI en OWNER-09).
 - **Token de custom claim expirado durante sesión activa:** la app Flutter debe forzar refresh del `idToken` antes de llamadas sensibles. Implementar token refresh middleware en el repositorio de auth.
 
 ---

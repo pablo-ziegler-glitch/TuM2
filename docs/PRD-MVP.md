@@ -100,6 +100,7 @@ Un OWNER mantiene **todas** las capacidades de CUSTOMER más su panel operativo.
 | F-O08 | Edición de producto | P0 | OWNER-05 |
 | F-O09 | Cargar turno de farmacia | P0 | OWNER-11 (solo farmacias) |
 | F-O10 | Ver calendario de turnos | P0 | OWNER-10 (solo farmacias) |
+| F-O11 | Carga masiva de turnos de farmacia | P1 | OWNER-12 (solo farmacias, propia + red) |
 
 ### 3.4 ADMIN — Moderación
 
@@ -123,7 +124,7 @@ Un OWNER mantiene **todas** las capacidades de CUSTOMER más su panel operativo.
 | Reseñas / calificaciones | Fuera del scope por decisión de producto |
 | Ficha de producto web | MVP+ (TuM2-0073) |
 | Links compartibles | MVP+ (TuM2-0076) |
-| Carga masiva de datos | Post-MVP (TuM2-0112) |
+| Carga masiva genérica de datos de comercios | Post-MVP (TuM2-0112). Excepción: carga masiva de turnos de farmacia OWNER-12 |
 | Verificación avanzada | Post-MVP (TuM2-0115) |
 
 ---

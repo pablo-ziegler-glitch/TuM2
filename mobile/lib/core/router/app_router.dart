@@ -29,6 +29,7 @@ import '../../modules/owner/screens/owner_access_guard_page.dart';
 import '../../modules/owner/screens/owner_products_screen.dart';
 import '../../modules/owner/screens/product_form_screen.dart';
 import '../../modules/owner/screens/product_saved_screen.dart';
+import '../../modules/owner/screens/owner_pharmacy_duties_screen.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
 import '../../modules/merchant_detail/presentation/merchant_detail_page.dart';
 import '../../modules/merchant_detail/presentation/product_detail_page.dart';
@@ -345,14 +346,17 @@ List<RouteBase> _buildRoutes() {
     ),
     // Compatibilidad temporal con path histórico.
     GoRoute(
+      path: AppRoutes.ownerPharmacyDuties,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Turnos de farmacia',
+        child: OwnerPharmacyDutiesScreen(),
+      ),
+    ),
+    GoRoute(
       path: AppRoutes.ownerDuties,
       builder: (_, __) => const OwnerAccessGuardPage(
         title: 'Turnos de farmacia',
-        child: PlaceholderScreen(
-          screenId: 'OWNER-09',
-          label: 'Turnos de farmacia',
-          roleRequired: 'owner',
-        ),
+        child: OwnerPharmacyDutiesScreen(),
       ),
     ),
 

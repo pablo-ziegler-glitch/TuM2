@@ -108,6 +108,8 @@ OwnerStack (Modal / Full-screen Stack)
     └── CargarTurno       → OWNER-11
 ```
 
+`OWNER-12 (CargaMasivaTurnos)` queda reservado para Post-MVP y no se expone en la navegación actual.
+
 **OWNER-08 — SenalOperativa** se presenta como **bottom sheet modal** sobre OWNER-06, no como pantalla full.
 
 ---

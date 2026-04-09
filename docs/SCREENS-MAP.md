@@ -56,6 +56,8 @@ TuM2 App
 │       ├── OWNER-10  Ver calendario de turnos
 │       └── OWNER-11  Cargar / confirmar turno
 │
+│   (OWNER-12 Carga masiva: reservado Post-MVP)
+│
 ├── DETALLE (accesibles desde múltiples contextos)
 │   ├── DETAIL-01  Ficha pública de comercio
 │   │   └── DETAIL-02  Ficha de producto (bottom sheet / pantalla)
@@ -251,11 +253,15 @@ TuM2 App
 
 ### OWNER-10 — Ver calendario de turnos
 - **UI:** calendario mensual con días de turno marcados.
-- **Fuente:** `pharmacy_duties/{zone}/{year-month}`.
+- **Fuente:** query privada por `merchantId` + rango mensual en `pharmacy_duties`.
 
 ### OWNER-11 — Cargar / confirmar turno
-- **Flujo:** seleccionar fecha → confirmar guardia → guardado en `pharmacy_duties`.
-- **Validación:** solo un turno activo por fecha por zona.
+- **Flujo:** seleccionar fecha → confirmar guardia → callable `upsertPharmacyDuty`.
+- **Validación:** conflicto horario/ownership/rubro farmacia server-side.
+
+### OWNER-12 — Carga masiva de turnos
+- **Estado:** Post-MVP (deshabilitado en runtime).
+- **Nota:** fuera de alcance de TuM2-0068; requiere backend de importación dedicado.
 
 ---
 
@@ -354,6 +360,11 @@ OWNER-01 → tap "Agregar señal" → OWNER-08 (modal) → selecciona "Vacacione
 ### Flujo 4: OWNER carga turno de farmacia
 ```
 OWNER-01 → tap "Turnos" → OWNER-09 → OWNER-10 (calendario) → selecciona fecha → OWNER-11 → Confirmar → vuelve a OWNER-10 con día marcado
+```
+
+### Flujo 6: OWNER carga turnos en lote para su red
+```
+OWNER-12 queda reservado para una fase posterior con backend de importación.
 ```
 
 ### Flujo 5: OWNER nuevo se registra

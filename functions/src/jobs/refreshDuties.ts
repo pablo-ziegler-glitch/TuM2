@@ -6,10 +6,9 @@ const db = () => getFirestore();
 const BATCH_SIZE = 500;
 
 interface PharmacyDutyDoc {
-  dutyId: string;
   merchantId: string;
   date: string;
-  isActive?: boolean;
+  status: "draft" | "published" | "cancelled";
 }
 
 /**
@@ -58,11 +57,11 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
       }
     }
 
-    // Get today's active duties
+    // Get today's published duties
     const dutiesSnap = await db()
       .collection("pharmacy_duties")
       .where("date", "==", today)
-      .where("isActive", "!=", false)
+      .where("status", "==", "published")
       .get();
 
     const todayMerchantIds = new Set<string>();

@@ -41,6 +41,10 @@ export { updateZoneCoverageMetrics, scheduledRefreshZoneCoverage } from "./cover
 
 export { onboardingOwnerSubmit } from "./callables/onboardingOwnerSubmit";
 export { checkMerchantDuplicates } from "./callables/checkMerchantDuplicates";
+export {
+  upsertPharmacyDuty,
+  changePharmacyDutyStatus,
+} from "./callables/pharmacyDuties";
 
 // ─── Onboarding Scheduled Jobs ─────────────────────────────────────────────
 

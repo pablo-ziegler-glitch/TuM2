@@ -24,7 +24,7 @@ class OwnerPanelPlaceholderScreen extends StatelessWidget {
           color: AppColors.neutral900,
           onPressed: () => context.pop(),
         ),
-        title: Text('Mi comercio', style: AppTextStyles.headingSm),
+        title: const Text('Mi comercio', style: AppTextStyles.headingSm),
         centerTitle: false,
       ),
       body: SingleChildScrollView(
@@ -86,7 +86,7 @@ class OwnerPanelPlaceholderScreen extends StatelessWidget {
                       ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      side: BorderSide(color: AppColors.neutral300),
+                      side: const BorderSide(color: AppColors.neutral300),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -138,7 +138,7 @@ class OwnerPanelPlaceholderScreen extends StatelessWidget {
                 _ActionCard(
                   icon: Icons.calendar_month_outlined,
                   label: 'Turnos',
-                  onTap: () => context.push(AppRoutes.ownerDuties),
+                  onTap: () => context.push(AppRoutes.ownerPharmacyDuties),
                 ),
               ],
             ),
@@ -157,7 +157,7 @@ class OwnerPanelPlaceholderScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.warning_amber_outlined,
                         size: 18,
                         color: AppColors.warningFg,
@@ -202,10 +202,10 @@ class OwnerPanelPlaceholderScreen extends StatelessWidget {
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
-                        colors: [
+                        colors: <Color>[
                           AppColors.neutral800,
                           AppColors.neutral700,
                         ],

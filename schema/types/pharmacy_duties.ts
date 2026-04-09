@@ -1,5 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
-import type { MerchantSourceType, ConfidenceLevel } from './merchant';
+import type { ConfidenceLevel } from './merchant';
 
 export type PharmacyDutyStatus = 'draft' | 'published' | 'cancelled';
 
@@ -7,6 +7,11 @@ export type PharmacyDutyVerificationStatus =
   | 'referential'
   | 'validated'
   | 'claimed';
+
+export type PharmacyDutySourceType =
+  | 'owner_created'
+  | 'admin_created'
+  | 'external_seed';
 
 /**
  * Collection: pharmacy_duties/{dutyId}
@@ -22,21 +27,20 @@ export type PharmacyDutyVerificationStatus =
  */
 export interface PharmacyDutyDocument {
   // Obligatorios
-  id: string;
   merchantId: string;
   zoneId: string;
-  cityId: string;
-  provinceId: string;
   /** ISO date string: YYYY-MM-DD */
   date: string;
   startsAt: Timestamp;
   endsAt: Timestamp;
   status: PharmacyDutyStatus;
-  verificationStatus: PharmacyDutyVerificationStatus;
-  sourceType: MerchantSourceType;
+  sourceType: PharmacyDutySourceType;
+  createdBy: string;
+  updatedBy: string;
+  verificationStatus?: PharmacyDutyVerificationStatus;
   /** Score de confianza 0–100. Escrito solo por Cloud Functions. */
-  confidenceScore: number;
-  confidenceLevel: ConfidenceLevel;
+  confidenceScore?: number;
+  confidenceLevel?: ConfidenceLevel;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 

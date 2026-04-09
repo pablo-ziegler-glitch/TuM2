@@ -164,7 +164,7 @@ Second phase:
 | `merchant_schedules` | ✓ | own merchant | ✓ |
 | `merchant_operational_signals` | ✓ | own merchant | ✓ |
 | `merchant_products` | visible only | own merchant | ✓ |
-| `pharmacy_duties` | published only | own merchant | ✓ |
+| `pharmacy_duties` | published only | read own + mutate vía callable | ✓ |
 | `external_places` | — | — | ✓ |
 | `import_batches` | — | — | ✓ |
 | `merchant_claims` | own only | create own | ✓ |

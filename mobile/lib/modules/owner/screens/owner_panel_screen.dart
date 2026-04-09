@@ -148,7 +148,7 @@ class _AdminOwnerDashboard extends StatelessWidget {
         const SizedBox(height: 10),
         const _AdminOwnerActionCard(
           title: 'Turnos de farmacia',
-          route: AppRoutes.ownerDuties,
+          route: AppRoutes.ownerPharmacyDuties,
           icon: Icons.medical_services_outlined,
         ),
       ],
@@ -592,7 +592,7 @@ class _OwnerQuickActions extends StatelessWidget {
           label: 'Turnos de farmacia',
           subtitle: 'Guardias y calendario',
           icon: Icons.medical_services_outlined,
-          route: AppRoutes.ownerDuties,
+          route: AppRoutes.ownerPharmacyDuties,
         ),
       );
     }

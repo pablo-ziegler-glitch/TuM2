@@ -41,6 +41,7 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
   ImportType? _importType;
   DatasetType? _datasetType;
   String? _templateName;
+  bool _applyDestinationZone = true;
   String _zoneId = '';
   String? _fileName;
   ParsedImportData? _parsedData;
@@ -61,7 +62,9 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
   bool get _canGoNext => switch (_step) {
         0 => _importType != null,
         1 => _templateName != null,
-        2 => _datasetType != null && _zoneId.isNotEmpty && _parsedData != null,
+        2 => _datasetType != null &&
+            _parsedData != null &&
+            (!_applyDestinationZone || _zoneId.isNotEmpty),
         3 => _mappings.any((m) => m.enabled),
         4 => _previewRows.isNotEmpty,
         5 => true,
@@ -69,6 +72,7 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
       };
 
   String get _zoneLabel {
+    if (!_applyDestinationZone) return 'Sin zona fija';
     final found = _zones.where((zone) => zone.zoneId == _zoneId);
     if (found.isEmpty) return _zoneId;
     return found.first.label;
@@ -256,11 +260,16 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
       2 => WizardStepArchivo(
           selectedDatasetType: _datasetType,
           selectedZoneId: _zoneId.isEmpty ? null : _zoneId,
+          applyDestinationZone: _applyDestinationZone,
           zoneOptions: _zones,
           zonesLoading: _zonesLoading,
           zonesError: _zonesError,
           fileName: _fileName,
           onDatasetTypeChanged: (value) => setState(() => _datasetType = value),
+          onApplyDestinationZoneChanged: (value) => setState(() {
+            _applyDestinationZone = value;
+            if (!_applyDestinationZone) _zoneId = '';
+          }),
           onZoneChanged: (z) => setState(() => _zoneId = z ?? ''),
           onFileSelected: _pickFileAndParse,
           onDownloadCsvTemplate: _downloadCsvTemplate,
@@ -394,7 +403,7 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
         ImportSubmissionInput(
           importType: _importType!,
           datasetType: _datasetType!,
-          zoneId: _zoneId,
+          zoneId: _applyDestinationZone ? _zoneId : '',
           zoneLabel: _zoneLabel,
           templateName: _templateName,
           parsedData: _parsedData!,
@@ -426,7 +435,7 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
       setState(() {
         _zones = zones;
         _zonesLoading = false;
-        if (_zoneId.isEmpty && zones.isNotEmpty) {
+        if (_applyDestinationZone && _zoneId.isEmpty && zones.isNotEmpty) {
           _zoneId = zones.first.zoneId;
         }
       });

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
@@ -33,13 +34,23 @@ class ZoneOption {
     required this.zoneId,
     required this.name,
     required this.cityId,
+    required this.countryName,
+    required this.provinceName,
+    required this.localityName,
   });
 
   final String zoneId;
   final String name;
   final String cityId;
+  final String countryName;
+  final String provinceName;
+  final String localityName;
 
-  String get label => cityId.trim().isEmpty ? name : '$name — $cityId';
+  String get label {
+    final locality = localityName.trim().isEmpty ? name : localityName;
+    final province = provinceName.trim();
+    return province.isEmpty ? locality : '$locality — $province';
+  }
 }
 
 class ImportValidationResult {
@@ -127,10 +138,22 @@ class ImportDataRepository {
     final docs = await _fetchActiveZoneDocs();
     return docs.map((doc) {
       final data = doc.data();
+      final localityName = _readText(data, const [
+            'localityName',
+            'cityName',
+            'name',
+            'nombre',
+          ]) ??
+          doc.id;
       return ZoneOption(
         zoneId: doc.id,
-        name: _readText(data, const ['name', 'nombre']) ?? doc.id,
+        name: _readText(data, const ['name', 'nombre']) ?? localityName,
         cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
+        countryName:
+            _readText(data, const ['countryName', 'paisNombre']) ?? 'Argentina',
+        provinceName:
+            _readText(data, const ['provinceName', 'provinciaNombre']) ?? '',
+        localityName: localityName,
       );
     }).toList();
   }
@@ -340,7 +363,7 @@ class ImportDataRepository {
       'zone': input.zoneLabel,
       'zoneId': input.zoneId,
       'zoneLabel': input.zoneLabel,
-      'status': ImportBatchStatus.running.name,
+      'status': ImportBatchStatus.draft.name,
       'processedCount': input.parsedData.rows.length,
       'createdCount': 0,
       'duplicatedCount': 0,
@@ -361,107 +384,164 @@ class ImportDataRepository {
       'fileHash': input.parsedData.fileHash,
       'fieldMappings': input.fieldMappings.map((item) => item.toMap()).toList(),
       'errors': validation.errors.map((item) => item.toMap()).toList(),
-      'auditTrail': baseTrail.map((item) => item.toMap()).toList(),
-    });
-
-    final enabledMappings =
-        input.fieldMappings.where((m) => m.enabled).toList();
-    final placeRefs =
-        <DocumentReference<Map<String, dynamic>>, Map<String, dynamic>>{};
-    var duplicatedCount = 0;
-    var pendingReview = 0;
-
-    for (var i = 0; i < input.parsedData.rows.length; i++) {
-      final row = input.parsedData.rows[i];
-      final state = _rowState(row, enabledMappings);
-      if (state.$1) {
-        continue;
-      }
-
-      final name = _mappedValue(row, enabledMappings, tum2FieldName);
-      final address = _mappedValue(row, enabledMappings, tum2FieldAddress);
-      final dedupeKey = _dedupeKey(name, address, input.zoneId);
-      if (input.deduplicationEnabled) {
-        final exists = await _externalPlaces
-            .where('dedupeKey', isEqualTo: dedupeKey)
-            .limit(1)
-            .get();
-        if (exists.docs.isNotEmpty) {
-          duplicatedCount++;
-          pendingReview++;
-          continue;
-        }
-      }
-
-      final lat = _doubleOrNull(
-        _mappedValue(row, enabledMappings, tum2FieldLatitude),
-      );
-      final lng = _doubleOrNull(
-        _mappedValue(row, enabledMappings, tum2FieldLongitude),
-      );
-
-      final docRef = _externalPlaces.doc();
-      placeRefs[docRef] = {
-        'externalId': docRef.id,
-        'sourceType': 'admin_import',
-        'rawName': name ?? 'Sin nombre',
-        'rawCategory':
-            _mappedValue(row, enabledMappings, tum2FieldCategory) ?? '',
-        'rawAddress': address ?? '',
-        'rawLat': lat,
-        'rawLng': lng,
-        'zoneId': input.zoneId,
-        'zoneLabel': input.zoneLabel,
-        'importBatchId': batchId,
-        'dedupeKey': dedupeKey,
-        'rawPayload': row,
-        'visibilityStatus': input.visibilityAfterImport,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-    }
-
-    await _applyMapInChunks(placeRefs);
-
-    final createdCount = placeRefs.length;
-    final isHidden = input.visibilityAfterImport == 'hidden';
-    final status = createdCount == 0
-        ? ImportBatchStatus.failed
-        : (validation.errorRows > 0 || duplicatedCount > 0)
-            ? ImportBatchStatus.partial
-            : (isHidden
-                ? ImportBatchStatus.hidden
-                : ImportBatchStatus.completed);
-
-    await batchRef.set({
-      'status': status.name,
-      'createdCount': createdCount,
-      'duplicatedCount': duplicatedCount,
-      'pendingReviewCount': pendingReview,
-      'stagingCount': createdCount,
-      'mergeCandidateCount': duplicatedCount,
-      'finishedAt': FieldValue.serverTimestamp(),
-      'auditTrail': FieldValue.arrayUnion([
+      'auditTrail': [
+        ...baseTrail.map((item) => item.toMap()),
         AuditTimelineEvent(
-          stage: 'stage',
-          label: 'Staged to Firestore',
-          timestamp: DateTime.now(),
+          stage: 'queue',
+          label: 'Import Queued',
+          timestamp: now,
           actor: 'system',
           result: true,
-          detail:
-              '$createdCount records staged (${input.visibilityAfterImport})',
+          detail: 'Processing will continue in background',
         ).toMap(),
-        AuditTimelineEvent(
-          stage: 'confirm',
-          label: 'Import Confirmed',
-          timestamp: DateTime.now(),
-          actor: createdBy,
-          result: true,
-          detail: 'Batch marked as ${status.name}',
-        ).toMap(),
-      ]),
-    }, SetOptions(merge: true));
+      ],
+    });
+
+    unawaited(_processBatchInBackground(
+      batchRef: batchRef,
+      batchId: batchId,
+      input: input,
+      validation: validation,
+      createdBy: createdBy,
+    ));
 
     return batchId;
+  }
+
+  Future<void> _processBatchInBackground({
+    required DocumentReference<Map<String, dynamic>> batchRef,
+    required String batchId,
+    required ImportSubmissionInput input,
+    required ImportValidationResult validation,
+    required String createdBy,
+  }) async {
+    try {
+      await batchRef.set({
+        'status': ImportBatchStatus.running.name,
+        'auditTrail': FieldValue.arrayUnion([
+          AuditTimelineEvent(
+            stage: 'process',
+            label: 'Background Processing Started',
+            timestamp: DateTime.now(),
+            actor: 'system',
+            result: true,
+            detail: 'Preparing rows and staging records',
+          ).toMap(),
+        ]),
+      }, SetOptions(merge: true));
+
+      final enabledMappings =
+          input.fieldMappings.where((m) => m.enabled).toList();
+      final placeRefs =
+          <DocumentReference<Map<String, dynamic>>, Map<String, dynamic>>{};
+      var duplicatedCount = 0;
+      var pendingReview = 0;
+
+      for (var i = 0; i < input.parsedData.rows.length; i++) {
+        final row = input.parsedData.rows[i];
+        final state = _rowState(row, enabledMappings);
+        if (state.$1) {
+          continue;
+        }
+
+        final name = _mappedValue(row, enabledMappings, tum2FieldName);
+        final address = _mappedValue(row, enabledMappings, tum2FieldAddress);
+        final dedupeKey = _dedupeKey(name, address, input.zoneId);
+        if (input.deduplicationEnabled) {
+          final exists = await _externalPlaces
+              .where('dedupeKey', isEqualTo: dedupeKey)
+              .limit(1)
+              .get();
+          if (exists.docs.isNotEmpty) {
+            duplicatedCount++;
+            pendingReview++;
+            continue;
+          }
+        }
+
+        final lat = _doubleOrNull(
+          _mappedValue(row, enabledMappings, tum2FieldLatitude),
+        );
+        final lng = _doubleOrNull(
+          _mappedValue(row, enabledMappings, tum2FieldLongitude),
+        );
+
+        final docRef = _externalPlaces.doc();
+        placeRefs[docRef] = {
+          'externalId': docRef.id,
+          'sourceType': 'admin_import',
+          'rawName': name ?? 'Sin nombre',
+          'rawCategory':
+              _mappedValue(row, enabledMappings, tum2FieldCategory) ?? '',
+          'rawAddress': address ?? '',
+          'rawLat': lat,
+          'rawLng': lng,
+          'zoneId': input.zoneId,
+          'zoneLabel': input.zoneLabel,
+          'importBatchId': batchId,
+          'dedupeKey': dedupeKey,
+          'rawPayload': row,
+          'visibilityStatus': input.visibilityAfterImport,
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+      }
+
+      await _applyMapInChunks(placeRefs);
+
+      final createdCount = placeRefs.length;
+      final isHidden = input.visibilityAfterImport == 'hidden';
+      final status = createdCount == 0
+          ? ImportBatchStatus.failed
+          : (validation.errorRows > 0 || duplicatedCount > 0)
+              ? ImportBatchStatus.partial
+              : (isHidden
+                  ? ImportBatchStatus.hidden
+                  : ImportBatchStatus.completed);
+
+      await batchRef.set({
+        'status': status.name,
+        'createdCount': createdCount,
+        'duplicatedCount': duplicatedCount,
+        'pendingReviewCount': pendingReview,
+        'stagingCount': createdCount,
+        'mergeCandidateCount': duplicatedCount,
+        'finishedAt': FieldValue.serverTimestamp(),
+        'auditTrail': FieldValue.arrayUnion([
+          AuditTimelineEvent(
+            stage: 'stage',
+            label: 'Staged to Firestore',
+            timestamp: DateTime.now(),
+            actor: 'system',
+            result: true,
+            detail:
+                '$createdCount records staged (${input.visibilityAfterImport})',
+          ).toMap(),
+          AuditTimelineEvent(
+            stage: 'confirm',
+            label: 'Import Confirmed',
+            timestamp: DateTime.now(),
+            actor: createdBy,
+            result: true,
+            detail: 'Batch marked as ${status.name}',
+          ).toMap(),
+        ]),
+      }, SetOptions(merge: true));
+    } catch (error) {
+      await batchRef.set({
+        'status': ImportBatchStatus.failed.name,
+        'finishedAt': FieldValue.serverTimestamp(),
+        'auditTrail': FieldValue.arrayUnion([
+          AuditTimelineEvent(
+            stage: 'process',
+            label: 'Background Processing Failed',
+            timestamp: DateTime.now(),
+            actor: 'system',
+            result: false,
+            detail: error.toString(),
+          ).toMap(),
+        ]),
+      }, SetOptions(merge: true));
+    }
   }
 
   Future<ParsedImportData> parseImportFile({

@@ -45,15 +45,19 @@ service cloud.firestore {
     function draftMerchantIdUnchanged() {
       let progress = 'onboardingOwnerProgress';
       let incoming = request.resource.data.get(progress, null);
+      let existingProgress = resource.data.get(progress, null);
+      let existingId = existingProgress == null
+        ? null
+        : existingProgress.get('draftMerchantId', null);
+      let newId = incoming == null
+        ? null
+        : incoming.get('draftMerchantId', null);
       // Si el update elimina onboardingOwnerProgress, solo se permite
       // si aún no había un draftMerchantId asignado (no hay nada que proteger)
-      if (incoming == null) {
-        return resource.data[progress].get('draftMerchantId', null) == null;
-      }
-      let existingId = resource.data[progress].draftMerchantId;
-      let newId = incoming.draftMerchantId;
-      // Allow if it was null/unset before, or if it stays the same
-      return existingId == null || existingId == newId;
+      return incoming == null
+        ? existingId == null
+        // Allow if it was null/unset before, or if it stays the same
+        : existingId == null || existingId == newId;
     }
 
     function onboardingProgressExists() {

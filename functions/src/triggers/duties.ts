@@ -15,7 +15,8 @@ interface PharmacyDutyDoc {
  *
  * Triggered on any write to pharmacy_duties/{dutyId}.
  * If the duty applies to today (Argentina TZ), updates
- * merchant_public/{merchantId}.hasPharmacyDutyToday.
+ * merchant_operational_signals/{merchantId}.hasPharmacyDutyToday.
+ * merchant_public se sincroniza desde onSignalsWriteSyncPublic.
  */
 export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
   "pharmacy_duties/{dutyId}",
@@ -38,42 +39,61 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
 
     if (!merchantId) return;
 
+    const beforeDuty = beforeSnap?.exists
+      ? (beforeSnap.data() as PharmacyDutyDoc)
+      : undefined;
+    const afterDuty = afterSnap?.exists
+      ? (afterSnap.data() as PharmacyDutyDoc)
+      : undefined;
+    const isSameEffectiveState =
+      beforeDuty &&
+      afterDuty &&
+      beforeDuty.merchantId === afterDuty.merchantId &&
+      beforeDuty.date === afterDuty.date &&
+      beforeDuty.status === afterDuty.status;
+    if (isSameEffectiveState) return;
+
     const today = todayDateString();
     const touchesToday = beforeDate === today || afterDate === today;
     if (!touchesToday) return;
 
-    const publishedTodaySnap = await db()
-      .collection("pharmacy_duties")
-      .where("merchantId", "==", merchantId)
-      .where("date", "==", today)
-      .where("status", "==", "published")
-      .limit(1)
-      .get();
-    const hasDutyToday = !publishedTodaySnap.empty;
+    const affectedMerchantIds = new Set<string>();
+    if (beforeDuty?.merchantId?.trim()) affectedMerchantIds.add(beforeDuty.merchantId.trim());
+    if (afterDuty?.merchantId?.trim()) affectedMerchantIds.add(afterDuty.merchantId.trim());
+    if (affectedMerchantIds.size === 0) return;
 
-    await Promise.all([
-      db()
-        .doc(`merchant_public/${merchantId}`)
-        .set(
-          {
-            hasPharmacyDutyToday: hasDutyToday,
-            syncedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        ),
-      db()
-        .doc(`merchant_operational_signals/${merchantId}`)
-        .set(
+    await Promise.all(
+      [...affectedMerchantIds].map(async (affectedMerchantId) => {
+        const signalRef = db().doc(`merchant_operational_signals/${affectedMerchantId}`);
+        const [publishedTodaySnap, signalSnap] = await Promise.all([
+          db()
+            .collection("pharmacy_duties")
+            .where("merchantId", "==", affectedMerchantId)
+            .where("date", "==", today)
+            .where("status", "==", "published")
+            .limit(1)
+            .get(),
+          signalRef.get(),
+        ]);
+        const hasDutyToday = !publishedTodaySnap.empty;
+        const currentHasDutyToday = signalSnap.exists
+          && signalSnap.data()?.["hasPharmacyDutyToday"] === true;
+        if (currentHasDutyToday === hasDutyToday) {
+          return;
+        }
+
+        await signalRef.set(
           {
             hasPharmacyDutyToday: hasDutyToday,
             updatedAt: FieldValue.serverTimestamp(),
           },
           { merge: true }
-        ),
-    ]);
+        );
 
-    console.log(
-      `[onPharmacyDutyWriteSyncMerchant] ${merchantId} hasPharmacyDutyToday=${hasDutyToday}`
+        console.log(
+          `[onPharmacyDutyWriteSyncMerchant] ${affectedMerchantId} hasPharmacyDutyToday=${hasDutyToday}`
+        );
+      })
     );
   }
 );

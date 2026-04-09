@@ -4,6 +4,23 @@ Documento técnico de referencia para el equipo. Describe las decisiones de arqu
 
 ---
 
+## 0. Guardrail de costo Firestore (primer nivel)
+
+Toda evolución del sistema debe cumplir explícitamente:
+
+- minimización de lecturas Firestore
+- eliminación de listeners innecesarios
+- uso obligatorio de `limit` y/o paginación real
+- evitar queries amplias sin scope (`zoneId`, `visibilityStatus`)
+- preferir cache + TTL/control de invalidez frente a realtime permanente
+- evitar polling/refetch agresivo
+- reducir writes redundantes en Cloud Functions
+- diseñar con costo como constraint desde el inicio
+
+Incumplir este bloque es un error crítico de arquitectura (impacto económico).
+
+---
+
 ## 1. Visión general
 
 TuM2 es una plataforma de información de comercios locales compuesta por:
@@ -50,11 +67,13 @@ TuM2 es una plataforma de información de comercios locales compuesta por:
 
 | Alias | Proyecto Firebase | Uso |
 |-------|------------------|-----|
-| `dev` | tum2-dev | Desarrollo local con emuladores |
-| `staging` | tum2-staging | QA y validación pre-lanzamiento |
-| `prod` | tum2-prod | Producción |
+| `dev` | tum2-dev-6283d | Desarrollo local con emuladores |
+| `staging` | tum2-staging-45c83 | QA y validación pre-lanzamiento |
+| `prod` | tum2-prod-bc9b4 | Producción |
 
 El proyecto soporta switching con `firebase use <alias>`.
+
+`tum2-dev` (sin sufijo) se considera proyecto huérfano y no debe usarse.
 
 Los emuladores locales cubren: Auth (9099), Firestore (8080), Storage (9199), Functions (5001), UI (4000).
 

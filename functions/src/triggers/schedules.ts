@@ -5,26 +5,46 @@ import { MerchantScheduleDoc } from "../lib/types";
 
 const db = () => getFirestore();
 
+function scheduleComparableShape(doc: MerchantScheduleDoc | undefined): string {
+  if (!doc) return "{}";
+  return JSON.stringify({
+    schedule: doc.schedule ?? null,
+    timezone: doc.timezone ?? null,
+  });
+}
+
 /**
  * onScheduleWriteRecalculateOpenNow
  *
  * Triggered on any write to merchant_schedules/{merchantId}.
- * Recalculates isOpenNow and todayScheduleLabel and propagates to:
- * - merchant_operational_signals/{merchantId}
- * - merchant_public/{merchantId}
+ * Recalculates isOpenNow and todayScheduleLabel and propagates to
+ * merchant_operational_signals/{merchantId}.
+ * merchant_public se sincroniza desde onSignalsWriteSyncPublic.
  */
 export const onScheduleWriteRecalculateOpenNow = onDocumentWritten(
   "merchant_schedules/{merchantId}",
   async (event) => {
     const merchantId = event.params.merchantId;
+    const beforeSnap = event.data?.before;
     const afterSnap = event.data?.after;
 
     if (!afterSnap?.exists) return;
 
     const scheduleDoc = afterSnap.data() as MerchantScheduleDoc;
-
     const openNow = isOpenNow(scheduleDoc);
     const scheduleLabel = todayScheduleLabel(scheduleDoc);
+
+    if (beforeSnap?.exists) {
+      const beforeDoc = beforeSnap.data() as MerchantScheduleDoc;
+      if (scheduleComparableShape(beforeDoc) === scheduleComparableShape(scheduleDoc)) {
+        return;
+      }
+      const beforeOpenNow = isOpenNow(beforeDoc);
+      const beforeScheduleLabel = todayScheduleLabel(beforeDoc);
+      if (beforeOpenNow === openNow && beforeScheduleLabel === scheduleLabel) {
+        return;
+      }
+    }
 
     const signalUpdate = {
       isOpenNow: openNow,
@@ -32,21 +52,9 @@ export const onScheduleWriteRecalculateOpenNow = onDocumentWritten(
       updatedAt: FieldValue.serverTimestamp(),
     };
 
-    await Promise.all([
-      db()
-        .doc(`merchant_operational_signals/${merchantId}`)
-        .set(signalUpdate, { merge: true }),
-      db()
-        .doc(`merchant_public/${merchantId}`)
-        .set(
-          {
-            isOpenNow: openNow,
-            todayScheduleLabel: scheduleLabel,
-            syncedAt: FieldValue.serverTimestamp(),
-          },
-          { merge: true }
-        ),
-    ]);
+    await db()
+      .doc(`merchant_operational_signals/${merchantId}`)
+      .set(signalUpdate, { merge: true });
 
     console.log(
       `[onScheduleWriteRecalculateOpenNow] ${merchantId} isOpenNow=${openNow}`

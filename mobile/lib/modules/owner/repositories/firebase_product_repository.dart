@@ -12,9 +12,9 @@ class FirebaseProductRepository implements ProductRepository {
         _storage = storage ?? FirebaseStorage.instance;
 
   static const String _productsCollection = 'merchant_products';
-  static const String _merchantsCollection = 'merchants';
   static const int _maxImageBytes = 5 * 1024 * 1024;
   static const int _maxPublicProductsLimit = 60;
+  static const int _maxOwnerProductsLimit = 180;
 
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
@@ -36,6 +36,37 @@ class FirebaseProductRepository implements ProductRepository {
           .map(MerchantProduct.fromFirestore)
           .toList(growable: false);
     });
+  }
+
+  @override
+  Future<List<MerchantProduct>> fetchOwnerProducts({
+    required String merchantId,
+    int limit = 120,
+  }) async {
+    final normalizedMerchantId = normalizeProductField(merchantId);
+    if (normalizedMerchantId.isEmpty) return const [];
+    final safeLimit = limit.clamp(1, _maxOwnerProductsLimit).toInt();
+
+    try {
+      final snapshot = await _firestore
+          .collection(_productsCollection)
+          .where('merchantId', isEqualTo: normalizedMerchantId)
+          .orderBy('updatedAt', descending: true)
+          .limit(safeLimit)
+          .get();
+
+      return snapshot.docs
+          .map(MerchantProduct.fromFirestore)
+          .toList(growable: false);
+    } on FirebaseException catch (error) {
+      throw _mapFirestoreException(error);
+    } catch (error) {
+      throw ProductRepositoryException(
+        code: 'product-owner-read-failed',
+        message: 'No pudimos cargar el catálogo del comercio.',
+        cause: error,
+      );
+    }
   }
 
   @override
@@ -93,10 +124,6 @@ class FirebaseProductRepository implements ProductRepository {
     }
 
     _validateInput(input);
-    await _assertOwnerOwnsMerchant(
-      merchantId: normalizedMerchantId,
-      ownerUserId: normalizedOwnerUserId,
-    );
 
     final productRef = _firestore.collection(_productsCollection).doc();
     final productId = productRef.id;
@@ -165,10 +192,6 @@ class FirebaseProductRepository implements ProductRepository {
   }) async {
     _validateInput(input);
     _assertActorMatchesProductOwner(product: product, actorUserId: actorUserId);
-    await _assertOwnerOwnsMerchant(
-      merchantId: product.merchantId,
-      ownerUserId: product.ownerUserId,
-    );
 
     ProductImageUploadResult? uploadedImage;
     try {
@@ -230,10 +253,6 @@ class FirebaseProductRepository implements ProductRepository {
     required String actorUserId,
   }) async {
     _assertActorMatchesProductOwner(product: product, actorUserId: actorUserId);
-    await _assertOwnerOwnsMerchant(
-      merchantId: product.merchantId,
-      ownerUserId: product.ownerUserId,
-    );
 
     try {
       await _firestore.collection(_productsCollection).doc(product.id).update({
@@ -259,10 +278,6 @@ class FirebaseProductRepository implements ProductRepository {
     required String actorUserId,
   }) async {
     _assertActorMatchesProductOwner(product: product, actorUserId: actorUserId);
-    await _assertOwnerOwnsMerchant(
-      merchantId: product.merchantId,
-      ownerUserId: product.ownerUserId,
-    );
 
     try {
       await _firestore.collection(_productsCollection).doc(product.id).update({
@@ -391,26 +406,6 @@ class FirebaseProductRepository implements ProductRepository {
     final normalizedActorUserId = normalizeProductField(actorUserId);
     if (normalizedActorUserId.isEmpty ||
         normalizedActorUserId != product.ownerUserId) {
-      throw const ProductUnauthorizedException();
-    }
-  }
-
-  Future<void> _assertOwnerOwnsMerchant({
-    required String merchantId,
-    required String ownerUserId,
-  }) async {
-    final merchantRef =
-        _firestore.collection(_merchantsCollection).doc(merchantId);
-    final merchantSnapshot = await merchantRef.get();
-    if (!merchantSnapshot.exists) {
-      throw const ProductUnauthorizedException(
-        message: 'No encontramos el comercio asociado al producto.',
-      );
-    }
-    final merchantData = merchantSnapshot.data() ?? const <String, dynamic>{};
-    final merchantOwnerId =
-        normalizeProductField(merchantData['ownerUserId'] as String? ?? '');
-    if (merchantOwnerId.isEmpty || merchantOwnerId != ownerUserId) {
       throw const ProductUnauthorizedException();
     }
   }

@@ -127,7 +127,7 @@ export async function runBackfillSearchKeywords(): Promise<BackfillSearchKeyword
  * using source data from merchants.
  */
 export const backfillSearchKeywords = onCall(
-  { timeoutSeconds: 540, memory: "1GiB", enforceAppCheck: false },
+  { timeoutSeconds: 540, memory: "1GiB", enforceAppCheck: true },
   async (request) => {
     assertAdminCallableAccess(request.auth);
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -42,6 +44,7 @@ class Step1TipoNombreScreen extends StatefulWidget {
 
 class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
   final _nameCtrl = TextEditingController();
+  StreamSubscription<DuplicateState>? _duplicateSubscription;
   String? _selectedCategoryId;
   bool _submitted = false;
   DuplicateState _duplicateState = DuplicateState.none;
@@ -70,11 +73,13 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
     final cats = await widget.categoriesRepository.getCategories();
     if (!mounted) return;
     setState(() {
-      _categoryOptions = cats.map((c) => CategoryOption(
-        id: c.id,
-        label: c.label,
-        icon: _iconForName(c.iconName),
-      )).toList();
+      _categoryOptions = cats
+          .map((c) => CategoryOption(
+                id: c.id,
+                label: c.label,
+                icon: _iconForName(c.iconName),
+              ))
+          .toList();
       _loadingCategories = false;
     });
   }
@@ -92,7 +97,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
   }
 
   void _subscribeToDuplicates() {
-    widget.duplicateCheckService.stateStream.listen((state) {
+    _duplicateSubscription =
+        widget.duplicateCheckService.stateStream.listen((state) {
       if (!mounted) return;
       setState(() {
         _duplicateState = state;
@@ -107,6 +113,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
 
   @override
   void dispose() {
+    _duplicateSubscription?.cancel();
     _nameCtrl.dispose();
     super.dispose();
   }
@@ -312,7 +319,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                     if (_hasErrors) ...[
                       ValidationBanner(
                         title: 'Revisá los campos',
-                        body: 'Completá el nombre y seleccioná una categoría para continuar.',
+                        body:
+                            'Completá el nombre y seleccioná una categoría para continuar.',
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -321,7 +329,9 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                     Text(
                       'Nombre del comercio *',
                       style: AppTextStyles.labelMd.copyWith(
-                        color: nameHasError ? AppColors.errorFg : AppColors.neutral900,
+                        color: nameHasError
+                            ? AppColors.errorFg
+                            : AppColors.neutral900,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -330,8 +340,10 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                       onChanged: _onNameChanged,
                       decoration: InputDecoration(
                         hintText: 'Ej: Farmacia del Centro',
-                        hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.neutral500),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        hintStyle: AppTextStyles.bodyMd
+                            .copyWith(color: AppColors.neutral500),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
                         filled: true,
                         fillColor: AppColors.surface,
                         enabledBorder: OutlineInputBorder(
@@ -367,7 +379,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.warningFg.withOpacity(0.4)),
+                          border: Border.all(
+                              color: AppColors.warningFg.withOpacity(0.4)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,7 +394,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                             const SizedBox(height: 4),
                             RichText(
                               text: TextSpan(
-                                style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
+                                style: AppTextStyles.bodyXs
+                                    .copyWith(color: AppColors.neutral700),
                                 children: const [
                                   TextSpan(text: '¿Es el mismo local? '),
                                   TextSpan(
@@ -391,7 +405,9 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                                       decoration: TextDecoration.underline,
                                     ),
                                   ),
-                                  TextSpan(text: '. Si es otro, usá un nombre diferente.'),
+                                  TextSpan(
+                                      text:
+                                          '. Si es otro, usá un nombre diferente.'),
                                 ],
                               ),
                             ),
@@ -406,7 +422,9 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                     Text(
                       'Categoría *',
                       style: AppTextStyles.labelMd.copyWith(
-                        color: categoryHasError ? AppColors.errorFg : AppColors.neutral900,
+                        color: categoryHasError
+                            ? AppColors.errorFg
+                            : AppColors.neutral900,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -419,9 +437,12 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                           )
                         : CategoryGrid(
                             selectedId: _selectedCategoryId,
-                            onSelect: (id) => setState(() => _selectedCategoryId = id),
+                            onSelect: (id) =>
+                                setState(() => _selectedCategoryId = id),
                             hasError: categoryHasError,
-                            categories: _categoryOptions.isNotEmpty ? _categoryOptions : null,
+                            categories: _categoryOptions.isNotEmpty
+                                ? _categoryOptions
+                                : null,
                           ),
                     if (categoryHasError)
                       InlineError(message: 'Seleccioná una categoría'),
@@ -462,9 +483,10 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                 child: ElevatedButton(
                   onPressed: _onNext,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: (_submitted && (_nameEmpty || _categoryEmpty))
-                        ? AppColors.neutral300
-                        : AppColors.primary500,
+                    backgroundColor:
+                        (_submitted && (_nameEmpty || _categoryEmpty))
+                            ? AppColors.neutral300
+                            : AppColors.primary500,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

@@ -5,6 +5,7 @@ import { normalizeExternalCategory } from "../lib/normalizeCategory";
 import { dedupeMerchantCandidate, ExistingMerchant } from "../lib/dedupe";
 
 const db = () => getFirestore();
+const MAX_DEDUPE_ZONE_SCAN = 250;
 
 /**
  * onExternalPlaceCreateNormalize
@@ -32,7 +33,8 @@ export const onExternalPlaceCreateNormalize = onDocumentCreated(
     // Fetch existing merchants in the same zone for dedup
     const existingSnap = await db()
       .collection("merchants")
-      .where("zone", "==", place.zoneId)
+      .where("zoneId", "==", place.zoneId)
+      .limit(MAX_DEDUPE_ZONE_SCAN)
       .get();
 
     const existing: ExistingMerchant[] = existingSnap.docs.map((d) => {
@@ -43,7 +45,7 @@ export const onExternalPlaceCreateNormalize = onDocumentCreated(
         address: data.address,
         lat: data.lat,
         lng: data.lng,
-        zone: data.zone,
+        zone: data.zoneId ?? data.zone,
       };
     });
 
@@ -89,7 +91,9 @@ export const onExternalPlaceCreateNormalize = onDocumentCreated(
         merchantId: newMerchantRef.id,
         name: place.rawName,
         category: normalizedCategory,
+        categoryId: normalizedCategory,
         zone: place.zoneId,
+        zoneId: place.zoneId,
         address: place.rawAddress,
         verificationStatus: "referential",
         visibilityStatus: "review_pending",

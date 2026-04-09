@@ -373,10 +373,28 @@ final pharmacyDutyAnalyticsProvider =
 
 final pharmacyDutyProvider =
     StateNotifierProvider.autoDispose<PharmacyDutyNotifier, PharmacyDutyState>(
-  (ref) => PharmacyDutyNotifier(
-    dutyRepository: ref.watch(pharmacyDutyRepositoryProvider),
-    zonesRepository: ref.watch(pharmacyZonesRepositoryProvider),
-    geoLocationService: ref.watch(pharmacyGeoLocationServiceProvider),
-    analytics: ref.watch(pharmacyDutyAnalyticsProvider),
-  ),
+  (ref) {
+    final link = ref.keepAlive();
+    Timer? disposeTimer;
+    const keepAliveTtl = Duration(minutes: 5);
+
+    ref.onCancel(() {
+      disposeTimer?.cancel();
+      disposeTimer = Timer(keepAliveTtl, link.close);
+    });
+    ref.onResume(() {
+      disposeTimer?.cancel();
+      disposeTimer = null;
+    });
+    ref.onDispose(() {
+      disposeTimer?.cancel();
+    });
+
+    return PharmacyDutyNotifier(
+      dutyRepository: ref.watch(pharmacyDutyRepositoryProvider),
+      zonesRepository: ref.watch(pharmacyZonesRepositoryProvider),
+      geoLocationService: ref.watch(pharmacyGeoLocationServiceProvider),
+      analytics: ref.watch(pharmacyDutyAnalyticsProvider),
+    );
+  },
 );

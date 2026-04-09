@@ -92,6 +92,10 @@ class ImportSubmissionInput {
 }
 
 class ImportDataRepository {
+  static const int _whereInLimit = 30;
+  static const int _maxWatchedBatches = 150;
+  static const int _maxZonesPerQuery = 300;
+
   static const List<String> _zoneCollectionCandidates = <String>[
     'zones',
   ];
@@ -119,8 +123,15 @@ class ImportDataRepository {
   CollectionReference<Map<String, dynamic>> get _externalPlaces =>
       _firestore.collection('external_places');
 
-  Stream<List<ImportBatchUi>> watchBatches() {
-    return _batches.orderBy('createdAt', descending: true).snapshots().map(
+  Stream<List<ImportBatchUi>> watchBatches({
+    int limit = _maxWatchedBatches,
+  }) {
+    final safeLimit = limit.clamp(1, _maxWatchedBatches).toInt();
+    return _batches
+        .orderBy('createdAt', descending: true)
+        .limit(safeLimit)
+        .snapshots()
+        .map(
         (snapshot) => snapshot.docs
             .map((doc) => ImportBatchUi.fromDoc(doc.id, doc.data()))
             .toList());
@@ -161,7 +172,10 @@ class ImportDataRepository {
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
       _fetchActiveZoneDocs() async {
     for (final collectionName in _zoneCollectionCandidates) {
-      final snapshot = await _firestore.collection(collectionName).get();
+      final snapshot = await _firestore
+          .collection(collectionName)
+          .limit(_maxZonesPerQuery)
+          .get();
       final docs = snapshot.docs.where(_isActiveZoneDoc).toList();
       if (docs.isEmpty) continue;
       docs.sort(_compareZoneDocs);
@@ -242,23 +256,25 @@ class ImportDataRepository {
 
     final merchantUpdates =
         <DocumentReference<Map<String, dynamic>>, Map<String, Object?>>{};
+    final placeIds = placeDocs.docs.map((doc) => doc.id).toSet();
+    final linkedMerchantIds = <String>{};
     for (final placeDoc in placeDocs.docs) {
-      final placeData = placeDoc.data();
-      final linkedMerchantId = placeData['linkedMerchantId']?.toString();
-      if (linkedMerchantId == null || linkedMerchantId.isEmpty) {
-        continue;
+      final linkedMerchantId =
+          placeDoc.data()['linkedMerchantId']?.toString().trim() ?? '';
+      if (linkedMerchantId.isNotEmpty) {
+        linkedMerchantIds.add(linkedMerchantId);
       }
+    }
 
-      final merchantRef =
-          _firestore.collection('merchants').doc(linkedMerchantId);
-      final merchantSnap = await merchantRef.get();
-      if (!merchantSnap.exists) continue;
-      final merchantData = merchantSnap.data() ?? const <String, dynamic>{};
+    final merchantsById = await _fetchMerchantsByIds(linkedMerchantIds);
+    for (final entry in merchantsById.entries) {
+      final merchantRef = entry.value.reference;
+      final merchantData = entry.value.data();
       final sourceType = merchantData['sourceType']?.toString();
       final externalPlaceId = merchantData['externalPlaceId']?.toString();
-
-      // Solo suprimimos comercios sembrados por external seed vinculados al place del batch.
-      if (sourceType == 'external_seed' && externalPlaceId == placeDoc.id) {
+      if (sourceType == 'external_seed' &&
+          externalPlaceId != null &&
+          placeIds.contains(externalPlaceId)) {
         merchantUpdates[merchantRef] = {
           'visibilityStatus': 'suppressed',
           'rollbackBatchId': batch.id,
@@ -436,6 +452,14 @@ class ImportDataRepository {
           <DocumentReference<Map<String, dynamic>>, Map<String, dynamic>>{};
       var duplicatedCount = 0;
       var pendingReview = 0;
+      final stagedDedupeKeys = <String>{};
+      final existingDedupeKeys = input.deduplicationEnabled
+          ? await _fetchExistingDedupeKeys(
+              rows: input.parsedData.rows,
+              mappings: enabledMappings,
+              zoneId: input.zoneId,
+            )
+          : const <String>{};
 
       for (var i = 0; i < input.parsedData.rows.length; i++) {
         final row = input.parsedData.rows[i];
@@ -448,15 +472,14 @@ class ImportDataRepository {
         final address = _mappedValue(row, enabledMappings, tum2FieldAddress);
         final dedupeKey = _dedupeKey(name, address, input.zoneId);
         if (input.deduplicationEnabled) {
-          final exists = await _externalPlaces
-              .where('dedupeKey', isEqualTo: dedupeKey)
-              .limit(1)
-              .get();
-          if (exists.docs.isNotEmpty) {
+          final alreadyExists = existingDedupeKeys.contains(dedupeKey) ||
+              stagedDedupeKeys.contains(dedupeKey);
+          if (alreadyExists) {
             duplicatedCount++;
             pendingReview++;
             continue;
           }
+          stagedDedupeKeys.add(dedupeKey);
         }
 
         final lat = _doubleOrNull(
@@ -681,6 +704,8 @@ class ImportDataRepository {
   }
 
   String? _guessTum2Field(String header) {
+    final isLikelyIdColumn = header.endsWith('_id') || header == 'id';
+
     if (_matchesAny(header,
         ['name', 'nombre', 'business', 'comercio', 'establecimiento'])) {
       return tum2FieldName;
@@ -691,7 +716,12 @@ class ImportDataRepository {
     if (_matchesAny(header, ['phone', 'telefono', 'tel', 'whatsapp'])) {
       return tum2FieldPhone;
     }
-    if (_matchesAny(header, ['category', 'rubro', 'tipo', 'typology'])) {
+    if (_matchesAny(
+        header, ['category', 'rubro', 'tipologia_sigla', 'typology_sigla'])) {
+      return tum2FieldCategory;
+    }
+    if (!isLikelyIdColumn &&
+        _matchesAny(header, ['tipo', 'typology', 'categoria'])) {
       return tum2FieldCategory;
     }
     if (_matchesAny(header, ['lat', 'latitude', 'latitud'])) {
@@ -850,6 +880,63 @@ class ImportDataRepository {
     final normalizedName = (name ?? '').toLowerCase().trim();
     final normalizedAddress = (address ?? '').toLowerCase().trim();
     return '$zoneId|$normalizedName|$normalizedAddress';
+  }
+
+  Future<Set<String>> _fetchExistingDedupeKeys({
+    required List<Map<String, String>> rows,
+    required List<FieldMapping> mappings,
+    required String zoneId,
+  }) async {
+    final requestedKeys = <String>{};
+    for (final row in rows) {
+      final rowState = _rowState(row, mappings);
+      if (rowState.$1) continue;
+      final name = _mappedValue(row, mappings, tum2FieldName);
+      final address = _mappedValue(row, mappings, tum2FieldAddress);
+      requestedKeys.add(_dedupeKey(name, address, zoneId));
+    }
+    if (requestedKeys.isEmpty) return const <String>{};
+
+    final existing = <String>{};
+    final keys = requestedKeys.toList(growable: false);
+    for (var i = 0; i < keys.length; i += _whereInLimit) {
+      final end =
+          (i + _whereInLimit > keys.length) ? keys.length : i + _whereInLimit;
+      final chunk = keys.sublist(i, end);
+      final snapshot =
+          await _externalPlaces.where('dedupeKey', whereIn: chunk).get();
+      for (final doc in snapshot.docs) {
+        final dedupeKey = doc.data()['dedupeKey']?.toString();
+        if (dedupeKey != null && dedupeKey.isNotEmpty) {
+          existing.add(dedupeKey);
+        }
+      }
+    }
+
+    return existing;
+  }
+
+  Future<Map<String, QueryDocumentSnapshot<Map<String, dynamic>>>>
+      _fetchMerchantsByIds(Set<String> merchantIds) async {
+    if (merchantIds.isEmpty) {
+      return const <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
+    }
+
+    final result = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
+    final ids = merchantIds.toList(growable: false);
+    for (var i = 0; i < ids.length; i += _whereInLimit) {
+      final end =
+          (i + _whereInLimit > ids.length) ? ids.length : i + _whereInLimit;
+      final chunk = ids.sublist(i, end);
+      final snapshot = await _firestore
+          .collection('merchants')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      for (final doc in snapshot.docs) {
+        result[doc.id] = doc;
+      }
+    }
+    return result;
   }
 
   double? _doubleOrNull(String? raw) {

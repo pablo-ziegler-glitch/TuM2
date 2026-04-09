@@ -41,6 +41,7 @@ class MerchantSearchItem {
 
   MerchantSearchItem copyWith({
     double? distanceMeters,
+    bool clearDistance = false,
     bool? isOnDutyToday,
     bool? is24h,
   }) {
@@ -61,7 +62,8 @@ class MerchantSearchItem {
       openStatusLabel: openStatusLabel,
       sortBoost: sortBoost,
       searchKeywords: searchKeywords,
-      distanceMeters: distanceMeters ?? this.distanceMeters,
+      distanceMeters:
+          clearDistance ? null : (distanceMeters ?? this.distanceMeters),
     );
   }
 

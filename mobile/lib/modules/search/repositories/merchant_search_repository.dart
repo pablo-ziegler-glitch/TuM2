@@ -17,6 +17,10 @@ class MerchantSearchRepository implements MerchantSearchDataSource {
 
   static const Duration _queryTimeout = Duration(seconds: 6);
   static const _maxCorpus = 200;
+  static const _legacyZoneFallbackEnabled = bool.fromEnvironment(
+    'SEARCH_LEGACY_ZONE_FALLBACK',
+    defaultValue: false,
+  );
 
   @override
   Future<List<MerchantSearchItem>> fetchZoneCorpus(
@@ -32,10 +36,10 @@ class MerchantSearchRepository implements MerchantSearchDataSource {
         .get()
         .timeout(_queryTimeout);
 
-    if (primarySnapshot.docs.isNotEmpty) {
+    if (primarySnapshot.docs.isNotEmpty || !_legacyZoneFallbackEnabled) {
       return primarySnapshot.docs
           .map(MerchantSearchItem.fromFirestore)
-          .toList();
+          .toList(growable: false);
     }
 
     final legacySnapshot = await _firestore
@@ -46,6 +50,8 @@ class MerchantSearchRepository implements MerchantSearchDataSource {
         .get()
         .timeout(_queryTimeout);
 
-    return legacySnapshot.docs.map(MerchantSearchItem.fromFirestore).toList();
+    return legacySnapshot.docs
+        .map(MerchantSearchItem.fromFirestore)
+        .toList(growable: false);
   }
 }

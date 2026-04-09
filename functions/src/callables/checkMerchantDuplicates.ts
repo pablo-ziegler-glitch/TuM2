@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
 
 const db = () => getFirestore();
+const MAX_ZONE_SCAN = 150;
 
 interface CheckDuplicatesRequest {
   name: string;
@@ -83,30 +84,45 @@ function haversineMeters(
  * Only callable by authenticated users with role 'owner'.
  */
 export const checkMerchantDuplicates = onCall(
-  { enforceAppCheck: false },
+  { enforceAppCheck: true },
   async (request): Promise<CheckDuplicatesResponse> => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Autenticación requerida.");
     }
 
-    const uid = request.auth.uid;
-    const userSnap = await db().doc(`users/${uid}`).get();
-    if (!userSnap.exists || userSnap.data()?.role !== "owner") {
-      throw new HttpsError("permission-denied", "Solo usuarios 'owner' pueden usar esta función.");
+    const roleClaim = request.auth.token.role;
+    const normalizedRole =
+      typeof roleClaim === "string" ? roleClaim.trim().toLowerCase() : "";
+    if (
+      normalizedRole !== "owner" &&
+      normalizedRole !== "admin" &&
+      normalizedRole !== "super_admin"
+    ) {
+      throw new HttpsError(
+        "permission-denied",
+        "Solo usuarios owner/admin pueden usar esta función."
+      );
     }
 
     const { name, lat, lng, zoneId } = request.data as CheckDuplicatesRequest;
     if (!name) {
       throw new HttpsError("invalid-argument", "name es requerido.");
     }
+    const normalizedZoneId = zoneId?.trim() ?? "";
+    if (normalizedZoneId.length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "zoneId es requerido para evitar consultas amplias."
+      );
+    }
 
     const normalizedInput = normalize(name);
 
-    // Query merchants: filter by zone if provided, otherwise search all
-    const merchantsQuery = zoneId
-      ? db().collection("merchants").where("zone", "==", zoneId)
-      : db().collection("merchants").limit(500);
-    const merchantsSnap = await merchantsQuery.get();
+    const merchantsSnap = await db()
+      .collection("merchants")
+      .where("zoneId", "==", normalizedZoneId)
+      .limit(MAX_ZONE_SCAN)
+      .get();
 
     const candidates: DuplicateCandidate[] = [];
     let hasSoftDuplicate = false;
@@ -114,6 +130,14 @@ export const checkMerchantDuplicates = onCall(
 
     for (const doc of merchantsSnap.docs) {
       const data = doc.data();
+      const status = (data.status ?? "").toString().trim().toLowerCase();
+      if (status === "archived") continue;
+      const visibilityStatus = (data.visibilityStatus ?? "")
+        .toString()
+        .trim()
+        .toLowerCase();
+      if (visibilityStatus === "suppressed") continue;
+
       const existingName = data.name ?? "";
       const normalizedExisting = normalize(existingName);
 
@@ -160,7 +184,7 @@ export const checkMerchantDuplicates = onCall(
     }
 
     console.log(
-      `[checkMerchantDuplicates] name="${name}" zone="${zoneId}" → soft=${hasSoftDuplicate} hard=${hasHardDuplicate} candidates=${candidates.length}`
+      `[checkMerchantDuplicates] name="${name}" zoneId="${normalizedZoneId}" → soft=${hasSoftDuplicate} hard=${hasHardDuplicate} candidates=${candidates.length}`
     );
 
     return { hasSoftDuplicate, hasHardDuplicate, candidates };

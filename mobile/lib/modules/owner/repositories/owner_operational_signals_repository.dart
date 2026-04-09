@@ -11,10 +11,6 @@ abstract interface class OwnerOperationalSignalsDataSource {
     required String merchantId,
   });
 
-  Future<String?> fetchOwnerUserId({
-    required String merchantId,
-  });
-
   Future<void> saveSignalsIfOwned({
     required String merchantId,
     required String ownerUserId,
@@ -62,17 +58,6 @@ class FirestoreOwnerOperationalSignalsDataSource
   }
 
   @override
-  Future<String?> fetchOwnerUserId({
-    required String merchantId,
-  }) async {
-    final merchantSnapshot =
-        await _firestore.collection('merchants').doc(merchantId).get();
-    if (!merchantSnapshot.exists) return null;
-    final data = merchantSnapshot.data();
-    return (data?['ownerUserId'] as String?)?.trim();
-  }
-
-  @override
   Future<void> saveSignalsIfOwned({
     required String merchantId,
     required String ownerUserId,
@@ -89,29 +74,18 @@ class FirestoreOwnerOperationalSignalsDataSource
       for (final entry in values.entries)
         'signals.${entry.key.fieldName}': entry.value,
     };
-    final merchantRef = _firestore.collection('merchants').doc(merchantId);
     final signalsRef =
         _firestore.collection('merchant_operational_signals').doc(merchantId);
 
-    await _firestore.runTransaction((transaction) async {
-      final merchantSnapshot = await transaction.get(merchantRef);
-      final merchantOwnerUserId =
-          (merchantSnapshot.data()?['ownerUserId'] as String?)?.trim();
-      if (merchantOwnerUserId == null || merchantOwnerUserId != ownerUserId) {
-        throw const OwnerOperationalSignalsUnauthorizedException();
-      }
-
-      transaction.set(
-        signalsRef,
-        {
-          ...payload,
-          'sourceType': ownerOperationalSignalsSourceType,
-          'updatedAt': FieldValue.serverTimestamp(),
-          'updatedBy': updatedBy,
-        },
-        SetOptions(merge: true),
-      );
-    });
+    await signalsRef.set(
+      {
+        ...payload,
+        'sourceType': ownerOperationalSignalsSourceType,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': updatedBy,
+      },
+      SetOptions(merge: true),
+    );
   }
 }
 
@@ -126,14 +100,14 @@ class OwnerOperationalSignalsRepository {
     required String merchantId,
     required String ownerUserId,
   }) async {
-    final isOwner = await validateOwnership(
-      merchantId: merchantId,
-      ownerUserId: ownerUserId,
-    );
-    if (!isOwner) {
-      throw const OwnerOperationalSignalsUnauthorizedException();
+    try {
+      return _dataSource.fetchSignals(merchantId: merchantId);
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied') {
+        throw const OwnerOperationalSignalsUnauthorizedException();
+      }
+      rethrow;
     }
-    return _dataSource.fetchSignals(merchantId: merchantId);
   }
 
   Future<void> updateSignals({
@@ -142,12 +116,19 @@ class OwnerOperationalSignalsRepository {
     required Map<OperationalSignalKey, bool> values,
   }) async {
     if (values.isEmpty) return;
-    await _dataSource.saveSignalsIfOwned(
-      merchantId: merchantId,
-      ownerUserId: ownerUserId,
-      updatedBy: ownerUserId,
-      values: values,
-    );
+    try {
+      await _dataSource.saveSignalsIfOwned(
+        merchantId: merchantId,
+        ownerUserId: ownerUserId,
+        updatedBy: ownerUserId,
+        values: values,
+      );
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied') {
+        throw const OwnerOperationalSignalsUnauthorizedException();
+      }
+      rethrow;
+    }
   }
 
   Future<void> updateSignal({
@@ -161,17 +142,5 @@ class OwnerOperationalSignalsRepository {
       ownerUserId: ownerUserId,
       values: {key: value},
     );
-  }
-
-  Future<bool> validateOwnership({
-    required String merchantId,
-    required String ownerUserId,
-  }) async {
-    if (merchantId.trim().isEmpty || ownerUserId.trim().isEmpty) return false;
-    final merchantOwnerUserId = await _dataSource.fetchOwnerUserId(
-      merchantId: merchantId,
-    );
-    if (merchantOwnerUserId == null) return false;
-    return merchantOwnerUserId == ownerUserId;
   }
 }

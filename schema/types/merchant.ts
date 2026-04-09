@@ -89,6 +89,8 @@ export interface MerchantDocument {
   // Obligatorios
   id: string;
   name: string;
+  razonSocial?: string;
+  nombreFantasia?: string;
   normalizedName: string;
   categoryId: string;
   zoneId: string;

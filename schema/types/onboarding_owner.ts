@@ -19,7 +19,12 @@ export type OnboardingOwnerStep =
   | 'abandoned';
 
 export interface OnboardingStep1Data {
-  name: string;
+  /** Razón social (nombre legal). */
+  razonSocial: string;
+  /** Nombre de fantasía/comercial. Opcional. */
+  nombreFantasia?: string;
+  /** Compatibilidad hacia atrás con drafts viejos. */
+  name?: string;
   categoryId: string;
 }
 

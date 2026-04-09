@@ -26,6 +26,7 @@ import '../../modules/owner/screens/owner_operational_signals_screen.dart';
 import '../../modules/owner/screens/owner_schedule_screen.dart';
 import '../../modules/owner/screens/owner_resolve_page.dart';
 import '../../modules/owner/screens/owner_access_guard_page.dart';
+import '../../modules/owner/screens/owner_edit_profile_screen.dart';
 import '../../modules/owner/screens/owner_products_screen.dart';
 import '../../modules/owner/screens/product_form_screen.dart';
 import '../../modules/owner/screens/product_saved_screen.dart';
@@ -283,11 +284,7 @@ List<RouteBase> _buildRoutes() {
       path: AppRoutes.ownerEdit,
       builder: (_, __) => const OwnerAccessGuardPage(
         title: 'Editar comercio',
-        child: PlaceholderScreen(
-          screenId: 'OWNER-02',
-          label: 'Editar perfil del comercio',
-          roleRequired: 'owner',
-        ),
+        child: OwnerEditProfileScreen(),
       ),
     ),
     GoRoute(

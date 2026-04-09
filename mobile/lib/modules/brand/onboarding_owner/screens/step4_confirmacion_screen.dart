@@ -26,7 +26,7 @@ class Step4ConfirmacionScreen extends StatefulWidget {
   final VoidCallback onBack;
   final VoidCallback onExit;
   final VoidCallback onGoToProfile; // EX-06 → OWNER-01
-  final VoidCallback onGoHome;      // EX-06 → HOME-01
+  final VoidCallback onGoHome; // EX-06 → HOME-01
 
   const Step4ConfirmacionScreen({
     super.key,
@@ -64,7 +64,8 @@ class _Step4ConfirmacionScreenState extends State<Step4ConfirmacionScreen> {
             OnboardingAnalytics.logCompleted();
           case SubmitState.networkError:
             _publishState = _PublishState.networkError;
-            OnboardingAnalytics.logError('confirmation', 'submit_network_error');
+            OnboardingAnalytics.logError(
+                'confirmation', 'submit_network_error');
           case SubmitState.idle:
             _publishState = _PublishState.idle;
         }
@@ -90,8 +91,9 @@ class _Step4ConfirmacionScreenState extends State<Step4ConfirmacionScreen> {
       case _PublishState.loading:
         return _LoadingView(); // EX-05
       case _PublishState.success:
-        return _SuccessView( // EX-06
-          merchantName: widget.step1.name,
+        return _SuccessView(
+          // EX-06
+          merchantName: widget.step1.displayName,
           onGoToProfile: widget.onGoToProfile,
           onGoHome: widget.onGoHome,
         );
@@ -230,7 +232,8 @@ class _ConfirmView extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(step1.name, style: AppTextStyles.headingMd),
+                          Text(step1.displayName,
+                              style: AppTextStyles.headingMd),
                           const SizedBox(height: 8),
                           _SummaryRow(
                             icon: Icons.store_outlined,
@@ -248,10 +251,10 @@ class _ConfirmView extends StatelessWidget {
                           // EX-12: Horarios pendientes
                           _SummaryRow(
                             icon: Icons.schedule_outlined,
-                            text: step3Skipped ? '' : '9:00 – 20:00 (Lun a Vie)',
-                            trailingBadge: step3Skipped
-                                ? const _PendingBadge()
-                                : null,
+                            text:
+                                step3Skipped ? '' : '9:00 – 20:00 (Lun a Vie)',
+                            trailingBadge:
+                                step3Skipped ? const _PendingBadge() : null,
                           ),
                         ],
                       ),
@@ -567,8 +570,8 @@ class _SuccessView extends StatelessWidget {
               const SizedBox(height: 10),
               TextButton(
                 onPressed: onGoHome,
-                style: TextButton.styleFrom(
-                    foregroundColor: AppColors.neutral700),
+                style:
+                    TextButton.styleFrom(foregroundColor: AppColors.neutral700),
                 child: const Text('Volver al inicio'),
               ),
             ],

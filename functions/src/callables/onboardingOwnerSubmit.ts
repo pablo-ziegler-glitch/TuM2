@@ -85,16 +85,18 @@ export const onboardingOwnerSubmit = onCall(
 
     // ── Validate step1 ──────────────────────────────────────────────────────
     const step1 = progress.step1;
-    if (!step1?.name || !step1?.categoryId) {
+    const razonSocial = (step1?.razonSocial ?? step1?.name ?? "").trim();
+
+    if (!razonSocial || !step1?.categoryId) {
       throw new HttpsError(
         "failed-precondition",
-        "El paso 1 (nombre y categoría) no fue completado."
+        "El paso 1 (razón social y categoría) no fue completado."
       );
     }
-    if (step1.name.trim().length < 2 || step1.name.trim().length > 80) {
+    if (razonSocial.length < 2 || razonSocial.length > 80) {
       throw new HttpsError(
         "invalid-argument",
-        "El nombre debe tener entre 2 y 80 caracteres."
+        "La razón social debe tener entre 2 y 80 caracteres."
       );
     }
 
@@ -134,6 +136,15 @@ export const onboardingOwnerSubmit = onCall(
       const freshStep2 = freshProgress.step2;
       const freshStep3 = freshProgress.step3 as OnboardingStep3Data | null;
       const freshStep3Skipped = freshProgress.step3Skipped ?? false;
+      const freshRazonSocial = (freshStep1?.razonSocial ?? freshStep1?.name ?? "").trim();
+      const freshNombreFantasia = (freshStep1?.nombreFantasia ?? "").trim();
+      const freshMerchantName = (freshNombreFantasia || freshRazonSocial).trim();
+      if (!freshStep1?.categoryId || freshRazonSocial.length < 2 || freshRazonSocial.length > 80) {
+        throw new HttpsError(
+          "aborted",
+          "El paso 1 quedó inválido durante el envío. Revisá razón social y categoría."
+        );
+      }
 
       // Check if merchant already exists (idempotency via Firestore)
       const existingMerchant = await tx.get(merchantRef);
@@ -149,7 +160,9 @@ export const onboardingOwnerSubmit = onCall(
       // Write merchant document
       tx.set(merchantRef, {
         merchantId: draftMerchantId,
-        name: freshStep1!.name.trim(),
+        name: freshMerchantName,
+        razonSocial: freshRazonSocial,
+        nombreFantasia: freshNombreFantasia,
         category: freshStep1!.categoryId,
         zone: freshStep2!.zoneId,
         zoneId: freshStep2!.zoneId,

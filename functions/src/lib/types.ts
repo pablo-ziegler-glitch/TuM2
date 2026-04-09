@@ -53,6 +53,8 @@ export interface OperationalSignals {
 export interface MerchantDoc {
   merchantId: string;
   name: string;
+  razonSocial?: string;
+  nombreFantasia?: string;
   category: string;
   zone: string;
   address?: string;
@@ -106,7 +108,10 @@ export type OnboardingOwnerStep =
   | "abandoned";
 
 export interface OnboardingStep1Data {
-  name: string;
+  // Compatibilidad hacia atrás: name actúa como alias de razonSocial.
+  name?: string;
+  razonSocial?: string;
+  nombreFantasia?: string;
   categoryId: string;
 }
 

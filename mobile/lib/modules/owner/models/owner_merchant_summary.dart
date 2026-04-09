@@ -7,6 +7,8 @@ class OwnerMerchantSummary {
   const OwnerMerchantSummary({
     required this.id,
     required this.name,
+    required this.razonSocial,
+    required this.nombreFantasia,
     required this.categoryId,
     required this.zoneId,
     required this.address,
@@ -24,6 +26,8 @@ class OwnerMerchantSummary {
 
   final String id;
   final String name;
+  final String razonSocial;
+  final String nombreFantasia;
   final String categoryId;
   final String zoneId;
   final String address;
@@ -58,6 +62,8 @@ class OwnerMerchantSummary {
     Map<String, dynamic> data,
   ) {
     final name = (data['name'] as String?)?.trim() ?? '';
+    final razonSocial = (data['razonSocial'] as String?)?.trim() ?? name;
+    final nombreFantasia = (data['nombreFantasia'] as String?)?.trim() ?? '';
     final categoryId = (data['categoryId'] as String?)?.trim() ??
         (data['category'] as String?)?.trim() ??
         '';
@@ -77,6 +83,8 @@ class OwnerMerchantSummary {
     return OwnerMerchantSummary(
       id: id,
       name: name.isEmpty ? 'Comercio sin nombre' : name,
+      razonSocial: razonSocial,
+      nombreFantasia: nombreFantasia,
       categoryId: categoryId,
       zoneId: zoneId,
       address: address,

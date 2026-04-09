@@ -41,7 +41,8 @@ class Step1TipoNombreScreen extends StatefulWidget {
 }
 
 class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
-  final _nameCtrl = TextEditingController();
+  final _razonSocialCtrl = TextEditingController();
+  final _nombreFantasiaCtrl = TextEditingController();
   String? _selectedCategoryId;
   bool _submitted = false;
   DuplicateState _duplicateState = DuplicateState.none;
@@ -51,15 +52,22 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
   List<CategoryOption> _categoryOptions = [];
   bool _loadingCategories = true;
 
-  bool get _nameEmpty => _nameCtrl.text.trim().isEmpty;
+  bool get _razonSocialEmpty => _razonSocialCtrl.text.trim().isEmpty;
   bool get _categoryEmpty => _selectedCategoryId == null;
-  bool get _hasErrors => _submitted && (_nameEmpty || _categoryEmpty);
+  bool get _hasErrors => _submitted && (_razonSocialEmpty || _categoryEmpty);
+
+  String get _nameForDuplicateCheck {
+    final fantasyName = _nombreFantasiaCtrl.text.trim();
+    if (fantasyName.isNotEmpty) return fantasyName;
+    return _razonSocialCtrl.text.trim();
+  }
 
   @override
   void initState() {
     super.initState();
     if (widget.initialData != null) {
-      _nameCtrl.text = widget.initialData!.name;
+      _razonSocialCtrl.text = widget.initialData!.razonSocial;
+      _nombreFantasiaCtrl.text = widget.initialData!.nombreFantasia;
       _selectedCategoryId = widget.initialData!.categoryId;
     }
     _loadCategories();
@@ -70,11 +78,13 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
     final cats = await widget.categoriesRepository.getCategories();
     if (!mounted) return;
     setState(() {
-      _categoryOptions = cats.map((c) => CategoryOption(
-        id: c.id,
-        label: c.label,
-        icon: _iconForName(c.iconName),
-      )).toList();
+      _categoryOptions = cats
+          .map((c) => CategoryOption(
+                id: c.id,
+                label: c.label,
+                icon: _iconForName(c.iconName),
+              ))
+          .toList();
       _loadingCategories = false;
     });
   }
@@ -107,31 +117,43 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
+    _razonSocialCtrl.dispose();
+    _nombreFantasiaCtrl.dispose();
     super.dispose();
   }
 
-  void _onNameChanged(String value) {
+  void _onRazonSocialChanged(String value) {
     setState(() {});
-    // Chequeo de duplicados solo por nombre (sin filtro de zona ni coordenadas).
-    // Se omite la llamada al server si el nombre es muy corto para evitar
-    // errores de validación innecesarios.
+    if (_nombreFantasiaCtrl.text.trim().isNotEmpty) return;
     if (value.trim().length < 3) return;
     widget.duplicateCheckService.checkName(
       name: value,
     );
   }
 
+  void _onNombreFantasiaChanged(String value) {
+    setState(() {});
+    // Chequeo de duplicados solo por nombre (sin filtro de zona ni coordenadas).
+    // Se omite la llamada al server si el nombre es muy corto para evitar
+    // errores de validación innecesarios.
+    final name = _nameForDuplicateCheck;
+    if (name.length < 3) return;
+    widget.duplicateCheckService.checkName(
+      name: name,
+    );
+  }
+
   Future<void> _onNext() async {
     setState(() => _submitted = true);
-    if (_nameEmpty || _categoryEmpty) return;
+    if (_razonSocialEmpty || _categoryEmpty) return;
 
     // Si es hard duplicate, mostrar interstitial en lugar de avanzar
     if (_duplicateState == DuplicateState.hard) return;
 
     try {
       await widget.ownerRepository.saveStep1(Step1Data(
-        name: _nameCtrl.text.trim(),
+        razonSocial: _razonSocialCtrl.text.trim(),
+        nombreFantasia: _nombreFantasiaCtrl.text.trim(),
         categoryId: _selectedCategoryId!,
       ));
     } catch (_) {
@@ -139,7 +161,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
     }
 
     widget.onNext(Step1Data(
-      name: _nameCtrl.text.trim(),
+      razonSocial: _razonSocialCtrl.text.trim(),
+      nombreFantasia: _nombreFantasiaCtrl.text.trim(),
       categoryId: _selectedCategoryId!,
     ));
   }
@@ -193,7 +216,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                   style: AppTextStyles.headingLg, textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text(
-                'Encontramos "${candidate?.name ?? _nameCtrl.text}" ya registrado en TuM2.',
+                'Encontramos "${candidate?.name ?? _nameForDuplicateCheck}" ya registrado en TuM2.',
                 style: AppTextStyles.bodySm,
                 textAlign: TextAlign.center,
               ),
@@ -263,7 +286,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
       return _buildAlreadyRegisteredInterstitial();
     }
 
-    final nameHasError = _submitted && _nameEmpty;
+    final razonSocialHasError = _submitted && _razonSocialEmpty;
     final categoryHasError = _submitted && _categoryEmpty;
     final showDuplicateWarning = _duplicateState == DuplicateState.soft;
 
@@ -312,62 +335,108 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                     if (_hasErrors) ...[
                       ValidationBanner(
                         title: 'Revisá los campos',
-                        body: 'Completá el nombre y seleccioná una categoría para continuar.',
+                        body:
+                            'Completá la razón social y seleccioná una categoría para continuar.',
                       ),
                       const SizedBox(height: 16),
                     ],
 
-                    // Campo nombre
+                    // Campo razón social (nombre legal)
                     Text(
-                      'Nombre del comercio *',
+                      'Razón social *',
                       style: AppTextStyles.labelMd.copyWith(
-                        color: nameHasError ? AppColors.errorFg : AppColors.neutral900,
+                        color: razonSocialHasError
+                            ? AppColors.errorFg
+                            : AppColors.neutral900,
                       ),
                     ),
                     const SizedBox(height: 6),
                     TextField(
-                      controller: _nameCtrl,
-                      onChanged: _onNameChanged,
+                      controller: _razonSocialCtrl,
+                      onChanged: _onRazonSocialChanged,
                       decoration: InputDecoration(
-                        hintText: 'Ej: Farmacia del Centro',
-                        hintStyle: AppTextStyles.bodyMd.copyWith(color: AppColors.neutral500),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        hintText: 'Ej: Farmacia del Centro S.R.L.',
+                        hintStyle: AppTextStyles.bodyMd
+                            .copyWith(color: AppColors.neutral500),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
                         filled: true,
                         fillColor: AppColors.surface,
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: nameHasError
+                            color: razonSocialHasError
                                 ? AppColors.errorFg
-                                : showDuplicateWarning
-                                    ? AppColors.warningFg
-                                    : AppColors.neutral300,
+                                : AppColors.neutral300,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: nameHasError
+                            color: razonSocialHasError
                                 ? AppColors.errorFg
-                                : showDuplicateWarning
-                                    ? AppColors.warningFg
-                                    : AppColors.primary500,
+                                : AppColors.primary500,
                             width: 1.5,
                           ),
                         ),
                       ),
                     ),
-                    if (nameHasError)
-                      InlineError(message: 'Ingresá el nombre del comercio'),
+                    if (razonSocialHasError)
+                      InlineError(message: 'Ingresá la razón social'),
+                    const SizedBox(height: 14),
+
+                    Text(
+                      'Nombre de fantasía',
+                      style: AppTextStyles.labelMd
+                          .copyWith(color: AppColors.neutral900),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _nombreFantasiaCtrl,
+                      onChanged: _onNombreFantasiaChanged,
+                      decoration: InputDecoration(
+                        hintText: 'Ej: Farmacia del Centro',
+                        hintStyle: AppTextStyles.bodyMd
+                            .copyWith(color: AppColors.neutral500),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        filled: true,
+                        fillColor: AppColors.surface,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: showDuplicateWarning
+                                ? AppColors.warningFg
+                                : AppColors.neutral300,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: showDuplicateWarning
+                                ? AppColors.warningFg
+                                : AppColors.primary500,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Si no lo cargás, vamos a mostrar la razón social como nombre visible.',
+                      style: AppTextStyles.bodyXs
+                          .copyWith(color: AppColors.neutral600),
+                    ),
                     // EX-13: warning soft duplicate
-                    if (showDuplicateWarning && !nameHasError) ...[
+                    if (showDuplicateWarning && !razonSocialHasError) ...[
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.warningFg.withOpacity(0.4)),
+                          border: Border.all(
+                              color: AppColors.warningFg.withOpacity(0.4)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,7 +450,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                             const SizedBox(height: 4),
                             RichText(
                               text: TextSpan(
-                                style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
+                                style: AppTextStyles.bodyXs
+                                    .copyWith(color: AppColors.neutral700),
                                 children: const [
                                   TextSpan(text: '¿Es el mismo local? '),
                                   TextSpan(
@@ -391,7 +461,9 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                                       decoration: TextDecoration.underline,
                                     ),
                                   ),
-                                  TextSpan(text: '. Si es otro, usá un nombre diferente.'),
+                                  TextSpan(
+                                      text:
+                                          '. Si es otro, usá un nombre diferente.'),
                                 ],
                               ),
                             ),
@@ -406,7 +478,9 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                     Text(
                       'Categoría *',
                       style: AppTextStyles.labelMd.copyWith(
-                        color: categoryHasError ? AppColors.errorFg : AppColors.neutral900,
+                        color: categoryHasError
+                            ? AppColors.errorFg
+                            : AppColors.neutral900,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -419,9 +493,12 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                           )
                         : CategoryGrid(
                             selectedId: _selectedCategoryId,
-                            onSelect: (id) => setState(() => _selectedCategoryId = id),
+                            onSelect: (id) =>
+                                setState(() => _selectedCategoryId = id),
                             hasError: categoryHasError,
-                            categories: _categoryOptions.isNotEmpty ? _categoryOptions : null,
+                            categories: _categoryOptions.isNotEmpty
+                                ? _categoryOptions
+                                : null,
                           ),
                     if (categoryHasError)
                       InlineError(message: 'Seleccioná una categoría'),
@@ -462,9 +539,10 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                 child: ElevatedButton(
                   onPressed: _onNext,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: (_submitted && (_nameEmpty || _categoryEmpty))
-                        ? AppColors.neutral300
-                        : AppColors.primary500,
+                    backgroundColor:
+                        (_submitted && (_razonSocialEmpty || _categoryEmpty))
+                            ? AppColors.neutral300
+                            : AppColors.primary500,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(

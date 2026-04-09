@@ -567,6 +567,12 @@ class _OwnerQuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = <_OwnerAction>[
       const _OwnerAction(
+        label: 'Editar perfil',
+        subtitle: 'Razón social y nombre',
+        icon: Icons.edit_outlined,
+        route: AppRoutes.ownerEdit,
+      ),
+      const _OwnerAction(
         label: 'Gestionar productos',
         subtitle: 'Stock y precios',
         icon: Icons.inventory_2_outlined,

@@ -147,6 +147,14 @@ function loadThresholds(thresholdsPath, env) {
 }
 
 function gcloudAccessToken() {
+  const envToken =
+    process.env.GOOGLE_OAUTH_ACCESS_TOKEN ||
+    process.env.CLOUDSDK_AUTH_ACCESS_TOKEN ||
+    "";
+  if (envToken.trim()) {
+    return envToken.trim();
+  }
+
   try {
     const output = execFileSync(
       "gcloud",
@@ -162,6 +170,8 @@ function gcloudAccessToken() {
     throw new Error(
       "No se pudo obtener access token con gcloud. " +
         "Revisá autenticación: gcloud auth application-default login o account impersonation.\n" +
+        "Si usás gcloud vía snap, ejecutá con token explícito:\n" +
+        "GOOGLE_OAUTH_ACCESS_TOKEN=\"$(gcloud auth print-access-token)\" npm run cost:guard -- ...\n" +
         String(error?.message || error)
     );
   }

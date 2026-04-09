@@ -11,11 +11,13 @@ class WizardStepArchivo extends StatefulWidget {
     super.key,
     required this.selectedDatasetType,
     required this.selectedZoneId,
+    required this.applyDestinationZone,
     required this.zoneOptions,
     required this.zonesLoading,
     required this.zonesError,
     required this.fileName,
     required this.onDatasetTypeChanged,
+    required this.onApplyDestinationZoneChanged,
     required this.onZoneChanged,
     required this.onFileSelected,
     required this.onDownloadCsvTemplate,
@@ -24,11 +26,13 @@ class WizardStepArchivo extends StatefulWidget {
 
   final DatasetType? selectedDatasetType;
   final String? selectedZoneId;
+  final bool applyDestinationZone;
   final List<ZoneOption> zoneOptions;
   final bool zonesLoading;
   final String? zonesError;
   final String? fileName;
   final ValueChanged<DatasetType?> onDatasetTypeChanged;
+  final ValueChanged<bool> onApplyDestinationZoneChanged;
   final ValueChanged<String?> onZoneChanged;
   final VoidCallback onFileSelected;
   final VoidCallback onDownloadCsvTemplate;
@@ -40,6 +44,90 @@ class WizardStepArchivo extends StatefulWidget {
 
 class _WizardStepArchivoState extends State<WizardStepArchivo> {
   bool _isDragOver = false;
+  String _country = 'Argentina';
+  String? _province;
+
+  List<String> get _countries {
+    final countries = widget.zoneOptions
+        .map((zone) => zone.countryName.trim())
+        .where((country) => country.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    if (countries.isEmpty) return const ['Argentina'];
+    return countries;
+  }
+
+  List<String> get _provinces {
+    final provinces = widget.zoneOptions
+        .where((zone) => zone.countryName == _country)
+        .map((zone) => zone.provinceName.trim())
+        .where((province) => province.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return provinces;
+  }
+
+  List<ZoneOption> get _localities {
+    return widget.zoneOptions.where((zone) {
+      final sameCountry = zone.countryName == _country;
+      if (!sameCountry) return false;
+      if (_province == null || _province!.isEmpty) return true;
+      return zone.provinceName == _province;
+    }).toList()
+      ..sort((a, b) =>
+          a.localityName.toLowerCase().compareTo(b.localityName.toLowerCase()));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFiltersWithSelection();
+  }
+
+  @override
+  void didUpdateWidget(covariant WizardStepArchivo oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.zoneOptions != widget.zoneOptions ||
+        oldWidget.selectedZoneId != widget.selectedZoneId) {
+      _syncFiltersWithSelection();
+    }
+  }
+
+  void _syncFiltersWithSelection() {
+    final selected = widget.zoneOptions.where((zone) {
+      return zone.zoneId == widget.selectedZoneId;
+    });
+    if (selected.isNotEmpty) {
+      final current = selected.first;
+      _country = current.countryName.trim().isEmpty
+          ? 'Argentina'
+          : current.countryName.trim();
+      _province = current.provinceName.trim().isEmpty
+          ? null
+          : current.provinceName.trim();
+      return;
+    }
+
+    final argentina =
+        widget.zoneOptions.where((zone) => zone.countryName == 'Argentina');
+    if (argentina.isNotEmpty) {
+      _country = 'Argentina';
+      final provinces = argentina
+          .map((zone) => zone.provinceName.trim())
+          .where((province) => province.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      _province = provinces.isEmpty ? null : provinces.first;
+      return;
+    }
+
+    final countries = _countries;
+    _country = countries.first;
+    _province = _provinces.isEmpty ? null : _provinces.first;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,25 +162,117 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
               const SizedBox(height: 20),
               // Zona destino
               _FieldLabel(label: 'ZONA DESTINO'),
+              const SizedBox(height: 4),
+              Text(
+                'Usala cuando querés forzar una zona para todos los registros importados.',
+                style:
+                    AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+              ),
               const SizedBox(height: 6),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: Checkbox(
+                      value: widget.applyDestinationZone,
+                      onChanged: (value) =>
+                          widget.onApplyDestinationZoneChanged(
+                        value ?? false,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Aplicar zona destino (opcional)',
+                      style: AppTextStyles.bodySm,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               if (widget.zonesLoading)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: LinearProgressIndicator(minHeight: 2),
                 )
               else
-                _StyledDropdown<String>(
-                  value: widget.selectedZoneId,
-                  hint: 'Seleccionar zona...',
-                  items: widget.zoneOptions
-                      .map((zone) => DropdownMenuItem(
-                            value: zone.zoneId,
-                            child: Text(zone.label,
-                                style: AppTextStyles.bodySm,
-                                overflow: TextOverflow.ellipsis),
-                          ))
-                      .toList(),
-                  onChanged: widget.onZoneChanged,
+                Column(
+                  children: [
+                    _StyledDropdown<String>(
+                      value: _country,
+                      hint: 'Seleccionar país...',
+                      items: _countries
+                          .map((country) => DropdownMenuItem(
+                                value: country,
+                                child:
+                                    Text(country, style: AppTextStyles.bodySm),
+                              ))
+                          .toList(),
+                      onChanged: widget.applyDestinationZone
+                          ? (country) {
+                              if (country == null) return;
+                              setState(() {
+                                _country = country;
+                                final provinces = _provinces;
+                                _province =
+                                    provinces.isEmpty ? null : provinces.first;
+                              });
+                              final localities = _localities;
+                              widget.onZoneChanged(
+                                localities.isEmpty
+                                    ? null
+                                    : localities.first.zoneId,
+                              );
+                            }
+                          : (_) {},
+                      enabled: widget.applyDestinationZone,
+                    ),
+                    const SizedBox(height: 8),
+                    _StyledDropdown<String>(
+                      value: _province,
+                      hint: 'Seleccionar provincia...',
+                      items: _provinces
+                          .map((province) => DropdownMenuItem(
+                                value: province,
+                                child:
+                                    Text(province, style: AppTextStyles.bodySm),
+                              ))
+                          .toList(),
+                      onChanged: widget.applyDestinationZone
+                          ? (province) {
+                              setState(() => _province = province);
+                              final localities = _localities;
+                              widget.onZoneChanged(
+                                localities.isEmpty
+                                    ? null
+                                    : localities.first.zoneId,
+                              );
+                            }
+                          : (_) {},
+                      enabled: widget.applyDestinationZone,
+                    ),
+                    const SizedBox(height: 8),
+                    _StyledDropdown<String>(
+                      value: widget.selectedZoneId,
+                      hint: 'Seleccionar localidad...',
+                      items: _localities
+                          .map((zone) => DropdownMenuItem(
+                                value: zone.zoneId,
+                                child: Text(
+                                  '${zone.localityName} (${zone.zoneId})',
+                                  style: AppTextStyles.bodySm,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: widget.applyDestinationZone
+                          ? widget.onZoneChanged
+                          : (_) {},
+                      enabled: widget.applyDestinationZone,
+                    ),
+                  ],
                 ),
               if (widget.zonesError != null) ...[
                 const SizedBox(height: 6),
@@ -105,7 +285,8 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
               const SizedBox(height: 24),
               // Info de configuración completa
               if (widget.selectedDatasetType != null &&
-                  widget.selectedZoneId != null)
+                  (!widget.applyDestinationZone ||
+                      widget.selectedZoneId != null))
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -120,7 +301,9 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Configuración de origen completa',
+                          widget.applyDestinationZone
+                              ? 'Configuración de origen completa'
+                              : 'Zona destino desactivada (importación sin zona fija)',
                           style: AppTextStyles.bodyXs
                               .copyWith(color: AppColors.successFg),
                         ),
@@ -320,12 +503,14 @@ class _StyledDropdown<T> extends StatelessWidget {
     required this.hint,
     required this.items,
     required this.onChanged,
+    this.enabled = true,
   });
 
   final T? value;
   final String hint;
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -333,19 +518,23 @@ class _StyledDropdown<T> extends StatelessWidget {
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.neutral200),
+        border: Border.all(
+          color: enabled ? AppColors.neutral200 : AppColors.neutral100,
+        ),
         borderRadius: BorderRadius.circular(8),
-        color: AppColors.surface,
+        color: enabled ? AppColors.surface : AppColors.neutral50,
       ),
       child: DropdownButton<T>(
-        value: value,
+        value: items.any((item) => item.value == value) ? value : null,
         isExpanded: true,
         underline: const SizedBox(),
         hint: Text(hint,
             style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500)),
         items: items,
-        onChanged: onChanged,
-        style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral900),
+        onChanged: enabled ? onChanged : null,
+        style: AppTextStyles.bodySm.copyWith(
+          color: enabled ? AppColors.neutral900 : AppColors.neutral500,
+        ),
       ),
     );
   }

@@ -308,7 +308,7 @@ class ImportBatchUi {
   String get statusLabel {
     switch (status) {
       case ImportBatchStatus.draft:
-        return 'Borrador';
+        return 'En cola';
       case ImportBatchStatus.running:
         return 'En proceso';
       case ImportBatchStatus.validated:

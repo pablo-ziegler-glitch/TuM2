@@ -628,7 +628,7 @@ class _StatusBadge extends StatelessWidget {
       ImportBatchStatus.draft => (
           AppColors.neutral500,
           AppColors.neutral100,
-          'Draft'
+          'Queued'
         ),
       ImportBatchStatus.archived => (
           AppColors.neutral400,

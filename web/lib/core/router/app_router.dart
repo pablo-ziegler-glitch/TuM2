@@ -45,14 +45,16 @@ final appRouter = GoRouter(
           path: '/dashboard',
           builder: (context, state) => const _PlaceholderScreen(
             label: 'Dashboard',
-            description: 'Panel principal de métricas — próximamente',
+            description: 'Panel principal de métricas',
+            storyCardId: 'TuM2-0084',
           ),
         ),
         GoRoute(
           path: '/businesses',
           builder: (context, state) => const _PlaceholderScreen(
             label: 'Businesses',
-            description: 'Listado y moderación de comercios — TuM2-0078',
+            description: 'Listado y moderación de comercios',
+            storyCardId: 'TuM2-0078',
           ),
         ),
         GoRoute(
@@ -94,23 +96,24 @@ final appRouter = GoRouter(
           path: '/templates',
           builder: (context, state) => const _PlaceholderScreen(
             label: 'Templates',
-            description:
-                'Plantillas de importación y mapeo de campos — próximamente',
+            description: 'Plantillas de importación y mapeo de campos',
+            storyCardId: 'TuM2-xxxx',
           ),
         ),
         GoRoute(
           path: '/analytics',
           builder: (context, state) => const _PlaceholderScreen(
             label: 'Analytics',
-            description:
-                'Analítica de importaciones y calidad de datos — próximamente',
+            description: 'Analítica de importaciones y calidad de datos',
+            storyCardId: 'TuM2-0084',
           ),
         ),
         GoRoute(
           path: '/settings',
           builder: (context, state) => const _PlaceholderScreen(
             label: 'Settings',
-            description: 'Configuración del panel admin — próximamente',
+            description: 'Configuración del panel admin',
+            storyCardId: 'TuM2-xxxx',
           ),
         ),
       ],
@@ -136,9 +139,14 @@ class _AuthRefreshNotifier extends ChangeNotifier {
 
 /// Pantalla de placeholder para secciones del admin aún no implementadas.
 class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.label, required this.description});
+  const _PlaceholderScreen({
+    required this.label,
+    required this.description,
+    required this.storyCardId,
+  });
   final String label;
   final String description;
+  final String storyCardId;
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +170,22 @@ class _PlaceholderScreen extends StatelessWidget {
             Text(
               description,
               style: const TextStyle(fontSize: 13, color: Color(0xFF7E7C6D)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF2FF),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'Tarjeta objetivo: $storyCardId',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF1D4ED8),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),

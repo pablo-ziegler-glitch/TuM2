@@ -112,6 +112,7 @@ Opcional para emuladores locales:
 | [NAVIGATION.md](docs/NAVIGATION.md) | Arquitectura de navegación Flutter (go_router) |
 | [QUERY-ARCHITECTURE.md](docs/QUERY-ARCHITECTURE.md) | Patrones de queries Firestore por pantalla |
 | [TuM2-0014-MICROCOPY.md](docs/TuM2-0014-MICROCOPY.md) | Guía de tono y microcopy para el MVP Fase 3 |
+| [PROD-LAUNCH-CRITICAL.md](docs/ops/PROD-LAUNCH-CRITICAL.md) | Runbook crítico para lanzamiento a producción |
 | [schema/README.md](schema/README.md) | Modelo de datos, colecciones, índices |
 | [CLAUDE.md](CLAUDE.md) | Backlog maestro y estado del proyecto |
 

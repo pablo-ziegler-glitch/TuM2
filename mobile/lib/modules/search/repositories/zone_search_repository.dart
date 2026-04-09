@@ -1,68 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+export '../models/search_zone_item.dart';
+import '../models/search_zone_item.dart';
+
 abstract interface class ZoneSearchDataSource {
   Future<List<SearchZoneItem>> fetchAvailableZones();
-}
-
-class SearchZoneItem {
-  final String zoneId;
-  final String name;
-  final String cityId;
-  final double? centroidLat;
-  final double? centroidLng;
-
-  const SearchZoneItem({
-    required this.zoneId,
-    required this.name,
-    required this.cityId,
-    this.centroidLat,
-    this.centroidLng,
-  });
-
-  factory SearchZoneItem.fromFirestore(
-    QueryDocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data();
-    final centroid = _readMap(data, const ['centroid', 'centroide']);
-    return SearchZoneItem(
-      zoneId: doc.id,
-      name: _readText(data, const ['name', 'nombre']) ?? doc.id,
-      cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
-      centroidLat: _readNum(centroid, const ['lat']) ??
-          _readNum(data, const ['lat', 'latitude']),
-      centroidLng: _readNum(centroid, const ['lng']) ??
-          _readNum(data, const ['lng', 'longitude']),
-    );
-  }
-
-  static String? _readText(Map<String, dynamic> data, List<String> keys) {
-    for (final key in keys) {
-      final value = data[key]?.toString().trim();
-      if (value != null && value.isNotEmpty) return value;
-    }
-    return null;
-  }
-
-  static Map<String, dynamic>? _readMap(
-    Map<String, dynamic> data,
-    List<String> keys,
-  ) {
-    for (final key in keys) {
-      final value = data[key];
-      if (value is Map<String, dynamic>) return value;
-      if (value is Map) return Map<String, dynamic>.from(value);
-    }
-    return null;
-  }
-
-  static double? _readNum(Map<String, dynamic>? data, List<String> keys) {
-    if (data == null) return null;
-    for (final key in keys) {
-      final value = data[key];
-      if (value is num) return value.toDouble();
-    }
-    return null;
-  }
 }
 
 class ZoneSearchRepository implements ZoneSearchDataSource {
@@ -83,6 +25,7 @@ class ZoneSearchRepository implements ZoneSearchDataSource {
 
   final FirebaseFirestore _firestore;
   static const Duration _queryTimeout = Duration(seconds: 6);
+  static const int _maxZonesPerQuery = 300;
 
   @override
   Future<List<SearchZoneItem>> fetchAvailableZones() async {
@@ -95,6 +38,7 @@ class ZoneSearchRepository implements ZoneSearchDataSource {
     for (final collectionName in _zoneCollectionCandidates) {
       final snapshot = await _firestore
           .collection(collectionName)
+          .limit(_maxZonesPerQuery)
           .get()
           .timeout(_queryTimeout);
       final docs = snapshot.docs.where(_isActiveZoneDoc).toList();
@@ -108,7 +52,7 @@ class ZoneSearchRepository implements ZoneSearchDataSource {
   static bool _isActiveZoneDoc(
       QueryDocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
-    final status = SearchZoneItem._readText(
+    final status = SearchZoneItem.readText(
       data,
       const ['status', 'estado'],
     )?.toLowerCase();
@@ -123,14 +67,14 @@ class ZoneSearchRepository implements ZoneSearchDataSource {
     final priorityCompare =
         _zonePriority(a.data()).compareTo(_zonePriority(b.data()));
     if (priorityCompare != 0) return priorityCompare;
-    final nameCompare = (SearchZoneItem._readText(
+    final nameCompare = (SearchZoneItem.readText(
               a.data(),
               const ['name', 'nombre'],
             ) ??
             a.id)
         .toLowerCase()
         .compareTo(
-          (SearchZoneItem._readText(
+          (SearchZoneItem.readText(
                     b.data(),
                     const ['name', 'nombre'],
                   ) ??

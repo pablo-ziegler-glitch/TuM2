@@ -5,11 +5,15 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/auth/auth_notifier.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_toast.dart';
+import '../analytics/owner_products_analytics.dart';
+import '../models/catalog_capacity.dart';
 import '../models/merchant_product.dart';
+import '../providers/catalog_capacity_providers.dart';
 import '../providers/owner_providers.dart';
 import '../providers/product_providers.dart';
 import '../repositories/product_repository.dart';
@@ -62,6 +66,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   @override
   Widget build(BuildContext context) {
     final ownerMerchantAsync = ref.watch(ownerMerchantProvider);
+    final catalogCapacityPolicyEnabledAsync =
+        ref.watch(catalogCapacityPolicyEnabledProvider);
+    final catalogCapacityHardBlockEnabledAsync =
+        ref.watch(catalogCapacityHardBlockEnabledProvider);
+    final catalogCreateViaCfEnabledAsync =
+        ref.watch(catalogProductCreateViaCfEnabledProvider);
+    final catalogLimitsConfigAsync = ref.watch(catalogLimitsConfigProvider);
     final ownerUserId = widget.debugOwnerUserId != null
         ? normalizeProductField(widget.debugOwnerUserId!)
         : _ownerUserIdFromAuth();
@@ -93,6 +104,31 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
             ),
           );
         }
+
+        final catalogPolicyEnabled =
+            catalogCapacityPolicyEnabledAsync.valueOrNull ?? true;
+        final catalogHardBlockEnabled =
+            catalogCapacityHardBlockEnabledAsync.valueOrNull ?? true;
+        final catalogCreateViaCfEnabled =
+            catalogCreateViaCfEnabledAsync.valueOrNull ?? true;
+        final catalogCapacity =
+            catalogPolicyEnabled && catalogLimitsConfigAsync.hasValue
+                ? resolveOwnerCatalogCapacity(
+                    categoryId: merchant.categoryId,
+                    activeProductCount: merchant.activeProductCount,
+                    merchantLimitOverride: merchant.catalogProductLimitOverride,
+                    config: catalogLimitsConfigAsync.requireValue,
+                  )
+                : null;
+        final isCreateBlocked = !widget.isEditing &&
+            catalogPolicyEnabled &&
+            catalogHardBlockEnabled &&
+            (catalogCapacity?.isBlocked ?? false);
+        final isCreateDisabledByFlag =
+            !widget.isEditing && !catalogCreateViaCfEnabled;
+        final isCreateWarning = !widget.isEditing &&
+            catalogPolicyEnabled &&
+            (catalogCapacity?.isWarning ?? false);
 
         final scope = ProductFormScope(
           merchantId: merchant.id,
@@ -141,6 +177,28 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                 ],
+                                if (isCreateWarning && catalogCapacity != null)
+                                  _CatalogCapacityNotice(
+                                    message:
+                                        'Te estás quedando con poco espacio para tu catálogo (${catalogCapacity.used}/${catalogCapacity.limit}).',
+                                    isError: false,
+                                  ),
+                                if (isCreateBlocked && catalogCapacity != null)
+                                  _CatalogCapacityNotice(
+                                    message:
+                                        'Límite alcanzado (${catalogCapacity.used}/${catalogCapacity.limit}). No podés crear nuevos productos.',
+                                    isError: true,
+                                  ),
+                                if (isCreateDisabledByFlag)
+                                  const _CatalogCapacityNotice(
+                                    message:
+                                        'La creación de productos está temporalmente deshabilitada por configuración.',
+                                    isError: true,
+                                  ),
+                                if (((isCreateWarning || isCreateBlocked) &&
+                                        catalogCapacity != null) ||
+                                    isCreateDisabledByFlag)
+                                  const SizedBox(height: 12),
                                 _ImagePickerSection(
                                   imageProvider: imageProvider,
                                   imageError: formState.imageError,
@@ -189,6 +247,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                         onSubmitted: (_) => _handleSubmit(
                                           scope: scope,
                                           ownerUserId: ownerUserId,
+                                          merchantId: merchant.id,
+                                          catalogCapacity: catalogCapacity,
+                                          catalogPolicyEnabled:
+                                              catalogPolicyEnabled,
+                                          catalogHardBlockEnabled:
+                                              catalogHardBlockEnabled,
+                                          catalogCreateViaCfEnabled:
+                                              catalogCreateViaCfEnabled,
                                         ),
                                         onChanged: notifier.setPriceLabel,
                                         maxLength: productPriceLabelMaxLength,
@@ -251,11 +317,21 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                     ),
                                   ),
                                   child: ElevatedButton(
-                                    onPressed: formState.isSubmitting
+                                    onPressed: formState.isSubmitting ||
+                                            isCreateBlocked ||
+                                            isCreateDisabledByFlag
                                         ? null
                                         : () => _handleSubmit(
                                               scope: scope,
                                               ownerUserId: ownerUserId,
+                                              merchantId: merchant.id,
+                                              catalogCapacity: catalogCapacity,
+                                              catalogPolicyEnabled:
+                                                  catalogPolicyEnabled,
+                                              catalogHardBlockEnabled:
+                                                  catalogHardBlockEnabled,
+                                              catalogCreateViaCfEnabled:
+                                                  catalogCreateViaCfEnabled,
                                             ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.transparent,
@@ -277,7 +353,11 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                         : Text(
                                             widget.isEditing
                                                 ? 'Guardar cambios'
-                                                : 'Guardar producto',
+                                                : (isCreateBlocked
+                                                    ? 'Límite alcanzado'
+                                                    : (isCreateDisabledByFlag
+                                                        ? 'Temporalmente deshabilitado'
+                                                        : 'Guardar producto')),
                                             style:
                                                 AppTextStyles.labelMd.copyWith(
                                               color: Colors.white,
@@ -381,7 +461,46 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   Future<void> _handleSubmit({
     required ProductFormScope scope,
     required String ownerUserId,
+    required String merchantId,
+    required OwnerCatalogCapacity? catalogCapacity,
+    required bool catalogPolicyEnabled,
+    required bool catalogHardBlockEnabled,
+    required bool catalogCreateViaCfEnabled,
   }) async {
+    final isCreateViaCfDisabled =
+        !widget.isEditing && !catalogCreateViaCfEnabled;
+    if (isCreateViaCfDisabled) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        message:
+            'La creación de productos está temporalmente deshabilitada por configuración.',
+        type: ToastType.error,
+      );
+      return;
+    }
+
+    final isCreateBlocked = !widget.isEditing &&
+        catalogPolicyEnabled &&
+        catalogHardBlockEnabled &&
+        (catalogCapacity?.isBlocked ?? false);
+    if (isCreateBlocked) {
+      await OwnerProductsAnalytics.logProductCreateBlockedByLimit(
+        merchantId: merchantId,
+        used: catalogCapacity?.used ?? 0,
+        limit: catalogCapacity?.limit ?? 0,
+        source: catalogCapacity?.source.value ?? 'global_default',
+      );
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        message:
+            'Alcanzaste el límite del catálogo. Contactá a administración para ampliar el cupo.',
+        type: ToastType.error,
+      );
+      return;
+    }
+
     FocusScope.of(context).unfocus();
     final notifier = ref.read(productFormNotifierProvider(scope).notifier);
     final repository = ref.read(productRepositoryProvider);
@@ -780,6 +899,48 @@ class _SegmentedOptionBar<T> extends StatelessWidget {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CatalogCapacityNotice extends StatelessWidget {
+  const _CatalogCapacityNotice({
+    required this.message,
+    required this.isError,
+  });
+
+  final String message;
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isError ? AppColors.errorBg : AppColors.warningBg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            isError ? Icons.block_rounded : Icons.warning_amber_rounded,
+            size: 16,
+            color: isError ? AppColors.errorFg : AppColors.warningFg,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.bodySm.copyWith(
+                color: isError ? AppColors.errorFg : AppColors.warningFg,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         ],
       ),
     );

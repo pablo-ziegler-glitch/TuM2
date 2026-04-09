@@ -216,6 +216,17 @@ class _FakeProductRepository implements ProductRepository {
   }
 
   @override
+  Future<List<MerchantProduct>> fetchOwnerProducts({
+    required String merchantId,
+    int limit = 120,
+  }) async {
+    return _products.values
+        .where((item) => item.merchantId == merchantId)
+        .take(limit)
+        .toList();
+  }
+
+  @override
   Future<MerchantProduct?> getProductById(String productId) async {
     return _products[productId];
   }

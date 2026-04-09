@@ -21,6 +21,13 @@ export interface FeatureFlags {
   [flag: string]: boolean;
 }
 
+export interface CatalogLimitsConfig {
+  defaultProductLimit: number;
+  categoryLimits: Record<string, number>;
+  updatedAt: Timestamp;
+  updatedBy: string;
+}
+
 /**
  * Collection: admin_configs/global
  * Singleton config document. Readable by admins, writable by super_admins.

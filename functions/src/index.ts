@@ -45,6 +45,16 @@ export {
   upsertPharmacyDuty,
   changePharmacyDutyStatus,
 } from "./callables/pharmacyDuties";
+export {
+  setGlobalCatalogProductLimit,
+  setCategoryCatalogProductLimit,
+  clearCategoryCatalogProductLimit,
+  setMerchantCatalogLimitOverride,
+  clearMerchantCatalogLimitOverride,
+  searchCatalogLimitMerchants,
+  createMerchantProduct,
+  deactivateMerchantProduct,
+} from "./callables/catalogLimits";
 
 // ─── Onboarding Scheduled Jobs ─────────────────────────────────────────────
 

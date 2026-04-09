@@ -10,11 +10,12 @@ import '../../modules/import_data/screens/import_list_screen.dart';
 import '../../modules/import_data/screens/import_wizard_screen.dart';
 import '../../modules/import_data/screens/import_result_screen.dart';
 import '../../modules/import_data/screens/import_batch_history_screen.dart';
+import '../../modules/catalog_limits/screens/catalog_limits_screen.dart';
 
 /// Router principal del portal admin.
 /// Rutas disponibles:
 ///   /dashboard              — panel principal (placeholder)
-///   /businesses             — listado de comercios (placeholder)
+///   /businesses             — límites de catálogo (global/categoría/override)
 ///   /imports                — overview dashboard de importaciones
 ///   /imports/new            — wizard de nueva importación (6 pasos)
 ///   /imports/history        — historial de batches con filtros
@@ -51,11 +52,11 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/businesses',
-          builder: (context, state) => const _PlaceholderScreen(
-            label: 'Businesses',
-            description: 'Listado y moderación de comercios',
-            storyCardId: 'TuM2-0078',
-          ),
+          builder: (context, state) => const CatalogLimitsScreen(),
+        ),
+        GoRoute(
+          path: '/catalog-limits',
+          redirect: (context, state) => '/businesses',
         ),
         GoRoute(
           path: '/imports',

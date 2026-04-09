@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +11,10 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_toast.dart';
+import '../analytics/owner_products_analytics.dart';
+import '../models/catalog_capacity.dart';
 import '../models/merchant_product.dart';
+import '../providers/catalog_capacity_providers.dart';
 import '../providers/owner_providers.dart';
 import '../providers/product_providers.dart';
 import '../widgets/product_actions_sheet.dart';
@@ -35,6 +40,8 @@ class OwnerProductsScreen extends ConsumerStatefulWidget {
 
 class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
   String? _lastMutationError;
+  String? _lastLimitWarningKey;
+  String? _lastLimitBlockedKey;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   _ProductsSortOption _sortOption = _ProductsSortOption.recents;
@@ -49,6 +56,13 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider).authState;
     final ownerProductsEnabledAsync = ref.watch(ownerProductsEnabledProvider);
+    final catalogCapacityPolicyEnabledAsync =
+        ref.watch(catalogCapacityPolicyEnabledProvider);
+    final catalogCapacityHardBlockEnabledAsync =
+        ref.watch(catalogCapacityHardBlockEnabledProvider);
+    final catalogCreateViaCfEnabledAsync =
+        ref.watch(catalogProductCreateViaCfEnabledProvider);
+    final catalogLimitsConfigAsync = ref.watch(catalogLimitsConfigProvider);
     final ownerMerchantAsync = ref.watch(ownerMerchantProvider);
     final mutationState = ref.watch(productMutationProvider);
     _listenMutationErrors(mutationState);
@@ -111,16 +125,51 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
               );
             }
 
+            final catalogPolicyEnabled =
+                catalogCapacityPolicyEnabledAsync.valueOrNull ?? true;
+            final catalogHardBlockEnabled =
+                catalogCapacityHardBlockEnabledAsync.valueOrNull ?? true;
+            final catalogCreateViaCfEnabled =
+                catalogCreateViaCfEnabledAsync.valueOrNull ?? true;
+            final catalogCapacity = catalogPolicyEnabled &&
+                    catalogLimitsConfigAsync.hasValue
+                ? resolveOwnerCatalogCapacity(
+                    categoryId: merchant.categoryId,
+                    activeProductCount: merchant.activeProductCount,
+                    merchantLimitOverride: merchant.catalogProductLimitOverride,
+                    config: catalogLimitsConfigAsync.requireValue,
+                  )
+                : null;
+            final isCreateBlocked = catalogPolicyEnabled &&
+                catalogHardBlockEnabled &&
+                (catalogCapacity?.isBlocked ?? false);
+            _trackCatalogCapacityEvents(
+              merchantId: merchant.id,
+              capacity: catalogCapacity,
+            );
+
             final productsAsync =
                 ref.watch(merchantProductsProvider(merchant.id));
 
             return _Shell(
-              onFabPressed: () => _goToCreate(context),
+              onFabPressed: () => _handleCreateTap(
+                merchantId: merchant.id,
+                capacity: catalogCapacity,
+                policyEnabled: catalogPolicyEnabled,
+                hardBlockEnabled: catalogHardBlockEnabled,
+                createViaCfEnabled: catalogCreateViaCfEnabled,
+              ),
               child: Column(
                 children: [
                   Expanded(
                     child: productsAsync.when(
-                      loading: _buildLoadingContent,
+                      loading: () => _buildLoadingContent(
+                        merchantId: merchant.id,
+                        capacity: catalogCapacity,
+                        policyEnabled: catalogPolicyEnabled,
+                        hardBlockEnabled: catalogHardBlockEnabled,
+                        createViaCfEnabled: catalogCreateViaCfEnabled,
+                      ),
                       error: (_, __) => _LoadErrorState(
                         title: 'No pudimos cargar tu catálogo',
                         message: 'Revisá tu conexión e intentá de nuevo.',
@@ -132,7 +181,14 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                         final filtered = _applyFilters(products,
                             query: _searchQuery, sort: _sortOption);
                         if (products.isEmpty) {
-                          return _buildEmptyState(context);
+                          return _buildEmptyState(
+                            context,
+                            merchantId: merchant.id,
+                            capacity: catalogCapacity,
+                            policyEnabled: catalogPolicyEnabled,
+                            hardBlockEnabled: catalogHardBlockEnabled,
+                            createViaCfEnabled: catalogCreateViaCfEnabled,
+                          );
                         }
                         return RefreshIndicator(
                           onRefresh: () async {
@@ -146,7 +202,19 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                             children: [
                               _HeaderBlock(
-                                onAddPressed: () => _goToCreate(context),
+                                onAddPressed: () => _handleCreateTap(
+                                  merchantId: merchant.id,
+                                  capacity: catalogCapacity,
+                                  policyEnabled: catalogPolicyEnabled,
+                                  hardBlockEnabled: catalogHardBlockEnabled,
+                                  createViaCfEnabled: catalogCreateViaCfEnabled,
+                                ),
+                                capacity: catalogCapacity,
+                                policyEnabled: catalogPolicyEnabled,
+                                hardBlockEnabled: catalogHardBlockEnabled,
+                                onContactAdmin: () => _showContactAdminDialog(
+                                  merchantId: merchant.id,
+                                ),
                               ),
                               const SizedBox(height: 14),
                               _SearchAndSortBlock(
@@ -230,6 +298,14 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                                     ],
                                   ),
                                 ),
+                              if (isCreateBlocked) ...[
+                                const SizedBox(height: 12),
+                                _CreateBlockedFooter(
+                                  onContactAdmin: () => _showContactAdminDialog(
+                                    merchantId: merchant.id,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         );
@@ -253,11 +329,31 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
     );
   }
 
-  Widget _buildLoadingContent() {
+  Widget _buildLoadingContent({
+    required String merchantId,
+    required OwnerCatalogCapacity? capacity,
+    required bool policyEnabled,
+    required bool hardBlockEnabled,
+    required bool createViaCfEnabled,
+  }) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       children: [
-        _HeaderBlock(onAddPressed: () => _goToCreate(context)),
+        _HeaderBlock(
+          onAddPressed: () => _handleCreateTap(
+            merchantId: merchantId,
+            capacity: capacity,
+            policyEnabled: policyEnabled,
+            hardBlockEnabled: hardBlockEnabled,
+            createViaCfEnabled: createViaCfEnabled,
+          ),
+          capacity: capacity,
+          policyEnabled: policyEnabled,
+          hardBlockEnabled: hardBlockEnabled,
+          onContactAdmin: () => _showContactAdminDialog(
+            merchantId: merchantId,
+          ),
+        ),
         const SizedBox(height: 14),
         _SearchAndSortBlock(
           searchController: _searchController,
@@ -277,14 +373,41 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(
+    BuildContext context, {
+    required String merchantId,
+    required OwnerCatalogCapacity? capacity,
+    required bool policyEnabled,
+    required bool hardBlockEnabled,
+    required bool createViaCfEnabled,
+  }) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       children: [
-        _HeaderBlock(onAddPressed: () => _goToCreate(context)),
+        _HeaderBlock(
+          onAddPressed: () => _handleCreateTap(
+            merchantId: merchantId,
+            capacity: capacity,
+            policyEnabled: policyEnabled,
+            hardBlockEnabled: hardBlockEnabled,
+            createViaCfEnabled: createViaCfEnabled,
+          ),
+          capacity: capacity,
+          policyEnabled: policyEnabled,
+          hardBlockEnabled: hardBlockEnabled,
+          onContactAdmin: () => _showContactAdminDialog(
+            merchantId: merchantId,
+          ),
+        ),
         const SizedBox(height: 18),
         ProductEmptyState(
-          onAddPressed: () => _goToCreate(context),
+          onAddPressed: () => _handleCreateTap(
+            merchantId: merchantId,
+            capacity: capacity,
+            policyEnabled: policyEnabled,
+            hardBlockEnabled: hardBlockEnabled,
+            createViaCfEnabled: createViaCfEnabled,
+          ),
         ),
       ],
     );
@@ -350,12 +473,119 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
     });
   }
 
-  void _goToCreate(BuildContext context) {
+  Future<void> _handleCreateTap({
+    required String merchantId,
+    required OwnerCatalogCapacity? capacity,
+    required bool policyEnabled,
+    required bool hardBlockEnabled,
+    required bool createViaCfEnabled,
+  }) async {
+    if (!createViaCfEnabled) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        message:
+            'La creación de productos está temporalmente deshabilitada por configuración.',
+        type: ToastType.error,
+      );
+      return;
+    }
+
+    final isBlocked =
+        policyEnabled && hardBlockEnabled && (capacity?.isBlocked ?? false);
+    if (isBlocked) {
+      await OwnerProductsAnalytics.logProductCreateBlockedByLimit(
+        merchantId: merchantId,
+        used: capacity?.used ?? 0,
+        limit: capacity?.limit ?? 0,
+        source: capacity?.source.value ?? 'global_default',
+      );
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        message:
+            'Alcanzaste el límite del catálogo. Contactá a administración para ampliar tu cupo.',
+        type: ToastType.error,
+      );
+      return;
+    }
+    if (!mounted) return;
     context.push(AppRoutes.ownerProductsNew);
   }
 
   void _goToEdit(BuildContext context, String productId) {
     context.push(AppRoutes.ownerProductsEditPath(productId));
+  }
+
+  Future<void> _showContactAdminDialog({
+    required String merchantId,
+  }) async {
+    await OwnerProductsAnalytics.logCatalogContactAdmin(
+      merchantId: merchantId,
+      source: 'owner_products',
+    );
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Contactar administración'),
+          content: const Text(
+            'Tu comercio alcanzó el cupo actual del catálogo. '
+            'Contactá al equipo de administración por los canales habituales para ampliar el límite.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Entendido'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _trackCatalogCapacityEvents({
+    required String merchantId,
+    required OwnerCatalogCapacity? capacity,
+  }) {
+    if (capacity == null) return;
+
+    if (capacity.isWarning) {
+      final warningKey =
+          '$merchantId:${capacity.used}:${capacity.limit}:warning';
+      if (warningKey != _lastLimitWarningKey) {
+        _lastLimitWarningKey = warningKey;
+        unawaited(
+          OwnerProductsAnalytics.logCatalogLimitWarningSeen(
+            merchantId: merchantId,
+            used: capacity.used,
+            limit: capacity.limit,
+            source: capacity.source.value,
+          ),
+        );
+      }
+    } else {
+      _lastLimitWarningKey = null;
+    }
+
+    if (capacity.isBlocked) {
+      final blockedKey =
+          '$merchantId:${capacity.used}:${capacity.limit}:blocked';
+      if (blockedKey != _lastLimitBlockedKey) {
+        _lastLimitBlockedKey = blockedKey;
+        unawaited(
+          OwnerProductsAnalytics.logCatalogLimitBlockSeen(
+            merchantId: merchantId,
+            used: capacity.used,
+            limit: capacity.limit,
+            source: capacity.source.value,
+          ),
+        );
+      }
+    } else {
+      _lastLimitBlockedKey = null;
+    }
   }
 
   Future<void> _confirmToggleVisibility(
@@ -542,12 +772,26 @@ class _Shell extends StatelessWidget {
 }
 
 class _HeaderBlock extends StatelessWidget {
-  const _HeaderBlock({required this.onAddPressed});
+  const _HeaderBlock({
+    required this.onAddPressed,
+    required this.capacity,
+    required this.policyEnabled,
+    required this.hardBlockEnabled,
+    required this.onContactAdmin,
+  });
 
   final VoidCallback onAddPressed;
+  final OwnerCatalogCapacity? capacity;
+  final bool policyEnabled;
+  final bool hardBlockEnabled;
+  final VoidCallback onContactAdmin;
 
   @override
   Widget build(BuildContext context) {
+    final isBlocked =
+        policyEnabled && hardBlockEnabled && (capacity?.isBlocked ?? false);
+    final isWarning = policyEnabled && (capacity?.isWarning ?? false);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -570,6 +814,33 @@ class _HeaderBlock extends StatelessWidget {
             fontWeight: FontWeight.w500,
           ),
         ),
+        if (policyEnabled && capacity != null) ...[
+          const SizedBox(height: 14),
+          _CatalogCapacityCard(
+            capacity: capacity!,
+            isHardBlocked: isBlocked,
+            onContactAdmin: onContactAdmin,
+          ),
+        ],
+        if (isWarning && !isBlocked) ...[
+          const SizedBox(height: 10),
+          const _InlineNotice(
+            color: AppColors.warningFg,
+            background: AppColors.warningBg,
+            icon: Icons.warning_amber_rounded,
+            text: 'Te estás quedando con poco espacio para tu catálogo.',
+          ),
+        ],
+        if (isBlocked) ...[
+          const SizedBox(height: 10),
+          const _InlineNotice(
+            color: AppColors.errorFg,
+            background: AppColors.errorBg,
+            icon: Icons.block_rounded,
+            text:
+                'Límite alcanzado: no podés crear productos nuevos hasta ampliar cupo o reducir activos.',
+          ),
+        ],
         const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
@@ -600,6 +871,191 @@ class _HeaderBlock extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CatalogCapacityCard extends StatelessWidget {
+  const _CatalogCapacityCard({
+    required this.capacity,
+    required this.isHardBlocked,
+    required this.onContactAdmin,
+  });
+
+  final OwnerCatalogCapacity capacity;
+  final bool isHardBlocked;
+  final VoidCallback onContactAdmin;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = capacity.usageRatio.clamp(0, 1).toDouble();
+    final progressColor = isHardBlocked
+        ? AppColors.errorFg
+        : (capacity.isWarning ? AppColors.warningFg : AppColors.primary500);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isHardBlocked
+              ? AppColors.errorFg.withValues(alpha: 0.25)
+              : AppColors.neutral200,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Capacidad de catálogo',
+            style: AppTextStyles.labelMd.copyWith(
+              color: AppColors.neutral800,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${capacity.used}/${capacity.limit} usados · ${capacity.remaining} restantes',
+            style: AppTextStyles.bodySm.copyWith(
+              color: AppColors.neutral700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 8,
+              value: progress,
+              color: progressColor,
+              backgroundColor: AppColors.neutral200,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Text(
+                'Uso: ${capacity.usagePercent}%',
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral600,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Fuente: ${capacity.source.label}',
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          if (isHardBlocked || capacity.isWarning) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: onContactAdmin,
+              icon: const Icon(Icons.support_agent, size: 16),
+              label: const Text('Contactar administración'),
+              style: TextButton.styleFrom(
+                foregroundColor:
+                    isHardBlocked ? AppColors.errorFg : AppColors.warningFg,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineNotice extends StatelessWidget {
+  const _InlineNotice({
+    required this.color,
+    required this.background,
+    required this.icon,
+    required this.text,
+  });
+
+  final Color color;
+  final Color background;
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTextStyles.bodyXs.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreateBlockedFooter extends StatelessWidget {
+  const _CreateBlockedFooter({required this.onContactAdmin});
+
+  final VoidCallback onContactAdmin;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.errorBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Alta bloqueada por capacidad',
+            style: AppTextStyles.labelMd.copyWith(
+              color: AppColors.errorFg,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Podés editar u ocultar productos existentes. Para sumar nuevos, necesitás ampliar el cupo.',
+            style: AppTextStyles.bodyXs.copyWith(
+              color: AppColors.errorFg,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: onContactAdmin,
+            icon: const Icon(Icons.support_agent, size: 16),
+            label: const Text('Contactar administración'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.errorFg,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

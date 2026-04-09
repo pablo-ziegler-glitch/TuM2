@@ -64,3 +64,68 @@ final ownerPharmacyDutiesEnabledProvider = FutureProvider<bool>((ref) async {
     return true;
   }
 });
+
+final catalogCapacityPolicyEnabledProvider = FutureProvider<bool>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  try {
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(seconds: 8),
+        minimumFetchInterval: const Duration(minutes: 30),
+      ),
+    );
+    await remoteConfig.setDefaults(const {
+      'catalog_capacity_policy_enabled': true,
+      'catalog_capacity_hard_block_enabled': true,
+      'catalog_product_create_via_cf_enabled': true,
+    });
+    await remoteConfig.fetchAndActivate();
+    return remoteConfig.getBool('catalog_capacity_policy_enabled');
+  } catch (_) {
+    return true;
+  }
+});
+
+final catalogCapacityHardBlockEnabledProvider =
+    FutureProvider<bool>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  try {
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(seconds: 8),
+        minimumFetchInterval: const Duration(minutes: 30),
+      ),
+    );
+    await remoteConfig.setDefaults(const {
+      'catalog_capacity_hard_block_enabled': true,
+      'catalog_capacity_policy_enabled': true,
+      'catalog_product_create_via_cf_enabled': true,
+    });
+    await remoteConfig.fetchAndActivate();
+    return remoteConfig.getBool('catalog_capacity_hard_block_enabled');
+  } catch (_) {
+    return true;
+  }
+});
+
+final catalogProductCreateViaCfEnabledProvider =
+    FutureProvider<bool>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  try {
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(seconds: 8),
+        minimumFetchInterval: const Duration(minutes: 30),
+      ),
+    );
+    await remoteConfig.setDefaults(const {
+      'catalog_product_create_via_cf_enabled': true,
+      'catalog_capacity_policy_enabled': true,
+      'catalog_capacity_hard_block_enabled': true,
+    });
+    await remoteConfig.fetchAndActivate();
+    return remoteConfig.getBool('catalog_product_create_via_cf_enabled');
+  } catch (_) {
+    return true;
+  }
+});

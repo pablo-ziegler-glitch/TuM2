@@ -22,7 +22,7 @@ interface AssignOwnerRoleResponse {
  * - El caller debe forzar refresh del token post-llamada (getIdTokenResult(forceRefresh: true)).
  */
 export const assignOwnerRole = onCall<void, Promise<AssignOwnerRoleResponse>>(
-  { enforceAppCheck: false },
+  { enforceAppCheck: true },
   async (request) => {
     // Guard: solo usuarios autenticados
     if (!request.auth) {

@@ -401,9 +401,27 @@ final openNowLocationReaderProvider = Provider<OpenNowLocationReader>(
 
 final openNowNotifierProvider =
     StateNotifierProvider.autoDispose<OpenNowNotifier, OpenNowState>(
-  (ref) => OpenNowNotifier(
-    repository: ref.watch(openNowRepositoryProvider),
-    analytics: ref.watch(openNowAnalyticsProvider),
-    locationReader: ref.watch(openNowLocationReaderProvider),
-  ),
+  (ref) {
+    final link = ref.keepAlive();
+    Timer? disposeTimer;
+    const keepAliveTtl = Duration(minutes: 5);
+
+    ref.onCancel(() {
+      disposeTimer?.cancel();
+      disposeTimer = Timer(keepAliveTtl, link.close);
+    });
+    ref.onResume(() {
+      disposeTimer?.cancel();
+      disposeTimer = null;
+    });
+    ref.onDispose(() {
+      disposeTimer?.cancel();
+    });
+
+    return OpenNowNotifier(
+      repository: ref.watch(openNowRepositoryProvider),
+      analytics: ref.watch(openNowAnalyticsProvider),
+      locationReader: ref.watch(openNowLocationReaderProvider),
+    );
+  },
 );

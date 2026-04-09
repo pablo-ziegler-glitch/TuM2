@@ -49,6 +49,11 @@ abstract interface class ProductRepository {
     required String merchantId,
   });
 
+  Future<List<MerchantProduct>> fetchOwnerProducts({
+    required String merchantId,
+    int limit,
+  });
+
   Stream<MerchantProduct?> watchProductById(String productId);
 
   Future<MerchantProduct?> getProductById(String productId);

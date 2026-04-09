@@ -178,6 +178,14 @@
         { "fieldPath": "targetId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "onboardingOwnerProgress.currentStep", "order": "ASCENDING" },
+        { "fieldPath": "onboardingOwnerProgress.updatedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

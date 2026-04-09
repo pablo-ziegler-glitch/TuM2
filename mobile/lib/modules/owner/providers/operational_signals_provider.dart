@@ -188,29 +188,19 @@ class OperationalSignalsNotifier
         values: payload,
       );
 
-      final refreshed = await _repository.fetchSignals(
-        merchantId: state.merchantId,
-        ownerUserId: state.ownerUserId,
-      );
-
       final remainingSavingKeys = {...state.savingKeys}
         ..removeAll(payload.keys);
-      final mergedSignals = _mergeServerSnapshotWithPending(
-        serverSignals: refreshed.signals,
-        localSignals: state.signals,
-        pendingKeys: remainingSavingKeys,
-      );
       final hasRemainingPendingWrites = remainingSavingKeys.isNotEmpty;
       state = state.copyWith(
-        signals: mergedSignals,
+        signals: state.signals,
         savingKeys: remainingSavingKeys,
         saveStatus: hasRemainingPendingWrites
             ? OperationalSignalsSaveStatus.idle
             : OperationalSignalsSaveStatus.success,
         message: hasRemainingPendingWrites ? null : 'Cambios guardados.',
         clearMessage: hasRemainingPendingWrites,
-        lastSuccessfulSaveAt: refreshed.updatedAt,
-        lastUpdatedBy: refreshed.updatedBy,
+        lastSuccessfulSaveAt: DateTime.now(),
+        lastUpdatedBy: state.ownerUserId,
       );
       unawaited(OwnerOperationalSignalsAnalytics.logSaved(
         merchantId: state.merchantId,
@@ -261,18 +251,6 @@ class OperationalSignalsNotifier
       reason: reason,
       payload: _payloadFromSignals(previousSignals),
     ));
-  }
-
-  OperationalSignals _mergeServerSnapshotWithPending({
-    required OperationalSignals serverSignals,
-    required OperationalSignals localSignals,
-    required Set<OperationalSignalKey> pendingKeys,
-  }) {
-    var merged = serverSignals;
-    for (final key in pendingKeys) {
-      merged = merged.withValue(key, localSignals.valueFor(key));
-    }
-    return merged;
   }
 }
 

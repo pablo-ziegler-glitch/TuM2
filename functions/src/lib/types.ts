@@ -45,6 +45,9 @@ export interface OperationalSignals {
   todayScheduleLabel?: string;
   temporaryClosed?: boolean;
   temporaryClosedNote?: string;
+  hasDelivery?: boolean;
+  acceptsWhatsappOrders?: boolean;
+  openNowManualOverride?: boolean;
   hasPharmacyDutyToday?: boolean;
   manualOverrides?: Record<string, unknown>;
   updatedAt?: FirebaseFirestore.Timestamp;
@@ -54,6 +57,7 @@ export interface MerchantDoc {
   merchantId: string;
   name: string;
   category: string;
+  categoryId?: string;
   zone: string;
   address?: string;
   lat?: number;

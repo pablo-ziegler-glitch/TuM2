@@ -105,9 +105,13 @@ class MerchantDetailRepository implements MerchantDetailDataSource {
         final data = doc.data();
         final visibilityStatus =
             (data['visibilityStatus'] as String?)?.trim().toLowerCase();
+        final status = (data['status'] as String?)?.trim().toLowerCase();
         final docMerchantId = (data['merchantId'] as String?)?.trim();
         if (docMerchantId != merchantId) continue;
-        if (visibilityStatus == 'hidden' || visibilityStatus == 'archived') {
+        if (visibilityStatus != 'visible') {
+          continue;
+        }
+        if (status != 'active') {
           continue;
         }
         byIdOrdered[doc.id] = MerchantProductDto.fromDocument(doc);
@@ -124,7 +128,9 @@ class MerchantDetailRepository implements MerchantDetailDataSource {
     final snapshot = await _firestore
         .collection('merchant_products')
         .where('merchantId', isEqualTo: merchantId)
+        .where('status', isEqualTo: 'active')
         .where('visibilityStatus', isEqualTo: 'visible')
+        .orderBy('updatedAt', descending: true)
         .limit(limit)
         .get()
         .timeout(_secondaryTimeout);
@@ -134,7 +140,8 @@ class MerchantDetailRepository implements MerchantDetailDataSource {
         .where((dto) {
           final visibility =
               (dto.data['visibilityStatus'] as String?)?.trim().toLowerCase();
-          return visibility != 'hidden' && visibility != 'archived';
+          final status = (dto.data['status'] as String?)?.trim().toLowerCase();
+          return visibility == 'visible' && status == 'active';
         })
         .take(limit)
         .toList(growable: false);

@@ -26,6 +26,9 @@ import '../../modules/owner/screens/owner_operational_signals_screen.dart';
 import '../../modules/owner/screens/owner_schedule_screen.dart';
 import '../../modules/owner/screens/owner_resolve_page.dart';
 import '../../modules/owner/screens/owner_access_guard_page.dart';
+import '../../modules/owner/screens/owner_products_screen.dart';
+import '../../modules/owner/screens/product_form_screen.dart';
+import '../../modules/owner/screens/product_saved_screen.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
 import '../../modules/merchant_detail/presentation/merchant_detail_page.dart';
 import '../../modules/merchant_detail/presentation/product_detail_page.dart';
@@ -289,13 +292,42 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: AppRoutes.ownerProducts,
       builder: (_, __) => const OwnerAccessGuardPage(
-        title: 'Gestionar Productos',
-        child: PlaceholderScreen(
-          screenId: 'TuM2-0065',
-          label: 'Gestionar Productos',
-          roleRequired: 'owner',
-        ),
+        title: 'Productos',
+        child: OwnerProductsScreen(),
       ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerProductsNew,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Nuevo producto',
+        child: ProductFormScreen(),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerProductsEdit,
+      builder: (_, state) {
+        final productId = state.pathParameters['productId']!;
+        return OwnerAccessGuardPage(
+          title: 'Editar producto',
+          child: ProductFormScreen(productId: productId),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.ownerProductsSaved,
+      builder: (_, state) {
+        final payload = state.extra as ProductSavedPayload?;
+        if (payload == null) {
+          return const OwnerAccessGuardPage(
+            title: 'Producto guardado',
+            child: OwnerProductsScreen(),
+          );
+        }
+        return OwnerAccessGuardPage(
+          title: 'Producto guardado',
+          child: ProductSavedScreen(payload: payload),
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.ownerSchedules,

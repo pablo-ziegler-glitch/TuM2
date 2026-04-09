@@ -15,6 +15,7 @@ export { assignOwnerRole } from "./callables/assignOwnerRole";
 // ─── Firestore Triggers ────────────────────────────────────────────────────
 
 export { onMerchantWriteSyncPublic } from "./triggers/merchants";
+export { onMerchantProductWriteRecalculateHasProducts } from "./triggers/products";
 export { onScheduleWriteRecalculateOpenNow } from "./triggers/schedules";
 export {
   onOwnerWeeklyScheduleWrite,

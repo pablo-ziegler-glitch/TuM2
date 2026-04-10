@@ -7,22 +7,27 @@ class CategoryOption {
   final String label;
   final IconData icon;
 
-  const CategoryOption({required this.id, required this.label, required this.icon});
+  const CategoryOption(
+      {required this.id, required this.label, required this.icon});
 }
 
 const kCategories = [
-  CategoryOption(id: 'pharmacy',   label: 'Farmacia',    icon: Icons.local_pharmacy_outlined),
-  CategoryOption(id: 'kiosk',      label: 'Kiosco',      icon: Icons.store_outlined),
-  CategoryOption(id: 'grocery',    label: 'Almacén',     icon: Icons.shopping_basket_outlined),
-  CategoryOption(id: 'vet',        label: 'Veterinaria', icon: Icons.pets_outlined),
-  CategoryOption(id: 'bakery',     label: 'Panadería',   icon: Icons.bakery_dining_outlined),
-  CategoryOption(id: 'other',      label: 'Otro',        icon: Icons.more_horiz),
+  CategoryOption(
+      id: 'pharmacy', label: 'Farmacia', icon: Icons.local_pharmacy_outlined),
+  CategoryOption(id: 'kiosk', label: 'Kiosco', icon: Icons.store_outlined),
+  CategoryOption(
+      id: 'grocery', label: 'Almacén', icon: Icons.shopping_basket_outlined),
+  CategoryOption(id: 'vet', label: 'Veterinaria', icon: Icons.pets_outlined),
+  CategoryOption(
+      id: 'bakery', label: 'Panadería', icon: Icons.bakery_dining_outlined),
+  CategoryOption(id: 'other', label: 'Otro', icon: Icons.more_horiz),
 ];
 
 class CategoryGrid extends StatelessWidget {
   final String? selectedId;
   final ValueChanged<String> onSelect;
   final bool hasError;
+
   /// Si se provee, usa estas categorías en lugar de [kCategories].
   final List<CategoryOption>? categories;
 

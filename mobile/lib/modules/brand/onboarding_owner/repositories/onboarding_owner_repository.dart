@@ -38,7 +38,8 @@ class OnboardingOwnerRepository {
   Stream<OnboardingDraft?> watchDraft() {
     return _userRef.snapshots().map((snap) {
       if (!snap.exists) return null;
-      final progress = (snap.data() as Map<String, dynamic>?)?['onboardingOwnerProgress'];
+      final progress =
+          (snap.data() as Map<String, dynamic>?)?['onboardingOwnerProgress'];
       if (progress == null) return null;
       return _progressToOnboardingDraft(progress as Map<String, dynamic>);
     });
@@ -49,9 +50,11 @@ class OnboardingOwnerRepository {
     try {
       final snap = await _userRef.get();
       if (!snap.exists) return null;
-      final progress = (snap.data() as Map<String, dynamic>?)?['onboardingOwnerProgress'];
+      final progress =
+          (snap.data() as Map<String, dynamic>?)?['onboardingOwnerProgress'];
       if (progress == null) return null;
-      final draft = _progressToOnboardingDraft(progress as Map<String, dynamic>);
+      final draft =
+          _progressToOnboardingDraft(progress as Map<String, dynamic>);
       await _cacheLocally(draft);
       return draft;
     } catch (_) {
@@ -189,26 +192,30 @@ class OnboardingOwnerRepository {
 
   Future<void> _cacheLocally(OnboardingDraft draft) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefsKey, jsonEncode({
-      'draftMerchantId': draft.draftMerchantId,
-      'currentStep': draft.currentStep,
-      'step3Skipped': draft.step3Skipped,
-      'createdAt': draft.createdAt.toIso8601String(),
-      'expiresAt': draft.expiresAt.toIso8601String(),
-      if (draft.step1 != null) 'step1': {
-        'name': draft.step1!.name,
-        'categoryId': draft.step1!.categoryId,
-      },
-      if (draft.step2 != null) 'step2': {
-        'address': draft.step2!.address,
-        'lat': draft.step2!.lat,
-        'lng': draft.step2!.lng,
-        'geohash': draft.step2!.geohash,
-        'zoneId': draft.step2!.zoneId,
-        'cityId': draft.step2!.cityId,
-        'provinceId': draft.step2!.provinceId,
-      },
-    }));
+    await prefs.setString(
+        _prefsKey,
+        jsonEncode({
+          'draftMerchantId': draft.draftMerchantId,
+          'currentStep': draft.currentStep,
+          'step3Skipped': draft.step3Skipped,
+          'createdAt': draft.createdAt.toIso8601String(),
+          'expiresAt': draft.expiresAt.toIso8601String(),
+          if (draft.step1 != null)
+            'step1': {
+              'name': draft.step1!.name,
+              'categoryId': draft.step1!.categoryId,
+            },
+          if (draft.step2 != null)
+            'step2': {
+              'address': draft.step2!.address,
+              'lat': draft.step2!.lat,
+              'lng': draft.step2!.lng,
+              'geohash': draft.step2!.geohash,
+              'zoneId': draft.step2!.zoneId,
+              'cityId': draft.step2!.cityId,
+              'provinceId': draft.step2!.provinceId,
+            },
+        }));
   }
 
   Future<OnboardingDraft?> _getFromCache() async {
@@ -242,8 +249,10 @@ class OnboardingOwnerRepository {
   // ─── Mappers ─────────────────────────────────────────────────────────────
 
   OnboardingDraft _progressToOnboardingDraft(Map<String, dynamic> progress) {
-    final updatedAt = (progress['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-    final startedAt = (progress['startedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final updatedAt =
+        (progress['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final startedAt =
+        (progress['startedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
     final expiresAt = updatedAt.add(Duration(hours: _ttlHours));
 
     return _mapToOnboardingDraft({
@@ -257,7 +266,8 @@ class OnboardingOwnerRepository {
     Step1Data? step1;
     if (map['step1'] != null) {
       final s1 = map['step1'] as Map<String, dynamic>;
-      step1 = Step1Data(name: s1['name'] ?? '', categoryId: s1['categoryId'] ?? '');
+      step1 =
+          Step1Data(name: s1['name'] ?? '', categoryId: s1['categoryId'] ?? '');
     }
 
     Step2Data? step2;
@@ -280,7 +290,8 @@ class OnboardingOwnerRepository {
         ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
         : DateTime.now();
     final expiresAt = expiresAtStr is String
-        ? DateTime.tryParse(expiresAtStr) ?? DateTime.now().add(const Duration(hours: _ttlHours))
+        ? DateTime.tryParse(expiresAtStr) ??
+            DateTime.now().add(const Duration(hours: _ttlHours))
         : DateTime.now().add(const Duration(hours: _ttlHours));
 
     return OnboardingDraft(

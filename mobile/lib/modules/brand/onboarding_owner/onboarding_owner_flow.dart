@@ -21,8 +21,8 @@ import 'screens/step4_confirmacion_screen.dart';
 /// Persiste cada transición en Firestore vía [OnboardingOwnerRepository].
 class OnboardingOwnerFlow extends StatefulWidget {
   final OnboardingDraft? existingDraft;
-  final VoidCallback onComplete;  // → OWNER-01
-  final VoidCallback onExit;      // → HOME-01
+  final VoidCallback onComplete; // → OWNER-01
+  final VoidCallback onExit; // → HOME-01
 
   const OnboardingOwnerFlow({
     super.key,

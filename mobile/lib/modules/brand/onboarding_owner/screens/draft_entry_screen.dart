@@ -78,10 +78,14 @@ class _ResumableView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progressColor = isUrgent ? AppColors.warningFg : AppColors.secondary500;
-    final cardBorderColor = isUrgent ? AppColors.warningFg : AppColors.primary500;
+    final progressColor =
+        isUrgent ? AppColors.warningFg : AppColors.secondary500;
+    final cardBorderColor =
+        isUrgent ? AppColors.warningFg : AppColors.primary500;
     final cardBg = isUrgent ? AppColors.warningBg : AppColors.infoBg;
-    final cardTitle = isUrgent ? 'Tu borrador está por vencer' : 'Tenés un registro sin terminar';
+    final cardTitle = isUrgent
+        ? 'Tu borrador está por vencer'
+        : 'Tenés un registro sin terminar';
     final ctaLabel = isUrgent ? 'Retomar ahora' : 'Retomar registro';
 
     return Scaffold(
@@ -118,7 +122,9 @@ class _ResumableView extends StatelessWidget {
                     Text(
                       cardTitle,
                       style: AppTextStyles.headingSm.copyWith(
-                        color: isUrgent ? AppColors.warningFg : AppColors.neutral900,
+                        color: isUrgent
+                            ? AppColors.warningFg
+                            : AppColors.neutral900,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -192,7 +198,9 @@ class _ResumableView extends StatelessWidget {
                     Text(
                       'Guardado ${draft.savedAgoLabel} · expira en ${draft.expiresInLabel}',
                       style: AppTextStyles.bodyXs.copyWith(
-                        color: isUrgent ? AppColors.warningFg : AppColors.neutral600,
+                        color: isUrgent
+                            ? AppColors.warningFg
+                            : AppColors.neutral600,
                       ),
                     ),
                     const SizedBox(height: 16),

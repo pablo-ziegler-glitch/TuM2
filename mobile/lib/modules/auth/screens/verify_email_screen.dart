@@ -57,8 +57,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   bool get _crossDeviceEmailValid {
     final email = _crossDeviceEmailController.text.trim();
-    return email.isNotEmpty &&
-        RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
+    return email.isNotEmpty && RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
   }
 
   bool get _canResend => _secondsLeft == 0;
@@ -91,9 +90,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   Future<void> _resend() async {
     if (!_canResend) return;
 
-    await ref
-        .read(authOpProvider.notifier)
-        .sendMagicLink(widget.email);
+    await ref.read(authOpProvider.notifier).sendMagicLink(widget.email);
 
     if (!mounted) return;
 
@@ -220,9 +217,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               // Botón reenviar con cooldown
               SecondaryButton(
                 label: 'Reenviar link',
-                disabledLabel: _secondsLeft > 0
-                    ? 'Reenviar en ${_secondsLeft}s'
-                    : null,
+                disabledLabel:
+                    _secondsLeft > 0 ? 'Reenviar en ${_secondsLeft}s' : null,
                 onPressed: _canResend && !isLoading ? _resend : null,
                 isLoading: isLoading,
               ),
@@ -236,8 +232,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                     child: LinearProgressIndicator(
                       value: _secondsLeft / _cooldownSeconds,
                       backgroundColor: AppColors.neutral100,
-                      valueColor: const AlwaysStoppedAnimation(
-                          AppColors.primary500),
+                      valueColor:
+                          const AlwaysStoppedAnimation(AppColors.primary500),
                       minHeight: 2,
                     ),
                   ),

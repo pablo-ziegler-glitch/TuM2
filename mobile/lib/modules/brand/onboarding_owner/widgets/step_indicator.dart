@@ -42,8 +42,7 @@ class StepIndicator extends StatelessWidget {
             state: _stateFor(i),
             color: _circleColor(_stateFor(i)),
           ),
-          if (i < totalSteps)
-            _StepConnector(completed: i < currentStep),
+          if (i < totalSteps) _StepConnector(completed: i < currentStep),
         ],
       ],
     );

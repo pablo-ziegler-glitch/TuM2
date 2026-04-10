@@ -251,8 +251,14 @@ class _OwnerProfileView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              _MenuRow(label: 'Notificaciones', icon: Icons.notifications_none, onTap: () {}),
-              _MenuRow(label: 'Zona activa', icon: Icons.location_on_outlined, onTap: () {}),
+              _MenuRow(
+                  label: 'Notificaciones',
+                  icon: Icons.notifications_none,
+                  onTap: () {}),
+              _MenuRow(
+                  label: 'Zona activa',
+                  icon: Icons.location_on_outlined,
+                  onTap: () {}),
               _MenuRow(label: 'Ayuda', icon: Icons.help_outline, onTap: () {}),
               _MenuRow(
                 label: 'Cerrar sesión',

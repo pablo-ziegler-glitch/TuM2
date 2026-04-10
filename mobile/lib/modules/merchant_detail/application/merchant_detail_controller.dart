@@ -65,8 +65,7 @@ class MerchantDetailController
     );
     if (projectedSignals.isNotEmpty) {
       initial = initial.copyWith(
-        signals:
-            AsyncValue<List<MerchantOperationalSignalViewData>>.data(
+        signals: AsyncValue<List<MerchantOperationalSignalViewData>>.data(
           projectedSignals,
         ),
       );

@@ -1646,6 +1646,19 @@ export const respondToReassignmentRequest = onCall<
           "La ronda de cobertura ya no está abierta."
         );
       }
+      const nowMillis = Timestamp.now().toMillis();
+      if (reassignmentRequest.expiresAt.toMillis() <= nowMillis) {
+        throw new HttpsError(
+          "failed-precondition",
+          "La invitación de cobertura ya expiró."
+        );
+      }
+      if (round.expiresAt.toMillis() <= nowMillis) {
+        throw new HttpsError(
+          "failed-precondition",
+          "La ronda de cobertura ya expiró."
+        );
+      }
       if (normalizeDutyStatus(duty.status) === "reassigned") {
         throw new HttpsError(
           "failed-precondition",

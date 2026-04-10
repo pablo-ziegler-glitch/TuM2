@@ -105,6 +105,31 @@ jobs:
             --markdown \
             --out ../docs/ops/generated/finops-summary.md
 
+      - name: Run FinOps gate
+        working-directory: functions
+        run: |
+          set -euo pipefail
+
+          warn_envs="prod"
+          if [[ "${FAIL_ON_WARN}" == "true" ]]; then
+            warn_envs="dev,staging,prod"
+          fi
+
+          only_envs=""
+          if [[ "${TARGET_ENV}" != "all" ]]; then
+            only_envs="${TARGET_ENV}"
+          fi
+
+          args=(
+            --summary ../docs/ops/generated/finops-summary.json
+            --fail-on-warn-envs "${warn_envs}"
+          )
+          if [[ -n "${only_envs}" ]]; then
+            args+=(--only-envs "${only_envs}")
+          fi
+
+          npm run finops:gate -- "${args[@]}"
+
       - name: Upload guardrail reports
         uses: actions/upload-artifact@v4
         with:

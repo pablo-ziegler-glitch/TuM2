@@ -131,6 +131,9 @@ Modo de uso:
 
 - `workflow_dispatch` para validar un ambiente puntual antes de release.
 - `schedule` cada 6h como monitoreo continuo.
+- El workflow ejecuta además:
+  - `npm run finops:summary` (json + markdown)
+  - `npm run finops:gate` para bloquear `critical` siempre y `warn` según política.
 
 ## 7) Notas de operación
 

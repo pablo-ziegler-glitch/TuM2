@@ -58,6 +58,7 @@ export const nightlyRefreshOpenStatuses = onSchedule(
 
     let scanQuery = db()
       .collection("merchant_public")
+      .where("visibilityStatus", "==", "visible")
       .orderBy(FieldPath.documentId())
       .limit(MAX_SCAN_PER_RUN);
     if (cursorDocId) {
@@ -75,6 +76,7 @@ export const nightlyRefreshOpenStatuses = onSchedule(
       );
       merchantsSnap = await db()
         .collection("merchant_public")
+        .where("visibilityStatus", "==", "visible")
         .orderBy(FieldPath.documentId())
         .limit(MAX_SCAN_PER_RUN)
         .get();
@@ -86,10 +88,7 @@ export const nightlyRefreshOpenStatuses = onSchedule(
       return;
     }
 
-    const visibleDocs = merchantsSnap.docs.filter(
-      (doc) => doc.data()["visibilityStatus"] === "visible"
-    );
-    const merchantIds = visibleDocs.map((d) => d.id);
+    const merchantIds = merchantsSnap.docs.map((d) => d.id);
     const lastScannedDocId = merchantsSnap.docs[merchantsSnap.docs.length - 1]?.id ?? "";
     const hasMore = merchantsSnap.size >= MAX_SCAN_PER_RUN;
     await cursorRef.set(
@@ -108,7 +107,7 @@ export const nightlyRefreshOpenStatuses = onSchedule(
         JSON.stringify({
           job: "nightlyRefreshOpenStatuses",
           scanned: merchantsSnap.size,
-          visibleScanned: 0,
+          visibleScanned: merchantsSnap.size,
           merchantScheduleReads: 0,
           signalWrites: 0,
           skippedUnchanged: 0,
@@ -122,11 +121,11 @@ export const nightlyRefreshOpenStatuses = onSchedule(
 
     const merchantPublicById = new Map<string, FirebaseFirestore.DocumentData>();
     let scheduleReads = 0;
-    for (const doc of visibleDocs) {
+    for (const doc of merchantsSnap.docs) {
       merchantPublicById.set(doc.id, doc.data());
     }
     console.log(
-      `[nightlyRefreshOpenStatuses] Window scanned=${merchantsSnap.size}, visible=${merchantIds.length}`
+      `[nightlyRefreshOpenStatuses] Visible window scanned=${merchantsSnap.size}`
     );
 
     const scheduleMap = new Map<string, MerchantScheduleDoc>();

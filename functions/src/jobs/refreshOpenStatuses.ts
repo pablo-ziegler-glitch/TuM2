@@ -5,6 +5,7 @@ import {
   FieldValue,
   WriteBatch,
 } from "firebase-admin/firestore";
+import { logFinOpsEvent } from "../lib/finops";
 import { isOpenNow, todayScheduleLabel } from "../lib/schedules";
 import { MerchantScheduleDoc } from "../lib/types";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";

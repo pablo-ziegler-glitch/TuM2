@@ -1,6 +1,7 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
+import { logFinOpsEvent } from "../lib/finops";
 import { computeUsefulCoverageScore } from "../lib/scoring";
 import { MerchantPublicDoc, ZoneCoverageMetrics } from "../lib/types";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";

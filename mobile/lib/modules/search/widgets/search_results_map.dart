@@ -26,9 +26,9 @@ class SearchResultsMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Text(
             'No hay resultados para mostrar en el mapa.',
             style: AppTextStyles.bodyMd,

@@ -262,7 +262,7 @@ class _MerchantPreviewHeader extends StatelessWidget {
                               : AppColors.secondary500.withValues(alpha: 0.3),
                         ),
                         if (signals.hasDelivery)
-                          _PreviewChip(
+                          const _PreviewChip(
                             label: 'DELIVERY',
                             color: Colors.white24,
                           ),
@@ -332,7 +332,7 @@ class _EmergencyCloseCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: AppColors.errorFg),
+              const Icon(Icons.warning_amber_rounded, color: AppColors.errorFg),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -407,9 +407,9 @@ class _OpenNowManualCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.storefront_rounded, color: AppColors.primary500),
+              const Icon(Icons.storefront_rounded, color: AppColors.primary500),
               const SizedBox(width: 8),
-              Expanded(
+              const Expanded(
                 child: Text(
                   '¿Estás abierto ahora?',
                   style: AppTextStyles.labelMd,
@@ -487,10 +487,10 @@ class _ServicesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(Icons.settings_suggest, color: AppColors.neutral600),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text('Servicios y Pedidos', style: AppTextStyles.labelMd),
             ],
           ),
@@ -504,7 +504,7 @@ class _ServicesCard extends StatelessWidget {
             onChanged: onDeliveryChanged,
           ),
           const SizedBox(height: 10),
-          Divider(color: AppColors.neutral100, height: 1),
+          const Divider(color: AppColors.neutral100, height: 1),
           const SizedBox(height: 10),
           _ServiceRow(
             title: '¿Recibís pedidos por WhatsApp?',

@@ -97,11 +97,12 @@ class _ResumableView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header
-              Text('Registrá tu comercio', style: AppTextStyles.headingLg),
+              const Text('Registrá tu comercio',
+                  style: AppTextStyles.headingLg),
               const SizedBox(height: 4),
-              Text('TuM2 para dueños', style: AppTextStyles.bodySm),
+              const Text('TuM2 para dueños', style: AppTextStyles.bodySm),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Conectá tu comercio con los vecinos de tu zona.',
                 style: AppTextStyles.bodyMd,
               ),
@@ -243,7 +244,7 @@ class _ResumableView extends StatelessWidget {
               const SizedBox(height: 12),
 
               // Footer note — crítico: retomar extiende el TTL
-              Text(
+              const Text(
                 'Al retomar, el borrador se restablece por otras 72 hs.',
                 style: AppTextStyles.bodyXs,
                 textAlign: TextAlign.center,
@@ -274,11 +275,12 @@ class _ExpiredView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Registrá tu comercio', style: AppTextStyles.headingLg),
+              const Text('Registrá tu comercio',
+                  style: AppTextStyles.headingLg),
               const SizedBox(height: 4),
-              Text('TuM2 para dueños', style: AppTextStyles.bodySm),
+              const Text('TuM2 para dueños', style: AppTextStyles.bodySm),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Conectá tu comercio con los vecinos de tu zona.',
                 style: AppTextStyles.bodyMd,
               ),
@@ -289,7 +291,8 @@ class _ExpiredView extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.errorBg,
-                  border: Border.all(color: AppColors.errorFg.withOpacity(0.4)),
+                  border: Border.all(
+                      color: AppColors.errorFg.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -358,7 +361,7 @@ class _ExpiredView extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Texto explicativo sin dramatismo
-              Text(
+              const Text(
                 'Los borradores se guardan por 72 hs. Podés registrar tu comercio cuando quieras.',
                 style: AppTextStyles.bodySm,
               ),
@@ -380,7 +383,7 @@ class _ExpiredView extends StatelessWidget {
               const SizedBox(height: 12),
 
               // Footer — reduce barrera de re-entrada
-              Text(
+              const Text(
                 'El proceso toma menos de 5 minutos.',
                 style: AppTextStyles.bodyXs,
                 textAlign: TextAlign.center,

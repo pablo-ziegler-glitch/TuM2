@@ -28,25 +28,13 @@ void main() {
   });
 
   group('OwnerOperationalSignalsRepository', () {
-    test('valida ownership antes de guardar', () async {
+    test('guarda señales con metadata canónica', () async {
       final dataSource = _FakeDataSource(
         ownerByMerchantId: const {'m1': 'owner-1'},
       );
       final repository = OwnerOperationalSignalsRepository(
         dataSource: dataSource,
       );
-
-      final isOwner = await repository.validateOwnership(
-        merchantId: 'm1',
-        ownerUserId: 'owner-1',
-      );
-      expect(isOwner, isTrue);
-
-      final isNotOwner = await repository.validateOwnership(
-        merchantId: 'm1',
-        ownerUserId: 'owner-2',
-      );
-      expect(isNotOwner, isFalse);
 
       await repository.updateSignal(
         merchantId: 'm1',
@@ -151,9 +139,13 @@ void main() {
       );
 
       await _waitForLoad(notifier);
+      await notifier.updateSignal(
+        key: OperationalSignalKey.hasDelivery,
+        value: true,
+      );
 
       expect(notifier.state.hasError, isTrue);
-      expect(notifier.state.message, contains('permisos'));
+      expect(notifier.state.message, contains('editar este comercio'));
     });
 
     test('bloquea abierto ahora manual cuando hay cierre temporal', () async {
@@ -262,11 +254,6 @@ class _FakeDataSource implements OwnerOperationalSignalsDataSource {
   final List<_SavedSignal> saved = [];
   final Map<String, OperationalSignals> _signalsByMerchant = {};
   final Map<String, DateTime> _updatedAtByMerchant = {};
-
-  @override
-  Future<String?> fetchOwnerUserId({required String merchantId}) async {
-    return ownerByMerchantId[merchantId];
-  }
 
   @override
   Future<OperationalSignalsSnapshot> fetchSignals({

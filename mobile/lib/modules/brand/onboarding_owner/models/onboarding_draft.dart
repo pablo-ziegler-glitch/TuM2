@@ -66,7 +66,7 @@ class OnboardingDraft {
 
   String get expiresInLabel {
     if (ttlRemainingHours <= 0) return 'vencido';
-    return '~${ttlRemainingHours} hs';
+    return '~$ttlRemainingHours hs';
   }
 }
 
@@ -127,8 +127,9 @@ class DaySchedule {
 
   /// Convierte a mapa para Firestore (schedule field en merchant_schedules).
   Map<String, dynamic> toFirestoreMap() {
-    if (!enabled)
+    if (!enabled) {
       return {'closed': true, 'open': openLabel, 'close': closeLabel};
+    }
     return {'open': openLabel, 'close': closeLabel};
   }
 }

@@ -457,10 +457,10 @@ class _ErrorState extends StatelessWidget {
             const Icon(Icons.wifi_off_rounded,
                 size: 44, color: AppColors.neutral500),
             const SizedBox(height: 10),
-            Text('Sin conexión. Revisá tu red.',
+            const Text('Sin conexión. Revisá tu red.',
                 style: AppTextStyles.headingSm),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'No pudimos cargar los resultados en este momento. Probá de nuevo en unos segundos.',
               style: AppTextStyles.bodyXs,
               maxLines: 3,

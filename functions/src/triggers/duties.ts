@@ -1,5 +1,6 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { logFinOpsEvent } from "../lib/finops";
 import { todayDateString } from "../lib/schedules";
 import {
   DutyConfidenceLevel,
@@ -9,16 +10,6 @@ import {
 } from "../lib/pharmacyDutyMitigation";
 
 const db = () => getFirestore();
-const MAX_DUTY_DOCS_PER_EVENT = 10;
-const NON_CANCELLED_DUTY_STATUSES = [
-  "draft",
-  "published",
-  "scheduled",
-  "active",
-  "incident_reported",
-  "replacement_pending",
-  "reassigned",
-] as const;
 
 interface PharmacyDutyDoc {
   merchantId: string;
@@ -109,6 +100,8 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
         const relevantTodayDuties = todayDutiesSnap.docs
           .map((doc) => doc.data() as PharmacyDutyDoc)
           .filter((doc) => normalizeDutyStatus(doc.status) !== "cancelled");
+        const totalNonCancelledDuties = relevantTodayDuties.length;
+        const wasTruncated = false;
         const hasDutyToday = relevantTodayDuties.length > 0;
         const bestDuty = relevantTodayDuties
           .slice()

@@ -27,9 +27,9 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           children: [
             const SizedBox(height: 20),
-            Text('Mi Perfil', style: AppTextStyles.headingLg),
+            const Text('Mi Perfil', style: AppTextStyles.headingLg),
             const SizedBox(height: 4),
-            Text(
+            const Text(
               'Gestiona tu experiencia en el barrio.',
               style: AppTextStyles.bodySm,
             ),
@@ -67,7 +67,7 @@ class ProfileScreen extends ConsumerWidget {
                           color: AppColors.neutral700,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.admin_panel_settings_outlined,
+                        child: const Icon(Icons.admin_panel_settings_outlined,
                             color: AppColors.surface, size: 22),
                       ),
                       const SizedBox(width: 12),
@@ -122,7 +122,7 @@ class ProfileScreen extends ConsumerWidget {
                           color: AppColors.primary400,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.storefront,
+                        child: const Icon(Icons.storefront,
                             color: AppColors.surface, size: 22),
                       ),
                       const SizedBox(width: 12),
@@ -235,7 +235,7 @@ class _UserCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.primary100,
             child: Icon(Icons.person_outline,
@@ -273,7 +273,8 @@ class _MenuCard extends StatelessWidget {
             children: [
               items[i],
               if (i < items.length - 1)
-                Divider(height: 1, color: AppColors.neutral100, indent: 52),
+                const Divider(
+                    height: 1, color: AppColors.neutral100, indent: 52),
             ],
           );
         }),
@@ -317,7 +318,8 @@ class _MenuItem extends StatelessWidget {
               ),
             ),
             if (showChevron)
-              Icon(Icons.chevron_right, color: AppColors.neutral400, size: 20),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.neutral400, size: 20),
           ],
         ),
       ),

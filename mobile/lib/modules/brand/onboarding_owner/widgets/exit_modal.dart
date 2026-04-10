@@ -44,9 +44,9 @@ class _ExitModalContent extends StatelessWidget {
               ),
             ),
 
-            Text('¿Salir del registro?', style: AppTextStyles.headingMd),
+            const Text('¿Salir del registro?', style: AppTextStyles.headingMd),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Tenés información ingresada. Guardamos un borrador por 72 hs para que puedas retomar después.',
               style: AppTextStyles.bodySm,
             ),

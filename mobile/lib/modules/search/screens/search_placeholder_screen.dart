@@ -47,7 +47,7 @@ class _SearchPlaceholderScreenState extends State<SearchPlaceholderScreen> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text('Explorar', style: AppTextStyles.headingLg),
+                      const Text('Explorar', style: AppTextStyles.headingLg),
                     ],
                   ),
                   IconButton(
@@ -72,7 +72,8 @@ class _SearchPlaceholderScreenState extends State<SearchPlaceholderScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.search, size: 20, color: AppColors.neutral400),
+                    const Icon(Icons.search,
+                        size: 20, color: AppColors.neutral400),
                     const SizedBox(width: 10),
                     Text(
                       'Buscar cafés, tiendas, arte...',
@@ -245,7 +246,7 @@ class _SearchPlaceholderScreenState extends State<SearchPlaceholderScreen> {
               const SizedBox(height: 20),
 
               // Sección editorial
-              Text(
+              const Text(
                 'Guía de Fin de Semana',
                 style: AppTextStyles.headingSm,
               ),

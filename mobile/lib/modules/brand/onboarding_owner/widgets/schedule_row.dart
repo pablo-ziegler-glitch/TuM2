@@ -47,7 +47,7 @@ class ScheduleRow extends StatelessWidget {
             Switch(
               value: schedule.enabled,
               onChanged: onToggle,
-              activeColor: AppColors.primary500,
+              activeThumbColor: AppColors.primary500,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             const SizedBox(width: 8),

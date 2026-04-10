@@ -55,8 +55,9 @@ class _ReassignmentTrackingScreenState
         error: (_, __) => _error('No pudimos validar tu comercio.'),
         data: (ownerResolution) {
           final merchant = ownerResolution.primaryMerchant;
-          if (merchant == null)
+          if (merchant == null) {
             return _error('No encontramos un comercio asociado.');
+          }
 
           return openRoundAsync.when(
             loading: _loading,

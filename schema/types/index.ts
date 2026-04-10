@@ -20,6 +20,8 @@ export type {
   MerchantSourceType,
   MerchantLocation,
   MerchantContact,
+  MerchantCatalogLimits,
+  MerchantCatalogStats,
   ConfidenceLevel,
   OwnerDisplay,
 } from './merchant';
@@ -151,6 +153,7 @@ export type {
 // ── Admin configs ────────────────────────────────────────────────────────────
 export type {
   AdminConfigGlobal,
+  CatalogLimitsConfig,
   ZonePublicationRules,
   BootstrapRules,
   FeatureFlags,

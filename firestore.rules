@@ -133,7 +133,10 @@ service cloud.firestore {
           && !('verificationStatus' in changed)
           && !('visibilityStatus' in changed)
           && !('sourceType' in changed)
-          && !('createdAt' in changed);
+          && !('createdAt' in changed)
+          // Límites/counters del catálogo solo backend/admin.
+          && !('catalogLimits' in changed)
+          && !('catalogStats' in changed);
       }
 
       allow get, list: if isPublicMerchant() || isOwnerOfThisMerchant() || isAdmin();
@@ -349,6 +352,10 @@ service cloud.firestore {
           && !('sourceType' in changed)
           && !('createdAt' in changed)
           && !('createdBy' in changed)
+          // El status de ciclo de vida se controla por backend para mantener
+          // `catalogStats.activeProductCount` consistente y evitar bypass.
+          && !('status' in changed)
+          && request.resource.data.status == resource.data.status
           && request.resource.data.updatedAt is timestamp
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.stockStatus is string
@@ -378,8 +385,7 @@ service cloud.firestore {
       allow read: if isAdmin();
 
       allow create: if isAdmin();
-      allow create: if isOwnerRole()
-        && productCreatePayloadIsValid();
+      // OWNER crea vía callable backend (`createMerchantProduct`).
 
       allow update: if isAdmin();
       allow update: if isProductOwner()

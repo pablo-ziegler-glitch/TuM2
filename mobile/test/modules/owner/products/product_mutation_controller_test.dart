@@ -122,6 +122,14 @@ class _MutationFakeRepository implements ProductRepository {
   }
 
   @override
+  Future<List<MerchantProduct>> fetchOwnerProducts({
+    required String merchantId,
+    int limit = 120,
+  }) async {
+    return const [];
+  }
+
+  @override
   Future<MerchantProduct?> getProductById(String productId) async {
     return null;
   }

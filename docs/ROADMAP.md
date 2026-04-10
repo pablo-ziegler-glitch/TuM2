@@ -9,12 +9,14 @@
 
 ## NOW
 
-### Estado real de ejecución (2026-04-07)
+### Estado real de ejecución (2026-04-10)
 
 - ✅ Fundacional cerrado: 0001, 0003, 0004, 0005, 0006, 0007, 0010, 0014, 0019-0024, 0027, 0028, 0042-0048, 0052.
 - ✅ Discovery CUSTOMER en mobile avanzado: 0053, 0054, 0056, 0057, 0058, 0060, 0061.
 - ✅ Admin web adelantado: 0077 y 0122.
-- ⚠️ Núcleo OWNER aún pendiente para cierre MVP: 0064-0068 (0068 en ejecución).
+- ✅ TuM2-0123 cerrado (PR #58): capacidad de catálogo con límites por comercio/categoría y enforcement transaccional vía Cloud Functions.
+- ✅ TuM2-0124 cerrado (PR #59): mitigación de guardias con incidente, reasignación por candidatas y cierre por primera aceptación.
+- ⚠️ Núcleo OWNER aún pendiente para cierre MVP: 0064-0068 (0068 en refactor operativo).
 - ⚠️ Bloques de lanzamiento/QA/legal aún abiertos: 0082-0083-0087, 0089-0092, 0094-0099, 0100-0104.
 
 ### Fase 0 — Definición maestra

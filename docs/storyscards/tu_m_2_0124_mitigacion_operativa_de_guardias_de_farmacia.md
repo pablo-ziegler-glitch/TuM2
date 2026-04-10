@@ -1,5 +1,27 @@
 # TuM2-0124 — Mitigación operativa de guardias de farmacia
 
+Estado: DONE  
+PR: #59  
+Fecha de cierre: 2026-04-09
+
+## Resumen de implementación real (PR #59)
+
+- Flujo operativo end-to-end implementado en Cloud Functions y mobile OWNER:
+  - `reportPharmacyDutyIncident`
+  - `getEligibleReplacementCandidates`
+  - `createReassignmentRound`
+  - `respondToReassignmentRequest`
+  - `cancelReassignmentRound`
+- Nuevas colecciones en schema: `pharmacy_duty_incidents`, `pharmacy_duty_reassignment_rounds`, `pharmacy_duty_reassignment_requests`.
+- Estados de guardia y confianza pública integrados (`confidenceLevel`, `publicStatusLabel`) para degradar/recuperar visibilidad durante incidentes.
+- Jobs programados para mitigación operativa:
+  - recordatorios de confirmación de guardia,
+  - expiración incremental de solicitudes pendientes.
+- Optimización de costo aplicada desde diseño:
+  - candidatas filtradas por `zoneId` + farmacia activa + distancia,
+  - límite de candidatas por ronda configurable,
+  - scans de jobs con límite por ciclo (sin barridos globales por ejecución).
+
 ---
 
 ## 1. Objetivo
@@ -259,4 +281,3 @@ Se adopta Alternativa 3:
 - cancelación automática
 
 ---
-

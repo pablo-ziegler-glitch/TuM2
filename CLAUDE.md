@@ -85,6 +85,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0066]** Implementar carga de horarios ✅ | Mobile app — OWNER-06 implementado con UI Stitch completa, validaciones, excepciones/cierres, persistencia en subcolecciones, triggers backend de recompute, feature flag Remote Config y analytics de módulo |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
+| **[0123]** Enforce de capacidad de catálogo por comercio ✅ | Backend / Mobile / Admin Web — límites globales/categoría/override en `admin_configs/catalog_limits`, creación de productos vía callable con validación transaccional y hard-block por cupo, telemetría de warning/bloqueo y gestión admin de límites |
+| **[0124]** Mitigación operativa de guardias de farmacia ✅ | Backend / Mobile — confirmación preventiva, incidente operativo, candidatas por zona+distancia con límite, ronda de reasignación (primera aceptación gana), expiración automática de solicitudes y degradación pública por confianza |
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
 | **[0036]** Diseñar vista Abierto ahora ✅ | UX/UI — HOME-02 implementado: header con zona activa + indicador en vivo, filtro por categoría (6 rubros), lista de comercios con horario de cierre y action buttons, barra "Ver en el mapa" |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
@@ -270,6 +272,12 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - TUM-138 / Parent: TuM2-9004 / TUM-18
   - Dependencias: TuM2-0001, TuM2-0003, TuM2-0015, TuM2-0017, TuM2-0020
   - Fuente semilla: Google Places (controlada, con guardrails de costo y atribución)
+- [0123] **Aplicar límites de capacidad de catálogo por comercio/categoría** — P0 — `Backend, Mobile, Admin, Operaciones, MVP` ✅
+  - PR #58: callables con `enforceAppCheck`, límites globales/categoría/override y creación de producto transaccional con bloqueo por cuota.
+  - Costo: búsqueda admin acotada con `limit` (máx. 30) y capacidad owner con cache TTL en provider.
+- [0124] **Mitigar guardias de farmacia con reasignación operativa** — P0 — `Backend, Mobile, Operaciones, MVP` ✅
+  - PR #59: incidente → candidatas por `zoneId` + distancia + `limit` → ronda abierta con requests paralelos y cierre por primera aceptación.
+  - Costo: scans programados incrementales (`limit` fijo) para recordatorios/expiraciones, sin listeners globales.
 
 ---
 
@@ -293,9 +301,11 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0030 onboarding owner
 - TuM2-0031 / 0033 / 0035 / 0036 / 0037 / 0038 / 0039 / 0040 UX de núcleo
 - TuM2-0048 / 0049 / 0050 lógica pública y derivada
+- TuM2-0123 límites de capacidad de catálogo (owner/admin)
 - TuM2-0053 / 0054 shell + auth mobile
 - TuM2-0056 / 0058 / 0060 / 0061 descubrimiento y valor público
 - TuM2-0064 / 0065 / 0066 / 0067 / 0068 módulo owner
+- TuM2-0124 mitigación operativa de guardias (reasignación + confianza pública)
 - TuM2-0071 / 0072 / 0074 / 0075 web pública útil
 - TuM2-0082 / 0083 / 0087 analytics base
 - TuM2-0090 / 0091 / 0092 QA y seguridad operativa
@@ -339,7 +349,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0090, 0091, 0092
 - TuM2-0094, 0095, 0097
 - TuM2-0100, 0101, 0102, 0104
-- TuM2-0077 ✅, TuM2-0078, 0079, 0080, 0081, TuM2-0122 ✅
+- TuM2-0077 ✅, TuM2-0078, 0079, 0080, 0081, TuM2-0122 ✅, TuM2-0123 ✅, TuM2-0124 ✅
 
 ---
 
@@ -365,13 +375,13 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Producto y arquitectura:** TuM2-0001, 0003, 0004, 0006, 0007, 0015, 0016, 0017, 0019 a 0024, 0027, 0028, 0030, 0031, 0033, 0035, 0036, 0037, 0038, 0039, 0040
 
-**Backend:** TuM2-0042, 0043, 0044, 0045, 0046, 0048, 0049, 0050
+**Backend:** TuM2-0042, 0043, 0044, 0045, 0046, 0048, 0049, 0050, 0123 ✅, 0124 ✅
 
-**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068
+**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅
 
 **Web:** TuM2-0070, 0071, 0072, 0074, 0075
 
-**Admin / Web portal:** TuM2-0077 ✅, TuM2-0122 ✅, TuM2-0078, 0079, 0080, 0081
+**Admin / Web portal:** TuM2-0077 ✅, TuM2-0122 ✅, TuM2-0123 ✅, TuM2-0078, 0079, 0080, 0081
 
 **Analytics / QA / Seguridad:** TuM2-0082, 0083, 0087, 0089, 0090, 0091, 0092
 
@@ -412,3 +422,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - [0066] Implementadas excepciones por fecha y cierres temporales por rango con alta/edición/eliminación.
 - [0066] Integración Firestore sobre `schedule_config/weekly`, `schedule_exceptions` y `schedule_exceptions_ranges`, con reglas y triggers backend para recompute de proyección pública.
 - [0066] Integrado feature flag `owner_schedule_editor_enabled` vía Firebase Remote Config + eventos analytics `owner_schedule_*` para seguimiento de adopción y errores.
+- [0123] Límites de catálogo cerrados (PR #58, 2026-04-09): configuración global/categoría/override en `admin_configs/catalog_limits`, alta de producto vía callable transaccional y bloqueo duro por cupo.
+- [0123] UI OWNER/ADMIN integrada con capacidad (`used/limit/source`), eventos analytics de warning/bloqueo y controles de costo (`limit` en búsquedas admin + cache TTL de config).
+- [0124] Mitigación de guardias cerrada (PR #59, 2026-04-09): confirmación de guardia, reporte de incidente, selección de candidatas por zona/distancia y ronda de reasignación con primera aceptación ganadora.
+- [0124] Nuevas colecciones operativas (`pharmacy_duty_incidents`, `pharmacy_duty_reassignment_rounds`, `pharmacy_duty_reassignment_requests`) y jobs incrementales para recordatorios/expiraciones con límites de scan por ciclo.

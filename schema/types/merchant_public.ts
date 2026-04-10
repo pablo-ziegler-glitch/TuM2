@@ -1,5 +1,6 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { MerchantVerificationStatus, MerchantVisibilityStatus } from './merchant';
+import type { PharmacyDutyConfidenceLevel, PharmacyDutyPublicStatusLabel } from './pharmacy_duties';
 
 export type MerchantBadge =
   | 'verified'
@@ -42,6 +43,9 @@ export interface MerchantPublicDocument {
   isOpenNow: boolean | null;
   openStatusLabel: string;
   hasPharmacyDutyToday: boolean;
+  isOnDutyToday?: boolean;
+  publicStatusLabel?: PharmacyDutyPublicStatusLabel | null;
+  confidenceLevel?: PharmacyDutyConfidenceLevel | null;
   searchKeywords: string[];
   /** Numeric boost for ordering in search results */
   sortBoost: number;

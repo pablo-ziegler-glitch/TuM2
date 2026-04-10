@@ -41,6 +41,19 @@ abstract class AppRoutes {
   static const ownerSignals = '/owner/signals';
   static const ownerPharmacyDuties = '/owner/pharmacy-duties';
   static const ownerDuties = '/owner/duties';
+  static const ownerPharmacyDutyUpcoming = '/owner/pharmacy-duty/upcoming';
+  static const ownerPharmacyDutyIncidentReport =
+      '/owner/pharmacy-duty/:dutyId/report-incident';
+  static const ownerPharmacyDutySelectCandidates =
+      '/owner/pharmacy-duty/:dutyId/select-candidates';
+  static const ownerPharmacyDutyTracking =
+      '/owner/pharmacy-duty/:dutyId/tracking';
+  static const ownerPharmacyDutyCoverageInvitation =
+      '/owner/pharmacy-duty/invitation/:requestId';
+  static const ownerPharmacyDutyCoverageResult =
+      '/owner/pharmacy-duty/invitation-result';
+  static const ownerPharmacyDutyPublicStatus =
+      '/owner/pharmacy-duty/public-status';
 
   // ── AdminStack (modal full-screen) ──────────────────────────────────────────
   static const admin = '/admin';
@@ -69,6 +82,27 @@ abstract class AppRoutes {
 
   static String ownerProductsEditPath(String productId) =>
       '/owner/products/$productId/edit';
+
+  static String ownerPharmacyDutyIncidentReportPath(String dutyId) =>
+      '/owner/pharmacy-duty/$dutyId/report-incident';
+
+  static String ownerPharmacyDutySelectCandidatesPath(String dutyId) =>
+      '/owner/pharmacy-duty/$dutyId/select-candidates';
+
+  static String ownerPharmacyDutyTrackingPath(String dutyId) =>
+      '/owner/pharmacy-duty/$dutyId/tracking';
+
+  static String ownerPharmacyDutyCoverageInvitationPath(String requestId) =>
+      '/owner/pharmacy-duty/invitation/$requestId';
+
+  static String ownerPharmacyDutyCoverageResultPath({
+    required String status,
+    required String action,
+  }) =>
+      '/owner/pharmacy-duty/invitation-result?status=$status&action=$action';
+
+  static String ownerPharmacyDutyPublicStatusPath() =>
+      '/owner/pharmacy-duty/public-status';
 
   /// Construye la ruta concreta de detalle de una farmacia de turno.
   static String pharmacyDutyDetailPath(String id) => '/pharmacy/$id';

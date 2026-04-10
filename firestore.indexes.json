@@ -71,6 +71,72 @@
       ]
     },
     {
+      "collectionGroup": "pharmacy_duties",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" },
+        { "fieldPath": "confirmationStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pharmacy_duties",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "incidentOpen", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pharmacy_duty_reassignment_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "candidateMerchantId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pharmacy_duty_reassignment_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "roundId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pharmacy_duty_reassignment_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dutyId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pharmacy_duty_reassignment_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pharmacy_duty_reassignment_rounds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dutyId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "pharmacy_duty_reassignment_rounds",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "originMerchantId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "merchant_products",
       "queryScope": "COLLECTION",
       "fields": [

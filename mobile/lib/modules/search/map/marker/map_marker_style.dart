@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_brand.dart';
+import '../../../../core/theme/app_colors.dart';
 import 'map_marker_type.dart';
 import 'map_marker_visual_type.dart';
 
@@ -11,12 +11,12 @@ abstract class MapMarkerStyle {
   static const double selectedGuardiaSizeDp = 56;
   static const double selectedBorderWidthDp = 2;
 
-  static const Color guardiaColor = AppBrand.badgeGuard;
-  static const Color openColor = AppBrand.badgeOpen;
-  static const Color open24hColor = AppBrand.badge24h;
-  static const Color defaultColor = AppBrand.dark;
-  static const Color closedColor = AppBrand.badgeClosed;
-  static const Color onMarkerColor = AppBrand.onDark;
+  static const Color guardiaColor = AppColors.tertiary500;
+  static const Color openColor = AppColors.secondary500;
+  static const Color open24hColor = AppColors.primary500;
+  static const Color defaultColor = AppColors.neutral900;
+  static const Color closedColor = AppColors.neutral700;
+  static const Color onMarkerColor = AppColors.surface;
   static const Color selectedBorderColor = Colors.white;
 
   static double sizeForVisualType(MapMarkerVisualType visualType) {

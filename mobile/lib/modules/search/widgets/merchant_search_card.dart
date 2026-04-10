@@ -27,6 +27,7 @@ class MerchantSearchCard extends StatelessWidget {
     final hasTrustedVerification =
         _verificationRank(item.verificationStatus) >= 5;
     final imageUrl = _imageForCard(item: item, seed: imageSeed);
+    final address = item.address.trim();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -75,7 +76,9 @@ class MerchantSearchCard extends StatelessWidget {
                           left: 10,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.secondary500,
                               borderRadius: BorderRadius.circular(8),
@@ -132,7 +135,7 @@ class MerchantSearchCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (item.addressSummary.isNotEmpty) ...[
+                      if (address.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Row(
                           children: [
@@ -144,7 +147,7 @@ class MerchantSearchCard extends StatelessWidget {
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                item.addressSummary,
+                                address,
                                 style: AppTextStyles.bodySm.copyWith(
                                   color: AppColors.neutral700,
                                 ),
@@ -161,7 +164,9 @@ class MerchantSearchCard extends StatelessWidget {
                           if (distanceText != null)
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.secondary100,
                                 borderRadius: BorderRadius.circular(20),
@@ -245,8 +250,8 @@ class MerchantSearchCard extends StatelessWidget {
     return Icons.store_mall_directory_outlined;
   }
 
-  static String _distanceLabel(int meters) {
-    if (meters < 1000) return 'A ${meters}m';
+  static String _distanceLabel(double meters) {
+    if (meters < 1000) return 'A ${meters.round()}m';
     final km = meters / 1000.0;
     return 'A ${km.toStringAsFixed(1)}km';
   }
@@ -287,132 +292,6 @@ class _PrimaryActionButton extends StatelessWidget {
               ),
             ),
           ),
-    this.onTap,
-  });
-
-  final MerchantSearchItem item;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppColors.neutral100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child:
-                  Icon(Icons.storefront_outlined, color: AppColors.neutral500),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.name,
-                          style: AppTextStyles.labelMd,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _VerificationBadge(status: item.verificationStatus),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${item.categoryLabel.isEmpty ? item.categoryId : item.categoryLabel} · ${item.address}',
-                    style: AppTextStyles.bodyXs,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.circle,
-                        size: 8,
-                        color: item.isOpenNow == true
-                            ? AppColors.secondary500
-                            : AppColors.neutral400,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        item.isOpenNow == true
-                            ? 'Abierto ahora'
-                            : (item.openStatusLabel.isEmpty
-                                ? 'Sin horario'
-                                : item.openStatusLabel),
-                        style: AppTextStyles.bodyXs,
-                      ),
-                      const Spacer(),
-                      Text(_formatDistance(item.distanceMeters),
-                          style: AppTextStyles.bodyXs),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatDistance(double? meters) {
-    if (meters == null) return '--';
-    if (meters < 1000) return '${meters.round()} m';
-    return '${(meters / 1000).toStringAsFixed(1)} km';
-  }
-}
-
-class _VerificationBadge extends StatelessWidget {
-  const _VerificationBadge({required this.status});
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (status) {
-      'verified' || 'validated' => ('Verificado', Colors.green),
-      'claimed' => ('Reclamado', Colors.blue),
-      'referential' => ('Referencial', Colors.teal),
-      'community_submitted' => ('No verificado', Colors.amber.shade800),
-      _ => ('Pendiente', Colors.grey),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.bodyXs.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );

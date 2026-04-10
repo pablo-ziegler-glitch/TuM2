@@ -48,6 +48,18 @@ service cloud.firestore {
         );
     }
 
+    function isDutyPublicReadableStatus(status) {
+      return status in [
+        'scheduled',
+        'active',
+        'incident_reported',
+        'replacement_pending',
+        'reassigned',
+        // Compatibilidad legacy
+        'published'
+      ];
+    }
+
     // ─── users/{userId} ─────────────────────────────────────────────────────
     // Users can read/write their own document (except role field).
     // Admins can read all users.
@@ -133,7 +145,10 @@ service cloud.firestore {
           && !('verificationStatus' in changed)
           && !('visibilityStatus' in changed)
           && !('sourceType' in changed)
-          && !('createdAt' in changed);
+          && !('createdAt' in changed)
+          // Límites/counters del catálogo solo backend/admin.
+          && !('catalogLimits' in changed)
+          && !('catalogStats' in changed);
       }
 
       allow get, list: if isPublicMerchant() || isOwnerOfThisMerchant() || isAdmin();
@@ -349,6 +364,10 @@ service cloud.firestore {
           && !('sourceType' in changed)
           && !('createdAt' in changed)
           && !('createdBy' in changed)
+          // El status de ciclo de vida se controla por backend para mantener
+          // `catalogStats.activeProductCount` consistente y evitar bypass.
+          && !('status' in changed)
+          && request.resource.data.status == resource.data.status
           && request.resource.data.updatedAt is timestamp
           && request.resource.data.updatedBy == request.auth.uid
           && request.resource.data.stockStatus is string
@@ -378,8 +397,7 @@ service cloud.firestore {
       allow read: if isAdmin();
 
       allow create: if isAdmin();
-      allow create: if isOwnerRole()
-        && productCreatePayloadIsValid();
+      // OWNER crea vía callable backend (`createMerchantProduct`).
 
       allow update: if isAdmin();
       allow update: if isProductOwner()
@@ -389,11 +407,11 @@ service cloud.firestore {
     }
 
     // ─── pharmacy_duties/{dutyId} ────────────────────────────────────────────
-    // Public read of published duties.
-    // Escrituras sensibles solo por backend (Admin SDK) o admin.
+    // Lectura pública sólo en estados operativos no cancelados.
+    // Escrituras sensibles sólo por backend (Admin SDK) o admin.
 
     match /pharmacy_duties/{dutyId} {
-      allow read: if resource.data.status == 'published';
+      allow read: if isDutyPublicReadableStatus(resource.data.status);
       allow read: if isAuthenticated()
                      && merchantBelongsToUser(resource.data.merchantId);
       allow read: if isAdmin();
@@ -401,6 +419,39 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
+    }
+
+    // ─── pharmacy_duty_incidents/{incidentId} ───────────────────────────────
+    // Escritura sólo backend/admin. Lectura limitada a farmacia dueña del duty.
+
+    match /pharmacy_duty_incidents/{incidentId} {
+      allow read: if isAdmin();
+      allow read: if isOwnerRole()
+        && merchantBelongsToUser(resource.data.merchantId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ─── pharmacy_duty_reassignment_rounds/{roundId} ────────────────────────
+    // Escritura sólo backend/admin. Lectura owner origen o admin.
+
+    match /pharmacy_duty_reassignment_rounds/{roundId} {
+      allow read: if isAdmin();
+      allow read: if isOwnerRole()
+        && merchantBelongsToUser(resource.data.originMerchantId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ─── pharmacy_duty_reassignment_requests/{requestId} ────────────────────
+    // Escritura sólo backend/admin. Lectura owner origen/candidata o admin.
+
+    match /pharmacy_duty_reassignment_requests/{requestId} {
+      allow read: if isAdmin();
+      allow read: if isOwnerRole()
+        && (
+          merchantBelongsToUser(resource.data.originMerchantId)
+          || merchantBelongsToUser(resource.data.candidateMerchantId)
+        );
+      allow create, update, delete: if isAdmin();
     }
 
     // ─── external_places/{externalPlaceDocId} ────────────────────────────────

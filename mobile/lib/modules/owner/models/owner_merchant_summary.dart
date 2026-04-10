@@ -19,6 +19,8 @@ class OwnerMerchantSummary {
     required this.hasProducts,
     required this.hasSchedules,
     required this.hasOperationalSignals,
+    required this.catalogProductLimitOverride,
+    required this.activeProductCount,
     required this.updatedAt,
     required this.createdAt,
     required this.isDataComplete,
@@ -38,6 +40,8 @@ class OwnerMerchantSummary {
   final bool hasProducts;
   final bool hasSchedules;
   final bool hasOperationalSignals;
+  final int? catalogProductLimitOverride;
+  final int activeProductCount;
   final DateTime? updatedAt;
   final DateTime? createdAt;
   final bool isDataComplete;
@@ -79,6 +83,12 @@ class OwnerMerchantSummary {
             'unverified';
     final sourceType = (data['sourceType'] as String?)?.trim().toLowerCase() ??
         'owner_created';
+    final catalogLimits =
+        (data['catalogLimits'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
+    final catalogStats =
+        (data['catalogStats'] as Map?)?.cast<String, dynamic>() ??
+            const <String, dynamic>{};
 
     return OwnerMerchantSummary(
       id: id,
@@ -95,6 +105,11 @@ class OwnerMerchantSummary {
       hasProducts: data['hasProducts'] == true,
       hasSchedules: data['hasSchedules'] == true,
       hasOperationalSignals: data['hasOperationalSignals'] == true,
+      catalogProductLimitOverride:
+          _parsePositiveInt(catalogLimits['productLimitOverride']),
+      activeProductCount: _parseNonNegativeInt(
+        catalogStats['activeProductCount'],
+      ),
       updatedAt: _parseTimestamp(data['updatedAt']),
       createdAt: _parseTimestamp(data['createdAt']),
       isDataComplete: name.isNotEmpty,
@@ -105,6 +120,18 @@ class OwnerMerchantSummary {
     if (raw is Timestamp) return raw.toDate();
     if (raw is DateTime) return raw;
     return null;
+  }
+
+  static int? _parsePositiveInt(Object? raw) {
+    if (raw is int && raw > 0) return raw;
+    if (raw is num && raw > 0 && raw == raw.toInt()) return raw.toInt();
+    return null;
+  }
+
+  static int _parseNonNegativeInt(Object? raw) {
+    if (raw is int && raw >= 0) return raw;
+    if (raw is num && raw >= 0 && raw == raw.toInt()) return raw.toInt();
+    return 0;
   }
 }
 

@@ -30,6 +30,13 @@ import '../../modules/owner/screens/owner_products_screen.dart';
 import '../../modules/owner/screens/product_form_screen.dart';
 import '../../modules/owner/screens/product_saved_screen.dart';
 import '../../modules/owner/screens/owner_pharmacy_duties_screen.dart';
+import '../../modules/owner/pharmacy/presentation/upcoming_duty_confirmation_screen.dart';
+import '../../modules/owner/pharmacy/presentation/report_duty_incident_screen.dart';
+import '../../modules/owner/pharmacy/presentation/select_replacement_candidates_screen.dart';
+import '../../modules/owner/pharmacy/presentation/reassignment_tracking_screen.dart';
+import '../../modules/owner/pharmacy/presentation/coverage_invitation_screen.dart';
+import '../../modules/owner/pharmacy/presentation/coverage_response_result_screen.dart';
+import '../../modules/owner/pharmacy/presentation/public_duty_status_screen.dart';
 import '../../modules/admin/screens/admin_panel_placeholder_screen.dart';
 import '../../modules/merchant_detail/presentation/merchant_detail_page.dart';
 import '../../modules/merchant_detail/presentation/product_detail_page.dart';
@@ -357,6 +364,74 @@ List<RouteBase> _buildRoutes() {
       builder: (_, __) => const OwnerAccessGuardPage(
         title: 'Turnos de farmacia',
         child: OwnerPharmacyDutiesScreen(),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyUpcoming,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Confirmación de guardia',
+        child: UpcomingDutyConfirmationScreen(),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyIncidentReport,
+      builder: (_, state) {
+        final dutyId = state.pathParameters['dutyId']!;
+        return OwnerAccessGuardPage(
+          title: 'Reportar incidente',
+          child: ReportDutyIncidentScreen(dutyId: dutyId),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutySelectCandidates,
+      builder: (_, state) {
+        final dutyId = state.pathParameters['dutyId']!;
+        return OwnerAccessGuardPage(
+          title: 'Seleccionar candidatas',
+          child: SelectReplacementCandidatesScreen(dutyId: dutyId),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyTracking,
+      builder: (_, state) {
+        final dutyId = state.pathParameters['dutyId']!;
+        return OwnerAccessGuardPage(
+          title: 'Seguimiento',
+          child: ReassignmentTrackingScreen(dutyId: dutyId),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyCoverageInvitation,
+      builder: (_, state) {
+        final requestId = state.pathParameters['requestId']!;
+        return OwnerAccessGuardPage(
+          title: 'Invitación',
+          child: CoverageInvitationScreen(requestId: requestId),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyCoverageResult,
+      builder: (_, state) {
+        final status = state.uri.queryParameters['status'] ?? '';
+        final action = state.uri.queryParameters['action'] ?? '';
+        return OwnerAccessGuardPage(
+          title: 'Resultado',
+          child: CoverageResponseResultScreen(
+            status: status,
+            action: action,
+          ),
+        );
+      },
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyPublicStatus,
+      builder: (_, __) => const OwnerAccessGuardPage(
+        title: 'Estado público',
+        child: PublicDutyStatusScreen(),
       ),
     ),
 

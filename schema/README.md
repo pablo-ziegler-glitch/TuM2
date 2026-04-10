@@ -16,11 +16,14 @@ Schema base for the TuM2 MVP. All TypeScript types live in `schema/types/`.
 | `merchant_operational_signals` | `{merchantId}` | Real-time operational state |
 | `merchant_products` | `{productId}` | Products offered by a merchant |
 | `pharmacy_duties` | `{dutyId}` | Pharmacy on-duty (turno de guardia) schedule |
+| `pharmacy_duty_incidents` | `{incidentId}` | Incidentes operativos reportados sobre una guardia |
+| `pharmacy_duty_reassignment_rounds` | `{roundId}` | Ciclo de rondas de reasignación para mitigación de guardias |
+| `pharmacy_duty_reassignment_requests` | `{requestId}` | Invitaciones y respuestas de candidatas para cobertura |
 | `external_places` | `{externalPlaceDocId}` | Raw data from Google Places (admin only) |
 | `import_batches` | `{batchId}` | External import pipeline audit log |
 | `merchant_claims` | `{claimId}` | Ownership claim requests |
 | `reports` | `{reportId}` | User-submitted data quality reports |
-| `admin_configs` | `global` (singleton) | Feature flags and operational thresholds |
+| `admin_configs` | `global`, `catalog_limits`, `pharmacyDutyRules` | Feature flags y umbrales operativos |
 
 ---
 
@@ -34,6 +37,7 @@ Schema base for the TuM2 MVP. All TypeScript types live in `schema/types/`.
   - `verificationStatus` — trust level (see below)
 - **`sourceType`**: always present on entities that may originate from external or community sources.
 - **`normalizedName`**: lowercase, accent-stripped version of `name`, used for dedup and search.
+- **Disciplina de costo**: los listados/lecturas deben priorizar filtros con scope (`zoneId`, `visibilityStatus`, etc.), `limit` explícito y evitar listeners realtime amplios.
 
 ---
 
@@ -107,10 +111,25 @@ user submits → community_submitted + review_pending
 ### `pharmacy_duties`
 1. `zoneId ASC + date ASC + status ASC`
 2. `merchantId ASC + date ASC`
+3. `date ASC + confirmationStatus ASC`
+4. `incidentOpen ASC + date ASC`
+
+### `pharmacy_duty_reassignment_requests`
+1. `candidateMerchantId ASC + status ASC + expiresAt ASC`
+2. `roundId ASC + status ASC`
+3. `dutyId ASC + status ASC`
+4. `status ASC + expiresAt ASC`
+
+### `pharmacy_duty_reassignment_rounds`
+1. `dutyId ASC + status ASC`
+2. `originMerchantId ASC + status ASC + createdAt ASC`
 
 ### `merchant_products`
 1. `merchantId ASC + visibilityStatus ASC`
 2. `merchantId ASC + status ASC`
+3. `merchantId ASC + status ASC + visibilityStatus ASC`
+4. `merchantId ASC + updatedAt DESC`
+5. `merchantId ASC + stockStatus ASC + visibilityStatus ASC`
 
 ### `external_places`
 1. `zoneId ASC + importStatus ASC`
@@ -146,6 +165,9 @@ Build these first:
 Second phase:
 
 - `merchant_products`
+- `pharmacy_duty_incidents`
+- `pharmacy_duty_reassignment_rounds`
+- `pharmacy_duty_reassignment_requests`
 - `merchant_claims`
 - `reports`
 - `import_batches`
@@ -165,8 +187,11 @@ Second phase:
 | `merchant_operational_signals` | ✓ | own merchant | ✓ |
 | `merchant_products` | visible only | own merchant | ✓ |
 | `pharmacy_duties` | published only | read own + mutate vía callable | ✓ |
+| `pharmacy_duty_incidents` | — | mutate vía callable | ✓ |
+| `pharmacy_duty_reassignment_rounds` | — | mutate vía callable | ✓ |
+| `pharmacy_duty_reassignment_requests` | candidate/origin own only | responder vía callable | ✓ |
 | `external_places` | — | — | ✓ |
 | `import_batches` | — | — | ✓ |
 | `merchant_claims` | own only | create own | ✓ |
 | `reports` | — | create own | ✓ |
-| `admin_configs` | — | — | read (super: write) |
+| `admin_configs` | — | — | read (admin/super), write vía callable/admin tools |

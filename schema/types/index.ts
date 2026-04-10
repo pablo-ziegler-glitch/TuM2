@@ -20,6 +20,8 @@ export type {
   MerchantSourceType,
   MerchantLocation,
   MerchantContact,
+  MerchantCatalogLimits,
+  MerchantCatalogStats,
   ConfidenceLevel,
   OwnerDisplay,
 } from './merchant';
@@ -61,9 +63,27 @@ export type {
 // ── Pharmacy duties ──────────────────────────────────────────────────────────
 export type {
   PharmacyDutyDocument,
+  PharmacyDutyConfirmationStatus,
+  PharmacyDutySourceType,
+  PharmacyDutyConfidenceLevel,
+  PharmacyDutyPublicStatusLabel,
   PharmacyDutyStatus,
   PharmacyDutyVerificationStatus,
 } from './pharmacy_duties';
+export type {
+  PharmacyDutyIncidentDocument,
+  PharmacyDutyIncidentType,
+  PharmacyDutyIncidentStatus,
+} from './pharmacy_duty_incidents';
+export type {
+  PharmacyDutyReassignmentRoundDocument,
+  PharmacyDutyReassignmentRoundStatus,
+} from './pharmacy_duty_reassignment_rounds';
+export type {
+  PharmacyDutyReassignmentRequestDocument,
+  PharmacyDutyReassignmentRequestStatus,
+  PharmacyDutyReassignmentResponseReason,
+} from './pharmacy_duty_reassignment_requests';
 
 // ── External places ──────────────────────────────────────────────────────────
 export type {
@@ -151,6 +171,7 @@ export type {
 // ── Admin configs ────────────────────────────────────────────────────────────
 export type {
   AdminConfigGlobal,
+  CatalogLimitsConfig,
   ZonePublicationRules,
   BootstrapRules,
   FeatureFlags,

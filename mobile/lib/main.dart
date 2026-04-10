@@ -1,7 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/firebase/app_environment.dart';
 import 'core/firebase/firebase_options.dart';
 import 'core/router/app_router.dart';
 import 'core/router/deep_link_listener.dart';
@@ -9,10 +11,22 @@ import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final environment = AppEnvironmentConfig.current;
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
+
+  assert(() {
+    debugPrint(
+      'TuM2 boot ENV=${environment.name} project=${AppEnvironmentConfig.firebaseProjectId}',
+    );
+    return true;
+  }());
 
   runApp(
     const ProviderScope(

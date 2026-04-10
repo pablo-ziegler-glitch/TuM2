@@ -5,15 +5,18 @@ import 'package:tum2/modules/pharmacy/models/pharmacy_zone.dart';
 import 'package:tum2/modules/pharmacy/providers/pharmacy_duty_notifier.dart';
 import 'package:tum2/modules/pharmacy/repositories/pharmacy_duty_repository.dart';
 import 'package:tum2/modules/pharmacy/repositories/zones_repository.dart';
+import 'package:tum2/modules/pharmacy/services/business_date.dart';
 import 'package:tum2/modules/pharmacy/services/geo_location_service.dart';
 
 void main() {
+  final todayKey = businessDateKey(businessTodayUtcMinus3());
+
   group('PharmacyDutyNotifier', () {
     test('ordena por distancia cuando hay ubicación', () async {
       final notifier = PharmacyDutyNotifier(
         dutyRepository: _FakeDutySource(
           itemsByDate: {
-            '2026-04-07': [
+            todayKey: [
               const PharmacyDutyItem(
                 dutyId: '1',
                 merchantId: 'm-1',
@@ -63,7 +66,7 @@ void main() {
     test('si falla red y hay cache previa usa cache', () async {
       final dutySource = _FakeDutySource(
         itemsByDate: {
-          '2026-04-07': [
+          todayKey: [
             const PharmacyDutyItem(
               dutyId: '1',
               merchantId: 'm-1',
@@ -109,7 +112,7 @@ void main() {
         final notifier = PharmacyDutyNotifier(
           dutyRepository: _FakeDutySource(
             itemsByDate: {
-              '2026-04-07': const [],
+              todayKey: const [],
             },
           ),
           zonesRepository: zonesSource,

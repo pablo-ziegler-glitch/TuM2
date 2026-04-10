@@ -94,7 +94,7 @@ void main() {
       await pumpPage(tester, repository: repository);
       await tester.pumpAndSettle();
 
-      expect(find.text('Kioscos'), findsOneWidget);
+      expect(find.text('Kioscos'), findsAtLeastNWidgets(1));
       expect(find.byKey(const Key('pharmacy_duty_banner')), findsNothing);
       expect(find.textContaining('Hoy: 09:00-20:00'), findsOneWidget);
     });

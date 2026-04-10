@@ -160,9 +160,9 @@ class FakeMerchantDetailActions implements MerchantDetailActions {
   @override
   Future<bool> openDirections({
     required String address,
-    required double? lat,
-    required double? lng,
-    required String? mapsUrl,
+    double? lat,
+    double? lng,
+    String? mapsUrl,
   }) async {
     directionsCount += 1;
     return directionsResult;

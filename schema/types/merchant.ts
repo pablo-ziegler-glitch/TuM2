@@ -61,6 +61,19 @@ export interface MerchantContact {
   website: string | null;
 }
 
+export interface MerchantCatalogLimits {
+  /** Override individual del comercio. Si es null, hereda categoría/global. */
+  productLimitOverride?: number | null;
+  updatedAt?: Timestamp | null;
+  updatedBy?: string | null;
+}
+
+export interface MerchantCatalogStats {
+  /** Contador persistido de productos activos (status=active). */
+  activeProductCount?: number;
+  updatedAt?: Timestamp | null;
+}
+
 /**
  * Snapshot público del dueño, denormalizado en el documento del comercio.
  * Se actualiza cuando se aprueba un merchant_claim.
@@ -129,6 +142,8 @@ export interface MerchantDocument {
   hasOperationalSignals?: boolean;
   hasPharmacyDuty?: boolean;
   catalogEnabled?: boolean;
+  catalogLimits?: MerchantCatalogLimits;
+  catalogStats?: MerchantCatalogStats;
   chatEnabled?: boolean;
   communityEditable?: boolean;
   favoritesCount?: number;

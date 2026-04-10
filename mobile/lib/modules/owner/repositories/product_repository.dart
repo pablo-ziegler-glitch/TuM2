@@ -157,3 +157,11 @@ class ProductImageUploadException extends ProductRepositoryException {
     super.cause,
   }) : super(code: 'product-image-upload-failed');
 }
+
+class ProductLimitReachedException extends ProductRepositoryException {
+  const ProductLimitReachedException({
+    super.message =
+        'Alcanzaste el límite de productos de tu catálogo. Contactá a administración para ampliar el cupo.',
+    super.cause,
+  }) : super(code: 'product-limit-reached');
+}

@@ -41,18 +41,79 @@ mobile/
 - `geolocator`
 - `geoflutterfire_plus` o equivalente (queries por cercanía)
 
-## Configuración segura de Firebase (API Keys)
+## Flavors y entorno Firebase
 
-Las API keys de Firebase no deben quedar hardcodeadas en el repositorio.
-Este proyecto las toma por `--dart-define` en tiempo de build.
+Entornos soportados:
+- `staging` (`tum2-staging-45c83`)
+- `prod` (`tum2-prod-bc9b4`)
 
-Ejemplo para correr local:
+Android package IDs:
+- staging: `com.floki.tum2.staging`
+- prod: `com.floki.tum2`
+
+El runtime Firebase se selecciona con:
+- `--dart-define=ENV=staging`
+- `--dart-define=ENV=prod`
+
+### Ejecutar app mobile
 
 ```bash
-flutter run \
-  --dart-define=FIREBASE_WEB_API_KEY=tu_web_key \
-  --dart-define=FIREBASE_ANDROID_API_KEY=tu_android_key \
-  --dart-define=FIREBASE_IOS_API_KEY=tu_ios_key
+# Android staging
+flutter run --flavor staging -t lib/main.dart --dart-define=ENV=staging
+
+# Android prod
+flutter run --flavor prod -t lib/main.dart --dart-define=ENV=prod
 ```
 
-Para CI/CD, cargá esos valores como secretos del pipeline y pasalos también por `--dart-define`.
+### Build web (customer app desde /mobile)
+
+```bash
+# Staging
+flutter build web --release -t lib/main.dart \
+  --dart-define=ENV=staging \
+  --dart-define=FIREBASE_WEB_API_KEY=__STAGING_WEB_API_KEY__
+
+# Prod
+flutter build web --release -t lib/main.dart \
+  --dart-define=ENV=prod \
+  --dart-define=FIREBASE_WEB_API_KEY=__PROD_WEB_API_KEY__
+```
+
+## FlutterFire CLI (sin mezclar entornos)
+
+```bash
+cd mobile
+
+# Staging
+~/.pub-cache/bin/flutterfire configure \
+  --yes \
+  --project=tum2-staging-45c83 \
+  --platforms=android,ios,web \
+  --android-package-name=com.floki.tum2.staging \
+  --ios-bundle-id=com.floki.tum2.staging \
+  --web-app-id=1:227534906025:web:41ca1f2d60d73c58b03fb8 \
+  --out=lib/core/firebase/firebase_options_staging.dart \
+  --android-out=android/app/src/staging/google-services.json \
+  --ios-out=/tmp/GoogleService-Info-staging.plist
+
+# Prod
+~/.pub-cache/bin/flutterfire configure \
+  --yes \
+  --project=tum2-prod-bc9b4 \
+  --platforms=android,ios,web \
+  --android-package-name=com.floki.tum2 \
+  --ios-bundle-id=com.floki.tum2 \
+  --web-app-id=1:57567901381:web:dadc4aec40273a4e6662ac \
+  --out=lib/core/firebase/firebase_options_prod.dart \
+  --android-out=android/app/src/prod/google-services.json \
+  --ios-out=/tmp/GoogleService-Info-prod.plist
+```
+
+## iOS (estado actual y soporte de esquemas)
+
+Actualmente este repo no incluye `mobile/ios`.  
+Cuando se regenere iOS (`flutter create . --platforms=ios`), crear esquemas:
+- `staging` con bundle id `com.floki.tum2.staging`
+- `prod` con bundle id `com.floki.tum2`
+
+Y mapear sus `GoogleService-Info.plist` por esquema/build configuration.

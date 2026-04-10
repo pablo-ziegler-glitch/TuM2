@@ -157,6 +157,13 @@ export interface MerchantPublicDoc {
   isOpenNow?: boolean;
   todayScheduleLabel?: string;
   hasPharmacyDutyToday?: boolean;
+  isOnDutyToday?: boolean;
+  confidenceLevel?: "high" | "medium" | "low" | null;
+  publicStatusLabel?:
+    | "guardia_confirmada"
+    | "guardia_en_verificacion"
+    | "cambio_operativo_en_curso"
+    | null;
   operationalSignals?: OperationalSignals;
   sortBoost: number;
   searchKeywords?: string[];

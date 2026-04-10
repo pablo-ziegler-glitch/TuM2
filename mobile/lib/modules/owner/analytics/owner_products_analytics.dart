@@ -115,6 +115,66 @@ abstract class OwnerProductsAnalytics {
         },
       );
 
+  static Future<void> logCatalogLimitWarningSeen({
+    required String merchantId,
+    required int used,
+    required int limit,
+    required String source,
+  }) =>
+      _safeLog(
+        'owner_catalog_limit_warning_seen',
+        parameters: {
+          'merchant_id': merchantId,
+          'used': used,
+          'limit': limit,
+          'source': source,
+        },
+      );
+
+  static Future<void> logCatalogLimitBlockSeen({
+    required String merchantId,
+    required int used,
+    required int limit,
+    required String source,
+  }) =>
+      _safeLog(
+        'owner_catalog_limit_block_seen',
+        parameters: {
+          'merchant_id': merchantId,
+          'used': used,
+          'limit': limit,
+          'source': source,
+        },
+      );
+
+  static Future<void> logCatalogContactAdmin({
+    required String merchantId,
+    required String source,
+  }) =>
+      _safeLog(
+        'owner_contact_admin_from_catalog_limit',
+        parameters: {
+          'merchant_id': merchantId,
+          'source': source,
+        },
+      );
+
+  static Future<void> logProductCreateBlockedByLimit({
+    required String merchantId,
+    required int used,
+    required int limit,
+    required String source,
+  }) =>
+      _safeLog(
+        'owner_product_create_blocked_by_limit',
+        parameters: {
+          'merchant_id': merchantId,
+          'used': used,
+          'limit': limit,
+          'source': source,
+        },
+      );
+
   static Map<String, Object> _baseParams({
     required String merchantId,
     required String productId,

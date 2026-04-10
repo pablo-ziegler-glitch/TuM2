@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../analytics/auth_analytics.dart';
+import '../firebase/app_environment.dart';
 import '../router/pending_route_provider.dart';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -13,7 +14,6 @@ import '../router/pending_route_provider.dart';
 const _kOnboardingSeenKey = 'onboarding_seen';
 const _kPendingEmailLinkKey = 'pending_email_link';
 const _kOnboardingOwnerDraftKey = 'onboarding_owner_draft';
-const _kAndroidApplicationId = 'com.floki.tum2.tum2';
 
 /// URL base para magic links. En producción apunta al dominio real.
 /// En desarrollo se puede usar el emulador de Auth.
@@ -235,10 +235,10 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
       final settings = ActionCodeSettings(
         url: _resolveMagicLinkUrl(),
         handleCodeInApp: true,
-        androidPackageName: _kAndroidApplicationId,
+        androidPackageName: AppEnvironmentConfig.androidApplicationId,
         androidInstallApp: true,
         androidMinimumVersion: '21',
-        iOSBundleId: 'com.tum2.app',
+        iOSBundleId: AppEnvironmentConfig.iosBundleId,
       );
 
       await authClient.sendSignInLinkToEmail(

@@ -1,7 +1,21 @@
 import type { Timestamp } from 'firebase/firestore';
-import type { ConfidenceLevel } from './merchant';
 
-export type PharmacyDutyStatus = 'draft' | 'published' | 'cancelled';
+export type PharmacyDutyStatus =
+  | 'draft'
+  | 'published'
+  | 'scheduled'
+  | 'active'
+  | 'incident_reported'
+  | 'replacement_pending'
+  | 'reassigned'
+  | 'cancelled';
+
+export type PharmacyDutyConfirmationStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'overdue'
+  | 'incident_reported'
+  | 'replaced';
 
 export type PharmacyDutyVerificationStatus =
   | 'referential'
@@ -11,7 +25,15 @@ export type PharmacyDutyVerificationStatus =
 export type PharmacyDutySourceType =
   | 'owner_created'
   | 'admin_created'
-  | 'external_seed';
+  | 'external_seed'
+  | 'system_reassigned';
+
+export type PharmacyDutyConfidenceLevel = 'high' | 'medium' | 'low';
+
+export type PharmacyDutyPublicStatusLabel =
+  | 'guardia_confirmada'
+  | 'guardia_en_verificacion'
+  | 'cambio_operativo_en_curso';
 
 /**
  * Collection: pharmacy_duties/{dutyId}
@@ -28,19 +50,30 @@ export type PharmacyDutySourceType =
 export interface PharmacyDutyDocument {
   // Obligatorios
   merchantId: string;
+  originMerchantId?: string;
   zoneId: string;
   /** ISO date string: YYYY-MM-DD */
   date: string;
-  startsAt: Timestamp;
-  endsAt: Timestamp;
+  startsAt: Timestamp | string;
+  endsAt: Timestamp | string;
   status: PharmacyDutyStatus;
+  confirmationStatus: PharmacyDutyConfirmationStatus;
   sourceType: PharmacyDutySourceType;
+  verificationStatus: PharmacyDutyVerificationStatus;
   createdBy: string;
   updatedBy: string;
-  verificationStatus?: PharmacyDutyVerificationStatus;
-  /** Score de confianza 0–100. Escrito solo por Cloud Functions. */
-  confidenceScore?: number;
-  confidenceLevel?: ConfidenceLevel;
+  confidenceLevel?: PharmacyDutyConfidenceLevel;
+  publicStatusLabel?: PharmacyDutyPublicStatusLabel;
+  incidentOpen?: boolean;
+  incidentId?: string;
+  replacementRoundOpen?: boolean;
+  replacementMerchantId?: string;
+  replacementAcceptedAt?: Timestamp;
+  confirmedAt?: Timestamp;
+  confirmedByUserId?: string;
+  lastStatusChangedAt?: Timestamp;
+  confirmationReminderLastSentAt?: Timestamp;
+  confirmationReminderCount?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 

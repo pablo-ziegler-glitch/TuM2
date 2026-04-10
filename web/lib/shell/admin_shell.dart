@@ -41,7 +41,7 @@ class _AdminSidebar extends StatelessWidget {
         icon: Icons.grid_view_outlined, label: 'Dashboard', path: '/dashboard'),
     _NavItem(
         icon: Icons.storefront_outlined,
-        label: 'Businesses',
+        label: 'Catalog Limits',
         path: '/businesses'),
     _NavItem(
         icon: Icons.storage_outlined,

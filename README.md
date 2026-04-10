@@ -18,7 +18,7 @@ TuM2/
 │   ├── NAVIGATION.md        — Arquitectura de navegación React Navigation
 │   └── QUERY-ARCHITECTURE.md — Patrones de queries Firestore por pantalla
 ├── schema/                  — Tipos TypeScript compartidos (modelo de datos)
-│   └── types/               — 14 archivos de tipos para todas las colecciones
+│   └── types/               — Tipos canónicos de colecciones y contratos operativos
 ├── functions/               — Firebase Cloud Functions (Node 20 + TypeScript)
 │   └── src/
 │       ├── triggers/        — Triggers de Firestore (sync, derivados)
@@ -39,9 +39,9 @@ TuM2/
 
 | Ambiente | Firebase Project | Uso |
 |----------|-----------------|-----|
-| dev | tum2-dev | Desarrollo local con emuladores |
-| staging | tum2-staging | QA y validación |
-| prod | tum2-prod | Producción |
+| dev | tum2-dev-6283d | Desarrollo local con emuladores |
+| staging | tum2-staging-45c83 | QA y validación |
+| prod | tum2-prod-bc9b4 | Producción |
 
 ```bash
 # Cambiar de ambiente
@@ -113,6 +113,8 @@ Opcional para emuladores locales:
 | [QUERY-ARCHITECTURE.md](docs/QUERY-ARCHITECTURE.md) | Patrones de queries Firestore por pantalla |
 | [TuM2-0014-MICROCOPY.md](docs/TuM2-0014-MICROCOPY.md) | Guía de tono y microcopy para el MVP Fase 3 |
 | [PROD-LAUNCH-CRITICAL.md](docs/ops/PROD-LAUNCH-CRITICAL.md) | Runbook crítico para lanzamiento a producción |
+| [TuM2-0123-limites-capacidad-catalogo.md](docs/storyscards/TuM2-0123-limites-capacidad-catalogo.md) | Historia TuM2-0123: enforcement de capacidad de catálogo (CF + OWNER + Admin Web) |
+| [tu_m_2_0124_mitigacion_operativa_de_guardias_de_farmacia.md](docs/storyscards/tu_m_2_0124_mitigacion_operativa_de_guardias_de_farmacia.md) | Historia TuM2-0124: mitigación de guardias y reasignación operativa |
 | [schema/README.md](schema/README.md) | Modelo de datos, colecciones, índices |
 | [CLAUDE.md](CLAUDE.md) | Backlog maestro y estado del proyecto |
 

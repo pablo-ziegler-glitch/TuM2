@@ -1,6 +1,8 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue, WriteBatch } from "firebase-admin/firestore";
 import { todayDateString } from "../lib/schedules";
+import { DutyStatus, normalizeDutyStatus } from "../lib/pharmacyDutyMitigation";
+import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
@@ -8,7 +10,7 @@ const BATCH_SIZE = 500;
 interface PharmacyDutyDoc {
   merchantId: string;
   date: string;
-  status: "draft" | "published" | "cancelled";
+  status: DutyStatus | string;
 }
 
 /**
@@ -24,6 +26,9 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {
+    if (!shouldRunAutomaticFirestoreJob("nightlyRefreshPharmacyDutyFlags")) {
+      return;
+    }
     const today = todayDateString();
     console.log(`[nightlyRefreshPharmacyDutyFlags] Starting for date=${today}`);
 
@@ -37,18 +42,18 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
       currentFlagByMerchantId.set(doc.id, true);
     }
 
-    // Get today's published duties
+    // Get today's duties (filtrado de estado se hace en memoria para evitar índices extra).
     const dutiesSnap = await db()
       .collection("pharmacy_duties")
       .where("date", "==", today)
-      .where("status", "==", "published")
       .get();
 
     const todayMerchantIds = new Set<string>();
 
     for (const dutyDoc of dutiesSnap.docs) {
       const duty = dutyDoc.data() as PharmacyDutyDoc;
-      if (duty.merchantId) {
+      const status = normalizeDutyStatus(duty.status);
+      if (duty.merchantId && status !== "cancelled") {
         todayMerchantIds.add(duty.merchantId);
       }
     }

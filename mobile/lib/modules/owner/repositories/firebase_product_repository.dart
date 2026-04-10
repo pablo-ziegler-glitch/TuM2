@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 
 import '../models/merchant_product.dart';
@@ -8,16 +9,20 @@ class FirebaseProductRepository implements ProductRepository {
   FirebaseProductRepository({
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
+    FirebaseFunctions? functions,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _storage = storage ?? FirebaseStorage.instance;
+        _storage = storage ?? FirebaseStorage.instance,
+        _functions = functions ?? FirebaseFunctions.instance;
 
   static const String _productsCollection = 'merchant_products';
   static const int _maxImageBytes = 5 * 1024 * 1024;
   static const int _maxPublicProductsLimit = 60;
   static const int _maxOwnerProductsLimit = 180;
+  static const Duration _callableTimeout = Duration(seconds: 10);
 
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
+  final FirebaseFunctions _functions;
 
   @override
   Stream<List<MerchantProduct>> watchOwnerProducts({
@@ -125,8 +130,7 @@ class FirebaseProductRepository implements ProductRepository {
 
     _validateInput(input);
 
-    final productRef = _firestore.collection(_productsCollection).doc();
-    final productId = productRef.id;
+    final productId = _firestore.collection(_productsCollection).doc().id;
     ProductImageUploadResult? imageResult;
 
     try {
@@ -138,31 +142,22 @@ class FirebaseProductRepository implements ProductRepository {
         );
       }
 
-      final normalizedName = normalizeProductName(input.name);
-      final payload = <String, dynamic>{
-        'id': productId,
-        'merchantId': normalizedMerchantId,
-        'ownerUserId': normalizedOwnerUserId,
-        'name': normalizeProductField(input.name),
-        'normalizedName': normalizedName,
-        'searchKeywords': buildProductSearchKeywords(input.name),
-        'priceLabel': normalizeProductField(input.priceLabel),
-        'stockStatus': input.stockStatus.value,
-        'visibilityStatus': input.visibilityStatus.value,
-        'status': input.status.value,
-        'sourceType': 'owner_created',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'createdBy': normalizedActorUserId,
-        'updatedBy': normalizedActorUserId,
-        if (imageResult != null) 'imageUrl': imageResult.downloadUrl,
-        if (imageResult != null) 'imagePath': imageResult.storagePath,
-        if (imageResult != null)
-          'imageUploadStatus': ProductImageUploadStatus.ready.value,
-      };
-
-      await productRef.set(payload);
-      return productId;
+      final createdProductId = await _callCreateProductCallable(
+        merchantId: normalizedMerchantId,
+        productId: productId,
+        name: normalizeProductField(input.name),
+        priceLabel: normalizeProductField(input.priceLabel),
+        stockStatus: input.stockStatus,
+        visibilityStatus: input.visibilityStatus,
+        status: input.status,
+        imageResult: imageResult,
+      );
+      return createdProductId;
+    } on FirebaseFunctionsException catch (error) {
+      if (imageResult != null) {
+        await _safeDeleteStorageObject(imageResult.storagePath);
+      }
+      throw _mapFunctionsException(error);
     } on FirebaseException catch (error) {
       if (imageResult != null) {
         await _safeDeleteStorageObject(imageResult.storagePath);
@@ -255,11 +250,12 @@ class FirebaseProductRepository implements ProductRepository {
     _assertActorMatchesProductOwner(product: product, actorUserId: actorUserId);
 
     try {
-      await _firestore.collection(_productsCollection).doc(product.id).update({
-        'status': ProductStatus.inactive.value,
-        'updatedAt': FieldValue.serverTimestamp(),
-        'updatedBy': normalizeProductField(actorUserId),
-      });
+      await _callDeactivateProductCallable(
+        merchantId: product.merchantId,
+        productId: product.id,
+      );
+    } on FirebaseFunctionsException catch (error) {
+      throw _mapFunctionsException(error);
     } on FirebaseException catch (error) {
       throw _mapFirebaseException(error);
     } catch (error) {
@@ -474,6 +470,88 @@ class FirebaseProductRepository implements ProductRepository {
       case 'unknown':
       default:
         return ProductImageUploadException(cause: error);
+    }
+  }
+
+  Future<String> _callCreateProductCallable({
+    required String merchantId,
+    required String productId,
+    required String name,
+    required String priceLabel,
+    required ProductStockStatus stockStatus,
+    required ProductVisibilityStatus visibilityStatus,
+    required ProductStatus status,
+    required ProductImageUploadResult? imageResult,
+  }) async {
+    final callable = _functions.httpsCallable('createMerchantProduct');
+    final response = await callable.call(<String, dynamic>{
+      'merchantId': merchantId,
+      'productId': productId,
+      'name': name,
+      'priceLabel': priceLabel,
+      'stockStatus': stockStatus.value,
+      'visibilityStatus': visibilityStatus.value,
+      'status': status.value,
+      if (imageResult != null) 'imageUrl': imageResult.downloadUrl,
+      if (imageResult != null) 'imagePath': imageResult.storagePath,
+      if (imageResult != null)
+        'imageUploadStatus': ProductImageUploadStatus.ready.value,
+    }).timeout(_callableTimeout);
+
+    final data = (response.data as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final createdProductId =
+        normalizeProductField((data['productId'] as String?) ?? productId);
+    if (createdProductId.isEmpty) {
+      throw const ProductRepositoryException(
+        code: 'product-create-failed',
+        message: 'No pudimos crear el producto.',
+      );
+    }
+    return createdProductId;
+  }
+
+  Future<void> _callDeactivateProductCallable({
+    required String merchantId,
+    required String productId,
+  }) async {
+    final callable = _functions.httpsCallable('deactivateMerchantProduct');
+    await callable.call(<String, dynamic>{
+      'merchantId': normalizeProductField(merchantId),
+      'productId': normalizeProductField(productId),
+    }).timeout(_callableTimeout);
+  }
+
+  ProductRepositoryException _mapFunctionsException(
+    FirebaseFunctionsException error,
+  ) {
+    final details = (error.details is Map)
+        ? (error.details as Map).cast<String, dynamic>()
+        : const <String, dynamic>{};
+    final detailCode = (details['code'] as String?)?.trim();
+    if (detailCode == 'catalog_limit_reached' ||
+        error.code == 'failed-precondition') {
+      return ProductLimitReachedException(
+        message: error.message ??
+            'Alcanzaste el límite de productos de tu catálogo. Contactá a administración para ampliar el cupo.',
+        cause: error,
+      );
+    }
+
+    switch (error.code) {
+      case 'permission-denied':
+        return ProductUnauthorizedException(cause: error);
+      case 'unauthenticated':
+        return ProductSessionExpiredException(cause: error);
+      case 'not-found':
+        return ProductNotFoundException(cause: error);
+      default:
+        return ProductRepositoryException(
+          code: 'product-functions-error',
+          message: error.message ??
+              'No pudimos guardar el producto. Revisá tu conexión y reintentá.',
+          cause: error,
+        );
     }
   }
 }

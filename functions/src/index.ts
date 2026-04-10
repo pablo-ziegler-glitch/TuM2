@@ -44,11 +44,31 @@ export { checkMerchantDuplicates } from "./callables/checkMerchantDuplicates";
 export {
   upsertPharmacyDuty,
   changePharmacyDutyStatus,
+  confirmPharmacyDuty,
+  reportPharmacyDutyIncident,
+  getEligibleReplacementCandidates,
+  createReassignmentRound,
+  respondToReassignmentRequest,
+  cancelReassignmentRound,
 } from "./callables/pharmacyDuties";
+export {
+  setGlobalCatalogProductLimit,
+  setCategoryCatalogProductLimit,
+  clearCategoryCatalogProductLimit,
+  setMerchantCatalogLimitOverride,
+  clearMerchantCatalogLimitOverride,
+  searchCatalogLimitMerchants,
+  createMerchantProduct,
+  deactivateMerchantProduct,
+} from "./callables/catalogLimits";
 
 // ─── Onboarding Scheduled Jobs ─────────────────────────────────────────────
 
 export { nightlyCleanupExpiredDrafts } from "./jobs/cleanupExpiredDrafts";
+export {
+  sendDutyConfirmationReminders,
+  expirePendingReassignmentRequests,
+} from "./jobs/pharmacyDutyMitigation";
 
 // ─── Admin Callables ───────────────────────────────────────────────────────
 

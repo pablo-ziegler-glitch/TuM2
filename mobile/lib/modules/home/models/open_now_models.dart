@@ -16,10 +16,16 @@ class OpenNowZone {
   factory OpenNowZone.fromFirestore(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) {
-    final data = doc.data();
+    return OpenNowZone.fromMap(doc.id, doc.data());
+  }
+
+  factory OpenNowZone.fromMap(
+    String zoneId,
+    Map<String, dynamic> data,
+  ) {
     return OpenNowZone(
-      zoneId: doc.id,
-      name: _readText(data, const ['name', 'nombre']) ?? doc.id,
+      zoneId: zoneId,
+      name: _readText(data, const ['name', 'nombre']) ?? zoneId,
       cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
       priorityLevel: _readPriority(data),
     );

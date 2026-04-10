@@ -49,6 +49,68 @@ npm run cost:guard -- \
 - `3`: se superó warning y se pasó `--fail-on-warn`.
 - `1`: error de ejecución/configuración.
 
+## `finops_summary.js`
+
+Consolida resultados generados por `firestore_cost_guard.js` en una vista
+operativa simple por ambiente.
+
+Entrada esperada:
+
+- `docs/ops/generated/cost-guard-*.json`
+
+### Ejecución
+
+```bash
+cd functions
+
+# Resumen por consola
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated
+
+# Resumen JSON consolidado
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated \
+  --out ../docs/ops/generated/finops-summary.json
+
+# Resumen Markdown para reporte semanal
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated \
+  --markdown \
+  --out ../docs/ops/generated/finops-summary.md
+```
+
+## `finops_gate.js`
+
+Evalúa el resumen consolidado y falla el proceso según política por ambiente.
+
+### Ejecución
+
+```bash
+cd functions
+
+# Política estándar: prod falla en warn/critical
+npm run finops:gate -- \
+  --summary ../docs/ops/generated/finops-summary.json \
+  --fail-on-warn-envs prod
+
+# Política estricta (release crítico): todos los ambientes fallan en warn
+npm run finops:gate -- \
+  --summary ../docs/ops/generated/finops-summary.json \
+  --fail-on-warn-envs dev,staging,prod
+
+# Evaluar solo un ambiente específico
+npm run finops:gate -- \
+  --summary ../docs/ops/generated/finops-summary.json \
+  --only-envs staging \
+  --fail-on-warn-envs prod
+```
+
+### Códigos de salida
+
+- `0`: OK.
+- `2`: al menos un ambiente en `critical`.
+- `3`: `warn` detectado en un ambiente incluido en `fail-on-warn-envs`.
+
 ## `seed_zones_from_csv.js`
 
 Carga/actualiza (`upsert`) documentos en `zones` desde un CSV de localidades.

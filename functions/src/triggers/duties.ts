@@ -86,16 +86,17 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
       [...affectedMerchantIds].map(async (affectedMerchantId) => {
         const signalRef = db().doc(`merchant_operational_signals/${affectedMerchantId}`);
         const publicRef = db().doc(`merchant_public/${affectedMerchantId}`);
-        const [publishedTodaySnap, signalSnap] = await Promise.all([
+        const [todayDutiesSnap, signalSnap] = await Promise.all([
           db()
             .collection("pharmacy_duties")
             .where("merchantId", "==", affectedMerchantId)
             .where("date", "==", today)
-            .limit(10)
+            // Query fuertemente acotada por merchantId+date; leemos el set completo
+            // para evitar falsos negativos cuando existen más de 10 duties.
             .get(),
           signalRef.get(),
         ]);
-        const relevantTodayDuties = publishedTodaySnap.docs
+        const relevantTodayDuties = todayDutiesSnap.docs
           .map((doc) => doc.data() as PharmacyDutyDoc)
           .filter((doc) => normalizeDutyStatus(doc.status) !== "cancelled");
         const hasDutyToday = relevantTodayDuties.length > 0;

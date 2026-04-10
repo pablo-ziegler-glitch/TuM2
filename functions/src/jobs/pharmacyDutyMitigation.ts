@@ -1,5 +1,6 @@
 import { getMessaging } from "firebase-admin/messaging";
 import {
+  FieldPath,
   FieldValue,
   Timestamp,
   WriteBatch,
@@ -19,6 +20,7 @@ import { todayDateString } from "../lib/schedules";
 const db = () => getFirestore();
 const MAX_SCAN_PER_RUN = 200;
 const MAX_BATCH_WRITES = 450;
+const REMINDER_CURSOR_DOC = "system_jobs/sendDutyConfirmationReminders";
 
 interface PharmacyDutyDoc {
   merchantId: string;
@@ -49,6 +51,16 @@ interface MerchantDoc {
   notificationTokens?: string[];
 }
 
+interface ReminderScanCursorDoc {
+  lastDate?: string;
+  lastDutyId?: string;
+}
+
+interface ReminderScanCursor {
+  date: string;
+  dutyId: string;
+}
+
 function toDutyDate(value: unknown): Date | null {
   if (value instanceof Timestamp) return value.toDate();
   if (typeof value === "string") {
@@ -67,6 +79,25 @@ function safeTokens(value: unknown): string[] {
     .slice(0, 10);
 }
 
+function parseReminderCursor(
+  raw: ReminderScanCursorDoc | undefined,
+  today: string,
+  tomorrow: string
+): ReminderScanCursor | null {
+  if (!raw) return null;
+  const date =
+    typeof raw.lastDate === "string" && raw.lastDate.trim().length > 0
+      ? raw.lastDate.trim()
+      : "";
+  const dutyId =
+    typeof raw.lastDutyId === "string" && raw.lastDutyId.trim().length > 0
+      ? raw.lastDutyId.trim()
+      : "";
+  if (date.length === 0 || dutyId.length === 0) return null;
+  if (date < today || date > tomorrow) return null;
+  return { date, dutyId };
+}
+
 export const sendDutyConfirmationReminders = onSchedule(
   {
     schedule: "*/15 * * * *",
@@ -79,14 +110,53 @@ export const sendDutyConfirmationReminders = onSchedule(
     const reminderCutoffMs = 6 * 60 * 60 * 1000;
     const reminderWindowMs = 12 * 60 * 60 * 1000;
 
-    const dutiesSnap = await db()
-      .collection("pharmacy_duties")
-      .where("date", ">=", today)
-      .where("date", "<=", tomorrow)
-      .where("confirmationStatus", "==", "pending")
-      // Límite duro para evitar barrido global en cada ciclo.
-      .limit(MAX_SCAN_PER_RUN)
-      .get();
+    const cursorRef = db().doc(REMINDER_CURSOR_DOC);
+    const cursorSnap = await cursorRef.get();
+    const cursor = parseReminderCursor(
+      cursorSnap.exists ? (cursorSnap.data() as ReminderScanCursorDoc) : undefined,
+      today,
+      tomorrow
+    );
+
+    const buildScanQuery = () =>
+      db()
+        .collection("pharmacy_duties")
+        .where("date", ">=", today)
+        .where("date", "<=", tomorrow)
+        .where("confirmationStatus", "==", "pending")
+        // Orden y cursor determinísticos para evitar starvation.
+        .orderBy("date", "asc")
+        .orderBy(FieldPath.documentId(), "asc")
+        // Límite duro para evitar barrido global en cada ciclo.
+        .limit(MAX_SCAN_PER_RUN);
+
+    let dutiesQuery = buildScanQuery();
+    if (cursor) {
+      dutiesQuery = dutiesQuery.startAfter(cursor.date, cursor.dutyId);
+    }
+
+    let dutiesSnap = await dutiesQuery.get();
+    let restartedFromBeginning = false;
+    if (dutiesSnap.empty && cursor) {
+      dutiesSnap = await buildScanQuery().get();
+      restartedFromBeginning = true;
+    }
+
+    if (dutiesSnap.empty) {
+      console.log("[sendDutyConfirmationReminders] No reminders to send.");
+      return;
+    }
+
+    const lastScannedDutyDoc = dutiesSnap.docs[dutiesSnap.docs.length - 1];
+    const lastScannedDuty = lastScannedDutyDoc.data() as PharmacyDutyDoc;
+    await cursorRef.set(
+      {
+        lastDate: lastScannedDuty.date,
+        lastDutyId: lastScannedDutyDoc.id,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
 
     const dueDuties = dutiesSnap.docs.filter((dutyDoc) => {
       const duty = dutyDoc.data() as PharmacyDutyDoc;
@@ -105,7 +175,16 @@ export const sendDutyConfirmationReminders = onSchedule(
     });
 
     if (dueDuties.length === 0) {
-      console.log("[sendDutyConfirmationReminders] No reminders to send.");
+      console.log(
+        JSON.stringify({
+          job: "sendDutyConfirmationReminders",
+          scanned: dutiesSnap.size,
+          dueCount: 0,
+          restartedFromBeginning,
+          cursorDate: lastScannedDuty.date,
+          cursorDutyId: lastScannedDutyDoc.id,
+        })
+      );
       return;
     }
 
@@ -185,6 +264,9 @@ export const sendDutyConfirmationReminders = onSchedule(
         job: "sendDutyConfirmationReminders",
         scanned: dutiesSnap.size,
         dueCount: dueDuties.length,
+        restartedFromBeginning,
+        cursorDate: lastScannedDuty.date,
+        cursorDutyId: lastScannedDutyDoc.id,
         updatedDocs,
         sentNotifications,
       })

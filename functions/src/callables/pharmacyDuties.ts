@@ -448,11 +448,16 @@ async function assertMerchantAccessAndGetContext(
 
   const ownerUserId =
     (merchantData["ownerUserId"] as string | undefined)?.trim() ?? "";
-  if (role === "owner" && claimMerchantId !== merchantId && ownerUserId !== uid) {
-    throw new HttpsError(
-      "permission-denied",
-      "No podés operar guardias de otro comercio."
-    );
+  if (role === "owner") {
+    // Seguridad: para mutaciones críticas con Admin SDK exigimos ownership vivo
+    // en merchants/{id}. El claim merchantId no alcanza por sí solo porque puede
+    // quedar stale durante cambios de ownership.
+    if (ownerUserId.length === 0 || ownerUserId !== uid) {
+      throw new HttpsError(
+        "permission-denied",
+        "No podés operar guardias de otro comercio."
+      );
+    }
   }
 
   const categoryId =

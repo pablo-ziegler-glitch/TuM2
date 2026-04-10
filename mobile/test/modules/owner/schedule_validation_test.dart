@@ -5,7 +5,7 @@ import 'package:tum2/modules/owner/schedules/owner_schedule_utils.dart';
 void main() {
   group('validateDaySchedule', () {
     test('acepta horario corrido válido', () {
-      final day = DayScheduleDraft(
+      final day = const DayScheduleDraft(
         dayKey: 'monday',
         dayLabel: 'Lunes',
         mode: DayScheduleMode.continuous,
@@ -17,7 +17,7 @@ void main() {
     });
 
     test('rechaza horario corrido invertido', () {
-      final day = DayScheduleDraft(
+      final day = const DayScheduleDraft(
         dayKey: 'monday',
         dayLabel: 'Lunes',
         mode: DayScheduleMode.continuous,

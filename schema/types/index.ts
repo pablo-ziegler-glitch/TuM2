@@ -172,7 +172,6 @@ export type {
 export type {
   AdminConfigGlobal,
   CatalogLimitsConfig,
-  PharmacyDutyRulesConfig,
   ZonePublicationRules,
   BootstrapRules,
   FeatureFlags,

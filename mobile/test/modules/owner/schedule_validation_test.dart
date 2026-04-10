@@ -29,7 +29,7 @@ void main() {
     });
 
     test('rechaza split con solapamiento', () {
-      final day = DayScheduleDraft(
+      final day = const DayScheduleDraft(
         dayKey: 'monday',
         dayLabel: 'Lunes',
         mode: DayScheduleMode.split,
@@ -45,7 +45,7 @@ void main() {
 
   group('validateTemporaryClosure', () {
     test('rechaza rango invertido', () {
-      final closure = TemporaryClosureDraft(
+      final closure = const TemporaryClosureDraft(
         id: 'range',
         startDate: DateTime(2026, 7, 15),
         endDate: DateTime(2026, 7, 10),

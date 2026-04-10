@@ -90,7 +90,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                     icon: const Icon(Icons.arrow_back),
                     color: AppColors.primary500,
                   ),
-                  title: Text('Horarios', style: AppTextStyles.headingSm),
+                  title: const Text('Horarios', style: AppTextStyles.headingSm),
                   actions: [
                     IconButton(
                       onPressed: () => _showHelp(context),
@@ -134,7 +134,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
-        title: Text('Horarios', style: AppTextStyles.headingSm),
+        title: const Text('Horarios', style: AppTextStyles.headingSm),
       ),
       body: const Center(child: CircularProgressIndicator()),
     );
@@ -144,7 +144,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
-        title: Text('Horarios', style: AppTextStyles.headingSm),
+        title: const Text('Horarios', style: AppTextStyles.headingSm),
       ),
       body: Center(
         child: Padding(
@@ -163,20 +163,20 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
-        title: Text('Horarios', style: AppTextStyles.headingSm),
+        title: const Text('Horarios', style: AppTextStyles.headingSm),
       ),
-      body: Center(
+      body: const Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.toggle_off_outlined,
                 size: 44,
                 color: AppColors.neutral600,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 'El editor de horarios está deshabilitado temporalmente.',
                 style: AppTextStyles.bodyMd,
@@ -245,7 +245,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Horarios de atención',
                 style: AppTextStyles.headingMd,
                 textAlign: TextAlign.center,
@@ -280,7 +280,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                 ),
               ),
               const SizedBox(height: 10),
-              Text(
+              const Text(
                 'Tus vecinos verán este horario en el perfil público.',
                 style: AppTextStyles.bodyXs,
                 textAlign: TextAlign.center,
@@ -535,7 +535,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Cierres temporales y feriados', style: AppTextStyles.headingMd),
+        const Text('Cierres temporales y feriados', style: AppTextStyles.headingMd),
         const SizedBox(height: 6),
         Text(
           'Agregalo acá para avisar a tus vecinos.',
@@ -582,7 +582,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
             child: const Icon(Icons.event_busy, color: AppColors.primary500),
           ),
           const SizedBox(height: 10),
-          Text(
+          const Text(
             'Sin cierres cargados',
             style: AppTextStyles.headingSm,
           ),

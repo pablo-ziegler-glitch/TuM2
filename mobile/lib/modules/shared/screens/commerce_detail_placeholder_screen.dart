@@ -25,7 +25,7 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
     const address = 'Av. Siempre Viva 742, Palermo';
     const schedule = 'Lun-Dom: 08-22';
     const payment = 'Débito, QR...';
-    const isOpen = true;
+    final isOpen = commerceId.isNotEmpty;
     const story =
         'Café Aura ha sido el corazón del barrio desde 2010. Reconocido por su '
         'café de especialidad de origen único y su ambiente acogedor, ideal para '
@@ -48,11 +48,11 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
             ),
             actions: [
               IconButton(
-                icon: Icon(Icons.share_outlined, color: AppColors.neutral900),
+                icon: const Icon(Icons.share_outlined, color: AppColors.neutral900),
                 onPressed: () {},
               ),
             ],
-            title: Text(commerceName, style: AppTextStyles.headingSm),
+            title: const Text(commerceName, style: AppTextStyles.headingSm),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 color: AppColors.neutral100,
@@ -93,7 +93,7 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Nombre y categoría
-                  Text(commerceName, style: AppTextStyles.headingMd),
+                  const Text(commerceName, style: AppTextStyles.headingMd),
                   const SizedBox(height: 4),
                   Text(
                     category,
@@ -104,12 +104,12 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Info rows
-                  _InfoRow(
+                  const _InfoRow(
                     icon: Icons.location_on_outlined,
                     text: address,
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  const Row(
                     children: [
                       Expanded(
                         child: _InfoRow(
@@ -117,7 +117,7 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
                           text: schedule,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: _InfoRow(
                           icon: Icons.credit_card_outlined,
@@ -176,7 +176,7 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Nuestra Historia
-                  Text('Nuestra Historia', style: AppTextStyles.headingSm),
+                  const Text('Nuestra Historia', style: AppTextStyles.headingSm),
                   const SizedBox(height: 8),
                   Text(
                     story,
@@ -191,7 +191,7 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Galería del Local', style: AppTextStyles.headingSm),
+                      const Text('Galería del Local', style: AppTextStyles.headingSm),
                       TextButton(
                         onPressed: () {},
                         child: Text(

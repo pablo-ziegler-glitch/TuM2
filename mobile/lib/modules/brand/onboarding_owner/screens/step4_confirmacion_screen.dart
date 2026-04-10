@@ -98,7 +98,7 @@ class _Step4ConfirmacionScreenState extends State<Step4ConfirmacionScreen> {
   Widget build(BuildContext context) {
     switch (_publishState) {
       case _PublishState.loading:
-        return _LoadingView(); // EX-05
+        return const _LoadingView(); // EX-05
       case _PublishState.success:
         return _SuccessView(
           // EX-06
@@ -157,7 +157,7 @@ class _ConfirmView extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  Expanded(
+                  const Expanded(
                     child: Text('¡Casi listo!', style: AppTextStyles.headingMd),
                   ),
                   IconButton(
@@ -168,8 +168,8 @@ class _ConfirmView extends StatelessWidget {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Paso 4 de 4', style: AppTextStyles.bodySm),
@@ -196,7 +196,7 @@ class _ConfirmView extends StatelessWidget {
                           color: AppColors.errorBg,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppColors.errorFg.withOpacity(0.3)),
+                              color: AppColors.errorFg.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,7 +277,7 @@ class _ConfirmView extends StatelessWidget {
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppColors.warningFg.withOpacity(0.4)),
+                              color: AppColors.warningFg.withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +359,7 @@ class _ConfirmView extends StatelessWidget {
                   // EX-07: footer + "Intentar más tarde"
                   if (hasNetworkError) ...[
                     const SizedBox(height: 8),
-                    Text(
+                    const Text(
                       'Tus datos están guardados localmente.',
                       style: AppTextStyles.bodyXs,
                       textAlign: TextAlign.center,
@@ -374,7 +374,7 @@ class _ConfirmView extends StatelessWidget {
 
                   if (!hasNetworkError && !step3Skipped) ...[
                     const SizedBox(height: 8),
-                    Text(
+                    const Text(
                       'Tu comercio será revisado y estará visible en breve.',
                       style: AppTextStyles.bodyXs,
                       textAlign: TextAlign.center,
@@ -411,13 +411,13 @@ class _LoadingView extends StatelessWidget {
                 strokeWidth: 3,
               ),
               const SizedBox(height: 32),
-              Text(
+              const Text(
                 'Publicando tu comercio...',
                 style: AppTextStyles.headingMd,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Esto tarda solo unos segundos',
                 style: AppTextStyles.bodySm,
                 textAlign: TextAlign.center,
@@ -428,7 +428,7 @@ class _LoadingView extends StatelessWidget {
               _SkeletonCard(),
 
               const SizedBox(height: 32),
-              Text(
+              const Text(
                 'No cerrés la app mientras procesamos',
                 style: AppTextStyles.bodyXs,
                 textAlign: TextAlign.center,
@@ -450,13 +450,13 @@ class _SkeletonCard extends StatelessWidget {
         color: AppColors.neutral100,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SkeletonLine(width: 0.6),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           _SkeletonLine(width: 0.4),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           _SkeletonLine(width: 0.8),
         ],
       ),
@@ -525,7 +525,7 @@ class _SuccessView extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              Text('¡Comercio enviado!',
+              const Text('¡Comercio enviado!',
                   style: AppTextStyles.headingLg, textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text(
@@ -549,13 +549,13 @@ class _SuccessView extends StatelessWidget {
                         style: AppTextStyles.headingSm
                             .copyWith(color: AppColors.primary500)),
                     const SizedBox(height: 12),
-                    _NextStep(
+                    const _NextStep(
                         number: '1',
                         text: 'Revisamos tu comercio (hasta 24 hs)'),
-                    _NextStep(
+                    const _NextStep(
                         number: '2',
                         text: 'Te notificamos por email cuando esté activo'),
-                    _NextStep(
+                    const _NextStep(
                         number: '3',
                         text: 'Podés editar datos desde tu perfil'),
                   ],
@@ -677,7 +677,7 @@ class _PendingBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.warningBg,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: AppColors.warningFg.withOpacity(0.5)),
+        border: Border.all(color: AppColors.warningFg.withValues(alpha: 0.5)),
       ),
       child: Text(
         'Pendiente',

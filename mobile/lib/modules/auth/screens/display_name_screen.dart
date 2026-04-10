@@ -122,7 +122,7 @@ class _DisplayNameScreenState extends ConsumerState<DisplayNameScreen> {
 
               const SizedBox(height: 24),
 
-              Text('¿Cómo te llamamos?', style: AppTextStyles.headingMd),
+              const Text('¿Cómo te llamamos?', style: AppTextStyles.headingMd),
               const SizedBox(height: 8),
               Text(
                 'Podés cambiarlo después desde tu perfil.',

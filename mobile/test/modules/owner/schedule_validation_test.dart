@@ -5,7 +5,7 @@ import 'package:tum2/modules/owner/schedules/owner_schedule_utils.dart';
 void main() {
   group('validateDaySchedule', () {
     test('acepta horario corrido válido', () {
-      final day = const DayScheduleDraft(
+      const day = DayScheduleDraft(
         dayKey: 'monday',
         dayLabel: 'Lunes',
         mode: DayScheduleMode.continuous,
@@ -17,7 +17,7 @@ void main() {
     });
 
     test('rechaza horario corrido invertido', () {
-      final day = const DayScheduleDraft(
+      const day = DayScheduleDraft(
         dayKey: 'monday',
         dayLabel: 'Lunes',
         mode: DayScheduleMode.continuous,
@@ -29,7 +29,7 @@ void main() {
     });
 
     test('rechaza split con solapamiento', () {
-      final day = const DayScheduleDraft(
+      const day = DayScheduleDraft(
         dayKey: 'monday',
         dayLabel: 'Lunes',
         mode: DayScheduleMode.split,
@@ -45,7 +45,7 @@ void main() {
 
   group('validateTemporaryClosure', () {
     test('rechaza rango invertido', () {
-      final closure = const TemporaryClosureDraft(
+      final closure = TemporaryClosureDraft(
         id: 'range',
         startDate: DateTime(2026, 7, 15),
         endDate: DateTime(2026, 7, 10),

@@ -33,7 +33,7 @@ MerchantSearchItem _merchant({
 }
 
 void main() {
-  final resolver = const MapClusterResolver();
+  const resolver = MapClusterResolver();
   final bounds = LatLngBounds(
     southwest: const LatLng(-34.62, -58.48),
     northeast: const LatLng(-34.54, -58.36),

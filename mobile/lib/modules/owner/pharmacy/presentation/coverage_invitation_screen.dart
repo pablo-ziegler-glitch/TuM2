@@ -56,15 +56,17 @@ class _CoverageInvitationScreenState
         error: (_, __) => _error('No pudimos validar tu comercio.'),
         data: (ownerResolution) {
           final ownerMerchant = ownerResolution.primaryMerchant;
-          if (ownerMerchant == null)
+          if (ownerMerchant == null) {
             return _error('No encontramos un comercio asociado.');
+          }
 
           return invitationAsync.when(
             loading: _loading,
             error: (_, __) => _error('No pudimos cargar la invitación.'),
             data: (invitation) {
-              if (invitation == null)
+              if (invitation == null) {
                 return _error('La invitación no está disponible.');
+              }
               final canRespond =
                   invitation.request.status == 'pending' && !_submitting;
 

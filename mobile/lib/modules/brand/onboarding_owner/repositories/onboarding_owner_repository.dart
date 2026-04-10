@@ -253,7 +253,7 @@ class OnboardingOwnerRepository {
         (progress['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
     final startedAt =
         (progress['startedAt'] as Timestamp?)?.toDate() ?? DateTime.now();
-    final expiresAt = updatedAt.add(Duration(hours: _ttlHours));
+    final expiresAt = updatedAt.add(const Duration(hours: _ttlHours));
 
     return _mapToOnboardingDraft({
       ...progress,

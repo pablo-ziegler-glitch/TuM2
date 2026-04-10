@@ -119,7 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
@@ -128,9 +128,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Entrá a TuM2', style: AppTextStyles.headingMd),
+                    const Text('Entrá a TuM2', style: AppTextStyles.headingMd),
                     const SizedBox(height: 4),
-                    Text(
+                    const Text(
                       'Usá tu email o Google para continuar',
                       style: AppTextStyles.bodySm,
                     ),
@@ -187,15 +187,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 20),
 
                     // Separador
-                    Row(
+                    const Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                             child: Divider(color: AppColors.neutral200)),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text('o', style: AppTextStyles.bodyXs),
                         ),
-                        const Expanded(
+                        Expanded(
                             child: Divider(color: AppColors.neutral200)),
                       ],
                     ),

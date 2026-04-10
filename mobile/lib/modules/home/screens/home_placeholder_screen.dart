@@ -45,7 +45,7 @@ class HomePlaceholderScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text('Tu barrio', style: AppTextStyles.headingLg),
+                      const Text('Tu barrio', style: AppTextStyles.headingLg),
                     ],
                   ),
                   CircleAvatar(
@@ -80,7 +80,7 @@ class HomePlaceholderScreen extends ConsumerWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.search,
                         size: 20,
                         color: AppColors.neutral400,
@@ -102,7 +102,7 @@ class HomePlaceholderScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Elegidos del barrio', style: AppTextStyles.headingSm),
+                  const Text('Elegidos del barrio', style: AppTextStyles.headingSm),
                   TextButton(
                     onPressed: () {},
                     child: Text(
@@ -206,9 +206,9 @@ class _CommerceCard extends StatelessWidget {
                 Container(
                   height: 110,
                   width: double.infinity,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.neutral100,
-                    borderRadius: const BorderRadius.vertical(
+                    borderRadius: BorderRadius.vertical(
                       top: Radius.circular(16),
                     ),
                   ),
@@ -263,7 +263,7 @@ class _CommerceCard extends StatelessWidget {
                       ),
                       Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.star,
                             size: 12,
                             color: AppColors.tertiary500,

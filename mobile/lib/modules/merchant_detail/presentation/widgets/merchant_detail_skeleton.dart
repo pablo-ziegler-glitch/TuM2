@@ -7,12 +7,12 @@ class MerchantDetailSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      key: const Key('merchant_detail_loading_state'),
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+    return const SingleChildScrollView(
+      key: Key('merchant_detail_loading_state'),
+      padding: EdgeInsets.fromLTRB(16, 10, 16, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           _SkeletonBlock(height: 250, width: double.infinity, radius: 18),
           SizedBox(height: 16),
           _SkeletonBlock(height: 16, width: 120),

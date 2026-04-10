@@ -59,8 +59,8 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
         children: [
           GestureDetector(
             onTap: () => context.pop(),
-            child: Padding(
-              padding: const EdgeInsets.only(right: 10),
+            child: const Padding(
+              padding: EdgeInsets.only(right: 10),
               child:
                   Icon(Icons.arrow_back, color: AppColors.neutral700, size: 22),
             ),
@@ -82,11 +82,11 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
                   color: AppColors.neutral100,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
                     Icon(Icons.location_on_outlined,
                         size: 13, color: AppColors.neutral600),
-                    const SizedBox(width: 3),
+                    SizedBox(width: 3),
                     Text('Palermo, 34m', style: AppTextStyles.bodyXs),
                   ],
                 ),
@@ -100,7 +100,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.circle, size: 7, color: AppColors.secondary500),
+                    const Icon(Icons.circle, size: 7, color: AppColors.secondary500),
                     const SizedBox(width: 4),
                     Text('Abierto ahora',
                         style: AppTextStyles.bodyXs
@@ -133,7 +133,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
             child: Row(
               children: [
                 const SizedBox(width: 10),
-                Icon(Icons.search, color: AppColors.neutral400, size: 18),
+                const Icon(Icons.search, color: AppColors.neutral400, size: 18),
                 const SizedBox(width: 6),
                 Text('Farmacia',
                     style: AppTextStyles.bodyMd
@@ -261,10 +261,10 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Farmacia Central del Parque',
+                  const Text('Farmacia Central del Parque',
                       style: AppTextStyles.headingSm),
                   const SizedBox(height: 6),
-                  Text(
+                  const Text(
                     'Abierta 24hs hoy. Atención prioritaria por ventanilla '
                     'nocturna. Ubicada a solo 450 metros.',
                     style: AppTextStyles.bodySm,
@@ -322,7 +322,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Abiertas ahora cerca de ti', style: AppTextStyles.headingSm),
+          const Text('Abiertas ahora cerca de ti', style: AppTextStyles.headingSm),
           const SizedBox(height: 12),
           GridView.count(
             crossAxisCount: 2,
@@ -355,9 +355,9 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tu salud, nuestra prioridad', style: AppTextStyles.headingSm),
+            const Text('Tu salud, nuestra prioridad', style: AppTextStyles.headingSm),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Avalamos únicamente farmacias habilitadas por el Ministerio de Salud. '
               'La información de farmacias de turno se actualiza cada 30 minutos '
               'para garantizar exactitud.',
@@ -374,7 +374,7 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.verified_outlined,
+                  const Icon(Icons.verified_outlined,
                       size: 16, color: AppColors.secondary500),
                   const SizedBox(width: 6),
                   Text(
@@ -485,7 +485,7 @@ class _PharmacyCardState extends State<_PharmacyCard> {
                   color: AppColors.secondary50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.local_pharmacy_outlined,
+                child: const Icon(Icons.local_pharmacy_outlined,
                     size: 16, color: AppColors.secondary500),
               ),
               GestureDetector(
@@ -508,7 +508,7 @@ class _PharmacyCardState extends State<_PharmacyCard> {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  Icon(Icons.near_me_outlined,
+                  const Icon(Icons.near_me_outlined,
                       size: 11, color: AppColors.neutral500),
                   const SizedBox(width: 2),
                   Text(p.distance, style: AppTextStyles.bodyXs),

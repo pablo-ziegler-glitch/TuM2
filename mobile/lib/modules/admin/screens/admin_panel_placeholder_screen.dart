@@ -22,7 +22,7 @@ class AdminPanelPlaceholderScreen extends StatelessWidget {
           color: AppColors.neutral900,
           onPressed: () => context.pop(),
         ),
-        title: Text('Panel de administración', style: AppTextStyles.headingSm),
+        title: const Text('Panel de administración', style: AppTextStyles.headingSm),
         centerTitle: false,
       ),
       body: PlaceholderScreen(

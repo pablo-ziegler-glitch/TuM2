@@ -139,9 +139,13 @@ void main() {
       );
 
       await _waitForLoad(notifier);
+      await notifier.updateSignal(
+        key: OperationalSignalKey.hasDelivery,
+        value: true,
+      );
 
       expect(notifier.state.hasError, isTrue);
-      expect(notifier.state.message, contains('permisos'));
+      expect(notifier.state.message, contains('editar este comercio'));
     });
 
     test('bloquea abierto ahora manual cuando hay cierre temporal', () async {
@@ -250,11 +254,6 @@ class _FakeDataSource implements OwnerOperationalSignalsDataSource {
   final List<_SavedSignal> saved = [];
   final Map<String, OperationalSignals> _signalsByMerchant = {};
   final Map<String, DateTime> _updatedAtByMerchant = {};
-
-  @override
-  Future<String?> fetchOwnerUserId({required String merchantId}) async {
-    return ownerByMerchantId[merchantId];
-  }
 
   @override
   Future<OperationalSignalsSnapshot> fetchSignals({

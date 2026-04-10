@@ -49,6 +49,36 @@ npm run cost:guard -- \
 - `3`: se superó warning y se pasó `--fail-on-warn`.
 - `1`: error de ejecución/configuración.
 
+## `finops_summary.js`
+
+Consolida resultados generados por `firestore_cost_guard.js` en una vista
+operativa simple por ambiente.
+
+Entrada esperada:
+
+- `docs/ops/generated/cost-guard-*.json`
+
+### Ejecución
+
+```bash
+cd functions
+
+# Resumen por consola
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated
+
+# Resumen JSON consolidado
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated \
+  --out ../docs/ops/generated/finops-summary.json
+
+# Resumen Markdown para reporte semanal
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated \
+  --markdown \
+  --out ../docs/ops/generated/finops-summary.md
+```
+
 ## `seed_zones_from_csv.js`
 
 Carga/actualiza (`upsert`) documentos en `zones` desde un CSV de localidades.

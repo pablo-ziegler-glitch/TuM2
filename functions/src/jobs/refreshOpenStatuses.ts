@@ -8,6 +8,7 @@ import {
 import { isOpenNow, todayScheduleLabel } from "../lib/schedules";
 import { MerchantScheduleDoc } from "../lib/types";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
+import { logFinOpsEvent } from "../lib/finops";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
@@ -204,5 +205,20 @@ export const nightlyRefreshOpenStatuses = onSchedule(
         lastScannedDocId,
       })
     );
+    logFinOpsEvent({
+      event: "job_refresh_open_statuses_window",
+      level: hasMore ? "warning" : "info",
+      module: "jobs.refreshOpenStatuses",
+      payload: {
+        scanned: merchantsSnap.size,
+        visibleScanned: merchantIds.length,
+        merchantScheduleReads: scheduleReads,
+        signalWrites: updated,
+        skippedUnchanged,
+        hasMore,
+        restartedFromBeginning,
+        lastScannedDocId,
+      },
+    });
   }
 );

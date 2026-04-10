@@ -6,6 +6,7 @@
     "test": "npm run build && node --test lib/admin/__tests__/backfillKeywords.test.js lib/lib/__tests__/projection.test.js lib/lib/__tests__/pharmacyDuties.test.js lib/lib/__tests__/pharmacyDutyMitigation.test.js lib/lib/__tests__/catalogLimits.test.js",
     "test": "npm run build && node --test lib/admin/__tests__/backfillKeywords.test.js lib/lib/__tests__/projection.test.js lib/lib/__tests__/pharmacyDuties.test.js lib/lib/__tests__/catalogLimits.test.js",
     "cost:guard": "node scripts/firestore_cost_guard.js",
+    "finops:summary": "node scripts/finops_summary.js",
     "seed:zones:csv": "node scripts/seed_zones_from_csv.js",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",

@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 
+import '../../../../core/cache/zones_cache_service.dart';
+
 /// Sugerencia de dirección del autocomplete de Places.
 class PlaceSuggestion {
   final String placeId;
@@ -76,18 +78,24 @@ class GooglePlacesService {
       'https://maps.googleapis.com/maps/api/place/autocomplete/json';
   static const String _detailsBaseUrl =
       'https://maps.googleapis.com/maps/api/place/details/json';
-  static const List<String> _zoneCollectionCandidates = <String>[
-    'zones',
-  ];
-
+  static const Set<String> _inactiveZoneStatuses = <String>{
+    'draft',
+    'internal_test',
+    'paused',
+    'borrador',
+    'pausado',
+    'pausada',
+  };
   final http.Client _httpClient;
-  final FirebaseFirestore _firestore;
+  final ZonesCacheService _zonesCache;
 
   GooglePlacesService({
     http.Client? httpClient,
     FirebaseFirestore? firestore,
   })  : _httpClient = httpClient ?? http.Client(),
-        _firestore = firestore ?? FirebaseFirestore.instance;
+        _zonesCache = ZonesCacheService(
+          firestore: firestore ?? FirebaseFirestore.instance,
+        );
 
   /// Retorna sugerencias de dirección para el texto ingresado.
   /// Restringido a Argentina. Usa sessionToken para reducir costo de API.
@@ -198,33 +206,37 @@ class GooglePlacesService {
     ZoneResolution? best;
     double bestDistance = double.infinity;
 
-    for (final collectionName in _zoneCollectionCandidates) {
-      final zonesSnap = await _firestore.collection(collectionName).get();
-      for (final doc in zonesSnap.docs) {
-        final data = doc.data();
-        final centroid = _readMap(data, const ['centroid', 'centroide']);
-        final zoneLat = _readNum(centroid, const ['lat']) ??
-            _readNum(data, const ['lat', 'latitude']);
-        final zoneLng = _readNum(centroid, const ['lng']) ??
-            _readNum(data, const ['lng', 'longitude']);
-        final radiusKm = _readNum(data, const ['radiusKm', 'radioKm']) ?? 2.0;
+    final zoneRecords = await _zonesCache.fetchZones(
+      timeout: const Duration(seconds: 8),
+    );
+    for (final zone in zoneRecords) {
+      final data = zone.data;
+      final status = _readText(data, const ['status', 'estado'])?.toLowerCase();
+      if (status != null && _inactiveZoneStatuses.contains(status)) {
+        continue;
+      }
+      final centroid = _readMap(data, const ['centroid', 'centroide']);
+      final zoneLat = _readNum(centroid, const ['lat']) ??
+          _readNum(data, const ['lat', 'latitude']);
+      final zoneLng = _readNum(centroid, const ['lng']) ??
+          _readNum(data, const ['lng', 'longitude']);
+      final radiusKm = _readNum(data, const ['radiusKm', 'radioKm']) ?? 2.0;
 
-        if (zoneLat == null || zoneLng == null) continue;
+      if (zoneLat == null || zoneLng == null) continue;
 
-        final distKm = _haversineKm(lat, lng, zoneLat, zoneLng);
-        if (distKm <= radiusKm && distKm < bestDistance) {
-          bestDistance = distKm;
-          best = ZoneResolution(
-            zoneId: doc.id,
-            cityId:
-                _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
-            provinceId: _readText(
-                  data,
-                  const ['provinceId', 'provinciaId', 'province_id'],
-                ) ??
-                '',
-          );
-        }
+      final distKm = _haversineKm(lat, lng, zoneLat, zoneLng);
+      if (distKm <= radiusKm && distKm < bestDistance) {
+        bestDistance = distKm;
+        best = ZoneResolution(
+          zoneId: zone.id,
+          cityId:
+              _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
+          provinceId: _readText(
+                data,
+                const ['provinceId', 'provinciaId', 'province_id'],
+              ) ??
+              '',
+        );
       }
     }
 

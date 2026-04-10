@@ -95,10 +95,9 @@ class ImportDataRepository {
   static const int _whereInLimit = 30;
   static const int _maxWatchedBatches = 150;
   static const int _maxZonesPerQuery = 300;
+  static const int _zonesCacheTtlSeconds = 300;
 
-  static const List<String> _zoneCollectionCandidates = <String>[
-    'zones',
-  ];
+  static const List<String> _zoneCollectionCandidates = <String>['zones'];
   static const Set<String> _inactiveZoneStatuses = <String>{
     'draft',
     'internal_test',
@@ -108,14 +107,14 @@ class ImportDataRepository {
     'pausada',
   };
 
-  ImportDataRepository({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+  ImportDataRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
+      : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  static List<QueryDocumentSnapshot<Map<String, dynamic>>>? _zonesCache;
+  static DateTime? _zonesCacheExpiresAtUtc;
 
   CollectionReference<Map<String, dynamic>> get _batches =>
       _firestore.collection('import_batches');
@@ -123,18 +122,17 @@ class ImportDataRepository {
   CollectionReference<Map<String, dynamic>> get _externalPlaces =>
       _firestore.collection('external_places');
 
-  Stream<List<ImportBatchUi>> watchBatches({
-    int limit = _maxWatchedBatches,
-  }) {
+  Stream<List<ImportBatchUi>> watchBatches({int limit = _maxWatchedBatches}) {
     final safeLimit = limit.clamp(1, _maxWatchedBatches).toInt();
     return _batches
         .orderBy('createdAt', descending: true)
         .limit(safeLimit)
         .snapshots()
         .map(
-        (snapshot) => snapshot.docs
-            .map((doc) => ImportBatchUi.fromDoc(doc.id, doc.data()))
-            .toList());
+          (snapshot) => snapshot.docs
+              .map((doc) => ImportBatchUi.fromDoc(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   Stream<ImportBatchUi?> watchBatch(String batchId) {
@@ -171,6 +169,15 @@ class ImportDataRepository {
 
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
       _fetchActiveZoneDocs() async {
+    final now = DateTime.now().toUtc();
+    if (_zonesCache != null &&
+        _zonesCacheExpiresAtUtc != null &&
+        now.isBefore(_zonesCacheExpiresAtUtc!)) {
+      return List<QueryDocumentSnapshot<Map<String, dynamic>>>.unmodifiable(
+        _zonesCache!,
+      );
+    }
+
     for (final collectionName in _zoneCollectionCandidates) {
       final snapshot = await _firestore
           .collection(collectionName)
@@ -179,16 +186,23 @@ class ImportDataRepository {
       final docs = snapshot.docs.where(_isActiveZoneDoc).toList();
       if (docs.isEmpty) continue;
       docs.sort(_compareZoneDocs);
+      _zonesCache = docs;
+      _zonesCacheExpiresAtUtc = now.add(
+        const Duration(seconds: _zonesCacheTtlSeconds),
+      );
       return docs;
     }
     return <QueryDocumentSnapshot<Map<String, dynamic>>>[];
   }
 
   static bool _isActiveZoneDoc(
-      QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final data = doc.data();
-    final status =
-        _readText(data, const ['status', 'estado'])?.toLowerCase().trim();
+    final status = _readText(data, const [
+      'status',
+      'estado',
+    ])?.toLowerCase().trim();
     if (status == null || status.isEmpty) return true;
     return !_inactiveZoneStatuses.contains(status);
   }
@@ -197,8 +211,9 @@ class ImportDataRepository {
     QueryDocumentSnapshot<Map<String, dynamic>> a,
     QueryDocumentSnapshot<Map<String, dynamic>> b,
   ) {
-    final priorityCompare =
-        _zonePriority(a.data()).compareTo(_zonePriority(b.data()));
+    final priorityCompare = _zonePriority(
+      a.data(),
+    ).compareTo(_zonePriority(b.data()));
     if (priorityCompare != 0) return priorityCompare;
     final nameCompare = (_readText(a.data(), const ['name', 'nombre']) ?? a.id)
         .toLowerCase()
@@ -316,7 +331,8 @@ class ImportDataRepository {
     final actor = _auth.currentUser;
     if (actor == null) {
       throw StateError(
-          'Debes iniciar sesión como admin para ejecutar importaciones.');
+        'Debes iniciar sesión como admin para ejecutar importaciones.',
+      );
     }
 
     final validation = validateRows(
@@ -413,13 +429,15 @@ class ImportDataRepository {
       ],
     });
 
-    unawaited(_processBatchInBackground(
-      batchRef: batchRef,
-      batchId: batchId,
-      input: input,
-      validation: validation,
-      createdBy: createdBy,
-    ));
+    unawaited(
+      _processBatchInBackground(
+        batchRef: batchRef,
+        batchId: batchId,
+        input: input,
+        validation: validation,
+        createdBy: createdBy,
+      ),
+    );
 
     return batchId;
   }
@@ -610,8 +628,10 @@ class ImportDataRepository {
     final errors = <ImportRowError>[];
 
     for (var i = 0; i < rows.length; i++) {
-      final state =
-          _rowState(rows[i], mappings.where((m) => m.enabled).toList());
+      final state = _rowState(
+        rows[i],
+        mappings.where((m) => m.enabled).toList(),
+      );
       if (state.$1) {
         errorRows++;
         errors.add(
@@ -706,8 +726,13 @@ class ImportDataRepository {
   String? _guessTum2Field(String header) {
     final isLikelyIdColumn = header.endsWith('_id') || header == 'id';
 
-    if (_matchesAny(header,
-        ['name', 'nombre', 'business', 'comercio', 'establecimiento'])) {
+    if (_matchesAny(header, [
+      'name',
+      'nombre',
+      'business',
+      'comercio',
+      'establecimiento',
+    ])) {
       return tum2FieldName;
     }
     if (_matchesAny(header, ['address', 'direccion', 'domicilio', 'calle'])) {
@@ -716,8 +741,12 @@ class ImportDataRepository {
     if (_matchesAny(header, ['phone', 'telefono', 'tel', 'whatsapp'])) {
       return tum2FieldPhone;
     }
-    if (_matchesAny(
-        header, ['category', 'rubro', 'tipologia_sigla', 'typology_sigla'])) {
+    if (_matchesAny(header, [
+      'category',
+      'rubro',
+      'tipologia_sigla',
+      'typology_sigla',
+    ])) {
       return tum2FieldCategory;
     }
     if (!isLikelyIdColumn &&
@@ -730,8 +759,13 @@ class ImportDataRepository {
     if (_matchesAny(header, ['lng', 'lon', 'longitude', 'longitud'])) {
       return tum2FieldLongitude;
     }
-    if (_matchesAny(
-        header, ['city', 'ciudad', 'locality', 'localidad', 'barrio'])) {
+    if (_matchesAny(header, [
+      'city',
+      'ciudad',
+      'locality',
+      'localidad',
+      'barrio',
+    ])) {
       return tum2FieldLocality;
     }
     if (_matchesAny(header, ['hours', 'horario', 'opening'])) {

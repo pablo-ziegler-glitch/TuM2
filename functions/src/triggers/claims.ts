@@ -1,5 +1,6 @@
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import { MerchantClaimDoc } from "../lib/types";
 
 const db = () => getFirestore();
@@ -39,8 +40,32 @@ export const onClaimApprovedPromoteMerchant = onDocumentUpdated(
         { merge: true }
       );
 
+    const auth = getAuth();
+    const userRecord = await auth.getUser(userId);
+    const currentClaims = userRecord.customClaims ?? {};
+    const claimMerchantId =
+      typeof currentClaims["merchantId"] === "string" &&
+      currentClaims["merchantId"].trim().length > 0
+        ? currentClaims["merchantId"].trim()
+        : null;
+    const claimMerchantIds = Array.isArray(currentClaims["merchantIds"])
+      ? currentClaims["merchantIds"]
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0)
+      : [];
+    const mergedMerchantIds = [...new Set([merchantId, ...claimMerchantIds])];
+
+    await auth.setCustomUserClaims(userId, {
+      ...currentClaims,
+      role: "owner",
+      merchantId: claimMerchantId ?? merchantId,
+      merchantIds: mergedMerchantIds,
+      onboardingComplete: true,
+    });
+
     console.log(
-      `[onClaimApprovedPromoteMerchant] Merchant ${merchantId} promoted to claimed, owner=${userId}`
+      `[onClaimApprovedPromoteMerchant] Merchant ${merchantId} promoted to claimed, owner=${userId}, claimsSynced=true`
     );
   }
 );

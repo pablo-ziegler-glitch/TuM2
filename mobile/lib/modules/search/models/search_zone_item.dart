@@ -18,11 +18,17 @@ class SearchZoneItem {
   factory SearchZoneItem.fromFirestore(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) {
-    final data = doc.data();
+    return SearchZoneItem.fromMap(doc.id, doc.data());
+  }
+
+  factory SearchZoneItem.fromMap(
+    String zoneId,
+    Map<String, dynamic> data,
+  ) {
     final centroid = readMap(data, const ['centroid', 'centroide']);
     return SearchZoneItem(
-      zoneId: doc.id,
-      name: readText(data, const ['name', 'nombre']) ?? doc.id,
+      zoneId: zoneId,
+      name: readText(data, const ['name', 'nombre']) ?? zoneId,
       cityId: readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
       centroidLat: readNum(centroid, const ['lat']) ??
           readNum(data, const ['lat', 'latitude']),

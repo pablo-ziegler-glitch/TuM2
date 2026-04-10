@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tum2/core/providers/feature_flags_provider.dart';
+import 'package:tum2/modules/owner/models/catalog_capacity.dart';
 import 'package:tum2/modules/owner/models/merchant_product.dart';
 import 'package:tum2/modules/owner/models/owner_merchant_summary.dart';
+import 'package:tum2/modules/owner/providers/catalog_capacity_providers.dart';
 import 'package:tum2/modules/owner/providers/owner_providers.dart';
 import 'package:tum2/modules/owner/providers/product_providers.dart';
 import 'package:tum2/modules/owner/repositories/product_repository.dart';
@@ -68,6 +71,8 @@ void main() {
       final merchant = OwnerMerchantSummary(
         id: 'm-1',
         name: 'Almacén Centro',
+        razonSocial: 'Almacén Centro SRL',
+        nombreFantasia: 'Almacén Centro',
         categoryId: 'grocery',
         zoneId: 'zone-1',
         address: 'Av. Siempre Viva 123',
@@ -78,6 +83,8 @@ void main() {
         hasProducts: false,
         hasSchedules: true,
         hasOperationalSignals: true,
+        catalogProductLimitOverride: null,
+        activeProductCount: 0,
         updatedAt: DateTime(2026, 4, 8),
         createdAt: DateTime(2026, 4, 1),
         isDataComplete: true,
@@ -92,6 +99,18 @@ void main() {
                 allMerchants: [merchant],
               );
             }),
+            catalogCapacityPolicyEnabledProvider
+                .overrideWith((ref) async => true),
+            catalogCapacityHardBlockEnabledProvider
+                .overrideWith((ref) async => true),
+            catalogProductCreateViaCfEnabledProvider
+                .overrideWith((ref) async => true),
+            catalogLimitsConfigProvider.overrideWith(
+              (ref) async => const OwnerCatalogLimitsConfig(
+                defaultProductLimit: 100,
+                categoryLimits: <String, int>{},
+              ),
+            ),
             productRepositoryProvider
                 .overrideWithValue(_WidgetFakeRepository()),
           ],
@@ -133,6 +152,14 @@ class _WidgetFakeRepository implements ProductRepository {
     required MerchantProduct product,
     required String actorUserId,
   }) async {}
+
+  @override
+  Future<List<MerchantProduct>> fetchOwnerProducts({
+    required String merchantId,
+    int limit = 120,
+  }) async {
+    return const [];
+  }
 
   @override
   Future<List<MerchantProduct>> fetchPublicProducts({

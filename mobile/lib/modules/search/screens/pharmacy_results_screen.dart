@@ -100,7 +100,8 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.circle, size: 7, color: AppColors.secondary500),
+                    const Icon(Icons.circle,
+                        size: 7, color: AppColors.secondary500),
                     const SizedBox(width: 4),
                     Text('Abierto ahora',
                         style: AppTextStyles.bodyXs
@@ -322,7 +323,8 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Abiertas ahora cerca de ti', style: AppTextStyles.headingSm),
+          const Text('Abiertas ahora cerca de ti',
+              style: AppTextStyles.headingSm),
           const SizedBox(height: 12),
           GridView.count(
             crossAxisCount: 2,
@@ -355,7 +357,8 @@ class _PharmacyResultsScreenState extends State<PharmacyResultsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Tu salud, nuestra prioridad', style: AppTextStyles.headingSm),
+            const Text('Tu salud, nuestra prioridad',
+                style: AppTextStyles.headingSm),
             const SizedBox(height: 8),
             const Text(
               'Avalamos únicamente farmacias habilitadas por el Ministerio de Salud. '

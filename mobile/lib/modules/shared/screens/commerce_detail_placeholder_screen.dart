@@ -48,7 +48,8 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.share_outlined, color: AppColors.neutral900),
+                icon: const Icon(Icons.share_outlined,
+                    color: AppColors.neutral900),
                 onPressed: () {},
               ),
             ],
@@ -176,7 +177,8 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Nuestra Historia
-                  const Text('Nuestra Historia', style: AppTextStyles.headingSm),
+                  const Text('Nuestra Historia',
+                      style: AppTextStyles.headingSm),
                   const SizedBox(height: 8),
                   Text(
                     story,
@@ -191,7 +193,8 @@ class CommerceDetailPlaceholderScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Galería del Local', style: AppTextStyles.headingSm),
+                      const Text('Galería del Local',
+                          style: AppTextStyles.headingSm),
                       TextButton(
                         onPressed: () {},
                         child: Text(

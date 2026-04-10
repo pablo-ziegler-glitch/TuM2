@@ -370,7 +370,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                       ),
                     ),
                     if (nameHasError)
-                      const InlineError(message: 'Ingresá el nombre del comercio'),
+                      const InlineError(
+                          message: 'Ingresá el nombre del comercio'),
                     // EX-13: warning soft duplicate
                     if (showDuplicateWarning && !nameHasError) ...[
                       const SizedBox(height: 8),
@@ -380,7 +381,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppColors.warningFg.withValues(alpha: 0.4)),
+                              color:
+                                  AppColors.warningFg.withValues(alpha: 0.4)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

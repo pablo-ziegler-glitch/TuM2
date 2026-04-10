@@ -189,14 +189,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Separador
                     const Row(
                       children: [
-                        Expanded(
-                            child: Divider(color: AppColors.neutral200)),
+                        Expanded(child: Divider(color: AppColors.neutral200)),
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text('o', style: AppTextStyles.bodyXs),
                         ),
-                        Expanded(
-                            child: Divider(color: AppColors.neutral200)),
+                        Expanded(child: Divider(color: AppColors.neutral200)),
                       ],
                     ),
 

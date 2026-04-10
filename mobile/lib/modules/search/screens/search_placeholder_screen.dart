@@ -72,7 +72,8 @@ class _SearchPlaceholderScreenState extends State<SearchPlaceholderScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.search, size: 20, color: AppColors.neutral400),
+                    const Icon(Icons.search,
+                        size: 20, color: AppColors.neutral400),
                     const SizedBox(width: 10),
                     Text(
                       'Buscar cafés, tiendas, arte...',

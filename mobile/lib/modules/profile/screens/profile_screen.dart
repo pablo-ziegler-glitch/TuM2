@@ -273,7 +273,8 @@ class _MenuCard extends StatelessWidget {
             children: [
               items[i],
               if (i < items.length - 1)
-                const Divider(height: 1, color: AppColors.neutral100, indent: 52),
+                const Divider(
+                    height: 1, color: AppColors.neutral100, indent: 52),
             ],
           );
         }),
@@ -317,7 +318,8 @@ class _MenuItem extends StatelessWidget {
               ),
             ),
             if (showChevron)
-              const Icon(Icons.chevron_right, color: AppColors.neutral400, size: 20),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.neutral400, size: 20),
           ],
         ),
       ),

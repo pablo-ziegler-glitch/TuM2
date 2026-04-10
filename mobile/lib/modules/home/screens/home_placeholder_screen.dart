@@ -102,7 +102,8 @@ class HomePlaceholderScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Elegidos del barrio', style: AppTextStyles.headingSm),
+                  const Text('Elegidos del barrio',
+                      style: AppTextStyles.headingSm),
                   TextButton(
                     onPressed: () {},
                     child: Text(

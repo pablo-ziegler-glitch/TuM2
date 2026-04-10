@@ -229,7 +229,8 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppColors.warningFg.withValues(alpha: 0.4)),
+                              color:
+                                  AppColors.warningFg.withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -338,8 +339,8 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _suggestions.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 1, color: AppColors.neutral200),
+                          separatorBuilder: (_, __) => const Divider(
+                              height: 1, color: AppColors.neutral200),
                           itemBuilder: (_, i) {
                             final s = _suggestions[i];
                             return InkWell(

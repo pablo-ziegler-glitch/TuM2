@@ -277,7 +277,8 @@ class _ConfirmView extends StatelessWidget {
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppColors.warningFg.withValues(alpha: 0.4)),
+                              color:
+                                  AppColors.warningFg.withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,

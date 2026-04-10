@@ -101,7 +101,8 @@ class PlaceholderScreen extends StatelessWidget {
               // Botones de navegación de prueba
               if (navActions.isNotEmpty) ...[
                 const SizedBox(height: 32),
-                const Text('Navegación de prueba', style: AppTextStyles.labelMd),
+                const Text('Navegación de prueba',
+                    style: AppTextStyles.labelMd),
                 const SizedBox(height: 12),
                 ...navActions.map(
                   (action) => Padding(

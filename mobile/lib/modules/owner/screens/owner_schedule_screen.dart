@@ -535,7 +535,8 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Cierres temporales y feriados', style: AppTextStyles.headingMd),
+        const Text('Cierres temporales y feriados',
+            style: AppTextStyles.headingMd),
         const SizedBox(height: 6),
         Text(
           'Agregalo acá para avisar a tus vecinos.',

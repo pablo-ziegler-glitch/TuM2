@@ -97,7 +97,8 @@ class _ResumableView extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Header
-              const Text('Registrá tu comercio', style: AppTextStyles.headingLg),
+              const Text('Registrá tu comercio',
+                  style: AppTextStyles.headingLg),
               const SizedBox(height: 4),
               const Text('TuM2 para dueños', style: AppTextStyles.bodySm),
               const SizedBox(height: 8),
@@ -274,7 +275,8 @@ class _ExpiredView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Registrá tu comercio', style: AppTextStyles.headingLg),
+              const Text('Registrá tu comercio',
+                  style: AppTextStyles.headingLg),
               const SizedBox(height: 4),
               const Text('TuM2 para dueños', style: AppTextStyles.bodySm),
               const SizedBox(height: 8),
@@ -289,7 +291,8 @@ class _ExpiredView extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppColors.errorBg,
-                  border: Border.all(color: AppColors.errorFg.withValues(alpha: 0.4)),
+                  border: Border.all(
+                      color: AppColors.errorFg.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(

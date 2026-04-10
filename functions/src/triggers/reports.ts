@@ -1,6 +1,7 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { ReportDoc } from "../lib/types";
+import { logFinOpsEvent } from "../lib/finops";
 
 const db = () => getFirestore();
 
@@ -62,11 +63,30 @@ export const onReportThresholdSuppressMerchant = onDocumentWritten(
 
     const openCount = Number(openReportsAgg.data().count ?? 0);
     const threshold = await getSuppressionThreshold();
+    logFinOpsEvent({
+      event: "trigger_reports_threshold_eval",
+      module: "triggers.reports",
+      payload: {
+        merchantId: targetId,
+        openCount,
+        threshold,
+      },
+    });
 
     if (openCount >= threshold) {
       const merchantRef = db().doc(`merchants/${targetId}`);
       const merchantSnap = await merchantRef.get();
       if (merchantSnap.exists && merchantSnap.data()?.["visibilityStatus"] === "suppressed") {
+        logFinOpsEvent({
+          event: "trigger_reports_suppress_skipped",
+          module: "triggers.reports",
+          payload: {
+            merchantId: targetId,
+            reason: "already_suppressed",
+            openCount,
+            threshold,
+          },
+        });
         return;
       }
 
@@ -81,6 +101,16 @@ export const onReportThresholdSuppressMerchant = onDocumentWritten(
       console.log(
         `[onReportThresholdSuppressMerchant] Suppressed merchant ${targetId} (${openCount} open reports >= threshold ${threshold})`
       );
+      logFinOpsEvent({
+        event: "trigger_reports_suppressed",
+        level: "warning",
+        module: "triggers.reports",
+        payload: {
+          merchantId: targetId,
+          openCount,
+          threshold,
+        },
+      });
     }
   }
 );

@@ -93,8 +93,23 @@ jobs:
             npm run cost:guard -- "${args[@]}"
           done
 
+      - name: Build FinOps summary
+        working-directory: functions
+        run: |
+          set -euo pipefail
+          npm run finops:summary -- \
+            --input-dir ../docs/ops/generated \
+            --out ../docs/ops/generated/finops-summary.json
+          npm run finops:summary -- \
+            --input-dir ../docs/ops/generated \
+            --markdown \
+            --out ../docs/ops/generated/finops-summary.md
+
       - name: Upload guardrail reports
         uses: actions/upload-artifact@v4
         with:
           name: firestore-cost-guard-reports
-          path: docs/ops/generated/cost-guard-*.json
+          path: |
+            docs/ops/generated/cost-guard-*.json
+            docs/ops/generated/finops-summary.json
+            docs/ops/generated/finops-summary.md

@@ -7,6 +7,7 @@ import {
   DutyStatus,
   normalizeDutyStatus,
 } from "../lib/pharmacyDutyMitigation";
+import { logFinOpsEvent } from "../lib/finops";
 
 const db = () => getFirestore();
 const MAX_DUTY_DOCS_PER_EVENT = 10;
@@ -110,6 +111,18 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
         const relevantTodayDuties = todayDutiesSnap.docs
           .map((doc) => doc.data() as PharmacyDutyDoc);
         const hasDutyToday = relevantTodayDuties.length > 0;
+        if (todayDutiesSnap.size >= MAX_DUTY_DOCS_PER_EVENT) {
+          logFinOpsEvent({
+            event: "trigger_duties_scan_cap_reached",
+            level: "warning",
+            module: "triggers.duties",
+            payload: {
+              merchantId: affectedMerchantId,
+              date: today,
+              queryLimit: MAX_DUTY_DOCS_PER_EVENT,
+            },
+          });
+        }
         const bestDuty = relevantTodayDuties
           .slice()
           .sort((a, b) => {
@@ -172,6 +185,18 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
         console.log(
           `[onPharmacyDutyWriteSyncMerchant] ${affectedMerchantId} hasPharmacyDutyToday=${hasDutyToday}`
         );
+        logFinOpsEvent({
+          event: "trigger_duties_sync",
+          module: "triggers.duties",
+          payload: {
+            merchantId: affectedMerchantId,
+            date: today,
+            dutiesRead: todayDutiesSnap.size,
+            signalWrite: signalNeedsUpdate,
+            publicWrite: publicNeedsUpdate,
+            hasDutyToday,
+          },
+        });
       })
     );
   }

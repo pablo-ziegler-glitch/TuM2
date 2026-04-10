@@ -4,6 +4,7 @@ import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
 import { computeUsefulCoverageScore } from "../lib/scoring";
 import { MerchantPublicDoc, ZoneCoverageMetrics } from "../lib/types";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
+import { logFinOpsEvent } from "../lib/finops";
 
 const db = () => getFirestore();
 const ZONE_REFRESH_CURSOR_DOC = "system_jobs/scheduledRefreshZoneCoverage";
@@ -161,6 +162,17 @@ async function refreshZoneCoverage(zoneId: string): Promise<void> {
   console.log(
     `[zoneCoverage] Zone ${zoneId}: visible=${metrics.visibleMerchantCount} verified=${metrics.verifiedCount} score=${metrics.usefulCoverageScore}`
   );
+  logFinOpsEvent({
+    event: "zone_coverage_refresh",
+    module: "coverage.zoneCoverage",
+    payload: {
+      zoneId,
+      merchantCount: metrics.merchantCount,
+      visibleMerchantCount: metrics.visibleMerchantCount,
+      verifiedCount: metrics.verifiedCount,
+      usefulCoverageScore: metrics.usefulCoverageScore,
+    },
+  });
 }
 
 /**
@@ -312,5 +324,17 @@ export const scheduledRefreshZoneCoverage = onSchedule(
         lastZoneId,
       })
     );
+    logFinOpsEvent({
+      event: "job_zone_coverage_window",
+      level: hasMore ? "warning" : "info",
+      module: "coverage.zoneCoverage",
+      payload: {
+        scanned: zonesSnap.size,
+        refreshed: zoneIds.length,
+        hasMore,
+        restartedFromBeginning,
+        lastZoneId,
+      },
+    });
   }
 );

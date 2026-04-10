@@ -101,6 +101,11 @@ Widgets obligatorios:
 - `nightlyRefreshOpenStatuses`
 - `nightlyRefreshPharmacyDutyFlags`
 - `nightlyCleanupExpiredDrafts`
+8. Logs FinOps estructurados (`logType = finops.cost.v1`) por módulo:
+- `jobs.refreshOpenStatuses`
+- `coverage.zoneCoverage`
+- `triggers.duties`
+- `triggers.reports`
 
 ## 5) Gate de release (checklist)
 
@@ -131,3 +136,21 @@ Modo de uso:
 
 - El guardrail usa métricas de Monitoring reales; no reemplaza revisión de Query Explain para casos puntuales.
 - Si el guardrail falla por picos puntuales esperados (ej. backfill admin), ejecutar ventana acotada y documentar excepción operativa.
+
+## 8) Resumen semanal FinOps
+
+Después de ejecutar `cost:guard` en ambientes activos, consolidar resultados:
+
+```bash
+cd functions
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated \
+  --markdown \
+  --out ../docs/ops/generated/finops-summary.md
+```
+
+Checklist semanal mínimo:
+
+- revisar `worst` por ambiente (`OK` esperado en dev/staging, `OK/WARN` justificado en prod).
+- abrir incidente si aparece `CRITICAL`.
+- registrar desvíos y acciones en el tablero operativo.

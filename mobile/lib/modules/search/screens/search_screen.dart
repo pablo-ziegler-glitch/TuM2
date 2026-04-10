@@ -19,12 +19,11 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
+  var _initializationStarted = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-        () => ref.read(searchNotifierProvider.notifier).ensureInitialized());
     _controller.addListener(() {
       ref.read(searchNotifierProvider.notifier).setQuery(_controller.text);
     });
@@ -48,7 +47,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.dispose();
   }
 
-  void _goToResults([String? query]) {
+  Future<void> _ensureInitializedOnce() async {
+    if (_initializationStarted) return;
+    _initializationStarted = true;
+    await ref.read(searchNotifierProvider.notifier).ensureInitialized();
+  }
+
+  void _goToResults([String? query]) async {
+    await _ensureInitializedOnce();
+    if (!mounted) return;
     final q = (query ?? _controller.text).trim();
     if (q.isNotEmpty) {
       ref.read(searchNotifierProvider.notifier).submitQuery(q);
@@ -65,7 +72,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _goToResults(value);
   }
 
-  void _toggleOpenNow() {
+  void _toggleOpenNow() async {
+    await _ensureInitializedOnce();
+    if (!mounted) return;
     final notifier = ref.read(searchNotifierProvider.notifier);
     final current = ref.read(searchNotifierProvider).filters;
     final nextValue = !current.isOpenNow;
@@ -112,6 +121,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Expanded(
                           child: TextField(
                             controller: _controller,
+                            onTap: _ensureInitializedOnce,
                             textInputAction: TextInputAction.search,
                             onSubmitted: _goToResults,
                             decoration: const InputDecoration(
@@ -133,7 +143,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           )
                         else
                           IconButton(
-                            onPressed: () => SearchFiltersSheet.show(context),
+                            onPressed: () async {
+                              await _ensureInitializedOnce();
+                              if (!context.mounted) return;
+                              SearchFiltersSheet.show(context);
+                            },
                             icon: const Icon(Icons.tune_rounded,
                                 color: AppColors.neutral600, size: 18),
                           ),
@@ -171,7 +185,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         _QuickChip(
                           label: 'Zona',
                           icon: Icons.location_on,
-                          onTap: () => ZoneSelectorSheet.show(context),
+                          onTap: () async {
+                            await _ensureInitializedOnce();
+                            if (!context.mounted) return;
+                            ZoneSelectorSheet.show(context);
+                          },
                         ),
                       ],
                     ),

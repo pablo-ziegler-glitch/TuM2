@@ -6,7 +6,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 /// Los parámetros son snake_case según la convención de Firebase Analytics.
 ///
 /// Para verificar en desarrollo: Firebase DebugView con `--dart-define=FIREBASE_DEBUG=true`
-/// o `adb shell setprop debug.firebase.analytics.app com.floki.tum2.tum2`.
+/// o `adb shell setprop debug.firebase.analytics.app com.floki.tum2.staging`.
 abstract class AuthAnalytics {
   static FirebaseAnalytics? get _analytics {
     try {

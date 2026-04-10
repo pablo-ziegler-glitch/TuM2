@@ -1,5 +1,6 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
@@ -24,6 +25,9 @@ export const nightlyCleanupExpiredDrafts = onSchedule(
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {
+    if (!shouldRunAutomaticFirestoreJob("nightlyCleanupExpiredDrafts")) {
+      return;
+    }
     console.log("[nightlyCleanupExpiredDrafts] Starting...");
 
     const cutoff = new Date(Date.now() - TTL_HOURS * 60 * 60 * 1000);

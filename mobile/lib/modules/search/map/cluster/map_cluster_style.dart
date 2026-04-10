@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_brand.dart';
+import '../../../../core/theme/app_colors.dart';
 import 'map_cluster_model.dart';
 
 abstract class MapClusterStyle {
@@ -17,13 +17,13 @@ abstract class MapClusterStyle {
   static Color resolveColor(MapClusterPriority priority) {
     switch (priority) {
       case MapClusterPriority.guardia:
-        return AppBrand.badgeGuard;
+        return AppColors.tertiary500;
       case MapClusterPriority.open:
-        return AppBrand.badgeOpen;
+        return AppColors.secondary500;
       case MapClusterPriority.defaultState:
-        return AppBrand.badge24h;
+        return AppColors.primary500;
       case MapClusterPriority.closed:
-        return AppBrand.badgeClosed;
+        return AppColors.neutral700;
     }
   }
 }

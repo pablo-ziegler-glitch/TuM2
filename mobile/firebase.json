@@ -1,1 +1,38 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"tum2-dev-6283d","appId":"1:967380985108:android:cea417d53a357e5d900e01","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"tum2-dev-6283d","configurations":{"android":"1:967380985108:android:cea417d53a357e5d900e01","ios":"1:967380985108:ios:c35d6bedbafba846900e01","web":"1:967380985108:web:084981eea879c427900e01"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "buildConfigurations": {
+          "src/staging": {
+            "projectId": "tum2-staging-45c83",
+            "appId": "1:227534906025:android:b08627eacb109a43b03fb8",
+            "fileOutput": "android/app/src/staging/google-services.json"
+          },
+          "src/prod": {
+            "projectId": "tum2-prod-bc9b4",
+            "appId": "1:57567901381:android:c8a51194d128f4c56662ac",
+            "fileOutput": "android/app/src/prod/google-services.json"
+          }
+        }
+      },
+      "dart": {
+        "lib/core/firebase/firebase_options_staging.dart": {
+          "projectId": "tum2-staging-45c83",
+          "configurations": {
+            "android": "1:227534906025:android:b08627eacb109a43b03fb8",
+            "ios": "1:227534906025:ios:4962e26ecfb9f9b9b03fb8",
+            "web": "1:227534906025:web:41ca1f2d60d73c58b03fb8"
+          }
+        },
+        "lib/core/firebase/firebase_options_prod.dart": {
+          "projectId": "tum2-prod-bc9b4",
+          "configurations": {
+            "android": "1:57567901381:android:c8a51194d128f4c56662ac",
+            "ios": "1:57567901381:ios:e07d92eae4e8efca6662ac",
+            "web": "1:57567901381:web:dadc4aec40273a4e6662ac"
+          }
+        }
+      }
+    }
+  }
+}

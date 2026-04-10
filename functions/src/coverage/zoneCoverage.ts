@@ -3,6 +3,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { computeUsefulCoverageScore } from "../lib/scoring";
 import { MerchantPublicDoc, ZoneCoverageMetrics } from "../lib/types";
+import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
 
@@ -165,6 +166,9 @@ async function refreshZoneCoverage(zoneId: string): Promise<void> {
 export const updateZoneCoverageMetrics = onDocumentWritten(
   "merchant_public/{merchantId}",
   async (event) => {
+    if (!shouldRunAutomaticFirestoreJob("updateZoneCoverageMetrics")) {
+      return;
+    }
     const before = event.data?.before.exists
       ? (event.data.before.data() as MerchantPublicDoc)
       : undefined;
@@ -228,6 +232,9 @@ export const scheduledRefreshZoneCoverage = onSchedule(
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {
+    if (!shouldRunAutomaticFirestoreJob("scheduledRefreshZoneCoverage")) {
+      return;
+    }
     console.log("[scheduledRefreshZoneCoverage] Starting...");
 
     const zonesSnap = await db().collection("zones").get();

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/router/app_routes.dart';
 import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -41,7 +43,7 @@ class _OwnerPharmacyDutiesScreenState
   int? _editingExpectedUpdatedAt;
   TimeOfDay _startsAt = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _endsAt = const TimeOfDay(hour: 20, minute: 0);
-  OwnerPharmacyDutyStatus _draftStatus = OwnerPharmacyDutyStatus.draft;
+  OwnerPharmacyDutyStatus _draftStatus = OwnerPharmacyDutyStatus.scheduled;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +104,8 @@ class _OwnerPharmacyDutiesScreenState
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                         children: [
                           _buildHeroCard(),
+                          const SizedBox(height: 12),
+                          _buildOperationalActionsCard(selectedDuties),
                           const SizedBox(height: 12),
                           _buildMonthHeader(merchant.id),
                           const SizedBox(height: 10),
@@ -235,6 +239,61 @@ class _OwnerPharmacyDutiesScreenState
     );
   }
 
+  Widget _buildOperationalActionsCard(List<OwnerPharmacyDuty> selectedDuties) {
+    final selectedDuty = selectedDuties.isNotEmpty ? selectedDuties.first : null;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.neutral100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Operación de guardia',
+            style: AppTextStyles.labelMd.copyWith(color: AppColors.neutral900),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => context.push(AppRoutes.ownerPharmacyDutyUpcoming),
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('Confirmar próxima guardia'),
+              ),
+              OutlinedButton.icon(
+                onPressed: selectedDuty == null
+                    ? null
+                    : () => context.push(
+                          AppRoutes.ownerPharmacyDutyIncidentReportPath(
+                            selectedDuty.id,
+                          ),
+                        ),
+                icon: const Icon(Icons.warning_amber_rounded),
+                label: const Text('Reportar incidente'),
+              ),
+              OutlinedButton.icon(
+                onPressed: selectedDuty == null
+                    ? null
+                    : () => context.push(
+                          AppRoutes.ownerPharmacyDutyTrackingPath(
+                            selectedDuty.id,
+                          ),
+                        ),
+                icon: const Icon(Icons.track_changes_outlined),
+                label: const Text('Seguimiento cobertura'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCalendarCard() {
     final daysInMonth = DateUtils.getDaysInMonth(
       _focusedMonth.year,
@@ -244,14 +303,27 @@ class _OwnerPharmacyDutiesScreenState
         DateTime(_focusedMonth.year, _focusedMonth.month, 1).weekday - 1;
     final totalSlots = ((firstWeekday + daysInMonth + 6) ~/ 7) * 7;
     final statusByDate = <String, OwnerPharmacyDutyStatus>{};
+    int priority(OwnerPharmacyDutyStatus status) {
+      switch (status) {
+        case OwnerPharmacyDutyStatus.active:
+          return 6;
+        case OwnerPharmacyDutyStatus.reassigned:
+          return 5;
+        case OwnerPharmacyDutyStatus.replacementPending:
+          return 4;
+        case OwnerPharmacyDutyStatus.incidentReported:
+          return 3;
+        case OwnerPharmacyDutyStatus.scheduled:
+          return 2;
+        case OwnerPharmacyDutyStatus.cancelled:
+          return 1;
+      }
+    }
     for (final duty in _monthDuties) {
       final existing = statusByDate[duty.dateKey];
-      if (existing == OwnerPharmacyDutyStatus.published) continue;
-      if (duty.status == OwnerPharmacyDutyStatus.published) {
+      if (existing == null || priority(duty.status) > priority(existing)) {
         statusByDate[duty.dateKey] = duty.status;
-        continue;
       }
-      statusByDate[duty.dateKey] ??= duty.status;
     }
 
     const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -356,12 +428,16 @@ class _OwnerPharmacyDutiesScreenState
 
     Color color;
     switch (status) {
-      case OwnerPharmacyDutyStatus.published:
+      case OwnerPharmacyDutyStatus.active:
+      case OwnerPharmacyDutyStatus.reassigned:
         color = AppColors.errorFg;
+      case OwnerPharmacyDutyStatus.replacementPending:
+      case OwnerPharmacyDutyStatus.incidentReported:
+        color = AppColors.warningFg;
       case OwnerPharmacyDutyStatus.cancelled:
         color = AppColors.neutral500;
-      case OwnerPharmacyDutyStatus.draft:
-        color = AppColors.tertiary500;
+      case OwnerPharmacyDutyStatus.scheduled:
+        color = AppColors.secondary500;
     }
 
     return Container(
@@ -392,8 +468,9 @@ class _OwnerPharmacyDutiesScreenState
       runSpacing: 8,
       children: [
         item(AppColors.neutral200, 'Sin turno'),
-        item(AppColors.tertiary500, 'Borrador'),
-        item(AppColors.errorFg, 'Publicado'),
+        item(AppColors.secondary500, 'Programado'),
+        item(AppColors.warningFg, 'Incidente / cobertura'),
+        item(AppColors.errorFg, 'Activo / reasignado'),
       ],
     );
   }
@@ -470,14 +547,20 @@ class _OwnerPharmacyDutiesScreenState
     final label = '${_timeFormat.format(duty.startsAt)} - '
         '${_timeFormat.format(duty.endsAt)}';
     final statusLabel = switch (duty.status) {
-      OwnerPharmacyDutyStatus.draft => 'Borrador',
-      OwnerPharmacyDutyStatus.published => 'Publicado',
+      OwnerPharmacyDutyStatus.scheduled => 'Programado',
+      OwnerPharmacyDutyStatus.active => 'Activo',
+      OwnerPharmacyDutyStatus.incidentReported => 'Incidente reportado',
+      OwnerPharmacyDutyStatus.replacementPending => 'Cobertura en curso',
+      OwnerPharmacyDutyStatus.reassigned => 'Reasignado',
       OwnerPharmacyDutyStatus.cancelled => 'Cancelado',
     };
 
     final badgeColor = switch (duty.status) {
-      OwnerPharmacyDutyStatus.draft => AppColors.tertiary500,
-      OwnerPharmacyDutyStatus.published => AppColors.errorFg,
+      OwnerPharmacyDutyStatus.scheduled => AppColors.secondary500,
+      OwnerPharmacyDutyStatus.active => AppColors.errorFg,
+      OwnerPharmacyDutyStatus.incidentReported => AppColors.warningFg,
+      OwnerPharmacyDutyStatus.replacementPending => AppColors.warningFg,
+      OwnerPharmacyDutyStatus.reassigned => AppColors.errorFg,
       OwnerPharmacyDutyStatus.cancelled => AppColors.neutral500,
     };
 
@@ -516,25 +599,15 @@ class _OwnerPharmacyDutiesScreenState
                 onPressed: _saving ? null : () => _startEditing(duty),
                 child: const Text('Editar'),
               ),
-              if (duty.status == OwnerPharmacyDutyStatus.draft)
+              if (duty.status == OwnerPharmacyDutyStatus.cancelled)
                 TextButton(
                   onPressed: _saving
                       ? null
                       : () => _changeStatus(
                             duty,
-                            OwnerPharmacyDutyStatus.published,
+                            OwnerPharmacyDutyStatus.scheduled,
                           ),
-                  child: const Text('Publicar'),
-                ),
-              if (duty.status == OwnerPharmacyDutyStatus.published)
-                TextButton(
-                  onPressed: _saving
-                      ? null
-                      : () => _changeStatus(
-                            duty,
-                            OwnerPharmacyDutyStatus.draft,
-                          ),
-                  child: const Text('Pasar a borrador'),
+                  child: const Text('Reactivar'),
                 ),
               if (duty.status != OwnerPharmacyDutyStatus.cancelled)
                 TextButton(
@@ -600,14 +673,10 @@ class _OwnerPharmacyDutiesScreenState
           const SizedBox(height: 12),
           DropdownButtonFormField<OwnerPharmacyDutyStatus>(
             initialValue: _draftStatus,
-            items: const [
+            items: const <DropdownMenuItem<OwnerPharmacyDutyStatus>>[
               DropdownMenuItem(
-                value: OwnerPharmacyDutyStatus.draft,
-                child: Text('Borrador'),
-              ),
-              DropdownMenuItem(
-                value: OwnerPharmacyDutyStatus.published,
-                child: Text('Publicado'),
+                value: OwnerPharmacyDutyStatus.scheduled,
+                child: Text('Programado'),
               ),
             ],
             onChanged: _saving
@@ -887,16 +956,12 @@ class _OwnerPharmacyDutiesScreenState
       if (!mounted) return;
       setState(() {
         _feedbackError = false;
-        _feedbackMessage = _draftStatus == OwnerPharmacyDutyStatus.published
-            ? 'Turno publicado correctamente.'
-            : 'Turno guardado en borrador.';
+        _feedbackMessage = 'Turno programado correctamente.';
         _lastConflict = null;
       });
       await _showSavedDialog(
         selectedDateKey,
-        _draftStatus == OwnerPharmacyDutyStatus.published
-            ? 'Turno publicado'
-            : 'Turno guardado',
+        'Turno guardado',
       );
     } on OwnerDutyException catch (error) {
       if (!mounted) return;
@@ -965,9 +1030,7 @@ class _OwnerPharmacyDutiesScreenState
     setState(() {
       _editingDutyId = duty.id;
       _editingExpectedUpdatedAt = duty.updatedAt?.millisecondsSinceEpoch;
-      _draftStatus = duty.status == OwnerPharmacyDutyStatus.cancelled
-          ? OwnerPharmacyDutyStatus.draft
-          : duty.status;
+      _draftStatus = OwnerPharmacyDutyStatus.scheduled;
       _startsAt = TimeOfDay.fromDateTime(duty.startsAt.toLocal());
       _endsAt = TimeOfDay.fromDateTime(duty.endsAt.toLocal());
       final selected = _dateKeyToDate(duty.dateKey);
@@ -982,7 +1045,7 @@ class _OwnerPharmacyDutiesScreenState
       _editingExpectedUpdatedAt = null;
       _startsAt = const TimeOfDay(hour: 8, minute: 0);
       _endsAt = const TimeOfDay(hour: 20, minute: 0);
-      _draftStatus = OwnerPharmacyDutyStatus.draft;
+      _draftStatus = OwnerPharmacyDutyStatus.scheduled;
     });
   }
 

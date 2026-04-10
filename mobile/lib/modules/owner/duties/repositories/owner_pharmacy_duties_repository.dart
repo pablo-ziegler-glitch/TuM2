@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 
 import '../models/owner_pharmacy_duty.dart';
+import '../../pharmacy/services/pharmacy_duty_command_service.dart';
 
 class OwnerDutyMutationResult {
   const OwnerDutyMutationResult({
@@ -42,12 +42,12 @@ class OwnerDutyConflict {
 class OwnerPharmacyDutiesRepository {
   OwnerPharmacyDutiesRepository({
     FirebaseFirestore? firestore,
-    FirebaseFunctions? functions,
+    PharmacyDutyCommandService? commandService,
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _functions = functions ?? FirebaseFunctions.instance;
+        _commandService = commandService ?? PharmacyDutyCommandService();
 
   final FirebaseFirestore _firestore;
-  final FirebaseFunctions _functions;
+  final PharmacyDutyCommandService _commandService;
 
   static const Duration _timeout = Duration(seconds: 8);
 
@@ -96,25 +96,22 @@ class OwnerPharmacyDutiesRepository {
     String? notes,
   }) async {
     try {
-      final callable = _functions.httpsCallable('upsertPharmacyDuty');
-      final response = await callable.call(<String, dynamic>{
-        'merchantId': merchantId,
-        'dutyId': dutyId,
-        'date': date,
-        'startsAt': startsAtIso,
-        'endsAt': endsAtIso,
-        'status': statusToString(status),
-        'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
-        'notes': notes,
-      }).timeout(_timeout);
-      final data = (response.data as Map?)?.cast<String, dynamic>() ??
-          const <String, dynamic>{};
+      final data = await _commandService.upsertDuty(
+        merchantId: merchantId,
+        dutyId: dutyId,
+        date: date,
+        startsAtIso: startsAtIso,
+        endsAtIso: endsAtIso,
+        status: statusToString(status),
+        expectedUpdatedAtMillis: expectedUpdatedAtMillis,
+        notes: notes,
+      );
       return OwnerDutyMutationResult(
         dutyId: (data['dutyId'] as String?)?.trim() ?? '',
         updatedAtMillis: (data['updatedAtMillis'] as num?)?.toInt() ??
             DateTime.now().millisecondsSinceEpoch,
       );
-    } on FirebaseFunctionsException catch (error) {
+    } on PharmacyDutyCommandException catch (error) {
       throw _mapFunctionError(error);
     }
   }
@@ -125,27 +122,24 @@ class OwnerPharmacyDutiesRepository {
     int? expectedUpdatedAtMillis,
   }) async {
     try {
-      final callable = _functions.httpsCallable('changePharmacyDutyStatus');
-      final response = await callable.call(<String, dynamic>{
-        'dutyId': dutyId,
-        'status': statusToString(status),
-        'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
-      }).timeout(_timeout);
-      final data = (response.data as Map?)?.cast<String, dynamic>() ??
-          const <String, dynamic>{};
+      final data = await _commandService.changeDutyStatus(
+        dutyId: dutyId,
+        status: statusToString(status),
+        expectedUpdatedAtMillis: expectedUpdatedAtMillis,
+      );
       return OwnerDutyMutationResult(
         dutyId: (data['dutyId'] as String?)?.trim() ?? dutyId,
         updatedAtMillis: (data['updatedAtMillis'] as num?)?.toInt() ??
             DateTime.now().millisecondsSinceEpoch,
       );
-    } on FirebaseFunctionsException catch (error) {
+    } on PharmacyDutyCommandException catch (error) {
       throw _mapFunctionError(error);
     }
   }
 
-  OwnerDutyException _mapFunctionError(FirebaseFunctionsException error) {
+  OwnerDutyException _mapFunctionError(PharmacyDutyCommandException error) {
     final details = (error.details is Map)
-        ? (error.details as Map).cast<String, dynamic>()
+        ? error.details!
         : const <String, dynamic>{};
     final detailCode = (details['code'] as String?)?.trim();
     if (detailCode == 'duty_conflict') {
@@ -178,12 +172,12 @@ class OwnerPharmacyDutiesRepository {
     if (error.code == 'failed-precondition') {
       return OwnerDutyException(
         code: 'failed_precondition',
-        message: error.message ?? 'No se pudo completar la operación.',
+        message: error.message,
       );
     }
     return OwnerDutyException(
       code: error.code,
-      message: error.message ?? 'No pudimos guardar el turno.',
+      message: error.message,
     );
   }
 }

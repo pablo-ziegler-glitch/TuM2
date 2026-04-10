@@ -28,6 +28,16 @@ export interface CatalogLimitsConfig {
   updatedBy: string;
 }
 
+export interface PharmacyDutyRulesConfig {
+  maxReassignmentDistanceKm: number;
+  requestExpiryMinutes: number;
+  maxCandidatesPerRound: number;
+  allowParallelRequests: boolean;
+  preventMultipleOpenRoundsPerDuty: boolean;
+  updatedAt?: Timestamp;
+  updatedBy?: string;
+}
+
 /**
  * Collection: admin_configs/global
  * Singleton config document. Readable by admins, writable by super_admins.

@@ -23,7 +23,7 @@ void main() {
           appRouterProvider.overrideWithValue(testRouter),
           deepLinkListenerProvider.overrideWithValue(null),
         ],
-        child: TuM2App(),
+        child: const TuM2App(),
       ),
     );
     expect(find.byType(TuM2App), findsOneWidget);

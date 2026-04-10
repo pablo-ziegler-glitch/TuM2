@@ -3,8 +3,8 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "test": "npm run build && node --test lib/admin/__tests__/backfillKeywords.test.js lib/lib/__tests__/projection.test.js lib/lib/__tests__/pharmacyDuties.test.js lib/lib/__tests__/pharmacyDutyMitigation.test.js lib/lib/__tests__/catalogLimits.test.js",
     "test": "npm run build && node --test lib/admin/__tests__/backfillKeywords.test.js lib/lib/__tests__/projection.test.js lib/lib/__tests__/pharmacyDuties.test.js lib/lib/__tests__/catalogLimits.test.js",
+    "test:full": "npm run build && node --test lib/admin/__tests__/backfillKeywords.test.js lib/lib/__tests__/projection.test.js lib/lib/__tests__/pharmacyDuties.test.js lib/lib/__tests__/pharmacyDutyMitigation.test.js lib/lib/__tests__/catalogLimits.test.js",
     "cost:guard": "node scripts/firestore_cost_guard.js",
     "finops:summary": "node scripts/finops_summary.js",
     "finops:gate": "node scripts/finops_gate.js",

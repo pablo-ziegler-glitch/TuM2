@@ -111,7 +111,18 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
         const relevantTodayDuties = todayDutiesSnap.docs
           .map((doc) => doc.data() as PharmacyDutyDoc);
         const hasDutyToday = relevantTodayDuties.length > 0;
+        let wasTruncated = false;
+        let totalNonCancelledDuties: number | null = null;
         if (todayDutiesSnap.size >= MAX_DUTY_DOCS_PER_EVENT) {
+          const countAgg = await db()
+            .collection("pharmacy_duties")
+            .where("merchantId", "==", affectedMerchantId)
+            .where("date", "==", today)
+            .where("status", "in", [...NON_CANCELLED_DUTY_STATUSES])
+            .count()
+            .get();
+          totalNonCancelledDuties = Number(countAgg.data().count ?? 0);
+          wasTruncated = totalNonCancelledDuties > MAX_DUTY_DOCS_PER_EVENT;
           logFinOpsEvent({
             event: "trigger_duties_scan_cap_reached",
             level: "warning",
@@ -120,6 +131,8 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
               merchantId: affectedMerchantId,
               date: today,
               queryLimit: MAX_DUTY_DOCS_PER_EVENT,
+              totalNonCancelledDuties,
+              wasTruncated,
             },
           });
         }
@@ -192,6 +205,8 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
             merchantId: affectedMerchantId,
             date: today,
             dutiesRead: todayDutiesSnap.size,
+            totalNonCancelledDuties,
+            wasTruncated,
             signalWrite: signalNeedsUpdate,
             publicWrite: publicNeedsUpdate,
             hasDutyToday,

@@ -8,7 +8,7 @@ import { logFinOpsEvent } from "../lib/finops";
 
 const db = () => getFirestore();
 const ZONE_REFRESH_CURSOR_DOC = "system_jobs/scheduledRefreshZoneCoverage";
-const MAX_ZONES_PER_RUN = 25;
+const MAX_ZONES_PER_RUN = 10;
 
 interface ZoneRefreshCursorDoc {
   lastZoneId?: string;
@@ -241,12 +241,12 @@ export const updateZoneCoverageMetrics = onDocumentWritten(
 /**
  * scheduledRefreshZoneCoverage
  *
- * Scheduled fallback: runs daily at 01:00 Argentina time (04:00 UTC).
- * Refreshes coverage metrics for all zones in case triggers were missed.
+ * Scheduled fallback: runs hourly with bounded window.
+ * Refreshes coverage metrics incrementally in case triggers were missed.
  */
 export const scheduledRefreshZoneCoverage = onSchedule(
   {
-    schedule: "0 4 * * *",
+    schedule: "10 * * * *",
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {

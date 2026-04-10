@@ -12,10 +12,24 @@ interface FinOpsEventInput {
 }
 
 function resolveProjectId(): string {
+  const gcloudProject = process.env.GCLOUD_PROJECT ?? process.env.GCP_PROJECT;
+  if (typeof gcloudProject === "string" && gcloudProject.trim().length > 0) {
+    return gcloudProject.trim();
+  }
+
+  const firebaseConfig = process.env.FIREBASE_CONFIG;
+  if (typeof firebaseConfig === "string" && firebaseConfig.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(firebaseConfig) as { projectId?: unknown };
+      if (typeof parsed.projectId === "string" && parsed.projectId.trim().length > 0) {
+        return parsed.projectId.trim();
+      }
+    } catch {
+      // Ignore parse errors and fall through to unknown.
+    }
+  }
+
   return (
-    process.env.GCLOUD_PROJECT ||
-    process.env.GCP_PROJECT ||
-    process.env.FIREBASE_CONFIG ||
     "unknown"
   );
 }

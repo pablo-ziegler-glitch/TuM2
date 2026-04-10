@@ -99,26 +99,6 @@ export const nightlyRefreshOpenStatuses = onSchedule(
       { merge: true }
     );
 
-    if (merchantIds.length === 0) {
-      console.log(
-        `[nightlyRefreshOpenStatuses] Window scanned=${merchantsSnap.size} has no visible merchants.`
-      );
-      console.log(
-        JSON.stringify({
-          job: "nightlyRefreshOpenStatuses",
-          scanned: merchantsSnap.size,
-          visibleScanned: merchantsSnap.size,
-          merchantScheduleReads: 0,
-          signalWrites: 0,
-          skippedUnchanged: 0,
-          hasMore,
-          restartedFromBeginning,
-          lastScannedDocId,
-        })
-      );
-      return;
-    }
-
     const merchantPublicById = new Map<string, FirebaseFirestore.DocumentData>();
     let scheduleReads = 0;
     for (const doc of merchantsSnap.docs) {

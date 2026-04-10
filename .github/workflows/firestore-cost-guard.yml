@@ -23,7 +23,7 @@ on:
         required: false
         default: false
   schedule:
-    - cron: "15 */6 * * *"
+    - cron: "15 3 * * *"
 
 jobs:
   cost-guard:
@@ -33,7 +33,7 @@ jobs:
       id-token: write
 
     env:
-      TARGET_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'all' }}
+      TARGET_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'prod' }}
       WINDOW_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.window_hours || '24' }}
       FAIL_ON_WARN: ${{ github.event_name == 'workflow_dispatch' && inputs.fail_on_warn || 'false' }}
 

@@ -1,11 +1,17 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
 import { computeUsefulCoverageScore } from "../lib/scoring";
 import { MerchantPublicDoc, ZoneCoverageMetrics } from "../lib/types";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
+const ZONE_REFRESH_CURSOR_DOC = "system_jobs/scheduledRefreshZoneCoverage";
+const MAX_ZONES_PER_RUN = 25;
+
+interface ZoneRefreshCursorDoc {
+  lastZoneId?: string;
+}
 
 function zoneKey(merchant: MerchantPublicDoc | undefined): string {
   if (!merchant) return "";
@@ -237,15 +243,74 @@ export const scheduledRefreshZoneCoverage = onSchedule(
     }
     console.log("[scheduledRefreshZoneCoverage] Starting...");
 
-    const zonesSnap = await db().collection("zones").get();
+    const cursorRef = db().doc(ZONE_REFRESH_CURSOR_DOC);
+    const cursorSnap = await cursorRef.get();
+    const cursorRaw = cursorSnap.exists
+      ? (cursorSnap.data() as ZoneRefreshCursorDoc)
+      : undefined;
+    const cursorZoneId =
+      typeof cursorRaw?.lastZoneId === "string" && cursorRaw.lastZoneId.trim().length > 0
+        ? cursorRaw.lastZoneId.trim()
+        : null;
+
+    let zonesQuery = db()
+      .collection("zones")
+      .orderBy(FieldPath.documentId())
+      .limit(MAX_ZONES_PER_RUN);
+    if (cursorZoneId) {
+      zonesQuery = zonesQuery.startAfter(cursorZoneId);
+    }
+
+    let zonesSnap = await zonesQuery.get();
+    let restartedFromBeginning = false;
+    if (zonesSnap.empty && cursorZoneId != null) {
+      await cursorRef.set(
+        {
+          lastZoneId: "",
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      zonesSnap = await db()
+        .collection("zones")
+        .orderBy(FieldPath.documentId())
+        .limit(MAX_ZONES_PER_RUN)
+        .get();
+      restartedFromBeginning = true;
+    }
+
     if (zonesSnap.empty) {
       console.log("[scheduledRefreshZoneCoverage] No zones found.");
       return;
     }
 
     const zoneIds = zonesSnap.docs.map((d) => d.id);
-    await Promise.all(zoneIds.map(refreshZoneCoverage));
+    for (const zoneId of zoneIds) {
+      await refreshZoneCoverage(zoneId);
+    }
 
-    console.log(`[scheduledRefreshZoneCoverage] Done. Refreshed ${zoneIds.length} zones.`);
+    const lastZoneId = zonesSnap.docs[zonesSnap.docs.length - 1]?.id ?? "";
+    const hasMore = zonesSnap.size >= MAX_ZONES_PER_RUN;
+    await cursorRef.set(
+      {
+        lastZoneId: hasMore ? lastZoneId : "",
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    console.log(
+      `[scheduledRefreshZoneCoverage] Done. Refreshed ${zoneIds.length} zones. hasMore=${hasMore}`
+    );
+    console.log(
+      JSON.stringify({
+        job: "scheduledRefreshZoneCoverage",
+        scanned: zonesSnap.size,
+        refreshed: zoneIds.length,
+        hasMore,
+        restartedFromBeginning,
+        lastZoneId,
+      })
+    );
   }
 );

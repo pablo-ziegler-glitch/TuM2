@@ -6,14 +6,30 @@ const db = () => getFirestore();
 
 const DEFAULT_SUPPRESSION_THRESHOLD = 3;
 const CONFIG_DOC = "admin_configs/moderation";
+const CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
+let cachedThreshold: number | null = null;
+let cachedThresholdExpiresAtMs = 0;
 
 async function getSuppressionThreshold(): Promise<number> {
+  const nowMs = Date.now();
+  if (cachedThreshold != null && nowMs < cachedThresholdExpiresAtMs) {
+    return cachedThreshold;
+  }
+
   const configSnap = await db().doc(CONFIG_DOC).get();
-  if (!configSnap.exists) return DEFAULT_SUPPRESSION_THRESHOLD;
+  if (!configSnap.exists) {
+    cachedThreshold = DEFAULT_SUPPRESSION_THRESHOLD;
+    cachedThresholdExpiresAtMs = nowMs + CONFIG_CACHE_TTL_MS;
+    return DEFAULT_SUPPRESSION_THRESHOLD;
+  }
+
   const data = configSnap.data();
-  return typeof data?.suppressionThreshold === "number"
+  const resolved = typeof data?.suppressionThreshold === "number"
     ? data.suppressionThreshold
     : DEFAULT_SUPPRESSION_THRESHOLD;
+  cachedThreshold = resolved;
+  cachedThresholdExpiresAtMs = nowMs + CONFIG_CACHE_TTL_MS;
+  return resolved;
 }
 
 /**
@@ -35,21 +51,26 @@ export const onReportThresholdSuppressMerchant = onDocumentWritten(
     const targetId = report.targetId;
     if (!targetId) return;
 
-    // Count open reports for this merchant
-    const openReportsSnap = await db()
+    // Count open reports with aggregate query to avoid reading all report docs.
+    const openReportsAgg = await db()
       .collection("reports")
       .where("targetId", "==", targetId)
       .where("targetType", "==", "merchant")
       .where("status", "==", "open")
+      .count()
       .get();
 
-    const openCount = openReportsSnap.size;
+    const openCount = Number(openReportsAgg.data().count ?? 0);
     const threshold = await getSuppressionThreshold();
 
     if (openCount >= threshold) {
-      await db()
-        .doc(`merchants/${targetId}`)
-        .set(
+      const merchantRef = db().doc(`merchants/${targetId}`);
+      const merchantSnap = await merchantRef.get();
+      if (merchantSnap.exists && merchantSnap.data()?.["visibilityStatus"] === "suppressed") {
+        return;
+      }
+
+      await merchantRef.set(
           {
             visibilityStatus: "suppressed",
             updatedAt: FieldValue.serverTimestamp(),

@@ -9,6 +9,16 @@ import {
 } from "../lib/pharmacyDutyMitigation";
 
 const db = () => getFirestore();
+const MAX_DUTY_DOCS_PER_EVENT = 10;
+const NON_CANCELLED_DUTY_STATUSES = [
+  "draft",
+  "published",
+  "scheduled",
+  "active",
+  "incident_reported",
+  "replacement_pending",
+  "reassigned",
+] as const;
 
 interface PharmacyDutyDoc {
   merchantId: string;
@@ -91,14 +101,14 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
             .collection("pharmacy_duties")
             .where("merchantId", "==", affectedMerchantId)
             .where("date", "==", today)
-            // Query fuertemente acotada por merchantId+date; leemos el set completo
-            // para evitar falsos negativos cuando existen más de 10 duties.
+            // Acotamos lecturas por evento: solo estados no cancelados y límite duro.
+            .where("status", "in", [...NON_CANCELLED_DUTY_STATUSES])
+            .limit(MAX_DUTY_DOCS_PER_EVENT)
             .get(),
           signalRef.get(),
         ]);
         const relevantTodayDuties = todayDutiesSnap.docs
-          .map((doc) => doc.data() as PharmacyDutyDoc)
-          .filter((doc) => normalizeDutyStatus(doc.status) !== "cancelled");
+          .map((doc) => doc.data() as PharmacyDutyDoc);
         const hasDutyToday = relevantTodayDuties.length > 0;
         const bestDuty = relevantTodayDuties
           .slice()

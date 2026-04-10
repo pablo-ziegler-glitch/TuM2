@@ -9,6 +9,16 @@ import {
 } from "../lib/pharmacyDutyMitigation";
 
 const db = () => getFirestore();
+const MAX_DUTY_DOCS_PER_EVENT = 10;
+const NON_CANCELLED_DUTY_STATUSES = [
+  "draft",
+  "published",
+  "scheduled",
+  "active",
+  "incident_reported",
+  "replacement_pending",
+  "reassigned",
+] as const;
 
 interface PharmacyDutyDoc {
   merchantId: string;
@@ -162,6 +172,20 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
         console.log(
           `[onPharmacyDutyWriteSyncMerchant] ${affectedMerchantId} hasPharmacyDutyToday=${hasDutyToday}`
         );
+        logFinOpsEvent({
+          event: "trigger_duties_sync",
+          module: "triggers.duties",
+          payload: {
+            merchantId: affectedMerchantId,
+            date: today,
+            dutiesRead: todayDutiesSnap.size,
+            totalNonCancelledDuties,
+            wasTruncated,
+            signalWrite: signalNeedsUpdate,
+            publicWrite: publicNeedsUpdate,
+            hasDutyToday,
+          },
+        });
       })
     );
   }

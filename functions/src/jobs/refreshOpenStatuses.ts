@@ -12,6 +12,12 @@ import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
 const READ_CHUNK_SIZE = 30;
+const MAX_SCAN_PER_RUN = 2000;
+const CURSOR_DOC = "system_jobs/nightlyRefreshOpenStatuses";
+
+interface OpenStatusCursorDoc {
+  lastDocId?: string;
+}
 
 function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -39,23 +45,67 @@ export const nightlyRefreshOpenStatuses = onSchedule(
     }
     console.log("[nightlyRefreshOpenStatuses] Starting...");
 
-    const merchantsSnap = await db()
+    const cursorRef = db().doc(CURSOR_DOC);
+    const cursorSnap = await cursorRef.get();
+    const cursorRaw = cursorSnap.exists
+      ? (cursorSnap.data() as OpenStatusCursorDoc)
+      : undefined;
+    const cursorDocId =
+      typeof cursorRaw?.lastDocId === "string" && cursorRaw.lastDocId.trim().length > 0
+        ? cursorRaw.lastDocId.trim()
+        : null;
+
+    let scanQuery = db()
       .collection("merchant_public")
       .where("visibilityStatus", "==", "visible")
-      .get();
+      .orderBy(FieldPath.documentId())
+      .limit(MAX_SCAN_PER_RUN);
+    if (cursorDocId) {
+      scanQuery = scanQuery.startAfter(cursorDocId);
+    }
+    let merchantsSnap = await scanQuery.get();
+    let restartedFromBeginning = false;
+    if (merchantsSnap.empty && cursorDocId != null) {
+      await cursorRef.set(
+        {
+          lastDocId: "",
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      merchantsSnap = await db()
+        .collection("merchant_public")
+        .where("visibilityStatus", "==", "visible")
+        .orderBy(FieldPath.documentId())
+        .limit(MAX_SCAN_PER_RUN)
+        .get();
+      restartedFromBeginning = true;
+    }
 
     if (merchantsSnap.empty) {
-      console.log("[nightlyRefreshOpenStatuses] No visible merchants found.");
+      console.log("[nightlyRefreshOpenStatuses] No merchants in current scan window.");
       return;
     }
 
     const merchantIds = merchantsSnap.docs.map((d) => d.id);
+    const lastScannedDocId = merchantsSnap.docs[merchantsSnap.docs.length - 1]?.id ?? "";
+    const hasMore = merchantsSnap.size >= MAX_SCAN_PER_RUN;
+    await cursorRef.set(
+      {
+        lastDocId: hasMore ? lastScannedDocId : "",
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
     const merchantPublicById = new Map<string, FirebaseFirestore.DocumentData>();
     let scheduleReads = 0;
     for (const doc of merchantsSnap.docs) {
       merchantPublicById.set(doc.id, doc.data());
     }
-    console.log(`[nightlyRefreshOpenStatuses] Processing ${merchantIds.length} merchants`);
+    console.log(
+      `[nightlyRefreshOpenStatuses] Visible window scanned=${merchantsSnap.size}`
+    );
 
     const scheduleMap = new Map<string, MerchantScheduleDoc>();
     for (const idsChunk of chunk(merchantIds, READ_CHUNK_SIZE)) {
@@ -123,11 +173,30 @@ export const nightlyRefreshOpenStatuses = onSchedule(
     console.log(
       JSON.stringify({
         job: "nightlyRefreshOpenStatuses",
-        merchantPublicReads: merchantsSnap.size,
+        scanned: merchantsSnap.size,
+        visibleScanned: merchantIds.length,
         merchantScheduleReads: scheduleReads,
         signalWrites: updated,
         skippedUnchanged,
+        hasMore,
+        restartedFromBeginning,
+        lastScannedDocId,
       })
     );
+    logFinOpsEvent({
+      event: "job_refresh_open_statuses_window",
+      level: hasMore ? "warning" : "info",
+      module: "jobs.refreshOpenStatuses",
+      payload: {
+        scanned: merchantsSnap.size,
+        visibleScanned: merchantIds.length,
+        merchantScheduleReads: scheduleReads,
+        signalWrites: updated,
+        skippedUnchanged,
+        hasMore,
+        restartedFromBeginning,
+        lastScannedDocId,
+      },
+    });
   }
 );

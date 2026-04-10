@@ -192,6 +192,7 @@ export const onboardingOwnerSubmit = onCall(
     await getAuth().setCustomUserClaims(uid, {
       role: "owner",
       merchantId: draftMerchantId,
+      merchantIds: [draftMerchantId],
       onboardingComplete: true,
     });
 

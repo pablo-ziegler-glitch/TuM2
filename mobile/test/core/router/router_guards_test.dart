@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:tum2/core/auth/auth_state.dart';
 import 'package:tum2/core/router/app_routes.dart';
 import 'package:tum2/core/router/router_guards.dart';

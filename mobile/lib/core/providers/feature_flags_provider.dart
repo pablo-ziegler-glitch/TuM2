@@ -66,7 +66,8 @@ final ownerPharmacyDutiesEnabledProvider = FutureProvider<bool>((ref) async {
   }
 });
 
-final ownerPharmacyDutyMitigationEnabledProvider = FutureProvider<bool>((ref) async {
+final ownerPharmacyDutyMitigationEnabledProvider =
+    FutureProvider<bool>((ref) async {
   final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
   try {
     await remoteConfig.setConfigSettings(

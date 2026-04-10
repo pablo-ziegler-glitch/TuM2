@@ -138,9 +138,8 @@ class OwnerPharmacyDutiesRepository {
   }
 
   OwnerDutyException _mapFunctionError(PharmacyDutyCommandException error) {
-    final details = (error.details is Map)
-        ? error.details!
-        : const <String, dynamic>{};
+    final details =
+        (error.details is Map) ? error.details! : const <String, dynamic>{};
     final detailCode = (details['code'] as String?)?.trim();
     if (detailCode == 'duty_conflict') {
       final conflictRaw =

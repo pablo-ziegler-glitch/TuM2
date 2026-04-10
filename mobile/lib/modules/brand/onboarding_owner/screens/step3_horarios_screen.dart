@@ -17,7 +17,7 @@ import '../analytics/onboarding_analytics.dart';
 /// El usuario puede skipear con "Completar después" (step3Skipped: true).
 class Step3HorariosScreen extends StatefulWidget {
   final ValueChanged<List<DaySchedule>> onNext; // SAVE_STEP_3
-  final VoidCallback onSkip;                    // SKIP_STEP_3
+  final VoidCallback onSkip; // SKIP_STEP_3
   final VoidCallback onBack;
   final VoidCallback onExit;
   final OnboardingOwnerRepository ownerRepository;
@@ -42,13 +42,42 @@ class _Step3HorariosScreenState extends State<Step3HorariosScreen> {
   void initState() {
     super.initState();
     _schedules = [
-      DaySchedule(day: 'Lun', dayKey: 'monday',    openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
-      DaySchedule(day: 'Mar', dayKey: 'tuesday',   openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
-      DaySchedule(day: 'Mié', dayKey: 'wednesday', openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
-      DaySchedule(day: 'Jue', dayKey: 'thursday',  openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
-      DaySchedule(day: 'Vie', dayKey: 'friday',    openTime: const TimeOfDay(hour: 9,  minute: 0), closeTime: const TimeOfDay(hour: 21, minute: 0)),
-      DaySchedule(day: 'Sáb', dayKey: 'saturday',  openTime: const TimeOfDay(hour: 10, minute: 0), closeTime: const TimeOfDay(hour: 14, minute: 0)),
-      DaySchedule(day: 'Dom', dayKey: 'sunday',    enabled: false, openTime: const TimeOfDay(hour: 9, minute: 0), closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(
+          day: 'Lun',
+          dayKey: 'monday',
+          openTime: const TimeOfDay(hour: 9, minute: 0),
+          closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(
+          day: 'Mar',
+          dayKey: 'tuesday',
+          openTime: const TimeOfDay(hour: 9, minute: 0),
+          closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(
+          day: 'Mié',
+          dayKey: 'wednesday',
+          openTime: const TimeOfDay(hour: 9, minute: 0),
+          closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(
+          day: 'Jue',
+          dayKey: 'thursday',
+          openTime: const TimeOfDay(hour: 9, minute: 0),
+          closeTime: const TimeOfDay(hour: 20, minute: 0)),
+      DaySchedule(
+          day: 'Vie',
+          dayKey: 'friday',
+          openTime: const TimeOfDay(hour: 9, minute: 0),
+          closeTime: const TimeOfDay(hour: 21, minute: 0)),
+      DaySchedule(
+          day: 'Sáb',
+          dayKey: 'saturday',
+          openTime: const TimeOfDay(hour: 10, minute: 0),
+          closeTime: const TimeOfDay(hour: 14, minute: 0)),
+      DaySchedule(
+          day: 'Dom',
+          dayKey: 'sunday',
+          enabled: false,
+          openTime: const TimeOfDay(hour: 9, minute: 0),
+          closeTime: const TimeOfDay(hour: 20, minute: 0)),
     ];
   }
 
@@ -100,7 +129,8 @@ class _Step3HorariosScreenState extends State<Step3HorariosScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('¿Cuándo abrís?', style: AppTextStyles.headingMd),
+                    child:
+                        Text('¿Cuándo abrís?', style: AppTextStyles.headingMd),
                   ),
                   IconButton(
                     onPressed: _onExitTap,

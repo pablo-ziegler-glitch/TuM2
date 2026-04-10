@@ -240,7 +240,8 @@ class _OwnerPharmacyDutiesScreenState
   }
 
   Widget _buildOperationalActionsCard(List<OwnerPharmacyDuty> selectedDuties) {
-    final selectedDuty = selectedDuties.isNotEmpty ? selectedDuties.first : null;
+    final selectedDuty =
+        selectedDuties.isNotEmpty ? selectedDuties.first : null;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -261,7 +262,8 @@ class _OwnerPharmacyDutiesScreenState
             runSpacing: 8,
             children: [
               OutlinedButton.icon(
-                onPressed: () => context.push(AppRoutes.ownerPharmacyDutyUpcoming),
+                onPressed: () =>
+                    context.push(AppRoutes.ownerPharmacyDutyUpcoming),
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text('Confirmar próxima guardia'),
               ),
@@ -319,6 +321,7 @@ class _OwnerPharmacyDutiesScreenState
           return 1;
       }
     }
+
     for (final duty in _monthDuties) {
       final existing = statusByDate[duty.dateKey];
       if (existing == null || priority(duty.status) > priority(existing)) {

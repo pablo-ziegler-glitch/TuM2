@@ -48,7 +48,8 @@ class _DisplayNameScreenState extends ConsumerState<DisplayNameScreen> {
     if (name.isEmpty) return;
 
     if (name.length < 2) {
-      setState(() => _errorText = 'El nombre debe tener al menos 2 caracteres.');
+      setState(
+          () => _errorText = 'El nombre debe tener al menos 2 caracteres.');
       return;
     }
 

@@ -127,7 +127,7 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
           address: details.formattedAddress,
           lat: details.lat,
           lng: details.lng,
-          geohash: '',    // computado server-side en CF-01
+          geohash: '', // computado server-side en CF-01
           zoneId: zone.zoneId,
           cityId: zone.cityId,
           provinceId: zone.provinceId,
@@ -299,7 +299,9 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                                 : _isNetworkError
                                     ? AppColors.warningFg
                                     : AppColors.neutral300,
-                            width: (_isInvalidAddress || _isNetworkError) ? 1.5 : 1,
+                            width: (_isInvalidAddress || _isNetworkError)
+                                ? 1.5
+                                : 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -381,7 +383,8 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                     // EX-09: error inline + card
                     if (_isInvalidAddress && !_isNetworkError) ...[
                       InlineError(
-                          message: 'No pudimos identificar la zona. Intentá con otra dirección.'),
+                          message:
+                              'No pudimos identificar la zona. Intentá con otra dirección.'),
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -470,9 +473,8 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                     )
                   else
                     ElevatedButton(
-                      onPressed: _addressState == _AddressState.valid
-                          ? _onNext
-                          : null,
+                      onPressed:
+                          _addressState == _AddressState.valid ? _onNext : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary500,
                         foregroundColor: Colors.white,

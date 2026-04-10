@@ -60,7 +60,8 @@ class CategoriesRepository {
   static void clearCache() => _cache = null;
 
   static const List<CategoryModel> _fallbackCategories = [
-    CategoryModel(id: 'pharmacy', label: 'Farmacia', iconName: 'local_pharmacy'),
+    CategoryModel(
+        id: 'pharmacy', label: 'Farmacia', iconName: 'local_pharmacy'),
     CategoryModel(id: 'kiosk', label: 'Kiosco', iconName: 'storefront'),
     CategoryModel(id: 'grocery', label: 'Almacén', iconName: 'shopping_basket'),
     CategoryModel(id: 'vet', label: 'Veterinaria', iconName: 'pets'),

@@ -87,7 +87,8 @@ class ScheduleRow extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.only(left: 8),
                 child: Text('Cerrado',
-                    style: TextStyle(fontSize: 13, color: AppColors.neutral500)),
+                    style:
+                        TextStyle(fontSize: 13, color: AppColors.neutral500)),
               ),
           ],
         ),

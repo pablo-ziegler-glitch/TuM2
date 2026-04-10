@@ -39,8 +39,8 @@ class ErrorBanner extends StatelessWidget {
             const SizedBox(width: 8),
             GestureDetector(
               onTap: onDismiss,
-              child: const Icon(Icons.close,
-                  size: 16, color: AppColors.errorFg),
+              child:
+                  const Icon(Icons.close, size: 16, color: AppColors.errorFg),
             ),
           ],
         ],

@@ -97,8 +97,8 @@ class PharmacyDutyFlowRepository {
         .get()
         .timeout(_timeout);
     if (!requestSnap.exists) return null;
-    final request =
-        DutyReassignmentRequestItem.fromFirestore(requestSnap.id, requestSnap.data()!);
+    final request = DutyReassignmentRequestItem.fromFirestore(
+        requestSnap.id, requestSnap.data()!);
 
     final dutySnap = await _firestore
         .doc('pharmacy_duties/${request.dutyId}')
@@ -112,8 +112,8 @@ class PharmacyDutyFlowRepository {
         .doc('merchants/${request.originMerchantId}')
         .get()
         .timeout(_timeout);
-    final originName =
-        (merchantSnap.data()?['name'] as String?)?.trim() ?? request.originMerchantId;
+    final originName = (merchantSnap.data()?['name'] as String?)?.trim() ??
+        request.originMerchantId;
 
     return DutyInvitationDetail(
       request: request,

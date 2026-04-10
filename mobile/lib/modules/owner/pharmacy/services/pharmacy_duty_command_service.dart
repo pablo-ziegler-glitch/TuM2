@@ -99,12 +99,13 @@ class PharmacyDutyCommandService {
     return (data['incidentId'] as String?)?.trim() ?? '';
   }
 
-  Future<({
-    String dutyId,
-    String originMerchantId,
-    int maxCandidatesPerRound,
-    List<DutyReplacementCandidate> candidates,
-  })> getEligibleCandidates({
+  Future<
+      ({
+        String dutyId,
+        String originMerchantId,
+        int maxCandidatesPerRound,
+        List<DutyReplacementCandidate> candidates,
+      })> getEligibleCandidates({
     required String dutyId,
   }) async {
     final data = await _call('getEligibleReplacementCandidates', {

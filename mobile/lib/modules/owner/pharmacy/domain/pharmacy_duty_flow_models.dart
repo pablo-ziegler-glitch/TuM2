@@ -95,8 +95,7 @@ class PharmacyDutyFlowSummary {
       incidentOpen: data['incidentOpen'] == true,
       replacementRoundOpen: data['replacementRoundOpen'] == true,
       incidentId: (data['incidentId'] as String?)?.trim(),
-      replacementMerchantId:
-          (data['replacementMerchantId'] as String?)?.trim(),
+      replacementMerchantId: (data['replacementMerchantId'] as String?)?.trim(),
     );
   }
 }

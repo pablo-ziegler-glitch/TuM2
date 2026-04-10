@@ -31,7 +31,8 @@ class _CoverageInvitationScreenState
   @override
   Widget build(BuildContext context) {
     final ownerMerchantAsync = ref.watch(ownerMerchantProvider);
-    final invitationAsync = ref.watch(invitationDetailProvider(widget.requestId));
+    final invitationAsync =
+        ref.watch(invitationDetailProvider(widget.requestId));
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
@@ -55,14 +56,17 @@ class _CoverageInvitationScreenState
         error: (_, __) => _error('No pudimos validar tu comercio.'),
         data: (ownerResolution) {
           final ownerMerchant = ownerResolution.primaryMerchant;
-          if (ownerMerchant == null) return _error('No encontramos un comercio asociado.');
+          if (ownerMerchant == null)
+            return _error('No encontramos un comercio asociado.');
 
           return invitationAsync.when(
             loading: _loading,
             error: (_, __) => _error('No pudimos cargar la invitación.'),
             data: (invitation) {
-              if (invitation == null) return _error('La invitación no está disponible.');
-              final canRespond = invitation.request.status == 'pending' && !_submitting;
+              if (invitation == null)
+                return _error('La invitación no está disponible.');
+              final canRespond =
+                  invitation.request.status == 'pending' && !_submitting;
 
               return Column(
                 children: [
@@ -101,8 +105,8 @@ class _CoverageInvitationScreenState
                         const SizedBox(height: 8),
                         Text(
                           'Una farmacia cercana requiere asistencia para cubrir su próximo turno obligatorio.',
-                          style:
-                              AppTextStyles.bodyMd.copyWith(color: AppColors.neutral700),
+                          style: AppTextStyles.bodyMd
+                              .copyWith(color: AppColors.neutral700),
                         ),
                         const SizedBox(height: 12),
                         Container(
@@ -111,7 +115,8 @@ class _CoverageInvitationScreenState
                             color: AppColors.surface,
                             borderRadius: BorderRadius.circular(10),
                             border: const Border(
-                              left: BorderSide(color: AppColors.primary500, width: 4),
+                              left: BorderSide(
+                                  color: AppColors.primary500, width: 4),
                             ),
                           ),
                           child: Row(

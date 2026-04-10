@@ -28,6 +28,7 @@ concurrency:
 env:
   PROJECT_ID: tum2-staging-45c83
   ADMIN_WEB_APP_ID: 1:227534906025:web:c83be9f7bef1e59bb03fb8
+  MOBILE_WEB_APP_ID: 1:227534906025:web:41ca1f2d60d73c58b03fb8
 
 jobs:
   changes:
@@ -168,12 +169,24 @@ jobs:
         working-directory: functions
         run: npm ci
 
+      - name: Resolve Firebase config for mobile web app
+        if: steps.scope.outputs.deploy_hosting_web == 'true'
+        id: mobile_sdk
+        run: |
+          set -euo pipefail
+          sdk_json="$(firebase apps:sdkconfig WEB "${MOBILE_WEB_APP_ID}" --project "${PROJECT_ID}" --json)"
+          web_api_key="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.apiKey" "${sdk_json}")"
+          echo "web_api_key=${web_api_key}" >> "$GITHUB_OUTPUT"
+
       - name: Build public web (mobile)
         if: steps.scope.outputs.deploy_hosting_web == 'true'
         working-directory: mobile
         run: |
           flutter pub get
-          flutter build web --release --dart-define=ENV=staging -t lib/main.dart
+          flutter build web --release \
+            --dart-define=ENV=staging \
+            --dart-define=FIREBASE_WEB_API_KEY=${{ steps.mobile_sdk.outputs.web_api_key }} \
+            -t lib/main.dart
 
       - name: Resolve Firebase config for admin web app
         if: steps.scope.outputs.deploy_hosting_admin == 'true'

@@ -15,14 +15,42 @@ import 'package:flutter/foundation.dart'
 /// );
 /// ```
 class DefaultFirebaseOptions {
+  static const String _webApiKey = String.fromEnvironment(
+    'FIREBASE_WEB_API_KEY',
+    defaultValue: '',
+  );
+  static const String _androidApiKey = String.fromEnvironment(
+    'FIREBASE_ANDROID_API_KEY',
+    defaultValue: '',
+  );
+  static const String _iosApiKey = String.fromEnvironment(
+    'FIREBASE_IOS_API_KEY',
+    defaultValue: '',
+  );
+
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
+      if (_webApiKey.isEmpty) {
+        throw StateError(
+          'Missing FIREBASE_WEB_API_KEY for prod web build.',
+        );
+      }
       return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
+        if (_androidApiKey.isEmpty) {
+          throw StateError(
+            'Missing FIREBASE_ANDROID_API_KEY for prod Android build.',
+          );
+        }
         return android;
       case TargetPlatform.iOS:
+        if (_iosApiKey.isEmpty) {
+          throw StateError(
+            'Missing FIREBASE_IOS_API_KEY for prod iOS build.',
+          );
+        }
         return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
@@ -46,8 +74,8 @@ class DefaultFirebaseOptions {
     }
   }
 
-  static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBJlI8afJYe4rssEjPfCQ9hGZrAl67lOmk',
+  static final FirebaseOptions web = FirebaseOptions(
+    apiKey: _webApiKey,
     appId: '1:57567901381:web:dadc4aec40273a4e6662ac',
     messagingSenderId: '57567901381',
     projectId: 'tum2-prod-bc9b4',
@@ -56,21 +84,22 @@ class DefaultFirebaseOptions {
     measurementId: 'G-25L5MPEV5Q',
   );
 
-  static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCcxvM2LZUSqIuI_rRL1dM-fb-DK801jRo',
+  static final FirebaseOptions android = FirebaseOptions(
+    apiKey: _androidApiKey,
     appId: '1:57567901381:android:c8a51194d128f4c56662ac',
     messagingSenderId: '57567901381',
     projectId: 'tum2-prod-bc9b4',
     storageBucket: 'tum2-prod-bc9b4.firebasestorage.app',
   );
 
-  static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAPaHsOABjld_yiucesSVemAsY9llb4tuU',
+  static final FirebaseOptions ios = FirebaseOptions(
+    apiKey: _iosApiKey,
     appId: '1:57567901381:ios:e07d92eae4e8efca6662ac',
     messagingSenderId: '57567901381',
     projectId: 'tum2-prod-bc9b4',
     storageBucket: 'tum2-prod-bc9b4.firebasestorage.app',
-    iosClientId: '57567901381-odvgplb0o1a9r0jv1uljdig4gfj1jihp.apps.googleusercontent.com',
+    iosClientId:
+        '57567901381-odvgplb0o1a9r0jv1uljdig4gfj1jihp.apps.googleusercontent.com',
     iosBundleId: 'com.floki.tum2',
   );
 }

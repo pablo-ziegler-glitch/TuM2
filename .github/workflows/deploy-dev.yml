@@ -1,4 +1,4 @@
-name: Deploy Staging
+name: Deploy Dev
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ on:
         type: boolean
   push:
     branches:
-      - staging
+      - develop
     paths:
       - "firebase.json"
       - "firestore.rules"
@@ -22,7 +22,7 @@ on:
       - "web/**"
 
 concurrency:
-  group: deploy-staging
+  group: deploy-dev
   cancel-in-progress: true
 
 permissions:
@@ -30,9 +30,7 @@ permissions:
   id-token: write
 
 env:
-  PROJECT_ID: tum2-staging-45c83
-  ADMIN_WEB_APP_ID: 1:227534906025:web:c83be9f7bef1e59bb03fb8
-  MOBILE_WEB_APP_ID: 1:227534906025:web:41ca1f2d60d73c58b03fb8
+  PROJECT_ID: tum2-dev-6283d
 
 jobs:
   detect-changes:
@@ -83,11 +81,11 @@ jobs:
               - "firebase.json"
 
   deploy:
-    name: Deploy to Firebase Staging
+    name: Deploy to Firebase Dev
     needs: detect-changes
     if: github.event_name == 'workflow_dispatch' || needs.detect-changes.outputs.any_changed == 'true'
     runs-on: ubuntu-latest
-    environment: staging
+    environment: dev
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -97,8 +95,8 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF_NAME}" != "staging" ]]; then
-            echo "::error::Manual deploy to staging is only allowed from branch 'staging'. Current branch: ${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_REF_NAME}" != "develop" ]]; then
+            echo "::error::Manual deploy to dev is only allowed from branch 'develop'. Current branch: ${GITHUB_REF_NAME}"
             exit 1
           fi
 
@@ -187,7 +185,7 @@ jobs:
         env:
           GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
           GCP_DEPLOYER_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOYER_SERVICE_ACCOUNT }}
-          GCP_SA_KEY_STAGING: ${{ secrets.GCP_SA_KEY_STAGING }}
+          GCP_SA_KEY_DEV: ${{ secrets.GCP_SA_KEY_DEV }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           set -euo pipefail
@@ -197,12 +195,12 @@ jobs:
           if [[ -n "${GCP_WIF_PROVIDER}" && -n "${GCP_DEPLOYER_SERVICE_ACCOUNT}" ]]; then
             has_oidc=true
           fi
-          if [[ -n "${GCP_SA_KEY_STAGING}" || -n "${FIREBASE_SERVICE_ACCOUNT}" ]]; then
+          if [[ -n "${GCP_SA_KEY_DEV}" || -n "${FIREBASE_SERVICE_ACCOUNT}" ]]; then
             has_key=true
           fi
 
           if [[ "${has_oidc}" != "true" && "${has_key}" != "true" ]]; then
-            echo "::error::Missing auth config. Set OIDC vars (GCP_WIF_PROVIDER + GCP_DEPLOYER_SERVICE_ACCOUNT) or secret GCP_SA_KEY_STAGING/FIREBASE_SERVICE_ACCOUNT."
+            echo "::error::Missing auth config. Set OIDC vars (GCP_WIF_PROVIDER + GCP_DEPLOYER_SERVICE_ACCOUNT) or secret GCP_SA_KEY_DEV/FIREBASE_SERVICE_ACCOUNT."
             exit 1
           fi
 
@@ -217,12 +215,22 @@ jobs:
       - name: Validate hosting variables
         if: steps.scope.outputs.deploy_hosting == 'true'
         env:
-          HOSTING_SITE_WEB: ${{ vars.HOSTING_SITE_WEB_STAGING }}
-          HOSTING_SITE_ADMIN: ${{ vars.HOSTING_SITE_ADMIN_STAGING }}
+          HOSTING_SITE_WEB: ${{ vars.HOSTING_SITE_WEB_DEV }}
+          HOSTING_SITE_ADMIN: ${{ vars.HOSTING_SITE_ADMIN_DEV }}
         run: |
           set -euo pipefail
-          : "${HOSTING_SITE_WEB:?Set variable HOSTING_SITE_WEB_STAGING in environment staging}"
-          : "${HOSTING_SITE_ADMIN:?Set variable HOSTING_SITE_ADMIN_STAGING in environment staging}"
+          : "${HOSTING_SITE_WEB:?Set variable HOSTING_SITE_WEB_DEV in environment dev}"
+          : "${HOSTING_SITE_ADMIN:?Set variable HOSTING_SITE_ADMIN_DEV in environment dev}"
+
+      - name: Validate app identifiers for hosting
+        if: steps.scope.outputs.deploy_hosting == 'true'
+        env:
+          MOBILE_WEB_APP_ID: ${{ vars.MOBILE_WEB_APP_ID_DEV }}
+          ADMIN_WEB_APP_ID: ${{ vars.ADMIN_WEB_APP_ID_DEV }}
+        run: |
+          set -euo pipefail
+          : "${MOBILE_WEB_APP_ID:?Set variable MOBILE_WEB_APP_ID_DEV in environment dev}"
+          : "${ADMIN_WEB_APP_ID:?Set variable ADMIN_WEB_APP_ID_DEV in environment dev}"
 
       - name: Auth with GCP service account
         if: steps.scope.outputs.should_deploy == 'true' && steps.auth_mode.outputs.mode == 'oidc'
@@ -235,7 +243,7 @@ jobs:
         if: steps.scope.outputs.should_deploy == 'true' && steps.auth_mode.outputs.mode == 'key'
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY_STAGING != '' && secrets.GCP_SA_KEY_STAGING || secrets.FIREBASE_SERVICE_ACCOUNT }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_DEV != '' && secrets.GCP_SA_KEY_DEV || secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Setup Node
         if: steps.scope.outputs.should_deploy == 'true'
@@ -269,8 +277,11 @@ jobs:
       - name: Resolve Firebase config for public web app
         if: steps.scope.outputs.deploy_hosting_web == 'true'
         id: mobile_sdk
+        env:
+          MOBILE_WEB_APP_ID: ${{ vars.MOBILE_WEB_APP_ID_DEV }}
         run: |
           set -euo pipefail
+          : "${MOBILE_WEB_APP_ID:?Set environment variable MOBILE_WEB_APP_ID_DEV in environment dev}"
           sdk_json="$(firebase apps:sdkconfig WEB "${MOBILE_WEB_APP_ID}" --project "${PROJECT_ID}" --json)"
           web_api_key="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.apiKey" "${sdk_json}")"
           echo "web_api_key=${web_api_key}" >> "$GITHUB_OUTPUT"
@@ -281,15 +292,18 @@ jobs:
         run: |
           flutter pub get
           flutter build web --release \
-            --dart-define=ENV=staging \
+            --dart-define=ENV=dev \
             --dart-define=FIREBASE_WEB_API_KEY=${{ steps.mobile_sdk.outputs.web_api_key }} \
             -t lib/main.dart
 
       - name: Resolve Firebase config for admin web app
         if: steps.scope.outputs.deploy_hosting_admin == 'true'
         id: admin_sdk
+        env:
+          ADMIN_WEB_APP_ID: ${{ vars.ADMIN_WEB_APP_ID_DEV }}
         run: |
           set -euo pipefail
+          : "${ADMIN_WEB_APP_ID:?Set environment variable ADMIN_WEB_APP_ID_DEV in environment dev}"
           sdk_json="$(firebase apps:sdkconfig WEB "${ADMIN_WEB_APP_ID}" --project "${PROJECT_ID}" --json)"
 
           api_key="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.apiKey" "${sdk_json}")"
@@ -325,12 +339,12 @@ jobs:
       - name: Apply Hosting targets
         if: steps.scope.outputs.deploy_hosting == 'true'
         env:
-          HOSTING_SITE_WEB: ${{ vars.HOSTING_SITE_WEB_STAGING }}
-          HOSTING_SITE_ADMIN: ${{ vars.HOSTING_SITE_ADMIN_STAGING }}
+          HOSTING_SITE_WEB: ${{ vars.HOSTING_SITE_WEB_DEV }}
+          HOSTING_SITE_ADMIN: ${{ vars.HOSTING_SITE_ADMIN_DEV }}
         run: |
           set -euo pipefail
-          : "${HOSTING_SITE_WEB:?Set environment variable HOSTING_SITE_WEB_STAGING in environment staging}"
-          : "${HOSTING_SITE_ADMIN:?Set environment variable HOSTING_SITE_ADMIN_STAGING in environment staging}"
+          : "${HOSTING_SITE_WEB:?Set environment variable HOSTING_SITE_WEB_DEV in environment dev}"
+          : "${HOSTING_SITE_ADMIN:?Set environment variable HOSTING_SITE_ADMIN_DEV in environment dev}"
 
           firebase target:apply hosting web "${HOSTING_SITE_WEB}" --project "${PROJECT_ID}"
           firebase target:apply hosting admin "${HOSTING_SITE_ADMIN}" --project "${PROJECT_ID}"
@@ -361,11 +375,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .ci-artifacts
-          cat > .ci-artifacts/deploy-manifest-staging.json <<JSON
+          cat > .ci-artifacts/deploy-manifest-dev.json <<JSON
           {
             "workflow": "${GITHUB_WORKFLOW}",
             "runId": "${GITHUB_RUN_ID}",
-            "environment": "staging",
+            "environment": "dev",
             "projectId": "${PROJECT_ID}",
             "branch": "${GITHUB_REF_NAME}",
             "commit": "${GITHUB_SHA}",
@@ -378,8 +392,8 @@ jobs:
         if: steps.scope.outputs.should_deploy == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: deploy-manifest-staging-${{ github.run_id }}
-          path: .ci-artifacts/deploy-manifest-staging.json
+          name: deploy-manifest-dev-${{ github.run_id }}
+          path: .ci-artifacts/deploy-manifest-dev.json
           retention-days: 30
 
       - name: Publish deployment summary
@@ -387,7 +401,7 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo "### Deploy Staging"
+            echo "### Deploy Dev"
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Branch: \`${GITHUB_REF_NAME}\`"
             echo "- Project: \`${PROJECT_ID}\`"

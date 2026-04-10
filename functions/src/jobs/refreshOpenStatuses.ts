@@ -8,7 +8,6 @@ import {
 import { isOpenNow, todayScheduleLabel } from "../lib/schedules";
 import { MerchantScheduleDoc } from "../lib/types";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
-import { logFinOpsEvent } from "../lib/finops";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 500;

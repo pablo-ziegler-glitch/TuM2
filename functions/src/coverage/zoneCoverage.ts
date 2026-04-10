@@ -4,7 +4,6 @@ import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
 import { computeUsefulCoverageScore } from "../lib/scoring";
 import { MerchantPublicDoc, ZoneCoverageMetrics } from "../lib/types";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
-import { logFinOpsEvent } from "../lib/finops";
 
 const db = () => getFirestore();
 const ZONE_REFRESH_CURSOR_DOC = "system_jobs/scheduledRefreshZoneCoverage";

@@ -7,7 +7,6 @@ import {
   DutyStatus,
   normalizeDutyStatus,
 } from "../lib/pharmacyDutyMitigation";
-import { logFinOpsEvent } from "../lib/finops";
 
 const db = () => getFirestore();
 const MAX_DUTY_DOCS_PER_EVENT = 10;
@@ -102,40 +101,15 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
             .collection("pharmacy_duties")
             .where("merchantId", "==", affectedMerchantId)
             .where("date", "==", today)
-            // Acotamos lecturas por evento: solo estados no cancelados y límite duro.
-            .where("status", "in", [...NON_CANCELLED_DUTY_STATUSES])
-            .limit(MAX_DUTY_DOCS_PER_EVENT)
+            // Query fuertemente acotada por merchantId+date; leemos el set completo
+            // para evitar falsos negativos cuando existen más de 10 duties.
             .get(),
           signalRef.get(),
         ]);
         const relevantTodayDuties = todayDutiesSnap.docs
-          .map((doc) => doc.data() as PharmacyDutyDoc);
+          .map((doc) => doc.data() as PharmacyDutyDoc)
+          .filter((doc) => normalizeDutyStatus(doc.status) !== "cancelled");
         const hasDutyToday = relevantTodayDuties.length > 0;
-        let wasTruncated = false;
-        let totalNonCancelledDuties: number | null = null;
-        if (todayDutiesSnap.size >= MAX_DUTY_DOCS_PER_EVENT) {
-          const countAgg = await db()
-            .collection("pharmacy_duties")
-            .where("merchantId", "==", affectedMerchantId)
-            .where("date", "==", today)
-            .where("status", "in", [...NON_CANCELLED_DUTY_STATUSES])
-            .count()
-            .get();
-          totalNonCancelledDuties = Number(countAgg.data().count ?? 0);
-          wasTruncated = totalNonCancelledDuties > MAX_DUTY_DOCS_PER_EVENT;
-          logFinOpsEvent({
-            event: "trigger_duties_scan_cap_reached",
-            level: "warning",
-            module: "triggers.duties",
-            payload: {
-              merchantId: affectedMerchantId,
-              date: today,
-              queryLimit: MAX_DUTY_DOCS_PER_EVENT,
-              totalNonCancelledDuties,
-              wasTruncated,
-            },
-          });
-        }
         const bestDuty = relevantTodayDuties
           .slice()
           .sort((a, b) => {

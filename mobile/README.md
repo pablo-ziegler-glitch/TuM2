@@ -69,10 +69,14 @@ flutter run --flavor prod -t lib/main.dart --dart-define=ENV=prod
 
 ```bash
 # Staging
-flutter build web --release -t lib/main.dart --dart-define=ENV=staging
+flutter build web --release -t lib/main.dart \
+  --dart-define=ENV=staging \
+  --dart-define=FIREBASE_WEB_API_KEY=__STAGING_WEB_API_KEY__
 
 # Prod
-flutter build web --release -t lib/main.dart --dart-define=ENV=prod
+flutter build web --release -t lib/main.dart \
+  --dart-define=ENV=prod \
+  --dart-define=FIREBASE_WEB_API_KEY=__PROD_WEB_API_KEY__
 ```
 
 ## FlutterFire CLI (sin mezclar entornos)

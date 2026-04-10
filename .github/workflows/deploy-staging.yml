@@ -1,0 +1,234 @@
+name: deploy-staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_full_deploy:
+        description: 'Deploy all components regardless of changed files'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches:
+      - staging
+    paths:
+      - '.firebaserc'
+      - 'firebase.json'
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'functions/**'
+      - 'schema/**'
+      - 'mobile/**'
+      - 'web/**'
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+env:
+  PROJECT_ID: tum2-staging-45c83
+  ADMIN_WEB_APP_ID: 1:227534906025:web:c83be9f7bef1e59bb03fb8
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.filter.outputs.any_changed }}
+      firestore_rules: ${{ steps.filter.outputs.firestore_rules }}
+      firestore_indexes: ${{ steps.filter.outputs.firestore_indexes }}
+      functions: ${{ steps.filter.outputs.functions }}
+      hosting_web: ${{ steps.filter.outputs.hosting_web }}
+      hosting_admin: ${{ steps.filter.outputs.hosting_admin }}
+      firebase_config: ${{ steps.filter.outputs.firebase_config }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed areas
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            any_changed:
+              - '.firebaserc'
+              - 'firebase.json'
+              - 'firestore.rules'
+              - 'firestore.indexes.json'
+              - 'functions/**'
+              - 'schema/**'
+              - 'mobile/**'
+              - 'web/**'
+            firestore_rules:
+              - 'firestore.rules'
+            firestore_indexes:
+              - 'firestore.indexes.json'
+            functions:
+              - 'functions/**'
+              - 'schema/**'
+            hosting_web:
+              - 'mobile/**'
+            hosting_admin:
+              - 'web/**'
+            firebase_config:
+              - '.firebaserc'
+              - 'firebase.json'
+
+  deploy:
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve deploy scope
+        id: scope
+        run: |
+          set -euo pipefail
+
+          force_full="${{ github.event_name == 'workflow_dispatch' && inputs.force_full_deploy || 'false' }}"
+          deploy_rules="${{ needs.changes.outputs.firestore_rules }}"
+          deploy_indexes="${{ needs.changes.outputs.firestore_indexes }}"
+          deploy_functions="${{ needs.changes.outputs.functions }}"
+          deploy_hosting_web="${{ needs.changes.outputs.hosting_web }}"
+          deploy_hosting_admin="${{ needs.changes.outputs.hosting_admin }}"
+          firebase_config="${{ needs.changes.outputs.firebase_config }}"
+
+          if [[ "${force_full}" == "true" ]]; then
+            deploy_rules=true
+            deploy_indexes=true
+            deploy_functions=true
+            deploy_hosting_web=true
+            deploy_hosting_admin=true
+          fi
+
+          if [[ "${firebase_config}" == "true" ]]; then
+            deploy_rules=true
+            deploy_indexes=true
+            deploy_hosting_web=true
+            deploy_hosting_admin=true
+          fi
+
+          deploy_hosting=false
+          if [[ "${deploy_hosting_web}" == "true" || "${deploy_hosting_admin}" == "true" ]]; then
+            deploy_hosting=true
+          fi
+
+          targets=()
+          if [[ "${deploy_rules}" == "true" ]]; then targets+=("firestore:rules"); fi
+          if [[ "${deploy_indexes}" == "true" ]]; then targets+=("firestore:indexes"); fi
+          if [[ "${deploy_functions}" == "true" ]]; then targets+=("functions"); fi
+          if [[ "${deploy_hosting_web}" == "true" ]]; then targets+=("hosting:web"); fi
+          if [[ "${deploy_hosting_admin}" == "true" ]]; then targets+=("hosting:admin"); fi
+
+          if [[ ${#targets[@]} -eq 0 ]]; then
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          deploy_only="$(IFS=,; echo "${targets[*]}")"
+          echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          echo "deploy_only=${deploy_only}" >> "$GITHUB_OUTPUT"
+          echo "deploy_functions=${deploy_functions}" >> "$GITHUB_OUTPUT"
+          echo "deploy_hosting=${deploy_hosting}" >> "$GITHUB_OUTPUT"
+          echo "deploy_hosting_web=${deploy_hosting_web}" >> "$GITHUB_OUTPUT"
+          echo "deploy_hosting_admin=${deploy_hosting_admin}" >> "$GITHUB_OUTPUT"
+
+      - name: Skip when nothing to deploy
+        if: steps.scope.outputs.should_deploy != 'true'
+        run: echo "No deployable changes detected."
+
+      - name: Auth with GCP service account
+        if: steps.scope.outputs.should_deploy == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_STAGING }}
+
+      - name: Setup Node
+        if: steps.scope.outputs.should_deploy == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        if: steps.scope.outputs.should_deploy == 'true'
+        run: npm install -g firebase-tools
+
+      - name: Setup Flutter
+        if: steps.scope.outputs.deploy_hosting == 'true'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Functions dependencies
+        if: steps.scope.outputs.deploy_functions == 'true'
+        working-directory: functions
+        run: npm ci
+
+      - name: Build public web (mobile)
+        if: steps.scope.outputs.deploy_hosting_web == 'true'
+        working-directory: mobile
+        run: |
+          flutter pub get
+          flutter build web --release --dart-define=ENV=staging -t lib/main.dart
+
+      - name: Resolve Firebase config for admin web app
+        if: steps.scope.outputs.deploy_hosting_admin == 'true'
+        id: admin_sdk
+        run: |
+          set -euo pipefail
+          sdk_json="$(firebase apps:sdkconfig WEB "${ADMIN_WEB_APP_ID}" --project "${PROJECT_ID}" --json)"
+
+          api_key="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.apiKey" "${sdk_json}")"
+          app_id="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.appId" "${sdk_json}")"
+          sender_id="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.messagingSenderId" "${sdk_json}")"
+          project_id="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.projectId" "${sdk_json}")"
+          auth_domain="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.authDomain" "${sdk_json}")"
+          storage_bucket="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.storageBucket" "${sdk_json}")"
+          measurement_id="$(node -pe "JSON.parse(process.argv[1]).result.sdkConfig.measurementId" "${sdk_json}")"
+
+          echo "api_key=${api_key}" >> "$GITHUB_OUTPUT"
+          echo "app_id=${app_id}" >> "$GITHUB_OUTPUT"
+          echo "sender_id=${sender_id}" >> "$GITHUB_OUTPUT"
+          echo "project_id=${project_id}" >> "$GITHUB_OUTPUT"
+          echo "auth_domain=${auth_domain}" >> "$GITHUB_OUTPUT"
+          echo "storage_bucket=${storage_bucket}" >> "$GITHUB_OUTPUT"
+          echo "measurement_id=${measurement_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Build admin web
+        if: steps.scope.outputs.deploy_hosting_admin == 'true'
+        working-directory: web
+        run: |
+          flutter pub get
+          flutter build web --release \
+            --dart-define=FIREBASE_API_KEY=${{ steps.admin_sdk.outputs.api_key }} \
+            --dart-define=FIREBASE_APP_ID=${{ steps.admin_sdk.outputs.app_id }} \
+            --dart-define=FIREBASE_MESSAGING_SENDER_ID=${{ steps.admin_sdk.outputs.sender_id }} \
+            --dart-define=FIREBASE_PROJECT_ID=${{ steps.admin_sdk.outputs.project_id }} \
+            --dart-define=FIREBASE_AUTH_DOMAIN=${{ steps.admin_sdk.outputs.auth_domain }} \
+            --dart-define=FIREBASE_STORAGE_BUCKET=${{ steps.admin_sdk.outputs.storage_bucket }} \
+            --dart-define=FIREBASE_MEASUREMENT_ID=${{ steps.admin_sdk.outputs.measurement_id }}
+
+      - name: Apply Hosting targets
+        if: steps.scope.outputs.deploy_hosting == 'true'
+        env:
+          HOSTING_SITE_WEB: ${{ vars.HOSTING_SITE_WEB_STAGING }}
+          HOSTING_SITE_ADMIN: ${{ vars.HOSTING_SITE_ADMIN_STAGING }}
+        run: |
+          set -euo pipefail
+          : "${HOSTING_SITE_WEB:?Set repository variable HOSTING_SITE_WEB_STAGING}"
+          : "${HOSTING_SITE_ADMIN:?Set repository variable HOSTING_SITE_ADMIN_STAGING}"
+
+          firebase target:apply hosting web "${HOSTING_SITE_WEB}" --project "${PROJECT_ID}"
+          firebase target:apply hosting admin "${HOSTING_SITE_ADMIN}" --project "${PROJECT_ID}"
+
+      - name: Deploy selected resources
+        if: steps.scope.outputs.should_deploy == 'true'
+        run: |
+          firebase deploy \
+            --project "${PROJECT_ID}" \
+            --only "${{ steps.scope.outputs.deploy_only }}" \
+            --non-interactive

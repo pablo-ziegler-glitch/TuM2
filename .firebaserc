@@ -1,7 +1,7 @@
 {
   "projects": {
-    "dev": "tum2-dev",
-    "staging": "tum2-staging",
-    "prod": "tum2-prod"
+    "dev": "tum2-dev-6283d",
+    "staging": "tum2-staging-45c83",
+    "prod": "tum2-prod-bc9b4"
   }
 }

@@ -7,6 +7,7 @@ import {
 } from "firebase-admin/firestore";
 import { isOpenNow, todayScheduleLabel } from "../lib/schedules";
 import { MerchantScheduleDoc } from "../lib/types";
+import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
@@ -33,6 +34,9 @@ export const nightlyRefreshOpenStatuses = onSchedule(
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {
+    if (!shouldRunAutomaticFirestoreJob("nightlyRefreshOpenStatuses")) {
+      return;
+    }
     console.log("[nightlyRefreshOpenStatuses] Starting...");
 
     const merchantsSnap = await db()

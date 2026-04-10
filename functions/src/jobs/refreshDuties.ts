@@ -2,6 +2,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { getFirestore, FieldValue, WriteBatch } from "firebase-admin/firestore";
 import { todayDateString } from "../lib/schedules";
 import { DutyStatus, normalizeDutyStatus } from "../lib/pharmacyDutyMitigation";
+import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
@@ -25,6 +26,9 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {
+    if (!shouldRunAutomaticFirestoreJob("nightlyRefreshPharmacyDutyFlags")) {
+      return;
+    }
     const today = todayDateString();
     console.log(`[nightlyRefreshPharmacyDutyFlags] Starting for date=${today}`);
 

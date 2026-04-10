@@ -16,6 +16,7 @@ import {
 } from "../lib/pharmacyDutyMitigation";
 import { addDaysToDateKey } from "../lib/pharmacyDuties";
 import { todayDateString } from "../lib/schedules";
+import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
 const MAX_SCAN_PER_RUN = 200;
@@ -104,6 +105,9 @@ export const sendDutyConfirmationReminders = onSchedule(
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {
+    if (!shouldRunAutomaticFirestoreJob("sendDutyConfirmationReminders")) {
+      return;
+    }
     const now = new Date();
     const today = todayDateString();
     const tomorrow = addDaysToDateKey(today, 1);
@@ -280,6 +284,9 @@ export const expirePendingReassignmentRequests = onSchedule(
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {
+    if (!shouldRunAutomaticFirestoreJob("expirePendingReassignmentRequests")) {
+      return;
+    }
     const nowTs = Timestamp.now();
     const expiredSnap = await db()
       .collection("pharmacy_duty_reassignment_requests")

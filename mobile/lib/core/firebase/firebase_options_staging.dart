@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart'
 ///
 /// Example:
 /// ```dart
-/// import 'firebase_options.dart';
+/// import 'firebase_options_staging.dart';
 /// // ...
 /// await Firebase.initializeApp(
 ///   options: DefaultFirebaseOptions.currentPlatform,
@@ -47,30 +47,30 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyD_VccUiSVpwR6yc3IbGyOZ-eOqZThywfo',
-    appId: '1:967380985108:web:084981eea879c427900e01',
-    messagingSenderId: '967380985108',
-    projectId: 'tum2-dev-6283d',
-    authDomain: 'tum2-dev-6283d.firebaseapp.com',
-    storageBucket: 'tum2-dev-6283d.firebasestorage.app',
-    measurementId: 'G-JGTE65V6YN',
+    apiKey: 'AIzaSyByRw816BJKUl7OOHLUDK1hIsyPtwkAtMw',
+    appId: '1:227534906025:web:41ca1f2d60d73c58b03fb8',
+    messagingSenderId: '227534906025',
+    projectId: 'tum2-staging-45c83',
+    authDomain: 'tum2-staging-45c83.firebaseapp.com',
+    storageBucket: 'tum2-staging-45c83.firebasestorage.app',
+    measurementId: 'G-78K8N2VLG9',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCASPbLxiopMFVnU32OFJ52PbJ6KUOwTIQ',
-    appId: '1:967380985108:android:cea417d53a357e5d900e01',
-    messagingSenderId: '967380985108',
-    projectId: 'tum2-dev-6283d',
-    storageBucket: 'tum2-dev-6283d.firebasestorage.app',
+    apiKey: 'AIzaSyAqk-OvQgqOiC8QSJ5wq-9T9GpeHaoPmvA',
+    appId: '1:227534906025:android:b08627eacb109a43b03fb8',
+    messagingSenderId: '227534906025',
+    projectId: 'tum2-staging-45c83',
+    storageBucket: 'tum2-staging-45c83.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAS0aQpzTWx_G4uAuBwivdYYEvzCJTXOiM',
-    appId: '1:967380985108:ios:c35d6bedbafba846900e01',
-    messagingSenderId: '967380985108',
-    projectId: 'tum2-dev-6283d',
-    storageBucket: 'tum2-dev-6283d.firebasestorage.app',
-    iosClientId: '967380985108-23kfc1rdv5j30faqiecrq3m718ook59r.apps.googleusercontent.com',
-    iosBundleId: 'com.example.tum2',
+    apiKey: 'AIzaSyCnPAba5_P-gSQxh0MJL-0XP4Os9aDL_3E',
+    appId: '1:227534906025:ios:4962e26ecfb9f9b9b03fb8',
+    messagingSenderId: '227534906025',
+    projectId: 'tum2-staging-45c83',
+    storageBucket: 'tum2-staging-45c83.firebasestorage.app',
+    iosClientId: '227534906025-tvhoa09a7ls2virhiicgbuuqeb6o7b2g.apps.googleusercontent.com',
+    iosBundleId: 'com.floki.tum2.staging',
   );
 }

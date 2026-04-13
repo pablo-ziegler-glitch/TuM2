@@ -404,12 +404,10 @@ class ImportOverviewKpis {
 
   factory ImportOverviewKpis.fromBatches(List<ImportBatchUi> batches) {
     final totalImports = batches.length;
-    final completed = batches
-        .where((b) => b.status == ImportBatchStatus.completed)
-        .length;
-    final failedBatches = batches
-        .where((b) => b.status == ImportBatchStatus.failed)
-        .length;
+    final completed =
+        batches.where((b) => b.status == ImportBatchStatus.completed).length;
+    final failedBatches =
+        batches.where((b) => b.status == ImportBatchStatus.failed).length;
     final rowsProcessed = batches.fold<int>(
       0,
       (sum, b) => sum + b.processedCount,

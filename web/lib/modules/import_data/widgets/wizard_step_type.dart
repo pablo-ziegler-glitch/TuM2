@@ -98,13 +98,13 @@ class WizardStepType extends StatelessWidget {
   }
 
   String _helpText(ImportType type) => switch (type) {
-    ImportType.officialDataset =>
-      'Official Datasets use name + geohash deduplication. Records will be staged as hidden and require a Publish action before becoming public.',
-    ImportType.masterCatalog =>
-      'Master Catalog uses barcode + name + brand deduplication. Conflicts are flagged for merge review before consolidation.',
-    ImportType.genericInternal =>
-      'Generic sources use configurable deduplication. You will define the key fields in the Mapping step.',
-  };
+        ImportType.officialDataset =>
+          'Official Datasets use name + geohash deduplication. Records will be staged as hidden and require a Publish action before becoming public.',
+        ImportType.masterCatalog =>
+          'Master Catalog uses barcode + name + brand deduplication. Conflicts are flagged for merge review before consolidation.',
+        ImportType.genericInternal =>
+          'Generic sources use configurable deduplication. You will define the key fields in the Mapping step.',
+      };
 }
 
 class _TypeCard extends StatefulWidget {
@@ -129,8 +129,8 @@ class _TypeCardState extends State<_TypeCard> {
     final borderColor = widget.isSelected
         ? AppColors.primary500
         : _hovered
-        ? AppColors.neutral300
-        : AppColors.neutral200;
+            ? AppColors.neutral300
+            : AppColors.neutral200;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),

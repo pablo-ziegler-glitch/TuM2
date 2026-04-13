@@ -60,17 +60,16 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
   ];
 
   bool get _canGoNext => switch (_step) {
-    0 => _importType != null,
-    1 => _templateName != null,
-    2 =>
-      _datasetType != null &&
-          _parsedData != null &&
-          (!_applyDestinationZone || _zoneId.isNotEmpty),
-    3 => _mappings.any((m) => m.enabled),
-    4 => _previewRows.isNotEmpty,
-    5 => true,
-    _ => false,
-  };
+        0 => _importType != null,
+        1 => _templateName != null,
+        2 => _datasetType != null &&
+            _parsedData != null &&
+            (!_applyDestinationZone || _zoneId.isNotEmpty),
+        3 => _mappings.any((m) => m.enabled),
+        4 => _previewRows.isNotEmpty,
+        5 => true,
+        _ => false,
+      };
 
   String get _zoneLabel {
     if (!_applyDestinationZone) return 'Sin zona fija';
@@ -211,8 +210,8 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
                     color: isDone
                         ? AppColors.successFg
                         : isActive
-                        ? AppColors.primary500
-                        : AppColors.neutral100,
+                            ? AppColors.primary500
+                            : AppColors.neutral100,
                   ),
                   child: Icon(
                     isDone ? Icons.check : step.icon,
@@ -230,8 +229,8 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
                       color: isActive
                           ? AppColors.primary500
                           : isDone
-                          ? AppColors.successFg
-                          : AppColors.neutral400,
+                              ? AppColors.successFg
+                              : AppColors.neutral400,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -242,9 +241,8 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
                     child: Container(
                       height: 1,
                       margin: const EdgeInsets.symmetric(horizontal: 6),
-                      color: isDone
-                          ? AppColors.successFg
-                          : AppColors.neutral200,
+                      color:
+                          isDone ? AppColors.successFg : AppColors.neutral200,
                     ),
                   ),
               ],
@@ -258,58 +256,59 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
   Widget _buildCurrentStep() {
     return switch (_step) {
       0 => WizardStepType(
-        selected: _importType,
-        onSelect: (t) => setState(() {
-          _importType = t;
-          _templateName = null; // resetear template al cambiar tipo
-        }),
-      ),
+          selected: _importType,
+          onSelect: (t) => setState(() {
+            _importType = t;
+            _templateName = null; // resetear template al cambiar tipo
+          }),
+        ),
       1 => WizardStepTemplate(
-        importType: _importType ?? ImportType.officialDataset,
-        selectedTemplate: _templateName,
-        onSelect: (t) => setState(() => _templateName = t),
-      ),
+          importType: _importType ?? ImportType.officialDataset,
+          selectedTemplate: _templateName,
+          onSelect: (t) => setState(() => _templateName = t),
+        ),
       2 => WizardStepArchivo(
-        selectedDatasetType: _datasetType,
-        selectedZoneId: _zoneId.isEmpty ? null : _zoneId,
-        applyDestinationZone: _applyDestinationZone,
-        zoneOptions: _zones,
-        zonesLoading: _zonesLoading,
-        zonesError: _zonesError,
-        fileName: _fileName,
-        onDatasetTypeChanged: (value) => setState(() => _datasetType = value),
-        onApplyDestinationZoneChanged: (value) => setState(() {
-          _applyDestinationZone = value;
-          if (!_applyDestinationZone) _zoneId = '';
-        }),
-        onZoneChanged: (z) => setState(() => _zoneId = z ?? ''),
-        onFileSelected: _pickFileAndParse,
-        onDownloadCsvTemplate: _downloadCsvTemplate,
-        onDownloadExcelTemplate: _downloadExcelTemplate,
-      ),
+          selectedDatasetType: _datasetType,
+          selectedZoneId: _zoneId.isEmpty ? null : _zoneId,
+          applyDestinationZone: _applyDestinationZone,
+          zoneOptions: _zones,
+          zonesLoading: _zonesLoading,
+          zonesError: _zonesError,
+          fileName: _fileName,
+          onDatasetTypeChanged: (value) => setState(() => _datasetType = value),
+          onApplyDestinationZoneChanged: (value) => setState(() {
+            _applyDestinationZone = value;
+            if (!_applyDestinationZone) _zoneId = '';
+          }),
+          onZoneChanged: (z) => setState(() => _zoneId = z ?? ''),
+          onFileSelected: _pickFileAndParse,
+          onDownloadCsvTemplate: _downloadCsvTemplate,
+          onDownloadExcelTemplate: _downloadExcelTemplate,
+        ),
       3 => WizardStepConfig(
-        mappings: _mappings,
-        deduplicationEnabled: _deduplicationEnabled,
-        visibilityAfterImport: _visibilityAfterImport,
-        onMappingsChanged: (m) => setState(() => _mappings = m),
-        onDeduplicationChanged: (v) =>
-            setState(() => _deduplicationEnabled = v),
-        onVisibilityChanged: (v) => setState(() => _visibilityAfterImport = v),
-      ),
+          mappings: _mappings,
+          deduplicationEnabled: _deduplicationEnabled,
+          visibilityAfterImport: _visibilityAfterImport,
+          onMappingsChanged: (m) => setState(() => _mappings = m),
+          onDeduplicationChanged: (v) =>
+              setState(() => _deduplicationEnabled = v),
+          onVisibilityChanged: (v) =>
+              setState(() => _visibilityAfterImport = v),
+        ),
       4 => WizardStepValidation(previewRows: _previewRows),
       5 => WizardStepConfirm(
-        importType: _importType ?? ImportType.officialDataset,
-        templateName: _templateName,
-        zone: _zoneLabel,
-        fileName: _fileName,
-        totalRows: _parsedData?.rows.length ?? 0,
-        validRows: _validation?.validRows ?? 0,
-        warningRows: _validation?.warningRows ?? 0,
-        errorRows: _validation?.errorRows ?? 0,
-        fieldMappings: _mappings,
-        deduplicationEnabled: _deduplicationEnabled,
-        visibilityAfterImport: _visibilityAfterImport,
-      ),
+          importType: _importType ?? ImportType.officialDataset,
+          templateName: _templateName,
+          zone: _zoneLabel,
+          fileName: _fileName,
+          totalRows: _parsedData?.rows.length ?? 0,
+          validRows: _validation?.validRows ?? 0,
+          warningRows: _validation?.warningRows ?? 0,
+          errorRows: _validation?.errorRows ?? 0,
+          fieldMappings: _mappings,
+          deduplicationEnabled: _deduplicationEnabled,
+          visibilityAfterImport: _visibilityAfterImport,
+        ),
       _ => const SizedBox.shrink(),
     };
   }
@@ -350,9 +349,8 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
           FilledButton(
             onPressed: (_canGoNext && !_isSubmitting) ? _next : null,
             style: FilledButton.styleFrom(
-              backgroundColor: isLastStep
-                  ? AppColors.successFg
-                  : AppColors.primary500,
+              backgroundColor:
+                  isLastStep ? AppColors.successFg : AppColors.primary500,
               disabledBackgroundColor: AppColors.neutral200,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               textStyle: AppTextStyles.labelSm,

@@ -18,79 +18,80 @@ class WizardStepTemplate extends StatelessWidget {
   final void Function(String) onSelect;
 
   List<_TemplateItem> get _templates => switch (importType) {
-    ImportType.officialDataset => [
-      const _TemplateItem(
-        name: 'REPES Official v2.1',
-        description: 'Ministerio de Salud · Farmacias',
-        fields: 18,
-        lastUpdated: '2026-02',
-        icon: Icons.local_pharmacy_outlined,
-      ),
-      const _TemplateItem(
-        name: 'BA Data WiFi v1.3',
-        description: 'Buenos Aires Data · Puntos WiFi',
-        fields: 12,
-        lastUpdated: '2025-11',
-        icon: Icons.wifi_outlined,
-      ),
-      const _TemplateItem(
-        name: 'Municipios v1.0',
-        description: 'Datos abiertos municipales genéricos',
-        fields: 15,
-        lastUpdated: '2025-09',
-        icon: Icons.location_city_outlined,
-      ),
-      const _TemplateItem(
-        name: 'Custom Schema',
-        description: 'Define your own column mapping',
-        fields: 0,
-        lastUpdated: null,
-        icon: Icons.tune_outlined,
-        isCustom: true,
-      ),
-    ],
-    ImportType.masterCatalog => [
-      const _TemplateItem(
-        name: 'GS1 Standard v3.0',
-        description: 'GTIN · EAN13 · barcode + brand',
-        fields: 24,
-        lastUpdated: '2026-01',
-        icon: Icons.qr_code_outlined,
-      ),
-      const _TemplateItem(
-        name: 'Internal Catalog v1.0',
-        description: 'Formato interno TuM2 productos',
-        fields: 16,
-        lastUpdated: '2025-12',
-        icon: Icons.inventory_2_outlined,
-      ),
-      const _TemplateItem(
-        name: 'Custom Schema',
-        description: 'Define your own column mapping',
-        fields: 0,
-        lastUpdated: null,
-        icon: Icons.tune_outlined,
-        isCustom: true,
-      ),
-    ],
-    ImportType.genericInternal => [
-      const _TemplateItem(
-        name: 'Generic Businesses v1.0',
-        description: 'Comercios genéricos — nombre + dirección + categoría',
-        fields: 10,
-        lastUpdated: '2025-10',
-        icon: Icons.storefront_outlined,
-      ),
-      const _TemplateItem(
-        name: 'Custom Schema',
-        description: 'Define your own column mapping',
-        fields: 0,
-        lastUpdated: null,
-        icon: Icons.tune_outlined,
-        isCustom: true,
-      ),
-    ],
-  };
+        ImportType.officialDataset => [
+            const _TemplateItem(
+              name: 'REPES Official v2.1',
+              description: 'Ministerio de Salud · Farmacias',
+              fields: 18,
+              lastUpdated: '2026-02',
+              icon: Icons.local_pharmacy_outlined,
+            ),
+            const _TemplateItem(
+              name: 'BA Data WiFi v1.3',
+              description: 'Buenos Aires Data · Puntos WiFi',
+              fields: 12,
+              lastUpdated: '2025-11',
+              icon: Icons.wifi_outlined,
+            ),
+            const _TemplateItem(
+              name: 'Municipios v1.0',
+              description: 'Datos abiertos municipales genéricos',
+              fields: 15,
+              lastUpdated: '2025-09',
+              icon: Icons.location_city_outlined,
+            ),
+            const _TemplateItem(
+              name: 'Custom Schema',
+              description: 'Define your own column mapping',
+              fields: 0,
+              lastUpdated: null,
+              icon: Icons.tune_outlined,
+              isCustom: true,
+            ),
+          ],
+        ImportType.masterCatalog => [
+            const _TemplateItem(
+              name: 'GS1 Standard v3.0',
+              description: 'GTIN · EAN13 · barcode + brand',
+              fields: 24,
+              lastUpdated: '2026-01',
+              icon: Icons.qr_code_outlined,
+            ),
+            const _TemplateItem(
+              name: 'Internal Catalog v1.0',
+              description: 'Formato interno TuM2 productos',
+              fields: 16,
+              lastUpdated: '2025-12',
+              icon: Icons.inventory_2_outlined,
+            ),
+            const _TemplateItem(
+              name: 'Custom Schema',
+              description: 'Define your own column mapping',
+              fields: 0,
+              lastUpdated: null,
+              icon: Icons.tune_outlined,
+              isCustom: true,
+            ),
+          ],
+        ImportType.genericInternal => [
+            const _TemplateItem(
+              name: 'Generic Businesses v1.0',
+              description:
+                  'Comercios genéricos — nombre + dirección + categoría',
+              fields: 10,
+              lastUpdated: '2025-10',
+              icon: Icons.storefront_outlined,
+            ),
+            const _TemplateItem(
+              name: 'Custom Schema',
+              description: 'Define your own column mapping',
+              fields: 0,
+              lastUpdated: null,
+              icon: Icons.tune_outlined,
+              isCustom: true,
+            ),
+          ],
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -204,8 +205,8 @@ class _TemplateCardState extends State<_TemplateCard> {
     final borderColor = widget.isSelected
         ? AppColors.primary500
         : _hovered
-        ? AppColors.neutral300
-        : AppColors.neutral200;
+            ? AppColors.neutral300
+            : AppColors.neutral200;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -234,8 +235,8 @@ class _TemplateCardState extends State<_TemplateCard> {
                   color: widget.item.isCustom
                       ? AppColors.neutral100
                       : widget.isSelected
-                      ? AppColors.primary500.withValues(alpha: 0.12)
-                      : AppColors.neutral100,
+                          ? AppColors.primary500.withValues(alpha: 0.12)
+                          : AppColors.neutral100,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(

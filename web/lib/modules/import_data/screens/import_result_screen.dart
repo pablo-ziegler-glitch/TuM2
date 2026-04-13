@@ -198,9 +198,8 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         if (batch.status == ImportBatchStatus.completed ||
             batch.status == ImportBatchStatus.hidden)
           OutlinedButton.icon(
-            onPressed: _isReverting
-                ? null
-                : () => _showRevertDialog(context, batch),
+            onPressed:
+                _isReverting ? null : () => _showRevertDialog(context, batch),
             icon: const Icon(Icons.undo, size: 15),
             label: Text(_isReverting ? 'Reverting...' : 'Revert'),
             style: OutlinedButton.styleFrom(
@@ -665,9 +664,8 @@ class _TimelineRow extends StatelessWidget {
                   child: Icon(
                     event.result ? Icons.check : Icons.close,
                     size: 13,
-                    color: event.result
-                        ? AppColors.successFg
-                        : AppColors.errorFg,
+                    color:
+                        event.result ? AppColors.successFg : AppColors.errorFg,
                   ),
                 ),
                 if (!isLast)
@@ -788,50 +786,50 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, bg, label) = switch (status) {
       ImportBatchStatus.completed => (
-        AppColors.successFg,
-        AppColors.successFg.withValues(alpha: 0.1),
-        'Completed',
-      ),
+          AppColors.successFg,
+          AppColors.successFg.withValues(alpha: 0.1),
+          'Completed',
+        ),
       ImportBatchStatus.running => (
-        AppColors.primary500,
-        AppColors.primary500.withValues(alpha: 0.1),
-        'Running',
-      ),
+          AppColors.primary500,
+          AppColors.primary500.withValues(alpha: 0.1),
+          'Running',
+        ),
       ImportBatchStatus.failed => (
-        AppColors.errorFg,
-        AppColors.errorFg.withValues(alpha: 0.1),
-        'Failed',
-      ),
+          AppColors.errorFg,
+          AppColors.errorFg.withValues(alpha: 0.1),
+          'Failed',
+        ),
       ImportBatchStatus.hidden => (
-        AppColors.neutral500,
-        AppColors.neutral200,
-        'Staged',
-      ),
+          AppColors.neutral500,
+          AppColors.neutral200,
+          'Staged',
+        ),
       ImportBatchStatus.rolledBack => (
-        AppColors.warningFg,
-        AppColors.warningFg.withValues(alpha: 0.1),
-        'Rolled Back',
-      ),
+          AppColors.warningFg,
+          AppColors.warningFg.withValues(alpha: 0.1),
+          'Rolled Back',
+        ),
       ImportBatchStatus.validated => (
-        AppColors.secondary500,
-        AppColors.secondary500.withValues(alpha: 0.1),
-        'Validated',
-      ),
+          AppColors.secondary500,
+          AppColors.secondary500.withValues(alpha: 0.1),
+          'Validated',
+        ),
       ImportBatchStatus.partial => (
-        AppColors.warningFg,
-        AppColors.warningFg.withValues(alpha: 0.1),
-        'Partial',
-      ),
+          AppColors.warningFg,
+          AppColors.warningFg.withValues(alpha: 0.1),
+          'Partial',
+        ),
       ImportBatchStatus.draft => (
-        AppColors.neutral500,
-        AppColors.neutral100,
-        'Queued',
-      ),
+          AppColors.neutral500,
+          AppColors.neutral100,
+          'Queued',
+        ),
       ImportBatchStatus.archived => (
-        AppColors.neutral400,
-        AppColors.neutral100,
-        'Archived',
-      ),
+          AppColors.neutral400,
+          AppColors.neutral100,
+          'Archived',
+        ),
     };
 
     return Container(
@@ -952,9 +950,8 @@ class _IssueTableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCritical = error.severity == ImportIssueSeverity.critical;
     final isError = error.severity == ImportIssueSeverity.error;
-    final color = isCritical || isError
-        ? AppColors.errorFg
-        : AppColors.warningFg;
+    final color =
+        isCritical || isError ? AppColors.errorFg : AppColors.warningFg;
 
     return Column(
       children: [

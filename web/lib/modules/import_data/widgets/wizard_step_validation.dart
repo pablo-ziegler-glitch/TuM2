@@ -450,8 +450,8 @@ class _PreviewTable extends StatelessWidget {
             color: isError
                 ? AppColors.errorFg.withValues(alpha: 0.04)
                 : isWarn
-                ? AppColors.warningFg.withValues(alpha: 0.04)
-                : Colors.transparent,
+                    ? AppColors.warningFg.withValues(alpha: 0.04)
+                    : Colors.transparent,
             child: Column(
               children: [
                 Padding(
@@ -522,16 +522,16 @@ class _PreviewTable extends StatelessWidget {
                                 color: AppColors.errorFg,
                               )
                             : isWarn
-                            ? const Icon(
-                                Icons.warning_amber_outlined,
-                                size: 14,
-                                color: AppColors.warningFg,
-                              )
-                            : const Icon(
-                                Icons.check_circle_outline,
-                                size: 14,
-                                color: AppColors.successFg,
-                              ),
+                                ? const Icon(
+                                    Icons.warning_amber_outlined,
+                                    size: 14,
+                                    color: AppColors.warningFg,
+                                  )
+                                : const Icon(
+                                    Icons.check_circle_outline,
+                                    size: 14,
+                                    color: AppColors.successFg,
+                                  ),
                       ),
                     ],
                   ),

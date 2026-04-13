@@ -107,7 +107,7 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
                     Switch(
                       value: widget.deduplicationEnabled,
                       onChanged: widget.onDeduplicationChanged,
-                      activeColor: AppColors.primary500,
+                      activeThumbColor: AppColors.primary500,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -220,7 +220,7 @@ class _MappingRow extends StatelessWidget {
             child: Switch(
               value: mapping.enabled,
               onChanged: mapping.required ? null : onToggle,
-              activeColor: AppColors.primary500,
+              activeThumbColor: AppColors.primary500,
             ),
           ),
           // Campo CSV
@@ -437,12 +437,12 @@ class _RadioOption extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Radio<String>(
-              value: value,
-              groupValue: groupValue,
-              onChanged: (v) => onChanged(v!),
-              activeColor: AppColors.primary500,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            Icon(
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              size: 20,
+              color: isSelected ? AppColors.primary500 : AppColors.neutral400,
             ),
             const SizedBox(width: 8),
             Column(

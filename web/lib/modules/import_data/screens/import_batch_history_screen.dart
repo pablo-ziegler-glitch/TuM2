@@ -97,12 +97,18 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
             padding: const EdgeInsets.all(4),
             child: Row(
               children: [
-                const Icon(Icons.arrow_back,
-                    size: 16, color: AppColors.neutral500),
+                const Icon(
+                  Icons.arrow_back,
+                  size: 16,
+                  color: AppColors.neutral500,
+                ),
                 const SizedBox(width: 6),
-                Text('Import Management',
-                    style: AppTextStyles.bodySm
-                        .copyWith(color: AppColors.neutral500)),
+                Text(
+                  'Import Management',
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.neutral500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -138,9 +144,10 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
         children: [
           const Icon(Icons.filter_list, size: 16, color: AppColors.neutral400),
           const SizedBox(width: 8),
-          Text('Filter by:',
-              style:
-                  AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500)),
+          Text(
+            'Filter by:',
+            style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+          ),
           const SizedBox(width: 16),
           _FilterChip(
             label: 'Type',
@@ -160,7 +167,7 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
               'En proceso',
               'Fallido',
               'Escondido',
-              'Revertido'
+              'Revertido',
             ],
             onChanged: (v) => setState(() {
               _statusFilter = v;
@@ -177,8 +184,10 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
               }),
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.neutral500,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 textStyle: AppTextStyles.labelSm,
               ),
               child: const Text('Clear filters'),
@@ -223,16 +232,19 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 40),
               child: Center(
-                child: Text('No batches match the selected filters.',
-                    style:
-                        TextStyle(color: AppColors.neutral400, fontSize: 13)),
+                child: Text(
+                  'No batches match the selected filters.',
+                  style: TextStyle(color: AppColors.neutral400, fontSize: 13),
+                ),
               ),
             )
           else
-            ...paginated.map((batch) => _HistoryTableRow(
-                  batch: batch,
-                  onTap: () => context.go('/imports/${batch.id}'),
-                )),
+            ...paginated.map(
+              (batch) => _HistoryTableRow(
+                batch: batch,
+                onTap: () => context.go('/imports/${batch.id}'),
+              ),
+            ),
         ],
       ),
     );
@@ -245,8 +257,9 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          onPressed:
-              _currentPage > 1 ? () => setState(() => _currentPage--) : null,
+          onPressed: _currentPage > 1
+              ? () => setState(() => _currentPage--)
+              : null,
           icon: const Icon(Icons.chevron_left, size: 18),
           style: IconButton.styleFrom(foregroundColor: AppColors.neutral600),
         ),
@@ -298,13 +311,17 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
     if (batches.isEmpty) {
       return const SizedBox.shrink();
     }
-    final completed =
-        batches.where((b) => b.status == ImportBatchStatus.completed).length;
-    final failed =
-        batches.where((b) => b.status == ImportBatchStatus.failed).length;
+    final completed = batches
+        .where((b) => b.status == ImportBatchStatus.completed)
+        .length;
+    final failed = batches
+        .where((b) => b.status == ImportBatchStatus.failed)
+        .length;
     final totalRows = batches.fold<int>(0, (sum, b) => sum + b.processedCount);
-    final totalConflicts =
-        batches.fold<int>(0, (sum, b) => sum + b.pendingReviewCount);
+    final totalConflicts = batches.fold<int>(
+      0,
+      (sum, b) => sum + b.pendingReviewCount,
+    );
 
     return Row(
       children: [
@@ -349,10 +366,11 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
       child: Text(
         text,
         style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            color: AppColors.neutral400,
-            letterSpacing: 0.8),
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: AppColors.neutral400,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -361,11 +379,12 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip(
-      {required this.label,
-      required this.value,
-      required this.options,
-      required this.onChanged});
+  const _FilterChip({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
   final String label;
   final String? value;
   final List<String> options;
@@ -378,9 +397,15 @@ class _FilterChip extends StatelessWidget {
       onSelected: onChanged,
       itemBuilder: (_) => [
         PopupMenuItem(
-            value: null, child: Text('All', style: AppTextStyles.bodySm)),
-        ...options.map((o) => PopupMenuItem(
-            value: o, child: Text(o, style: AppTextStyles.bodySm))),
+          value: null,
+          child: Text('All', style: AppTextStyles.bodySm),
+        ),
+        ...options.map(
+          (o) => PopupMenuItem(
+            value: o,
+            child: Text(o, style: AppTextStyles.bodySm),
+          ),
+        ),
       ],
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -390,8 +415,8 @@ class _FilterChip extends StatelessWidget {
               : AppColors.neutral50,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-              color:
-                  value != null ? AppColors.primary500 : AppColors.neutral200),
+            color: value != null ? AppColors.primary500 : AppColors.neutral200,
+          ),
         ),
         child: Row(
           children: [
@@ -399,16 +424,19 @@ class _FilterChip extends StatelessWidget {
               value ?? label,
               style: AppTextStyles.labelSm.copyWith(
                 fontSize: 12,
-                color:
-                    value != null ? AppColors.primary500 : AppColors.neutral600,
+                color: value != null
+                    ? AppColors.primary500
+                    : AppColors.neutral600,
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.expand_more,
-                size: 14,
-                color: value != null
-                    ? AppColors.primary500
-                    : AppColors.neutral400),
+            Icon(
+              Icons.expand_more,
+              size: 14,
+              color: value != null
+                  ? AppColors.primary500
+                  : AppColors.neutral400,
+            ),
           ],
         ),
       ),
@@ -441,22 +469,30 @@ class _HistoryTableRowState extends State<_HistoryTableRow> {
           child: Column(
             children: [
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     // Batch ID
                     Expanded(
                       flex: 1,
-                      child: Text('#${b.batchNumber}',
-                          style: AppTextStyles.labelSm.copyWith(
-                              color: AppColors.primary500, fontSize: 12)),
+                      child: Text(
+                        '#${b.batchNumber}',
+                        style: AppTextStyles.labelSm.copyWith(
+                          color: AppColors.primary500,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                     // Tipo
                     Expanded(
                       flex: 2,
-                      child: Text(b.importType.label,
-                          style: AppTextStyles.bodySm.copyWith(fontSize: 12)),
+                      child: Text(
+                        b.importType.label,
+                        style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                      ),
                     ),
                     // Fuente / archivo
                     Expanded(
@@ -464,15 +500,19 @@ class _HistoryTableRowState extends State<_HistoryTableRow> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(b.zone,
-                              style:
-                                  AppTextStyles.bodySm.copyWith(fontSize: 12),
-                              overflow: TextOverflow.ellipsis),
+                          Text(
+                            b.zone,
+                            style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           if (b.fileName != null)
-                            Text(b.fileName!,
-                                style: AppTextStyles.bodyXs
-                                    .copyWith(color: AppColors.neutral400),
-                                overflow: TextOverflow.ellipsis),
+                            Text(
+                              b.fileName!,
+                              style: AppTextStyles.bodyXs.copyWith(
+                                color: AppColors.neutral400,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                         ],
                       ),
                     ),
@@ -484,13 +524,16 @@ class _HistoryTableRowState extends State<_HistoryTableRow> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${b.processedCount} rows',
-                              style:
-                                  AppTextStyles.bodyXs.copyWith(fontSize: 11)),
                           Text(
-                              '${b.createdCount} created · ${b.errorCount} errors',
-                              style: AppTextStyles.bodyXs
-                                  .copyWith(color: AppColors.neutral400)),
+                            '${b.processedCount} rows',
+                            style: AppTextStyles.bodyXs.copyWith(fontSize: 11),
+                          ),
+                          Text(
+                            '${b.createdCount} created · ${b.errorCount} errors',
+                            style: AppTextStyles.bodyXs.copyWith(
+                              color: AppColors.neutral400,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -500,13 +543,17 @@ class _HistoryTableRowState extends State<_HistoryTableRow> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(b.createdBy,
-                              style:
-                                  AppTextStyles.bodySm.copyWith(fontSize: 12)),
+                          Text(
+                            b.createdBy,
+                            style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                          ),
                           if (b.actorRole != null)
-                            Text(b.actorRole!,
-                                style: AppTextStyles.bodyXs
-                                    .copyWith(color: AppColors.neutral400)),
+                            Text(
+                              b.actorRole!,
+                              style: AppTextStyles.bodyXs.copyWith(
+                                color: AppColors.neutral400,
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -514,10 +561,13 @@ class _HistoryTableRowState extends State<_HistoryTableRow> {
                     Expanded(
                       flex: 2,
                       child: Text(
-                        DateFormat('dd MMM yyyy\nHH:mm', 'es')
-                            .format(b.createdAt),
-                        style: AppTextStyles.bodyXs
-                            .copyWith(color: AppColors.neutral500),
+                        DateFormat(
+                          'dd MMM yyyy\nHH:mm',
+                          'es',
+                        ).format(b.createdAt),
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral500,
+                        ),
                       ),
                     ),
                     // Acción
@@ -530,8 +580,11 @@ class _HistoryTableRowState extends State<_HistoryTableRow> {
                           borderRadius: BorderRadius.circular(4),
                           child: const Padding(
                             padding: EdgeInsets.all(4),
-                            child: Icon(Icons.open_in_new,
-                                size: 14, color: AppColors.neutral400),
+                            child: Icon(
+                              Icons.open_in_new,
+                              size: 14,
+                              color: AppColors.neutral400,
+                            ),
                           ),
                         ),
                       ),
@@ -556,70 +609,78 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, bg, label) = switch (status) {
       ImportBatchStatus.completed => (
-          AppColors.successFg,
-          AppColors.successFg.withValues(alpha: 0.1),
-          'Completed'
-        ),
+        AppColors.successFg,
+        AppColors.successFg.withValues(alpha: 0.1),
+        'Completed',
+      ),
       ImportBatchStatus.running => (
-          AppColors.primary500,
-          AppColors.primary500.withValues(alpha: 0.1),
-          'Running'
-        ),
+        AppColors.primary500,
+        AppColors.primary500.withValues(alpha: 0.1),
+        'Running',
+      ),
       ImportBatchStatus.failed => (
-          AppColors.errorFg,
-          AppColors.errorFg.withValues(alpha: 0.1),
-          'Failed'
-        ),
+        AppColors.errorFg,
+        AppColors.errorFg.withValues(alpha: 0.1),
+        'Failed',
+      ),
       ImportBatchStatus.hidden => (
-          AppColors.neutral500,
-          AppColors.neutral200,
-          'Staged'
-        ),
+        AppColors.neutral500,
+        AppColors.neutral200,
+        'Staged',
+      ),
       ImportBatchStatus.rolledBack => (
-          AppColors.warningFg,
-          AppColors.warningFg.withValues(alpha: 0.1),
-          'Rolled Back'
-        ),
+        AppColors.warningFg,
+        AppColors.warningFg.withValues(alpha: 0.1),
+        'Rolled Back',
+      ),
       ImportBatchStatus.validated => (
-          AppColors.secondary500,
-          AppColors.secondary500.withValues(alpha: 0.1),
-          'Validated'
-        ),
+        AppColors.secondary500,
+        AppColors.secondary500.withValues(alpha: 0.1),
+        'Validated',
+      ),
       ImportBatchStatus.partial => (
-          AppColors.warningFg,
-          AppColors.warningFg.withValues(alpha: 0.1),
-          'Partial'
-        ),
+        AppColors.warningFg,
+        AppColors.warningFg.withValues(alpha: 0.1),
+        'Partial',
+      ),
       ImportBatchStatus.draft => (
-          AppColors.neutral500,
-          AppColors.neutral100,
-          'Queued'
-        ),
+        AppColors.neutral500,
+        AppColors.neutral100,
+        'Queued',
+      ),
       ImportBatchStatus.archived => (
-          AppColors.neutral400,
-          AppColors.neutral100,
-          'Archived'
-        ),
+        AppColors.neutral400,
+        AppColors.neutral100,
+        'Archived',
+      ),
     };
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
     );
   }
 }
 
 class _AnalysisCard extends StatelessWidget {
-  const _AnalysisCard(
-      {required this.title,
-      required this.value,
-      required this.subtitle,
-      required this.color,
-      required this.icon});
+  const _AnalysisCard({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.color,
+    required this.icon,
+  });
   final String title;
   final String value;
   final String subtitle;
@@ -652,15 +713,23 @@ class _AnalysisCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: AppTextStyles.bodyXs
-                          .copyWith(color: AppColors.neutral500)),
+                  Text(
+                    title,
+                    style: AppTextStyles.bodyXs.copyWith(
+                      color: AppColors.neutral500,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(value,
-                      style: AppTextStyles.headingSm.copyWith(fontSize: 18)),
-                  Text(subtitle,
-                      style: AppTextStyles.bodyXs
-                          .copyWith(color: AppColors.neutral400)),
+                  Text(
+                    value,
+                    style: AppTextStyles.headingSm.copyWith(fontSize: 18),
+                  ),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.bodyXs.copyWith(
+                      color: AppColors.neutral400,
+                    ),
+                  ),
                 ],
               ),
             ),

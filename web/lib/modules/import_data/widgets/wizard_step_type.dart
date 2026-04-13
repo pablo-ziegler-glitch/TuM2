@@ -6,7 +6,11 @@ import '../models/import_batch_ui.dart';
 
 /// Paso 1 del wizard de importación — selección del tipo de importación.
 class WizardStepType extends StatelessWidget {
-  const WizardStepType({super.key, required this.selected, required this.onSelect});
+  const WizardStepType({
+    super.key,
+    required this.selected,
+    required this.onSelect,
+  });
 
   final ImportType? selected;
   final void Function(ImportType) onSelect;
@@ -15,7 +19,8 @@ class WizardStepType extends StatelessWidget {
     _TypeItem(
       type: ImportType.officialDataset,
       icon: Icons.source_outlined,
-      examples: 'REPES pharmacies, public WiFi, municipal markets, neighborhood clubs',
+      examples:
+          'REPES pharmacies, public WiFi, municipal markets, neighborhood clubs',
     ),
     _TypeItem(
       type: ImportType.masterCatalog,
@@ -48,7 +53,11 @@ class WizardStepType extends StatelessWidget {
             return Expanded(
               child: Padding(
                 padding: EdgeInsets.only(right: item == _items.last ? 0 : 16),
-                child: _TypeCard(item: item, isSelected: isSelected, onSelect: onSelect),
+                child: _TypeCard(
+                  item: item,
+                  isSelected: isSelected,
+                  onSelect: onSelect,
+                ),
               ),
             );
           }).toList(),
@@ -60,16 +69,24 @@ class WizardStepType extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.primary500.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.primary500.withValues(alpha: 0.2)),
+              border: Border.all(
+                color: AppColors.primary500.withValues(alpha: 0.2),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 16, color: AppColors.primary500),
+                const Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: AppColors.primary500,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     _helpText(selected!),
-                    style: AppTextStyles.bodySm.copyWith(color: AppColors.primary500),
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.primary500,
+                    ),
                   ),
                 ),
               ],
@@ -91,7 +108,11 @@ class WizardStepType extends StatelessWidget {
 }
 
 class _TypeCard extends StatefulWidget {
-  const _TypeCard({required this.item, required this.isSelected, required this.onSelect});
+  const _TypeCard({
+    required this.item,
+    required this.isSelected,
+    required this.onSelect,
+  });
   final _TypeItem item;
   final bool isSelected;
   final void Function(ImportType) onSelect;
@@ -108,8 +129,8 @@ class _TypeCardState extends State<_TypeCard> {
     final borderColor = widget.isSelected
         ? AppColors.primary500
         : _hovered
-            ? AppColors.neutral300
-            : AppColors.neutral200;
+        ? AppColors.neutral300
+        : AppColors.neutral200;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -120,9 +141,14 @@ class _TypeCardState extends State<_TypeCard> {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: widget.isSelected ? AppColors.primary500.withValues(alpha: 0.04) : AppColors.surface,
+            color: widget.isSelected
+                ? AppColors.primary500.withValues(alpha: 0.04)
+                : AppColors.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: borderColor, width: widget.isSelected ? 2 : 1),
+            border: Border.all(
+              color: borderColor,
+              width: widget.isSelected ? 2 : 1,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,35 +167,51 @@ class _TypeCardState extends State<_TypeCard> {
                     child: Icon(
                       widget.item.icon,
                       size: 20,
-                      color: widget.isSelected ? AppColors.primary500 : AppColors.neutral600,
+                      color: widget.isSelected
+                          ? AppColors.primary500
+                          : AppColors.neutral600,
                     ),
                   ),
                   const Spacer(),
                   if (widget.isSelected)
-                    const Icon(Icons.check_circle, size: 18, color: AppColors.primary500),
+                    const Icon(
+                      Icons.check_circle,
+                      size: 18,
+                      color: AppColors.primary500,
+                    ),
                 ],
               ),
               const SizedBox(height: 14),
               Text(
                 widget.item.type.label,
                 style: AppTextStyles.labelMd.copyWith(
-                  color: widget.isSelected ? AppColors.primary500 : AppColors.neutral900,
+                  color: widget.isSelected
+                      ? AppColors.primary500
+                      : AppColors.neutral900,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 widget.item.type.description,
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500, fontSize: 12),
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.neutral500,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 12),
               Text(
                 'Examples:',
-                style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400, fontWeight: FontWeight.w600),
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral400,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 widget.item.examples,
-                style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral500,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -177,8 +219,14 @@ class _TypeCardState extends State<_TypeCard> {
                 child: OutlinedButton(
                   onPressed: () => widget.onSelect(widget.item.type),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: widget.isSelected ? AppColors.primary500 : AppColors.neutral700,
-                    side: BorderSide(color: widget.isSelected ? AppColors.primary500 : AppColors.neutral300),
+                    foregroundColor: widget.isSelected
+                        ? AppColors.primary500
+                        : AppColors.neutral700,
+                    side: BorderSide(
+                      color: widget.isSelected
+                          ? AppColors.primary500
+                          : AppColors.neutral300,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     textStyle: AppTextStyles.labelSm,
                   ),
@@ -194,7 +242,11 @@ class _TypeCardState extends State<_TypeCard> {
 }
 
 class _TypeItem {
-  const _TypeItem({required this.type, required this.icon, required this.examples});
+  const _TypeItem({
+    required this.type,
+    required this.icon,
+    required this.examples,
+  });
   final ImportType type;
   final IconData icon;
   final String examples;

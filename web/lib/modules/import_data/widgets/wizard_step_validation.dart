@@ -31,8 +31,10 @@ class _WizardStepValidationState extends State<WizardStepValidation>
     super.dispose();
   }
 
-  int get _validCount => widget.previewRows.where((r) => !r.hasError && !r.hasWarning).length;
-  int get _warningCount => widget.previewRows.where((r) => r.hasWarning && !r.hasError).length;
+  int get _validCount =>
+      widget.previewRows.where((r) => !r.hasError && !r.hasWarning).length;
+  int get _warningCount =>
+      widget.previewRows.where((r) => r.hasWarning && !r.hasError).length;
   int get _errorCount => widget.previewRows.where((r) => r.hasError).length;
   int get _total => widget.previewRows.length;
 
@@ -62,13 +64,33 @@ class _WizardStepValidationState extends State<WizardStepValidation>
   Widget _buildKpiRow() {
     return Row(
       children: [
-        _ValidationKpi(label: 'Total Rows', value: '$_total', icon: Icons.table_rows_outlined, color: AppColors.neutral600),
+        _ValidationKpi(
+          label: 'Total Rows',
+          value: '$_total',
+          icon: Icons.table_rows_outlined,
+          color: AppColors.neutral600,
+        ),
         const SizedBox(width: 12),
-        _ValidationKpi(label: 'Valid', value: '$_validCount', icon: Icons.check_circle_outline, color: AppColors.successFg),
+        _ValidationKpi(
+          label: 'Valid',
+          value: '$_validCount',
+          icon: Icons.check_circle_outline,
+          color: AppColors.successFg,
+        ),
         const SizedBox(width: 12),
-        _ValidationKpi(label: 'Warnings', value: '$_warningCount', icon: Icons.warning_amber_outlined, color: AppColors.warningFg),
+        _ValidationKpi(
+          label: 'Warnings',
+          value: '$_warningCount',
+          icon: Icons.warning_amber_outlined,
+          color: AppColors.warningFg,
+        ),
         const SizedBox(width: 12),
-        _ValidationKpi(label: 'Errors', value: '$_errorCount', icon: Icons.error_outline, color: AppColors.errorFg),
+        _ValidationKpi(
+          label: 'Errors',
+          value: '$_errorCount',
+          icon: Icons.error_outline,
+          color: AppColors.errorFg,
+        ),
       ],
     );
   }
@@ -103,9 +125,21 @@ class _WizardStepValidationState extends State<WizardStepValidation>
         controller: _tabController,
         children: [
           _SummaryTab(rows: widget.previewRows),
-          _RowsTab(rows: widget.previewRows.where((r) => !r.hasError && !r.hasWarning).toList(), emptyLabel: 'No valid rows'),
-          _IssuesTab(rows: widget.previewRows.where((r) => r.hasError || r.hasWarning).toList()),
-          _DestinationImpactTab(validCount: _validCount, errorCount: _errorCount),
+          _RowsTab(
+            rows: widget.previewRows
+                .where((r) => !r.hasError && !r.hasWarning)
+                .toList(),
+            emptyLabel: 'No valid rows',
+          ),
+          _IssuesTab(
+            rows: widget.previewRows
+                .where((r) => r.hasError || r.hasWarning)
+                .toList(),
+          ),
+          _DestinationImpactTab(
+            validCount: _validCount,
+            errorCount: _errorCount,
+          ),
         ],
       ),
     );
@@ -130,7 +164,9 @@ class _WizardStepValidationState extends State<WizardStepValidation>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            hasErrors ? Icons.tips_and_updates_outlined : Icons.check_circle_outline,
+            hasErrors
+                ? Icons.tips_and_updates_outlined
+                : Icons.check_circle_outline,
             size: 18,
             color: hasErrors ? AppColors.warningFg : AppColors.successFg,
           ),
@@ -140,7 +176,9 @@ class _WizardStepValidationState extends State<WizardStepValidation>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  hasErrors ? 'Data Strategy Recommendation' : 'Ready to Import',
+                  hasErrors
+                      ? 'Data Strategy Recommendation'
+                      : 'Ready to Import',
                   style: AppTextStyles.labelMd.copyWith(fontSize: 13),
                 ),
                 const SizedBox(height: 4),
@@ -148,7 +186,10 @@ class _WizardStepValidationState extends State<WizardStepValidation>
                   hasErrors
                       ? '$_errorCount rows have errors and will be skipped. $_validCount valid rows and $_warningCount warning rows will be staged. You can review and resolve skipped rows after import via the Conflict Review panel.'
                       : 'All $_total rows passed validation. The import is ready to be confirmed and staged.',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral600, fontSize: 12),
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.neutral600,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -167,9 +208,7 @@ class _SummaryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: _PreviewTable(rows: rows),
-    );
+    return SingleChildScrollView(child: _PreviewTable(rows: rows));
   }
 }
 
@@ -181,7 +220,12 @@ class _RowsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) {
-      return Center(child: Text(emptyLabel, style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral400)));
+      return Center(
+        child: Text(
+          emptyLabel,
+          style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral400),
+        ),
+      );
     }
     return SingleChildScrollView(child: _PreviewTable(rows: rows));
   }
@@ -198,17 +242,22 @@ class _IssuesTab extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.check_circle, size: 18, color: AppColors.successFg),
+            const Icon(
+              Icons.check_circle,
+              size: 18,
+              color: AppColors.successFg,
+            ),
             const SizedBox(width: 8),
-            Text('No issues found', style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500)),
+            Text(
+              'No issues found',
+              style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
+            ),
           ],
         ),
       );
     }
     return SingleChildScrollView(
-      child: Column(
-        children: rows.map((r) => _IssueRow(row: r)).toList(),
-      ),
+      child: Column(children: rows.map((r) => _IssueRow(row: r)).toList()),
     );
   }
 }
@@ -231,16 +280,25 @@ class _IssueRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(isError ? Icons.error_outline : Icons.warning_amber_outlined, size: 16, color: color),
+          Icon(
+            isError ? Icons.error_outline : Icons.warning_amber_outlined,
+            size: 16,
+            color: color,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(row.name, style: AppTextStyles.labelSm.copyWith(fontSize: 12)),
+                Text(
+                  row.name,
+                  style: AppTextStyles.labelSm.copyWith(fontSize: 12),
+                ),
                 Text(
                   '${row.address} · Lon: ${row.longitude} · Lat: ${row.latitude}',
-                  style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.neutral500,
+                  ),
                 ),
               ],
             ),
@@ -253,7 +311,11 @@ class _IssueRow extends StatelessWidget {
             ),
             child: Text(
               isError ? 'ERROR' : 'WARNING',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -273,7 +335,10 @@ class _IssueRow extends StatelessWidget {
 }
 
 class _DestinationImpactTab extends StatelessWidget {
-  const _DestinationImpactTab({required this.validCount, required this.errorCount});
+  const _DestinationImpactTab({
+    required this.validCount,
+    required this.errorCount,
+  });
   final int validCount;
   final int errorCount;
 
@@ -284,13 +349,33 @@ class _DestinationImpactTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ImpactRow(icon: Icons.storage_outlined, label: 'Records to be staged', value: '$validCount', color: AppColors.primary500),
+          _ImpactRow(
+            icon: Icons.storage_outlined,
+            label: 'Records to be staged',
+            value: '$validCount',
+            color: AppColors.primary500,
+          ),
           const SizedBox(height: 12),
-          _ImpactRow(icon: Icons.block_outlined, label: 'Records to be skipped', value: '$errorCount', color: AppColors.errorFg),
+          _ImpactRow(
+            icon: Icons.block_outlined,
+            label: 'Records to be skipped',
+            value: '$errorCount',
+            color: AppColors.errorFg,
+          ),
           const SizedBox(height: 12),
-          _ImpactRow(icon: Icons.visibility_off_outlined, label: 'Initial visibility', value: 'Hidden (staging)', color: AppColors.neutral500),
+          _ImpactRow(
+            icon: Icons.visibility_off_outlined,
+            label: 'Initial visibility',
+            value: 'Hidden (staging)',
+            color: AppColors.neutral500,
+          ),
           const SizedBox(height: 12),
-          _ImpactRow(icon: Icons.merge_type_outlined, label: 'Deduplication', value: 'Enabled · name + geohash', color: AppColors.secondary500),
+          _ImpactRow(
+            icon: Icons.merge_type_outlined,
+            label: 'Deduplication',
+            value: 'Enabled · name + geohash',
+            color: AppColors.secondary500,
+          ),
         ],
       ),
     );
@@ -298,7 +383,12 @@ class _DestinationImpactTab extends StatelessWidget {
 }
 
 class _ImpactRow extends StatelessWidget {
-  const _ImpactRow({required this.icon, required this.label, required this.value, required this.color});
+  const _ImpactRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final IconData icon;
   final String label;
   final String value;
@@ -310,8 +400,16 @@ class _ImpactRow extends StatelessWidget {
       children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 10),
-        Expanded(child: Text(label, style: AppTextStyles.bodySm.copyWith(fontSize: 12))),
-        Text(value, style: AppTextStyles.labelMd.copyWith(color: color, fontSize: 13)),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+          ),
+        ),
+        Text(
+          value,
+          style: AppTextStyles.labelMd.copyWith(color: color, fontSize: 13),
+        ),
       ],
     );
   }
@@ -352,27 +450,88 @@ class _PreviewTable extends StatelessWidget {
             color: isError
                 ? AppColors.errorFg.withValues(alpha: 0.04)
                 : isWarn
-                    ? AppColors.warningFg.withValues(alpha: 0.04)
-                    : Colors.transparent,
+                ? AppColors.warningFg.withValues(alpha: 0.04)
+                : Colors.transparent,
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
                   child: Row(
                     children: [
-                      Expanded(flex: 3, child: Text(row.name, style: AppTextStyles.bodySm.copyWith(fontSize: 12), overflow: TextOverflow.ellipsis)),
-                      Expanded(flex: 2, child: Text(row.locality, style: AppTextStyles.bodySm.copyWith(fontSize: 12))),
-                      Expanded(flex: 1, child: Text(row.typology, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500))),
-                      Expanded(flex: 3, child: Text(row.address, style: AppTextStyles.bodySm.copyWith(fontSize: 12), overflow: TextOverflow.ellipsis)),
-                      Expanded(flex: 2, child: Text(row.longitude, style: AppTextStyles.bodyXs.copyWith(color: isError ? AppColors.errorFg : AppColors.neutral600))),
-                      Expanded(flex: 2, child: Text(row.latitude, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600))),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          row.name,
+                          style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          row.locality,
+                          style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 1,
+                        child: Text(
+                          row.typology,
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.neutral500,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          row.address,
+                          style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          row.longitude,
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: isError
+                                ? AppColors.errorFg
+                                : AppColors.neutral600,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          row.latitude,
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.neutral600,
+                          ),
+                        ),
+                      ),
                       Expanded(
                         flex: 1,
                         child: isError
-                            ? const Icon(Icons.error_outline, size: 14, color: AppColors.errorFg)
+                            ? const Icon(
+                                Icons.error_outline,
+                                size: 14,
+                                color: AppColors.errorFg,
+                              )
                             : isWarn
-                                ? const Icon(Icons.warning_amber_outlined, size: 14, color: AppColors.warningFg)
-                                : const Icon(Icons.check_circle_outline, size: 14, color: AppColors.successFg),
+                            ? const Icon(
+                                Icons.warning_amber_outlined,
+                                size: 14,
+                                color: AppColors.warningFg,
+                              )
+                            : const Icon(
+                                Icons.check_circle_outline,
+                                size: 14,
+                                color: AppColors.successFg,
+                              ),
                       ),
                     ],
                   ),
@@ -393,14 +552,27 @@ class _HeaderCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.neutral400, letterSpacing: 0.7));
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        color: AppColors.neutral400,
+        letterSpacing: 0.7,
+      ),
+    );
   }
 }
 
 // ── KPI card ──────────────────────────────────────────────────────────────────
 
 class _ValidationKpi extends StatelessWidget {
-  const _ValidationKpi({required this.label, required this.value, required this.icon, required this.color});
+  const _ValidationKpi({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
   final String label;
   final String value;
   final IconData icon;
@@ -423,8 +595,16 @@ class _ValidationKpi extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(value, style: AppTextStyles.headingSm.copyWith(fontSize: 18)),
-                Text(label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500)),
+                Text(
+                  value,
+                  style: AppTextStyles.headingSm.copyWith(fontSize: 18),
+                ),
+                Text(
+                  label,
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.neutral500,
+                  ),
+                ),
               ],
             ),
           ],

@@ -32,9 +32,13 @@ function buildOwnerRequest(params: {
 
 async function deleteCollection(collectionName: string): Promise<void> {
   const firestore = getFirestore();
-  while (true) {
+  let hasMore = true;
+  while (hasMore) {
     const snapshot = await firestore.collection(collectionName).limit(200).get();
-    if (snapshot.empty) return;
+    if (snapshot.empty) {
+      hasMore = false;
+      continue;
+    }
     const batch = firestore.batch();
     for (const doc of snapshot.docs) {
       batch.delete(doc.ref);

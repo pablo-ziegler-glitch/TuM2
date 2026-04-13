@@ -48,24 +48,26 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
   String? _province;
 
   List<String> get _countries {
-    final countries = widget.zoneOptions
-        .map((zone) => zone.countryName.trim())
-        .where((country) => country.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final countries =
+        widget.zoneOptions
+            .map((zone) => zone.countryName.trim())
+            .where((country) => country.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     if (countries.isEmpty) return const ['Argentina'];
     return countries;
   }
 
   List<String> get _provinces {
-    final provinces = widget.zoneOptions
-        .where((zone) => zone.countryName == _country)
-        .map((zone) => zone.provinceName.trim())
-        .where((province) => province.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final provinces =
+        widget.zoneOptions
+            .where((zone) => zone.countryName == _country)
+            .map((zone) => zone.provinceName.trim())
+            .where((province) => province.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return provinces;
   }
 
@@ -75,9 +77,10 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
       if (!sameCountry) return false;
       if (_province == null || _province!.isEmpty) return true;
       return zone.provinceName == _province;
-    }).toList()
-      ..sort((a, b) =>
-          a.localityName.toLowerCase().compareTo(b.localityName.toLowerCase()));
+    }).toList()..sort(
+      (a, b) =>
+          a.localityName.toLowerCase().compareTo(b.localityName.toLowerCase()),
+    );
   }
 
   @override
@@ -110,16 +113,18 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
       return;
     }
 
-    final argentina =
-        widget.zoneOptions.where((zone) => zone.countryName == 'Argentina');
+    final argentina = widget.zoneOptions.where(
+      (zone) => zone.countryName == 'Argentina',
+    );
     if (argentina.isNotEmpty) {
       _country = 'Argentina';
-      final provinces = argentina
-          .map((zone) => zone.provinceName.trim())
-          .where((province) => province.isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      final provinces =
+          argentina
+              .map((zone) => zone.provinceName.trim())
+              .where((province) => province.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
       _province = provinces.isEmpty ? null : provinces.first;
       return;
     }
@@ -140,10 +145,7 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Configuración',
-                style: AppTextStyles.headingSm,
-              ),
+              Text('Configuración', style: AppTextStyles.headingSm),
               const SizedBox(height: 20),
               // Tipo de dataset
               _FieldLabel(label: 'TIPOS DE DATASET'),
@@ -152,10 +154,12 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                 value: widget.selectedDatasetType,
                 hint: 'Seleccionar tipo...',
                 items: DatasetType.values
-                    .map((t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(t.label, style: AppTextStyles.bodySm),
-                        ))
+                    .map(
+                      (t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(t.label, style: AppTextStyles.bodySm),
+                      ),
+                    )
                     .toList(),
                 onChanged: widget.onDatasetTypeChanged,
               ),
@@ -165,8 +169,9 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
               const SizedBox(height: 4),
               Text(
                 'Usala cuando querés forzar una zona para todos los registros importados.',
-                style:
-                    AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral500,
+                ),
               ),
               const SizedBox(height: 6),
               Row(
@@ -177,9 +182,7 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                     child: Checkbox(
                       value: widget.applyDestinationZone,
                       onChanged: (value) =>
-                          widget.onApplyDestinationZoneChanged(
-                        value ?? false,
-                      ),
+                          widget.onApplyDestinationZoneChanged(value ?? false),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -204,11 +207,12 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                       value: _country,
                       hint: 'Seleccionar país...',
                       items: _countries
-                          .map((country) => DropdownMenuItem(
-                                value: country,
-                                child:
-                                    Text(country, style: AppTextStyles.bodySm),
-                              ))
+                          .map(
+                            (country) => DropdownMenuItem(
+                              value: country,
+                              child: Text(country, style: AppTextStyles.bodySm),
+                            ),
+                          )
                           .toList(),
                       onChanged: widget.applyDestinationZone
                           ? (country) {
@@ -216,8 +220,9 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                               setState(() {
                                 _country = country;
                                 final provinces = _provinces;
-                                _province =
-                                    provinces.isEmpty ? null : provinces.first;
+                                _province = provinces.isEmpty
+                                    ? null
+                                    : provinces.first;
                               });
                               final localities = _localities;
                               widget.onZoneChanged(
@@ -234,11 +239,15 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                       value: _province,
                       hint: 'Seleccionar provincia...',
                       items: _provinces
-                          .map((province) => DropdownMenuItem(
-                                value: province,
-                                child:
-                                    Text(province, style: AppTextStyles.bodySm),
-                              ))
+                          .map(
+                            (province) => DropdownMenuItem(
+                              value: province,
+                              child: Text(
+                                province,
+                                style: AppTextStyles.bodySm,
+                              ),
+                            ),
+                          )
                           .toList(),
                       onChanged: widget.applyDestinationZone
                           ? (province) {
@@ -258,14 +267,16 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                       value: widget.selectedZoneId,
                       hint: 'Seleccionar localidad...',
                       items: _localities
-                          .map((zone) => DropdownMenuItem(
-                                value: zone.zoneId,
-                                child: Text(
-                                  '${zone.localityName} (${zone.zoneId})',
-                                  style: AppTextStyles.bodySm,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ))
+                          .map(
+                            (zone) => DropdownMenuItem(
+                              value: zone.zoneId,
+                              child: Text(
+                                '${zone.localityName} (${zone.zoneId})',
+                                style: AppTextStyles.bodySm,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
                           .toList(),
                       onChanged: widget.applyDestinationZone
                           ? widget.onZoneChanged
@@ -278,8 +289,9 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                 const SizedBox(height: 6),
                 Text(
                   widget.zonesError!,
-                  style:
-                      AppTextStyles.bodyXs.copyWith(color: AppColors.errorFg),
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.errorFg,
+                  ),
                 ),
               ],
               const SizedBox(height: 24),
@@ -296,16 +308,20 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle_outline,
-                          color: AppColors.successFg, size: 16),
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: AppColors.successFg,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           widget.applyDestinationZone
                               ? 'Configuración de origen completa'
                               : 'Zona destino desactivada (importación sin zona fija)',
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.successFg),
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.successFg,
+                          ),
                         ),
                       ),
                     ],
@@ -368,8 +384,9 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                               ? widget.fileName!
                               : 'Arrastrá el archivo CSV aquí',
                           style: widget.fileName != null
-                              ? AppTextStyles.labelMd
-                                  .copyWith(color: AppColors.primary500)
+                              ? AppTextStyles.labelMd.copyWith(
+                                  color: AppColors.primary500,
+                                )
                               : AppTextStyles.bodyMd,
                         ),
                         const SizedBox(height: 6),
@@ -384,29 +401,39 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                           children: [
                             OutlinedButton.icon(
                               onPressed: widget.onFileSelected,
-                              icon: const Icon(Icons.table_chart_outlined,
-                                  size: 16),
+                              icon: const Icon(
+                                Icons.table_chart_outlined,
+                                size: 16,
+                              ),
                               label: const Text('CSV / JSON'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.neutral700,
                                 side: const BorderSide(
-                                    color: AppColors.neutral300),
+                                  color: AppColors.neutral300,
+                                ),
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
                             OutlinedButton.icon(
                               onPressed: widget.onFileSelected,
-                              icon:
-                                  const Icon(Icons.storage_outlined, size: 16),
+                              icon: const Icon(
+                                Icons.storage_outlined,
+                                size: 16,
+                              ),
                               label: const Text('Max 50MB'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.neutral700,
                                 side: const BorderSide(
-                                    color: AppColors.neutral300),
+                                  color: AppColors.neutral300,
+                                ),
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
                               ),
                             ),
                           ],
@@ -427,14 +454,18 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.info_outline,
-                        size: 16, color: AppColors.primary500),
+                    const Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: AppColors.primary500,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Asegurate de que el archivo tenga columnas clave para facilitar el mapeo automático en el siguiente paso.',
-                        style: AppTextStyles.bodyXs
-                            .copyWith(color: AppColors.primary600),
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.primary600,
+                        ),
                       ),
                     ),
                   ],
@@ -528,8 +559,10 @@ class _StyledDropdown<T> extends StatelessWidget {
         value: items.any((item) => item.value == value) ? value : null,
         isExpanded: true,
         underline: const SizedBox(),
-        hint: Text(hint,
-            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500)),
+        hint: Text(
+          hint,
+          style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
+        ),
         items: items,
         onChanged: enabled ? onChanged : null,
         style: AppTextStyles.bodySm.copyWith(

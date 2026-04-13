@@ -74,7 +74,9 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
                           ),
                           if (i < widget.mappings.length - 1)
                             const Divider(
-                                height: 1, color: AppColors.neutral100),
+                              height: 1,
+                              color: AppColors.neutral100,
+                            ),
                         ],
                       );
                     }),
@@ -171,10 +173,11 @@ class _MappingTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const style = TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-        color: AppColors.neutral500,
-        letterSpacing: 0.6);
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+      color: AppColors.neutral500,
+      letterSpacing: 0.6,
+    );
     return Container(
       color: AppColors.neutral50,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -244,8 +247,9 @@ class _MappingRow extends StatelessWidget {
             child: Icon(
               Icons.arrow_forward,
               size: 16,
-              color:
-                  mapping.enabled ? AppColors.neutral600 : AppColors.neutral300,
+              color: mapping.enabled
+                  ? AppColors.neutral600
+                  : AppColors.neutral300,
             ),
           ),
           // Campo TuM2
@@ -265,18 +269,24 @@ class _MappingRow extends StatelessWidget {
                           : null,
                       isExpanded: true,
                       underline: const SizedBox(),
-                      hint: Text('Seleccionar campo...',
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.neutral500)),
+                      hint: Text(
+                        'Seleccionar campo...',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral500,
+                        ),
+                      ),
                       items: tum2Fields
-                          .map((f) => DropdownMenuItem(
-                                value: f,
-                                child: Text(f, style: AppTextStyles.bodySm),
-                              ))
+                          .map(
+                            (f) => DropdownMenuItem(
+                              value: f,
+                              child: Text(f, style: AppTextStyles.bodySm),
+                            ),
+                          )
                           .toList(),
                       onChanged: onFieldChanged,
-                      style: AppTextStyles.bodySm
-                          .copyWith(color: AppColors.neutral900),
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.neutral900,
+                      ),
                     ),
                   )
                 : Container(
@@ -287,9 +297,12 @@ class _MappingRow extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Center(
-                      child: Text('—',
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.neutral400)),
+                      child: Text(
+                        '—',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral400,
+                        ),
+                      ),
                     ),
                   ),
           ),
@@ -300,9 +313,12 @@ class _MappingRow extends StatelessWidget {
               padding: const EdgeInsets.only(left: 8),
               child: mapping.aiConfidence != null
                   ? _ConfidenceBar(confidence: mapping.aiConfidence!)
-                  : Text('—',
-                      style: AppTextStyles.bodyXs
-                          .copyWith(color: AppColors.neutral400)),
+                  : Text(
+                      '—',
+                      style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.neutral400,
+                      ),
+                    ),
             ),
           ),
           // Estado
@@ -313,20 +329,27 @@ class _MappingRow extends StatelessWidget {
               child: mapping.required
                   ? Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.errorBg,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text('Required',
-                          style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.errorFg)),
+                      child: Text(
+                        'Required',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.errorFg,
+                        ),
+                      ),
                     )
                   : Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: mapping.enabled
                             ? AppColors.successBg
@@ -336,11 +359,12 @@ class _MappingRow extends StatelessWidget {
                       child: Text(
                         mapping.enabled ? 'Optional' : 'Ignored',
                         style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: mapping.enabled
-                                ? AppColors.successFg
-                                : AppColors.neutral500),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: mapping.enabled
+                              ? AppColors.successFg
+                              : AppColors.neutral500,
+                        ),
                       ),
                     ),
             ),
@@ -446,8 +470,8 @@ class _ConfidenceBar extends StatelessWidget {
     final color = confidence >= 0.9
         ? AppColors.successFg
         : confidence >= 0.7
-            ? AppColors.warningFg
-            : AppColors.errorFg;
+        ? AppColors.warningFg
+        : AppColors.errorFg;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,7 +479,10 @@ class _ConfidenceBar extends StatelessWidget {
         Text(
           '${(confidence * 100).toStringAsFixed(0)}%',
           style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w600, color: color),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
         ),
         const SizedBox(height: 3),
         SizedBox(
@@ -502,11 +529,16 @@ class _SourceInsightPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome_outlined,
-                  size: 14, color: AppColors.primary500),
+              const Icon(
+                Icons.auto_awesome_outlined,
+                size: 14,
+                color: AppColors.primary500,
+              ),
               const SizedBox(width: 6),
-              Text('Source Insight',
-                  style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
+              Text(
+                'Source Insight',
+                style: AppTextStyles.labelMd.copyWith(fontSize: 12),
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -522,29 +554,39 @@ class _SourceInsightPanel extends StatelessWidget {
           const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.neutral100),
           const SizedBox(height: 12),
-          Text('Sample values',
-              style: AppTextStyles.bodyXs.copyWith(
-                  color: AppColors.neutral400, fontWeight: FontWeight.w600)),
+          Text(
+            'Sample values',
+            style: AppTextStyles.bodyXs.copyWith(
+              color: AppColors.neutral400,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 8),
           ...mappings
               .where((m) => m.sampleValue != null && m.enabled)
-              .map((m) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(m.csvColumn,
-                            style: AppTextStyles.bodyXs
-                                .copyWith(color: AppColors.neutral400)),
-                        Text(
-                          m.sampleValue!,
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.neutral700),
-                          overflow: TextOverflow.ellipsis,
+              .map(
+                (m) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        m.csvColumn,
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral400,
                         ),
-                      ],
-                    ),
-                  )),
+                      ),
+                      Text(
+                        m.sampleValue!,
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
         ],
       ),
     );
@@ -552,8 +594,11 @@ class _SourceInsightPanel extends StatelessWidget {
 }
 
 class _InsightRow extends StatelessWidget {
-  const _InsightRow(
-      {required this.label, required this.value, this.valueColor});
+  const _InsightRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
   final String label;
   final String value;
   final Color? valueColor;
@@ -565,13 +610,17 @@ class _InsightRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-              child: Text(label,
-                  style: AppTextStyles.bodyXs
-                      .copyWith(color: AppColors.neutral500))),
+            child: Text(
+              label,
+              style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+            ),
+          ),
           Text(
             value,
             style: AppTextStyles.labelSm.copyWith(
-                fontSize: 11, color: valueColor ?? AppColors.neutral800),
+              fontSize: 11,
+              color: valueColor ?? AppColors.neutral800,
+            ),
           ),
         ],
       ),

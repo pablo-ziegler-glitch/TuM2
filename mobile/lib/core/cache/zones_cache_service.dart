@@ -17,10 +17,6 @@ class ZonesCacheService {
   final FirebaseFirestore _firestore;
 
   static const String _zoneCollection = 'zones';
-  static const List<String> _activeStatuses = <String>[
-    'pilot_enabled',
-    'public_enabled',
-  ];
   static const int _maxZonesPerQuery = 300;
   static const int _cacheTtlSeconds = int.fromEnvironment(
     'ZONES_CACHE_TTL_SECONDS',
@@ -50,7 +46,6 @@ class ZonesCacheService {
 
     final fetch = _firestore
         .collection(_zoneCollection)
-        .where('status', whereIn: _activeStatuses)
         .limit(_maxZonesPerQuery)
         .get()
         .timeout(timeout)

@@ -59,12 +59,32 @@ class WizardStepConfirm extends StatelessWidget {
                     title: 'Import Configuration',
                     icon: Icons.settings_outlined,
                     children: [
-                      _SummaryRow(label: 'Import Type', value: importType.label),
-                      _SummaryRow(label: 'Template', value: templateName ?? 'Custom Schema'),
-                      _SummaryRow(label: 'Zone / Source', value: zone.isEmpty ? '—' : zone),
-                      _SummaryRow(label: 'File', value: fileName ?? 'No file selected'),
-                      _SummaryRow(label: 'Deduplication', value: deduplicationEnabled ? 'Enabled' : 'Disabled'),
-                      _SummaryRow(label: 'Visibility after import', value: visibilityAfterImport == 'visible' ? 'Public' : 'Hidden (staging)'),
+                      _SummaryRow(
+                        label: 'Import Type',
+                        value: importType.label,
+                      ),
+                      _SummaryRow(
+                        label: 'Template',
+                        value: templateName ?? 'Custom Schema',
+                      ),
+                      _SummaryRow(
+                        label: 'Zone / Source',
+                        value: zone.isEmpty ? '—' : zone,
+                      ),
+                      _SummaryRow(
+                        label: 'File',
+                        value: fileName ?? 'No file selected',
+                      ),
+                      _SummaryRow(
+                        label: 'Deduplication',
+                        value: deduplicationEnabled ? 'Enabled' : 'Disabled',
+                      ),
+                      _SummaryRow(
+                        label: 'Visibility after import',
+                        value: visibilityAfterImport == 'visible'
+                            ? 'Public'
+                            : 'Hidden (staging)',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -73,9 +93,21 @@ class WizardStepConfirm extends StatelessWidget {
                     icon: Icons.fact_check_outlined,
                     children: [
                       _SummaryRow(label: 'Total rows', value: '$totalRows'),
-                      _SummaryRow(label: 'Valid rows', value: '$validRows', valueColor: AppColors.successFg),
-                      _SummaryRow(label: 'Warning rows', value: '$warningRows', valueColor: AppColors.warningFg),
-                      _SummaryRow(label: 'Error rows (skipped)', value: '$errorRows', valueColor: AppColors.errorFg),
+                      _SummaryRow(
+                        label: 'Valid rows',
+                        value: '$validRows',
+                        valueColor: AppColors.successFg,
+                      ),
+                      _SummaryRow(
+                        label: 'Warning rows',
+                        value: '$warningRows',
+                        valueColor: AppColors.warningFg,
+                      ),
+                      _SummaryRow(
+                        label: 'Error rows (skipped)',
+                        value: '$errorRows',
+                        valueColor: AppColors.errorFg,
+                      ),
                     ],
                   ),
                   if (fieldMappings.isNotEmpty) ...[
@@ -83,11 +115,17 @@ class WizardStepConfirm extends StatelessWidget {
                     _SectionCard(
                       title: 'Field Mappings',
                       icon: Icons.compare_arrows_outlined,
-                      children: fieldMappings.map((m) => _SummaryRow(
-                        label: m.csvColumn,
-                        value: m.enabled ? m.tum2Field : 'Disabled',
-                        valueColor: m.enabled ? null : AppColors.neutral400,
-                      )).toList(),
+                      children: fieldMappings
+                          .map(
+                            (m) => _SummaryRow(
+                              label: m.csvColumn,
+                              value: m.enabled ? m.tum2Field : 'Disabled',
+                              valueColor: m.enabled
+                                  ? null
+                                  : AppColors.neutral400,
+                            ),
+                          )
+                          .toList(),
                     ),
                   ],
                 ],
@@ -133,7 +171,9 @@ class WizardStepConfirm extends StatelessWidget {
           Row(
             children: [
               Icon(
-                hasIssues ? Icons.warning_amber_outlined : Icons.check_circle_outline,
+                hasIssues
+                    ? Icons.warning_amber_outlined
+                    : Icons.check_circle_outline,
                 size: 18,
                 color: hasIssues ? AppColors.warningFg : AppColors.successFg,
               ),
@@ -174,18 +214,29 @@ class WizardStepConfirm extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Pipeline Steps', style: AppTextStyles.labelMd.copyWith(fontSize: 12, color: AppColors.neutral500)),
-          const SizedBox(height: 12),
-          ...stages.map((s) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              children: [
-                Icon(s.$2, size: 15, color: AppColors.primary500),
-                const SizedBox(width: 10),
-                Text(s.$1, style: AppTextStyles.bodySm.copyWith(fontSize: 12)),
-              ],
+          Text(
+            'Pipeline Steps',
+            style: AppTextStyles.labelMd.copyWith(
+              fontSize: 12,
+              color: AppColors.neutral500,
             ),
-          )),
+          ),
+          const SizedBox(height: 12),
+          ...stages.map(
+            (s) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Icon(s.$2, size: 15, color: AppColors.primary500),
+                  const SizedBox(width: 10),
+                  Text(
+                    s.$1,
+                    style: AppTextStyles.bodySm.copyWith(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -195,7 +246,11 @@ class WizardStepConfirm extends StatelessWidget {
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.icon, required this.children});
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
   final String title;
   final IconData icon;
   final List<Widget> children;
@@ -217,14 +272,23 @@ class _SectionCard extends StatelessWidget {
               children: [
                 Icon(icon, size: 15, color: AppColors.neutral500),
                 const SizedBox(width: 8),
-                Text(title, style: AppTextStyles.labelMd.copyWith(fontSize: 12, color: AppColors.neutral600)),
+                Text(
+                  title,
+                  style: AppTextStyles.labelMd.copyWith(
+                    fontSize: 12,
+                    color: AppColors.neutral600,
+                  ),
+                ),
               ],
             ),
           ),
           const Divider(height: 1, color: AppColors.neutral100),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
+            ),
           ),
         ],
       ),
@@ -233,7 +297,11 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.label, required this.value, this.valueColor});
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
   final String label;
   final String value;
   final Color? valueColor;
@@ -246,7 +314,10 @@ class _SummaryRow extends StatelessWidget {
         children: [
           Expanded(
             flex: 2,
-            child: Text(label, style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500)),
+            child: Text(
+              label,
+              style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+            ),
           ),
           Expanded(
             flex: 3,

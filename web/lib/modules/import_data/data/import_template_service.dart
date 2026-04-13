@@ -56,12 +56,16 @@ class ImportTemplateService {
     for (var col = 0; col < definition.headers.length; col++) {
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0))
-          .value = TextCellValue(definition.headers[col]);
+          .value = TextCellValue(
+        definition.headers[col],
+      );
     }
 
-    for (var rowIndex = 0;
-        rowIndex < definition.sampleRows.length;
-        rowIndex++) {
+    for (
+      var rowIndex = 0;
+      rowIndex < definition.sampleRows.length;
+      rowIndex++
+    ) {
       final rowData = definition.sampleRows[rowIndex];
       for (var col = 0; col < definition.headers.length; col++) {
         final header = definition.headers[col];
@@ -69,9 +73,13 @@ class ImportTemplateService {
         sheet
             .cell(
               CellIndex.indexByColumnRow(
-                  columnIndex: col, rowIndex: rowIndex + 1),
+                columnIndex: col,
+                rowIndex: rowIndex + 1,
+              ),
             )
-            .value = TextCellValue(value);
+            .value = TextCellValue(
+          value,
+        );
       }
     }
 

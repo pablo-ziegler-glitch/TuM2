@@ -98,10 +98,6 @@ class ImportDataRepository {
   static const int _zonesCacheTtlSeconds = 300;
 
   static const List<String> _zoneCollectionCandidates = <String>['zones'];
-  static const List<String> _activeZoneStatuses = <String>[
-    'pilot_enabled',
-    'public_enabled',
-  ];
   static const Set<String> _inactiveZoneStatuses = <String>{
     'draft',
     'internal_test',
@@ -186,7 +182,6 @@ class ImportDataRepository {
     for (final collectionName in _zoneCollectionCandidates) {
       final snapshot = await _firestore
           .collection(collectionName)
-          .where('status', whereIn: _activeZoneStatuses)
           .limit(_maxZonesPerQuery)
           .get();
       final docs = snapshot.docs.where(_isActiveZoneDoc).toList();

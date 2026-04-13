@@ -68,8 +68,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 6),
                 Text(
                   'Ingresá con una cuenta admin para operar importaciones reales.',
-                  style: AppTextStyles.bodySm
-                      .copyWith(color: AppColors.neutral500),
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.neutral500,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 TextFormField(
@@ -105,8 +106,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 10),
                   Text(
                     _error!,
-                    style:
-                        AppTextStyles.bodySm.copyWith(color: AppColors.errorFg),
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.errorFg,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 16),

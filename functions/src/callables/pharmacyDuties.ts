@@ -41,6 +41,8 @@ import { todayDateString } from "../lib/schedules";
 const db = () => getFirestore();
 const PHARMACY_DUTY_RULES_DOC = "admin_configs/pharmacyDutyRules";
 const CONFIG_CACHE_TTL_MS = 60_000;
+const PHARMACY_DUTY_MUTATION_RATE_LIMIT_COLLECTION =
+  "pharmacy_duty_mutation_rate_limits";
 
 let dutyRulesCache:
   | {
@@ -48,6 +50,33 @@ let dutyRulesCache:
     expiresAtMs: number;
   }
   | undefined;
+
+function readIntEnv(params: {
+  key: string;
+  fallback: number;
+  min: number;
+  max: number;
+}): number {
+  const raw = process.env[params.key];
+  if (raw == null || raw.trim().length === 0) return params.fallback;
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isFinite(value)) return params.fallback;
+  return Math.min(params.max, Math.max(params.min, value));
+}
+
+const PHARMACY_DUTY_MUTATION_RATE_LIMIT_WINDOW_MS = readIntEnv({
+  key: "PHARMACY_DUTY_MUTATION_RATE_LIMIT_WINDOW_MS",
+  fallback: 60_000,
+  min: 10_000,
+  max: 3_600_000,
+});
+
+const PHARMACY_DUTY_MUTATION_RATE_LIMIT_MAX = readIntEnv({
+  key: "PHARMACY_DUTY_MUTATION_RATE_LIMIT_MAX",
+  fallback: 12,
+  min: 1,
+  max: 200,
+});
 
 interface MerchantLocation {
   lat: number;
@@ -348,6 +377,109 @@ function logStructured(
   console.log(JSON.stringify({ event, ...payload }));
 }
 
+function resolveConflictReason(error: unknown): string | null {
+  if (!(error instanceof HttpsError)) return null;
+  const details = error.details;
+  if (details && typeof details === "object") {
+    const detailCode = (details as Record<string, unknown>)["code"];
+    if (typeof detailCode === "string" && detailCode.trim().length > 0) {
+      return detailCode.trim();
+    }
+  }
+  return error.code;
+}
+
+function logDutyMutationEvent(params: {
+  action: string;
+  result: "success" | "error";
+  actorUserId: string;
+  correlationId: string;
+  merchantId?: string;
+  dutyId?: string;
+  roundId?: string;
+  requestId?: string;
+  conflictReason?: string | null;
+  errorCode?: string | null;
+}): void {
+  logStructured("pharmacy_duty_mutation", {
+    action: params.action,
+    result: params.result,
+    actorUserId: params.actorUserId,
+    merchantId: params.merchantId ?? null,
+    dutyId: params.dutyId ?? null,
+    roundId: params.roundId ?? null,
+    requestId: params.requestId ?? null,
+    conflictReason: params.conflictReason ?? null,
+    errorCode: params.errorCode ?? null,
+    correlationId: params.correlationId,
+  });
+}
+
+async function assertMutationRateLimit(params: {
+  tx: Transaction;
+  action: string;
+  uid: string;
+  merchantId: string;
+  nowMillis?: number;
+}): Promise<void> {
+  const normalizedMerchantId = params.merchantId.trim();
+  if (normalizedMerchantId.length === 0) {
+    throw new HttpsError(
+      "invalid-argument",
+      "merchantId es requerido para controlar rate limit."
+    );
+  }
+
+  const nowMillis = params.nowMillis ?? Date.now();
+  const windowMs = PHARMACY_DUTY_MUTATION_RATE_LIMIT_WINDOW_MS;
+  const windowStartMillis = Math.floor(nowMillis / windowMs) * windowMs;
+  const retryAfterMillis = windowStartMillis + windowMs - nowMillis;
+  const docId = [
+    params.action.trim().toLowerCase(),
+    params.uid.trim(),
+    normalizedMerchantId.split("/").join("_"),
+    String(windowStartMillis),
+  ].join("__");
+  const limiterRef = db()
+    .collection(PHARMACY_DUTY_MUTATION_RATE_LIMIT_COLLECTION)
+    .doc(docId);
+  const limiterSnap = await params.tx.get(limiterRef);
+  const previousCountRaw = limiterSnap.data()?.["count"];
+  const previousCount =
+    typeof previousCountRaw === "number" && Number.isFinite(previousCountRaw)
+      ? Math.max(0, Math.trunc(previousCountRaw))
+      : 0;
+  const nextCount = previousCount + 1;
+
+  if (nextCount > PHARMACY_DUTY_MUTATION_RATE_LIMIT_MAX) {
+    throw new HttpsError(
+      "resource-exhausted",
+      "Demasiadas mutaciones en poco tiempo. Intentá nuevamente en unos segundos.",
+      {
+        code: "rate_limited",
+        action: params.action,
+        merchantId: normalizedMerchantId,
+        retryAfterMillis: Math.max(1, retryAfterMillis),
+      }
+    );
+  }
+
+  params.tx.set(
+    limiterRef,
+    {
+      action: params.action,
+      uid: params.uid,
+      merchantId: normalizedMerchantId,
+      count: nextCount,
+      windowStartMillis,
+      windowDurationMillis: windowMs,
+      expiresAt: Timestamp.fromMillis(windowStartMillis + windowMs * 2),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
 function assertExpectedUpdatedAt(
   expectedMillis: number | null,
   current: FirebaseFirestore.Timestamp | undefined
@@ -635,6 +767,7 @@ export const upsertPharmacyDuty = onCall<
 >(
   { enforceAppCheck: true },
   async (request) => {
+    const action = "upsert_duty";
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Autenticación requerida.");
     }
@@ -690,118 +823,148 @@ export const upsertPharmacyDuty = onCall<
     const endsAtTs = Timestamp.fromDate(endsAtDate);
     let resolvedZoneId = "";
     let confirmationStatus: DutyConfirmationStatus = "pending";
+    let resolvedMerchantId = merchantId;
 
-    await db().runTransaction(async (tx) => {
-      const merchantContext = await assertMerchantAccessAndGetContext(
-        merchantId,
-        uid,
-        role,
-        claimMerchantId,
-        tx
-      );
-      resolvedZoneId = merchantContext.zoneId;
+    try {
+      await db().runTransaction(async (tx) => {
+        const merchantContext = await assertMerchantAccessAndGetContext(
+          merchantId,
+          uid,
+          role,
+          claimMerchantId,
+          tx
+        );
+        resolvedZoneId = merchantContext.zoneId;
+        resolvedMerchantId = merchantContext.merchantId;
+        await assertMutationRateLimit({
+          tx,
+          action,
+          uid,
+          merchantId: merchantContext.merchantId,
+        });
 
-      const existingSnap = await tx.get(dutyRef);
-      const existing = existingSnap.exists
-        ? (existingSnap.data() as PharmacyDutyDoc)
-        : null;
+        const existingSnap = await tx.get(dutyRef);
+        const existing = existingSnap.exists
+          ? (existingSnap.data() as PharmacyDutyDoc)
+          : null;
 
-      if (existing) {
-        if (existing.merchantId !== merchantId) {
-          throw new HttpsError("permission-denied", "dutyId inválido.");
+        if (existing) {
+          if (existing.merchantId !== merchantId) {
+            throw new HttpsError("permission-denied", "dutyId inválido.");
+          }
+          assertExpectedUpdatedAt(expectedUpdatedAtMillis, existing.updatedAt);
         }
-        assertExpectedUpdatedAt(expectedUpdatedAtMillis, existing.updatedAt);
-      }
 
-      const conflict = await findDutyConflict({
-        tx,
-        merchantId,
-        date: dateKey,
-        startsAt: startsAtDate,
-        endsAt: endsAtDate,
-        excludeDutyId: existingSnap.exists ? dutyRef.id : undefined,
+        const conflict = await findDutyConflict({
+          tx,
+          merchantId,
+          date: dateKey,
+          startsAt: startsAtDate,
+          endsAt: endsAtDate,
+          excludeDutyId: existingSnap.exists ? dutyRef.id : undefined,
+        });
+        if (conflict) {
+          throw buildConflictError(conflict);
+        }
+
+        const nextConfirmationStatus: DutyConfirmationStatus = existing?.confirmationStatus === "confirmed" ||
+            existing?.confirmationStatus === "overdue" ||
+            existing?.confirmationStatus === "incident_reported" ||
+            existing?.confirmationStatus === "replaced"
+          ? existing.confirmationStatus
+          : "pending";
+        confirmationStatus = nextConfirmationStatus;
+        const incidentOpen = existing?.incidentOpen === true;
+        const derived = applyDerivedDutyState({
+          status,
+          confirmationStatus: nextConfirmationStatus,
+          incidentOpen,
+        });
+        const sourceType = existing?.sourceType ??
+          (role === "owner" ? "owner_created" : "admin_created");
+
+        const payload: Record<string, unknown> = {
+          merchantId,
+          originMerchantId: existing?.originMerchantId ?? merchantId,
+          zoneId: merchantContext.zoneId,
+          date: dateKey,
+          startsAt: startsAtTs,
+          endsAt: endsAtTs,
+          status,
+          confirmationStatus: nextConfirmationStatus,
+          verificationStatus: existing?.verificationStatus ?? (role === "owner" ? "claimed" : "validated"),
+          sourceType,
+          notes,
+          incidentOpen,
+          incidentId: existing?.incidentId ?? null,
+          replacementRoundOpen: existing?.replacementRoundOpen ?? false,
+          replacementMerchantId: existing?.replacementMerchantId ?? null,
+          replacementAcceptedAt: existing?.replacementAcceptedAt ?? null,
+          confidenceLevel: derived.confidenceLevel,
+          publicStatusLabel: derived.publicStatusLabel,
+          lastStatusChangedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: uid,
+        };
+
+        if (!existing) {
+          tx.set(dutyRef, {
+            ...payload,
+            createdAt: FieldValue.serverTimestamp(),
+            createdBy: uid,
+          });
+        } else {
+          tx.update(dutyRef, payload);
+        }
       });
-      if (conflict) {
-        throw buildConflictError(conflict);
-      }
 
-      const nextConfirmationStatus: DutyConfirmationStatus = existing?.confirmationStatus === "confirmed" ||
-          existing?.confirmationStatus === "overdue" ||
-          existing?.confirmationStatus === "incident_reported" ||
-          existing?.confirmationStatus === "replaced"
-        ? existing.confirmationStatus
-        : "pending";
-      confirmationStatus = nextConfirmationStatus;
-      const incidentOpen = existing?.incidentOpen === true;
-      const derived = applyDerivedDutyState({
+      const savedSnap = await dutyRef.get();
+      const saved = savedSnap.data() as PharmacyDutyDoc | undefined;
+      const summary = saved ? dutyResponseSummary(saved) : {
         status,
-        confirmationStatus: nextConfirmationStatus,
-        incidentOpen,
-      });
-      const sourceType = existing?.sourceType ??
-        (role === "owner" ? "owner_created" : "admin_created");
-
-      const payload: Record<string, unknown> = {
-        merchantId,
-        originMerchantId: existing?.originMerchantId ?? merchantId,
-        zoneId: merchantContext.zoneId,
-        date: dateKey,
-        startsAt: startsAtTs,
-        endsAt: endsAtTs,
-        status,
-        confirmationStatus: nextConfirmationStatus,
-        verificationStatus: existing?.verificationStatus ?? (role === "owner" ? "claimed" : "validated"),
-        sourceType,
-        notes,
-        incidentOpen,
-        incidentId: existing?.incidentId ?? null,
-        replacementRoundOpen: existing?.replacementRoundOpen ?? false,
-        replacementMerchantId: existing?.replacementMerchantId ?? null,
-        replacementAcceptedAt: existing?.replacementAcceptedAt ?? null,
-        confidenceLevel: derived.confidenceLevel,
-        publicStatusLabel: derived.publicStatusLabel,
-        lastStatusChangedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: uid,
+        confirmationStatus,
       };
 
-      if (!existing) {
-        tx.set(dutyRef, {
-          ...payload,
-          createdAt: FieldValue.serverTimestamp(),
-          createdBy: uid,
-        });
-      } else {
-        tx.update(dutyRef, payload);
-      }
-    });
+      logStructured("pharmacy_duty_upserted", {
+        dutyId: dutyRef.id,
+        actorUserId: uid,
+        actorMerchantId: resolvedMerchantId,
+        zoneId: resolvedZoneId,
+        nextStatus: summary.status,
+        correlationId,
+      });
+      logDutyMutationEvent({
+        action,
+        result: "success",
+        actorUserId: uid,
+        correlationId,
+        merchantId: resolvedMerchantId,
+        dutyId: dutyRef.id,
+      });
 
-    const savedSnap = await dutyRef.get();
-    const saved = savedSnap.data() as PharmacyDutyDoc | undefined;
-    const summary = saved ? dutyResponseSummary(saved) : {
-      status,
-      confirmationStatus,
-    };
-
-    logStructured("pharmacy_duty_upserted", {
-      dutyId: dutyRef.id,
-      actorUserId: uid,
-      actorMerchantId: merchantId,
-      zoneId: resolvedZoneId,
-      nextStatus: summary.status,
-      correlationId,
-    });
-
-    return {
-      dutyId: dutyRef.id,
-      merchantId,
-      zoneId: resolvedZoneId,
-      status: summary.status,
-      confirmationStatus: summary.confirmationStatus,
-      date: dateKey,
-      created: dutyId.length === 0,
-      updatedAtMillis: saved?.updatedAt?.toMillis() ?? Date.now(),
-    };
+      return {
+        dutyId: dutyRef.id,
+        merchantId,
+        zoneId: resolvedZoneId,
+        status: summary.status,
+        confirmationStatus: summary.confirmationStatus,
+        date: dateKey,
+        created: dutyId.length === 0,
+        updatedAtMillis: saved?.updatedAt?.toMillis() ?? Date.now(),
+      };
+    } catch (error) {
+      logDutyMutationEvent({
+        action,
+        result: "error",
+        actorUserId: uid,
+        correlationId,
+        merchantId: resolvedMerchantId,
+        dutyId: dutyId.length === 0 ? dutyRef.id : dutyId,
+        conflictReason: resolveConflictReason(error),
+        errorCode: error instanceof HttpsError ? error.code : "internal",
+      });
+      throw error;
+    }
   }
 );
 
@@ -811,6 +974,7 @@ export const changePharmacyDutyStatus = onCall<
 >(
   { enforceAppCheck: true },
   async (request) => {
+    const action = "change_duty_status";
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Autenticación requerida.");
     }
@@ -841,72 +1005,100 @@ export const changePharmacyDutyStatus = onCall<
     let merchantId = "";
     let nextStatus: DutyStatus = nextStatusRaw;
 
-    await db().runTransaction(async (tx) => {
-      const dutySnap = await tx.get(dutyRef);
-      if (!dutySnap.exists) {
-        throw new HttpsError("not-found", "Turno no encontrado.");
-      }
-      const duty = dutySnap.data() as PharmacyDutyDoc;
-      merchantId = duty.merchantId;
-      assertExpectedUpdatedAt(expectedUpdatedAtMillis, duty.updatedAt);
-      assertOwnerCanEditPastDate(role, duty.date);
-      await assertOwnerControlsMerchant(
-        duty.merchantId,
-        uid,
-        role,
-        claimMerchantId,
-        tx
-      );
-
-      if (nextStatusRaw === "cancelled" && duty.replacementRoundOpen === true) {
-        throw new HttpsError(
-          "failed-precondition",
-          "No podés cancelar una guardia con una ronda de cobertura abierta."
+    try {
+      await db().runTransaction(async (tx) => {
+        const dutySnap = await tx.get(dutyRef);
+        if (!dutySnap.exists) {
+          throw new HttpsError("not-found", "Turno no encontrado.");
+        }
+        const duty = dutySnap.data() as PharmacyDutyDoc;
+        merchantId = duty.merchantId;
+        await assertMutationRateLimit({
+          tx,
+          action,
+          uid,
+          merchantId: duty.merchantId,
+        });
+        assertExpectedUpdatedAt(expectedUpdatedAtMillis, duty.updatedAt);
+        assertOwnerCanEditPastDate(role, duty.date);
+        await assertOwnerControlsMerchant(
+          duty.merchantId,
+          uid,
+          role,
+          claimMerchantId,
+          tx
         );
-      }
 
-      const confirmationStatus: DutyConfirmationStatus =
-        duty.confirmationStatus === "confirmed" ||
-          duty.confirmationStatus === "overdue" ||
-          duty.confirmationStatus === "incident_reported" ||
-          duty.confirmationStatus === "replaced"
-          ? duty.confirmationStatus
-          : "pending";
-      const incidentOpen = duty.incidentOpen === true;
-      const derived = applyDerivedDutyState({
-        status: nextStatusRaw,
-        confirmationStatus,
-        incidentOpen,
+        if (nextStatusRaw === "cancelled" && duty.replacementRoundOpen === true) {
+          throw new HttpsError(
+            "failed-precondition",
+            "No podés cancelar una guardia con una ronda de cobertura abierta."
+          );
+        }
+
+        const confirmationStatus: DutyConfirmationStatus =
+          duty.confirmationStatus === "confirmed" ||
+            duty.confirmationStatus === "overdue" ||
+            duty.confirmationStatus === "incident_reported" ||
+            duty.confirmationStatus === "replaced"
+            ? duty.confirmationStatus
+            : "pending";
+        const incidentOpen = duty.incidentOpen === true;
+        const derived = applyDerivedDutyState({
+          status: nextStatusRaw,
+          confirmationStatus,
+          incidentOpen,
+        });
+        nextStatus = nextStatusRaw;
+
+        tx.update(dutyRef, {
+          status: nextStatusRaw,
+          confidenceLevel: derived.confidenceLevel,
+          publicStatusLabel: derived.publicStatusLabel,
+          lastStatusChangedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: uid,
+        });
       });
-      nextStatus = nextStatusRaw;
 
-      tx.update(dutyRef, {
-        status: nextStatusRaw,
-        confidenceLevel: derived.confidenceLevel,
-        publicStatusLabel: derived.publicStatusLabel,
-        lastStatusChangedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: uid,
+      const savedSnap = await dutyRef.get();
+      const saved = savedSnap.data() as PharmacyDutyDoc | undefined;
+
+      logStructured("pharmacy_duty_status_changed", {
+        dutyId,
+        actorUserId: uid,
+        actorMerchantId: merchantId,
+        nextStatus,
+        correlationId,
       });
-    });
+      logDutyMutationEvent({
+        action,
+        result: "success",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+      });
 
-    const savedSnap = await dutyRef.get();
-    const saved = savedSnap.data() as PharmacyDutyDoc | undefined;
-
-    logStructured("pharmacy_duty_status_changed", {
-      dutyId,
-      actorUserId: uid,
-      actorMerchantId: merchantId,
-      nextStatus,
-      correlationId,
-    });
-
-    return {
-      dutyId,
-      merchantId,
-      status: saved ? normalizeDutyStatus(saved.status) : nextStatus,
-      updatedAtMillis: saved?.updatedAt?.toMillis() ?? Date.now(),
-    };
+      return {
+        dutyId,
+        merchantId,
+        status: saved ? normalizeDutyStatus(saved.status) : nextStatus,
+        updatedAtMillis: saved?.updatedAt?.toMillis() ?? Date.now(),
+      };
+    } catch (error) {
+      logDutyMutationEvent({
+        action,
+        result: "error",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        conflictReason: resolveConflictReason(error),
+        errorCode: error instanceof HttpsError ? error.code : "internal",
+      });
+      throw error;
+    }
   }
 );
 
@@ -916,6 +1108,7 @@ export const confirmPharmacyDuty = onCall<
 >(
   { enforceAppCheck: true },
   async (request) => {
+    const action = "confirm_duty";
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Autenticación requerida.");
     }
@@ -935,89 +1128,117 @@ export const confirmPharmacyDuty = onCall<
     let status: DutyStatus = "scheduled";
     let confirmationStatus: DutyConfirmationStatus = "confirmed";
 
-    await db().runTransaction(async (tx) => {
-      const dutySnap = await tx.get(dutyRef);
-      if (!dutySnap.exists) {
-        throw new HttpsError("not-found", "Turno no encontrado.");
-      }
-      const duty = dutySnap.data() as PharmacyDutyDoc;
-      merchantId = duty.merchantId;
+    try {
+      await db().runTransaction(async (tx) => {
+        const dutySnap = await tx.get(dutyRef);
+        if (!dutySnap.exists) {
+          throw new HttpsError("not-found", "Turno no encontrado.");
+        }
+        const duty = dutySnap.data() as PharmacyDutyDoc;
+        merchantId = duty.merchantId;
+        await assertMutationRateLimit({
+          tx,
+          action,
+          uid,
+          merchantId: duty.merchantId,
+        });
 
-      await assertOwnerControlsMerchant(
-        duty.merchantId,
-        uid,
-        role,
-        claimMerchantId,
-        tx
-      );
-
-      const currentStatus = normalizeDutyStatus(duty.status);
-      if (currentStatus === "cancelled") {
-        throw new HttpsError(
-          "failed-precondition",
-          "No podés confirmar una guardia cancelada."
+        await assertOwnerControlsMerchant(
+          duty.merchantId,
+          uid,
+          role,
+          claimMerchantId,
+          tx
         );
-      }
-      if (duty.incidentOpen === true) {
-        throw new HttpsError(
-          "failed-precondition",
-          "No podés confirmar una guardia con incidente operativo abierto."
-        );
-      }
 
-      const now = new Date();
-      const startsAt = toDutyDate(duty.startsAt);
-      const endsAt = toDutyDate(duty.endsAt);
-      const shouldBeActive = startsAt && endsAt
-        ? now >= startsAt && now <= endsAt
-        : false;
+        const currentStatus = normalizeDutyStatus(duty.status);
+        if (currentStatus === "cancelled") {
+          throw new HttpsError(
+            "failed-precondition",
+            "No podés confirmar una guardia cancelada."
+          );
+        }
+        if (duty.incidentOpen === true) {
+          throw new HttpsError(
+            "failed-precondition",
+            "No podés confirmar una guardia con incidente operativo abierto."
+          );
+        }
 
-      status = shouldBeActive
-        ? "active"
-        : currentStatus === "reassigned"
-        ? "reassigned"
-        : "scheduled";
-      confirmationStatus = currentStatus === "reassigned"
-        ? "replaced"
-        : "confirmed";
-      const derived = applyDerivedDutyState({
-        status,
-        confirmationStatus,
-        incidentOpen: false,
+        const now = new Date();
+        const startsAt = toDutyDate(duty.startsAt);
+        const endsAt = toDutyDate(duty.endsAt);
+        const shouldBeActive = startsAt && endsAt
+          ? now >= startsAt && now <= endsAt
+          : false;
+
+        status = shouldBeActive
+          ? "active"
+          : currentStatus === "reassigned"
+          ? "reassigned"
+          : "scheduled";
+        confirmationStatus = currentStatus === "reassigned"
+          ? "replaced"
+          : "confirmed";
+        const derived = applyDerivedDutyState({
+          status,
+          confirmationStatus,
+          incidentOpen: false,
+        });
+
+        tx.update(dutyRef, {
+          status,
+          confirmationStatus,
+          confirmedAt: FieldValue.serverTimestamp(),
+          confirmedByUserId: uid,
+          confidenceLevel: derived.confidenceLevel,
+          publicStatusLabel: derived.publicStatusLabel,
+          lastStatusChangedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: uid,
+        });
       });
 
-      tx.update(dutyRef, {
+      const savedSnap = await dutyRef.get();
+      const saved = savedSnap.data() as PharmacyDutyDoc | undefined;
+
+      logStructured("pharmacy_duty_confirmed", {
+        dutyId,
+        actorUserId: uid,
+        actorMerchantId: merchantId,
+        previousStatus: saved ? normalizeDutyStatus(saved.status) : "scheduled",
+        nextStatus: status,
+        correlationId,
+      });
+      logDutyMutationEvent({
+        action,
+        result: "success",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+      });
+
+      return {
+        dutyId,
+        merchantId,
         status,
         confirmationStatus,
-        confirmedAt: FieldValue.serverTimestamp(),
-        confirmedByUserId: uid,
-        confidenceLevel: derived.confidenceLevel,
-        publicStatusLabel: derived.publicStatusLabel,
-        lastStatusChangedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: uid,
+        confirmedAtMillis: saved?.confirmedAt?.toMillis() ?? Date.now(),
+      };
+    } catch (error) {
+      logDutyMutationEvent({
+        action,
+        result: "error",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        conflictReason: resolveConflictReason(error),
+        errorCode: error instanceof HttpsError ? error.code : "internal",
       });
-    });
-
-    const savedSnap = await dutyRef.get();
-    const saved = savedSnap.data() as PharmacyDutyDoc | undefined;
-
-    logStructured("pharmacy_duty_confirmed", {
-      dutyId,
-      actorUserId: uid,
-      actorMerchantId: merchantId,
-      previousStatus: saved ? normalizeDutyStatus(saved.status) : "scheduled",
-      nextStatus: status,
-      correlationId,
-    });
-
-    return {
-      dutyId,
-      merchantId,
-      status,
-      confirmationStatus,
-      confirmedAtMillis: saved?.confirmedAt?.toMillis() ?? Date.now(),
-    };
+      throw error;
+    }
   }
 );
 
@@ -1027,6 +1248,7 @@ export const reportPharmacyDutyIncident = onCall<
 >(
   { enforceAppCheck: true },
   async (request) => {
+    const action = "report_incident";
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Autenticación requerida.");
     }
@@ -1048,85 +1270,113 @@ export const reportPharmacyDutyIncident = onCall<
     let merchantId = "";
     let incidentId = incidentRef.id;
 
-    await db().runTransaction(async (tx) => {
-      const dutySnap = await tx.get(dutyRef);
-      if (!dutySnap.exists) {
-        throw new HttpsError("not-found", "Turno no encontrado.");
-      }
+    try {
+      await db().runTransaction(async (tx) => {
+        const dutySnap = await tx.get(dutyRef);
+        if (!dutySnap.exists) {
+          throw new HttpsError("not-found", "Turno no encontrado.");
+        }
 
-      const duty = dutySnap.data() as PharmacyDutyDoc;
-      merchantId = duty.merchantId;
-      await assertOwnerControlsMerchant(
-        duty.merchantId,
-        uid,
-        role,
-        claimMerchantId,
-        tx
-      );
-
-      if (duty.incidentOpen === true && duty.incidentId) {
-        const openIncidentRef = db().doc(
-          `pharmacy_duty_incidents/${duty.incidentId}`
+        const duty = dutySnap.data() as PharmacyDutyDoc;
+        merchantId = duty.merchantId;
+        await assertMutationRateLimit({
+          tx,
+          action,
+          uid,
+          merchantId: duty.merchantId,
+        });
+        await assertOwnerControlsMerchant(
+          duty.merchantId,
+          uid,
+          role,
+          claimMerchantId,
+          tx
         );
-        const openIncidentSnap = await tx.get(openIncidentRef);
-        if (openIncidentSnap.exists) {
-          const openIncident = openIncidentSnap.data() as PharmacyDutyIncidentDoc;
-          if (openIncident.status === "open") {
-            incidentId = openIncidentSnap.id;
-            return;
+
+        if (duty.incidentOpen === true && duty.incidentId) {
+          const openIncidentRef = db().doc(
+            `pharmacy_duty_incidents/${duty.incidentId}`
+          );
+          const openIncidentSnap = await tx.get(openIncidentRef);
+          if (openIncidentSnap.exists) {
+            const openIncident = openIncidentSnap.data() as PharmacyDutyIncidentDoc;
+            if (openIncident.status === "open") {
+              incidentId = openIncidentSnap.id;
+              return;
+            }
           }
         }
-      }
 
-      const derived = applyDerivedDutyState({
-        status: "incident_reported",
-        confirmationStatus: "incident_reported",
-        incidentOpen: true,
+        const derived = applyDerivedDutyState({
+          status: "incident_reported",
+          confirmationStatus: "incident_reported",
+          incidentOpen: true,
+        });
+
+        tx.set(incidentRef, {
+          dutyId,
+          merchantId: duty.merchantId,
+          zoneId: duty.zoneId,
+          incidentType,
+          note,
+          status: "open",
+          createdByUserId: uid,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+
+        tx.update(dutyRef, {
+          originMerchantId: duty.originMerchantId ?? duty.merchantId,
+          status: "incident_reported",
+          confirmationStatus: "incident_reported",
+          incidentOpen: true,
+          incidentId: incidentRef.id,
+          replacementRoundOpen: false,
+          confidenceLevel: derived.confidenceLevel,
+          publicStatusLabel: derived.publicStatusLabel,
+          lastStatusChangedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: uid,
+        });
+        incidentId = incidentRef.id;
       });
 
-      tx.set(incidentRef, {
+      logStructured("pharmacy_duty_incident_reported", {
         dutyId,
-        merchantId: duty.merchantId,
-        zoneId: duty.zoneId,
-        incidentType,
-        note,
-        status: "open",
-        createdByUserId: uid,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
+        incidentId,
+        actorUserId: uid,
+        actorMerchantId: merchantId,
+        nextStatus: "incident_reported",
+        correlationId,
+      });
+      logDutyMutationEvent({
+        action,
+        result: "success",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
       });
 
-      tx.update(dutyRef, {
-        originMerchantId: duty.originMerchantId ?? duty.merchantId,
+      return {
+        dutyId,
+        incidentId,
         status: "incident_reported",
         confirmationStatus: "incident_reported",
-        incidentOpen: true,
-        incidentId: incidentRef.id,
-        replacementRoundOpen: false,
-        confidenceLevel: derived.confidenceLevel,
-        publicStatusLabel: derived.publicStatusLabel,
-        lastStatusChangedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: uid,
+      };
+    } catch (error) {
+      logDutyMutationEvent({
+        action,
+        result: "error",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        conflictReason: resolveConflictReason(error),
+        errorCode: error instanceof HttpsError ? error.code : "internal",
       });
-      incidentId = incidentRef.id;
-    });
-
-    logStructured("pharmacy_duty_incident_reported", {
-      dutyId,
-      incidentId,
-      actorUserId: uid,
-      actorMerchantId: merchantId,
-      nextStatus: "incident_reported",
-      correlationId,
-    });
-
-    return {
-      dutyId,
-      incidentId,
-      status: "incident_reported",
-      confirmationStatus: "incident_reported",
-    };
+      throw error;
+    }
   }
 );
 
@@ -1260,6 +1510,7 @@ export const createReassignmentRound = onCall<
 >(
   { enforceAppCheck: true },
   async (request) => {
+    const action = "create_reassignment_round";
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Autenticación requerida.");
     }
@@ -1306,205 +1557,237 @@ export const createReassignmentRound = onCall<
     const expiresAt = Timestamp.fromMillis(expiresAtMillis);
     let incidentId = "";
     let requestCount = 0;
+    let merchantId = "";
 
-    await db().runTransaction(async (tx) => {
-      const dutySnap = await tx.get(dutyRef);
-      if (!dutySnap.exists) {
-        throw new HttpsError("not-found", "Turno no encontrado.");
-      }
-      const duty = dutySnap.data() as PharmacyDutyDoc;
-      const originMerchantId = duty.originMerchantId ?? duty.merchantId;
-      await assertOwnerControlsMerchant(
-        originMerchantId,
-        uid,
-        role,
-        claimMerchantId,
-        tx
-      );
-
-      if (duty.incidentOpen !== true || !duty.incidentId) {
-        throw new HttpsError(
-          "failed-precondition",
-          "Debés reportar un incidente operativo antes de iniciar cobertura."
+    try {
+      await db().runTransaction(async (tx) => {
+        const dutySnap = await tx.get(dutyRef);
+        if (!dutySnap.exists) {
+          throw new HttpsError("not-found", "Turno no encontrado.");
+        }
+        const duty = dutySnap.data() as PharmacyDutyDoc;
+        const originMerchantId = duty.originMerchantId ?? duty.merchantId;
+        merchantId = originMerchantId;
+        await assertMutationRateLimit({
+          tx,
+          action,
+          uid,
+          merchantId: originMerchantId,
+        });
+        await assertOwnerControlsMerchant(
+          originMerchantId,
+          uid,
+          role,
+          claimMerchantId,
+          tx
         );
-      }
-      incidentId = duty.incidentId;
 
-      if (config.preventMultipleOpenRoundsPerDuty || duty.replacementRoundOpen) {
-        const openRoundSnap = await tx.get(
-          db()
-            .collection("pharmacy_duty_reassignment_rounds")
-            .where("dutyId", "==", dutyId)
-            .where("status", "==", "open")
-            .limit(1)
-        );
-        if (!openRoundSnap.empty) {
+        if (duty.incidentOpen !== true || !duty.incidentId) {
           throw new HttpsError(
             "failed-precondition",
-            "Ya existe una ronda de cobertura abierta para este turno."
+            "Debés reportar un incidente operativo antes de iniciar cobertura."
           );
         }
-      }
+        incidentId = duty.incidentId;
 
-      const incidentRef = db().doc(`pharmacy_duty_incidents/${duty.incidentId}`);
-      const incidentSnap = await tx.get(incidentRef);
-      if (!incidentSnap.exists) {
-        throw new HttpsError("not-found", "Incidente no encontrado.");
-      }
-      const incident = incidentSnap.data() as PharmacyDutyIncidentDoc;
-      if (incident.status !== "open") {
-        throw new HttpsError(
-          "failed-precondition",
-          "El incidente no está abierto."
-        );
-      }
+        if (config.preventMultipleOpenRoundsPerDuty || duty.replacementRoundOpen) {
+          const openRoundSnap = await tx.get(
+            db()
+              .collection("pharmacy_duty_reassignment_rounds")
+              .where("dutyId", "==", dutyId)
+              .where("status", "==", "open")
+              .limit(1)
+          );
+          if (!openRoundSnap.empty) {
+            throw new HttpsError(
+              "failed-precondition",
+              "Ya existe una ronda de cobertura abierta para este turno."
+            );
+          }
+        }
 
-      const originContext = await assertMerchantAccessAndGetContext(
-        originMerchantId,
-        uid,
-        role,
-        claimMerchantId,
-        tx
-      );
-      if (!originContext.location) {
-        throw new HttpsError(
-          "failed-precondition",
-          "La farmacia origen no tiene coordenadas configuradas."
-        );
-      }
-
-      const candidateDocs = await Promise.all(
-        // Leemos únicamente candidatas explícitamente seleccionadas por owner.
-        candidateMerchantIds.map((merchantId) =>
-          tx.get(db().doc(`merchants/${merchantId}`))
-        )
-      );
-
-      const validCandidates: Array<{
-        merchantId: string;
-        distanceKm: number;
-      }> = [];
-      for (const candidateSnap of candidateDocs) {
-        if (!candidateSnap.exists) {
+        const incidentRef = db().doc(`pharmacy_duty_incidents/${duty.incidentId}`);
+        const incidentSnap = await tx.get(incidentRef);
+        if (!incidentSnap.exists) {
+          throw new HttpsError("not-found", "Incidente no encontrado.");
+        }
+        const incident = incidentSnap.data() as PharmacyDutyIncidentDoc;
+        if (incident.status !== "open") {
           throw new HttpsError(
             "failed-precondition",
-            "Una candidata seleccionada no existe."
+            "El incidente no está abierto."
           );
         }
-        const candidateData = candidateSnap.data() ?? {};
-        const candidate: MerchantContext = {
-          merchantId: candidateSnap.id,
-          ownerUserId: extractString(candidateData, "ownerUserId"),
-          zoneId: extractString(candidateData, "zoneId"),
-          categoryId: extractString(candidateData, "categoryId"),
-          status: extractString(candidateData, "status"),
-          name: extractString(candidateData, "name") || candidateSnap.id,
-          location: extractMerchantLocation(candidateData),
-        };
-        if (candidate.merchantId === originMerchantId) {
+
+        const originContext = await assertMerchantAccessAndGetContext(
+          originMerchantId,
+          uid,
+          role,
+          claimMerchantId,
+          tx
+        );
+        if (!originContext.location) {
           throw new HttpsError(
             "failed-precondition",
-            "No podés auto-invitarte como cobertura."
+            "La farmacia origen no tiene coordenadas configuradas."
           );
         }
-        assertCandidateEligible(candidate, duty.zoneId);
 
-        const distanceKm = roundDistance(
-          haversineDistanceKm(
-            originContext.location.lat,
-            originContext.location.lng,
-            candidate.location!.lat,
-            candidate.location!.lng
+        const candidateDocs = await Promise.all(
+          // Leemos únicamente candidatas explícitamente seleccionadas por owner.
+          candidateMerchantIds.map((merchantId) =>
+            tx.get(db().doc(`merchants/${merchantId}`))
           )
         );
-        if (distanceKm > config.maxReassignmentDistanceKm) {
+
+        const validCandidates: Array<{
+          merchantId: string;
+          distanceKm: number;
+        }> = [];
+        for (const candidateSnap of candidateDocs) {
+          if (!candidateSnap.exists) {
+            throw new HttpsError(
+              "failed-precondition",
+              "Una candidata seleccionada no existe."
+            );
+          }
+          const candidateData = candidateSnap.data() ?? {};
+          const candidate: MerchantContext = {
+            merchantId: candidateSnap.id,
+            ownerUserId: extractString(candidateData, "ownerUserId"),
+            zoneId: extractString(candidateData, "zoneId"),
+            categoryId: extractString(candidateData, "categoryId"),
+            status: extractString(candidateData, "status"),
+            name: extractString(candidateData, "name") || candidateSnap.id,
+            location: extractMerchantLocation(candidateData),
+          };
+          if (candidate.merchantId === originMerchantId) {
+            throw new HttpsError(
+              "failed-precondition",
+              "No podés auto-invitarte como cobertura."
+            );
+          }
+          assertCandidateEligible(candidate, duty.zoneId);
+
+          const distanceKm = roundDistance(
+            haversineDistanceKm(
+              originContext.location.lat,
+              originContext.location.lng,
+              candidate.location!.lat,
+              candidate.location!.lng
+            )
+          );
+          if (distanceKm > config.maxReassignmentDistanceKm) {
+            throw new HttpsError(
+              "failed-precondition",
+              "Una candidata quedó fuera del radio máximo permitido."
+            );
+          }
+          validCandidates.push({
+            merchantId: candidate.merchantId,
+            distanceKm,
+          });
+        }
+
+        if (validCandidates.length === 0) {
           throw new HttpsError(
             "failed-precondition",
-            "Una candidata quedó fuera del radio máximo permitido."
+            "No hay candidatas elegibles para esta ronda."
           );
         }
-        validCandidates.push({
-          merchantId: candidate.merchantId,
-          distanceKm,
-        });
-      }
 
-      if (validCandidates.length === 0) {
-        throw new HttpsError(
-          "failed-precondition",
-          "No hay candidatas elegibles para esta ronda."
-        );
-      }
-
-      tx.set(roundRef, {
-        dutyId,
-        incidentId: duty.incidentId,
-        originMerchantId,
-        zoneId: duty.zoneId,
-        status: "open",
-        maxDistanceKmApplied: config.maxReassignmentDistanceKm,
-        candidateCount: validCandidates.length,
-        expiresAt,
-        createdByUserId: uid,
-        createdAt: FieldValue.serverTimestamp(),
-        lastEventAt: FieldValue.serverTimestamp(),
-      });
-
-      for (const candidate of validCandidates) {
-        const requestRef = db()
-          .collection("pharmacy_duty_reassignment_requests")
-          .doc();
-        tx.set(requestRef, {
-          roundId: roundRef.id,
+        tx.set(roundRef, {
           dutyId,
           incidentId: duty.incidentId,
           originMerchantId,
-          candidateMerchantId: candidate.merchantId,
           zoneId: duty.zoneId,
-          distanceKm: candidate.distanceKm,
-          status: "pending",
-          sentAt: FieldValue.serverTimestamp(),
+          status: "open",
+          maxDistanceKmApplied: config.maxReassignmentDistanceKm,
+          candidateCount: validCandidates.length,
           expiresAt,
           createdByUserId: uid,
+          createdAt: FieldValue.serverTimestamp(),
           lastEventAt: FieldValue.serverTimestamp(),
         });
-      }
 
-      const derived = applyDerivedDutyState({
-        status: "replacement_pending",
-        confirmationStatus: "incident_reported",
-        incidentOpen: true,
+        for (const candidate of validCandidates) {
+          const requestRef = db()
+            .collection("pharmacy_duty_reassignment_requests")
+            .doc();
+          tx.set(requestRef, {
+            roundId: roundRef.id,
+            dutyId,
+            incidentId: duty.incidentId,
+            originMerchantId,
+            candidateMerchantId: candidate.merchantId,
+            zoneId: duty.zoneId,
+            distanceKm: candidate.distanceKm,
+            status: "pending",
+            sentAt: FieldValue.serverTimestamp(),
+            expiresAt,
+            createdByUserId: uid,
+            lastEventAt: FieldValue.serverTimestamp(),
+          });
+        }
+
+        const derived = applyDerivedDutyState({
+          status: "replacement_pending",
+          confirmationStatus: "incident_reported",
+          incidentOpen: true,
+        });
+        tx.update(dutyRef, {
+          status: "replacement_pending",
+          confirmationStatus: "incident_reported",
+          replacementRoundOpen: true,
+          confidenceLevel: derived.confidenceLevel,
+          publicStatusLabel: derived.publicStatusLabel,
+          lastStatusChangedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: uid,
+        });
+
+        requestCount = validCandidates.length;
       });
-      tx.update(dutyRef, {
-        status: "replacement_pending",
-        confirmationStatus: "incident_reported",
-        replacementRoundOpen: true,
-        confidenceLevel: derived.confidenceLevel,
-        publicStatusLabel: derived.publicStatusLabel,
-        lastStatusChangedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: uid,
+
+      logStructured("pharmacy_duty_reassignment_round_created", {
+        dutyId,
+        incidentId,
+        roundId: roundRef.id,
+        actorUserId: uid,
+        candidateCount: requestCount,
+        correlationId,
+      });
+      logDutyMutationEvent({
+        action,
+        result: "success",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        roundId: roundRef.id,
       });
 
-      requestCount = validCandidates.length;
-    });
-
-    logStructured("pharmacy_duty_reassignment_round_created", {
-      dutyId,
-      incidentId,
-      roundId: roundRef.id,
-      actorUserId: uid,
-      candidateCount: requestCount,
-      correlationId,
-    });
-
-    return {
-      dutyId,
-      incidentId,
-      roundId: roundRef.id,
-      requestCount,
-      expiresAtMillis,
-    };
+      return {
+        dutyId,
+        incidentId,
+        roundId: roundRef.id,
+        requestCount,
+        expiresAtMillis,
+      };
+    } catch (error) {
+      logDutyMutationEvent({
+        action,
+        result: "error",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        roundId: roundRef.id,
+        conflictReason: resolveConflictReason(error),
+        errorCode: error instanceof HttpsError ? error.code : "internal",
+      });
+      throw error;
+    }
   }
 );
 
@@ -1514,6 +1797,7 @@ export const respondToReassignmentRequest = onCall<
 >(
   { enforceAppCheck: true },
   async (request) => {
+    const actionName = "respond_reassignment_request";
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Autenticación requerida.");
     }
@@ -1531,27 +1815,36 @@ export const respondToReassignmentRequest = onCall<
     const requestRef = db().doc(`pharmacy_duty_reassignment_requests/${requestId}`);
     let dutyId = "";
     let roundId = "";
+    let merchantId = "";
     let requestStatus: RequestStatus = "pending";
     let roundStatus: ReassignmentRoundDoc["status"] = "open";
     let dutyStatus: DutyStatus = "scheduled";
 
-    await db().runTransaction(async (tx) => {
-      const reassignmentRequestSnap = await tx.get(requestRef);
-      if (!reassignmentRequestSnap.exists) {
-        throw new HttpsError("not-found", "Invitación no encontrada.");
-      }
-      const reassignmentRequest = reassignmentRequestSnap.data() as ReassignmentRequestDoc;
-      dutyId = reassignmentRequest.dutyId;
-      roundId = reassignmentRequest.roundId;
-      requestStatus = reassignmentRequest.status;
+    try {
+      await db().runTransaction(async (tx) => {
+        const reassignmentRequestSnap = await tx.get(requestRef);
+        if (!reassignmentRequestSnap.exists) {
+          throw new HttpsError("not-found", "Invitación no encontrada.");
+        }
+        const reassignmentRequest = reassignmentRequestSnap.data() as ReassignmentRequestDoc;
+        dutyId = reassignmentRequest.dutyId;
+        roundId = reassignmentRequest.roundId;
+        merchantId = reassignmentRequest.candidateMerchantId;
+        requestStatus = reassignmentRequest.status;
+        await assertMutationRateLimit({
+          tx,
+          action: actionName,
+          uid,
+          merchantId: reassignmentRequest.candidateMerchantId,
+        });
 
-      await assertOwnerControlsMerchant(
-        reassignmentRequest.candidateMerchantId,
-        uid,
-        role,
-        claimMerchantId,
-        tx
-      );
+        await assertOwnerControlsMerchant(
+          reassignmentRequest.candidateMerchantId,
+          uid,
+          role,
+          claimMerchantId,
+          tx
+        );
 
       const roundRef = db().doc(
         `pharmacy_duty_reassignment_rounds/${reassignmentRequest.roundId}`
@@ -1727,28 +2020,53 @@ export const respondToReassignmentRequest = onCall<
         }
       }
 
-      requestStatus = "accepted";
-      roundStatus = "covered";
-      dutyStatus = "reassigned";
-    });
+        requestStatus = "accepted";
+        roundStatus = "covered";
+        dutyStatus = "reassigned";
+      });
 
-    logStructured("pharmacy_duty_reassignment_request_responded", {
-      requestId,
-      dutyId,
-      roundId,
-      actorUserId: uid,
-      nextStatus: requestStatus,
-      correlationId,
-    });
+      logStructured("pharmacy_duty_reassignment_request_responded", {
+        requestId,
+        dutyId,
+        roundId,
+        actorUserId: uid,
+        nextStatus: requestStatus,
+        correlationId,
+      });
+      logDutyMutationEvent({
+        action: actionName,
+        result: "success",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        roundId,
+        requestId,
+      });
 
-    return {
-      requestId,
-      dutyId,
-      roundId,
-      requestStatus,
-      roundStatus,
-      dutyStatus,
-    };
+      return {
+        requestId,
+        dutyId,
+        roundId,
+        requestStatus,
+        roundStatus,
+        dutyStatus,
+      };
+    } catch (error) {
+      logDutyMutationEvent({
+        action: actionName,
+        result: "error",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        roundId,
+        requestId,
+        conflictReason: resolveConflictReason(error),
+        errorCode: error instanceof HttpsError ? error.code : "internal",
+      });
+      throw error;
+    }
   }
 );
 
@@ -1758,6 +2076,7 @@ export const cancelReassignmentRound = onCall<
 >(
   { enforceAppCheck: true },
   async (request) => {
+    const action = "cancel_reassignment_round";
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Autenticación requerida.");
     }
@@ -1775,96 +2094,128 @@ export const cancelReassignmentRound = onCall<
 
     const roundRef = db().doc(`pharmacy_duty_reassignment_rounds/${roundId}`);
     let dutyId = "";
+    let merchantId = "";
     let roundStatus: ReassignmentRoundDoc["status"] = "cancelled";
 
-    await db().runTransaction(async (tx) => {
-      const roundSnap = await tx.get(roundRef);
-      if (!roundSnap.exists) {
-        throw new HttpsError("not-found", "Ronda no encontrada.");
-      }
-      const round = roundSnap.data() as ReassignmentRoundDoc;
-      roundStatus = round.status;
-      dutyId = round.dutyId;
+    try {
+      await db().runTransaction(async (tx) => {
+        const roundSnap = await tx.get(roundRef);
+        if (!roundSnap.exists) {
+          throw new HttpsError("not-found", "Ronda no encontrada.");
+        }
+        const round = roundSnap.data() as ReassignmentRoundDoc;
+        roundStatus = round.status;
+        dutyId = round.dutyId;
+        merchantId = round.originMerchantId;
+        await assertMutationRateLimit({
+          tx,
+          action,
+          uid,
+          merchantId: round.originMerchantId,
+        });
 
-      const dutyRef = db().doc(`pharmacy_duties/${round.dutyId}`);
-      const [dutySnap, pendingRequestsSnap] = await Promise.all([
-        tx.get(dutyRef),
-        tx.get(
-          db()
-            .collection("pharmacy_duty_reassignment_requests")
-            .where("roundId", "==", roundId)
-            .where("status", "==", "pending")
-        ),
-      ]);
-      if (!dutySnap.exists) {
-        throw new HttpsError("not-found", "Turno no encontrado.");
-      }
+        const dutyRef = db().doc(`pharmacy_duties/${round.dutyId}`);
+        const [dutySnap, pendingRequestsSnap] = await Promise.all([
+          tx.get(dutyRef),
+          tx.get(
+            db()
+              .collection("pharmacy_duty_reassignment_requests")
+              .where("roundId", "==", roundId)
+              .where("status", "==", "pending")
+          ),
+        ]);
+        if (!dutySnap.exists) {
+          throw new HttpsError("not-found", "Turno no encontrado.");
+        }
 
-      await assertOwnerControlsMerchant(
-        round.originMerchantId,
-        uid,
-        role,
-        claimMerchantId,
-        tx
-      );
+        await assertOwnerControlsMerchant(
+          round.originMerchantId,
+          uid,
+          role,
+          claimMerchantId,
+          tx
+        );
 
-      if (round.status !== "open") {
-        return;
-      }
+        if (round.status !== "open") {
+          return;
+        }
 
-      for (const pending of pendingRequestsSnap.docs) {
-        tx.update(pending.ref, {
+        for (const pending of pendingRequestsSnap.docs) {
+          tx.update(pending.ref, {
+            status: "cancelled",
+            respondedAt: FieldValue.serverTimestamp(),
+            responseReason: "cancelled_due_to_other_acceptance",
+            lastEventAt: FieldValue.serverTimestamp(),
+          });
+        }
+
+        tx.update(roundRef, {
           status: "cancelled",
-          respondedAt: FieldValue.serverTimestamp(),
-          responseReason: "cancelled_due_to_other_acceptance",
+          closedAt: FieldValue.serverTimestamp(),
           lastEventAt: FieldValue.serverTimestamp(),
         });
-      }
 
-      tx.update(roundRef, {
-        status: "cancelled",
-        closedAt: FieldValue.serverTimestamp(),
-        lastEventAt: FieldValue.serverTimestamp(),
+        const duty = dutySnap.data() as PharmacyDutyDoc;
+        const nextDutyStatus: DutyStatus = duty.incidentOpen === true
+          ? "incident_reported"
+          : "scheduled";
+        const nextConfirmationStatus: DutyConfirmationStatus = duty.incidentOpen === true
+          ? "incident_reported"
+          : "pending";
+        const derived = applyDerivedDutyState({
+          status: nextDutyStatus,
+          confirmationStatus: nextConfirmationStatus,
+          incidentOpen: duty.incidentOpen === true,
+        });
+
+        tx.update(dutyRef, {
+          status: nextDutyStatus,
+          confirmationStatus: nextConfirmationStatus,
+          replacementRoundOpen: false,
+          confidenceLevel: derived.confidenceLevel,
+          publicStatusLabel: derived.publicStatusLabel,
+          lastStatusChangedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: uid,
+        });
+        roundStatus = "cancelled";
       });
 
-      const duty = dutySnap.data() as PharmacyDutyDoc;
-      const nextDutyStatus: DutyStatus = duty.incidentOpen === true
-        ? "incident_reported"
-        : "scheduled";
-      const nextConfirmationStatus: DutyConfirmationStatus = duty.incidentOpen === true
-        ? "incident_reported"
-        : "pending";
-      const derived = applyDerivedDutyState({
-        status: nextDutyStatus,
-        confirmationStatus: nextConfirmationStatus,
-        incidentOpen: duty.incidentOpen === true,
+      logStructured("pharmacy_duty_reassignment_round_cancelled", {
+        roundId,
+        dutyId,
+        actorUserId: uid,
+        nextStatus: roundStatus,
+        correlationId,
+      });
+      logDutyMutationEvent({
+        action,
+        result: "success",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        roundId,
       });
 
-      tx.update(dutyRef, {
-        status: nextDutyStatus,
-        confirmationStatus: nextConfirmationStatus,
-        replacementRoundOpen: false,
-        confidenceLevel: derived.confidenceLevel,
-        publicStatusLabel: derived.publicStatusLabel,
-        lastStatusChangedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedBy: uid,
+      return {
+        roundId,
+        dutyId,
+        roundStatus,
+      };
+    } catch (error) {
+      logDutyMutationEvent({
+        action,
+        result: "error",
+        actorUserId: uid,
+        correlationId,
+        merchantId,
+        dutyId,
+        roundId,
+        conflictReason: resolveConflictReason(error),
+        errorCode: error instanceof HttpsError ? error.code : "internal",
       });
-      roundStatus = "cancelled";
-    });
-
-    logStructured("pharmacy_duty_reassignment_round_cancelled", {
-      roundId,
-      dutyId,
-      actorUserId: uid,
-      nextStatus: roundStatus,
-      correlationId,
-    });
-
-    return {
-      roundId,
-      dutyId,
-      roundStatus,
-    };
+      throw error;
+    }
   }
 );

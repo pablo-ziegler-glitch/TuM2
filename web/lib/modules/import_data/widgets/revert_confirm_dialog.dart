@@ -37,7 +37,11 @@ class RevertConfirmDialog extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.tertiary200),
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: AppColors.warningFg, size: 28),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.warningFg,
+                size: 28,
+              ),
             ),
             const SizedBox(height: 16),
             // Título
@@ -52,7 +56,10 @@ class RevertConfirmDialog extends StatelessWidget {
                   const TextSpan(text: 'Esto desactivará los '),
                   TextSpan(
                     text: '${batch.createdCount} establecimientos',
-                    style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700, color: AppColors.neutral900),
+                    style: AppTextStyles.bodySm.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.neutral900,
+                    ),
                   ),
                   const TextSpan(text: ' creados en esta importación.'),
                 ],
@@ -62,7 +69,10 @@ class RevertConfirmDialog extends StatelessWidget {
             // Advertencia destructiva
             Text(
               'Esta acción no puede deshacerse.',
-              style: AppTextStyles.bodySm.copyWith(color: AppColors.errorFg, fontWeight: FontWeight.w600),
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.errorFg,
+                fontWeight: FontWeight.w600,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -77,7 +87,10 @@ class RevertConfirmDialog extends StatelessWidget {
                 ),
                 child: const Text(
                   'Confirmar reversión',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -113,7 +126,10 @@ class RevertConfirmDialog extends StatelessWidget {
 }
 
 /// Abre el modal de confirmación de reversión y retorna true si se confirmó.
-Future<bool> showRevertConfirmDialog(BuildContext context, ImportBatchUi batch) async {
+Future<bool> showRevertConfirmDialog(
+  BuildContext context,
+  ImportBatchUi batch,
+) async {
   final result = await showDialog<bool>(
     context: context,
     barrierColor: Colors.black54,

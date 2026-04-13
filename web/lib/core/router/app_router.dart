@@ -35,10 +35,7 @@ final appRouter = GoRouter(
     return null;
   },
   routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     ShellRoute(
       builder: (context, state, child) => AdminShell(child: child),
       routes: [
@@ -78,10 +75,7 @@ final appRouter = GoRouter(
           },
         ),
         // Rutas legacy para compatibilidad con referencias anteriores
-        GoRoute(
-          path: '/datasets',
-          redirect: (context, state) => '/imports',
-        ),
+        GoRoute(path: '/datasets', redirect: (context, state) => '/imports'),
         GoRoute(
           path: '/datasets/new',
           redirect: (context, state) => '/imports/new',
@@ -157,15 +151,19 @@ class _PlaceholderScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.construction_outlined,
-                size: 40, color: Color(0xFFB0AE9F)),
+            const Icon(
+              Icons.construction_outlined,
+              size: 40,
+              color: Color(0xFFB0AE9F),
+            ),
             const SizedBox(height: 16),
             Text(
               label,
               style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2D2D26)),
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2D2D26),
+              ),
             ),
             const SizedBox(height: 8),
             Text(

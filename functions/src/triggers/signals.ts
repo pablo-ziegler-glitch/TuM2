@@ -1,12 +1,11 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import {
   normalizeOperationalPublicStateForDiff,
   resolveOperationalPublicState,
 } from "../lib/operationalSignals";
 import { OperationalSignals } from "../lib/types";
-
-const db = () => getFirestore();
+import { syncMerchantPublicProjection } from "../lib/publicProjectionSync";
+import { logFinOpsEvent } from "../lib/finops";
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(value);
@@ -40,54 +39,65 @@ export const onSignalsWriteSyncPublic = onDocumentWritten(
 
     const skipWrite = stableStringify(diffBefore) === stableStringify(diffAfter);
     if (skipWrite) {
-      console.log(
-        JSON.stringify({
-          trigger: "onSignalsWriteSyncPublic",
-          merchantId,
-          signalType: resolvedAfter.operationalSignalType,
-          overrideMode: resolvedAfter.manualOverrideMode,
-          forceClosed: resolvedAfter.manualOverrideMode === "force_closed",
-          projectionWriteSkipped: true,
-          reason: "no_diff",
-        })
-      );
-      return;
-    }
-
-    const updatedAt = afterSnap?.exists
-      ? (afterSnap.data()?.["updatedAt"] ?? null)
-      : null;
-
-    await db()
-      .doc(`merchant_public/${merchantId}`)
-      .set(
-        {
-          hasOperationalSignal: resolvedAfter.hasOperationalSignal,
-          operationalSignalType: resolvedAfter.operationalSignalType,
-          operationalSignalMessage: resolvedAfter.operationalSignalMessage,
-          operationalSignalUpdatedAt: updatedAt,
-          manualOverrideMode: resolvedAfter.manualOverrideMode,
-          operationalStatusLabel: resolvedAfter.operationalStatusLabel,
-          isOpenNow: resolvedAfter.isOpenNow,
-          todayScheduleLabel: resolvedAfter.todayScheduleLabel,
-          hasPharmacyDutyToday: resolvedAfter.hasPharmacyDutyToday,
-          operationalSignals: resolvedAfter.operationalSignals,
-          syncedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-    console.log(
-      JSON.stringify({
+      const logPayload = {
         trigger: "onSignalsWriteSyncPublic",
         merchantId,
         signalType: resolvedAfter.operationalSignalType,
         overrideMode: resolvedAfter.manualOverrideMode,
         forceClosed: resolvedAfter.manualOverrideMode === "force_closed",
-        projectionWriteSkipped: false,
-        reason: "projection_updated",
-      })
+        projectionWriteSkipped: true,
+        reason: "no_diff",
+      };
+      console.log(
+        JSON.stringify(logPayload)
+      );
+      logFinOpsEvent({
+        event: "trigger_signals_projection",
+        module: "triggers.signals",
+        payload: {
+          merchantId,
+          signalType: resolvedAfter.operationalSignalType,
+          overrideMode: resolvedAfter.manualOverrideMode,
+          duplicateEvent: true,
+          duplicateEventWriteRateSample: 1,
+          publicWritePerformed: false,
+          projectionWriteSkipped: true,
+          reason: "no_diff",
+        },
+      });
+      return;
+    }
+
+    const syncResult = await syncMerchantPublicProjection({
+      merchantId,
+      signals: afterSignals,
+    });
+
+    const logPayload = {
+      trigger: "onSignalsWriteSyncPublic",
+      merchantId,
+      signalType: syncResult.projectionSignalType,
+      overrideMode: syncResult.projectionOverrideMode,
+      forceClosed: syncResult.projectionOverrideMode === "force_closed",
+      projectionWriteSkipped: syncResult.projectionWriteSkipped,
+      reason: syncResult.reason,
+    };
+    console.log(
+      JSON.stringify(logPayload)
     );
+    logFinOpsEvent({
+      event: "trigger_signals_projection",
+      module: "triggers.signals",
+      payload: {
+        merchantId,
+        signalType: syncResult.projectionSignalType,
+        overrideMode: syncResult.projectionOverrideMode,
+        duplicateEvent: false,
+        duplicateEventWriteRateSample: 0,
+        publicWritePerformed: syncResult.publicWritePerformed,
+        projectionWriteSkipped: syncResult.projectionWriteSkipped,
+        reason: syncResult.reason,
+      },
+    });
   }
 );
-

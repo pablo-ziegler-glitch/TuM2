@@ -45,6 +45,18 @@ service cloud.firestore {
         );
     }
 
+    function merchantOwnedByAuthenticatedUser(merchantId) {
+      let merchantPath = /databases/$(database)/documents/merchants/$(merchantId);
+      return isAuthenticated()
+        && (
+          merchantBelongsToUser(merchantId)
+          || (
+            exists(merchantPath)
+            && get(merchantPath).data.ownerUserId == request.auth.uid
+          )
+        );
+    }
+
     function isDutyPublicReadableStatus(status) {
       return status in [
         'scheduled',
@@ -320,15 +332,15 @@ service cloud.firestore {
           );
       }
 
-      allow read: if isAdmin() || (isOwnerRole() && merchantBelongsToUser(merchantId));
+      allow read: if isAdmin() || (isOwnerRole() && merchantOwnedByAuthenticatedUser(merchantId));
       allow create: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
       allow create: if isOwnerRole()
-        && merchantBelongsToUser(merchantId)
+        && merchantOwnedByAuthenticatedUser(merchantId)
         && ownerFieldsAreValidForCreate();
       allow update: if isOwnerRole()
-        && merchantBelongsToUser(merchantId)
+        && merchantOwnedByAuthenticatedUser(merchantId)
         && ownerFieldsAreValidForUpdate();
       allow delete: if false;
     }

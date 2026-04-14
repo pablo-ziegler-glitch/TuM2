@@ -1,7 +1,8 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 import { computeMerchantPublicProjection } from "../lib/projection";
 import { MerchantDoc, OperationalSignals } from "../lib/types";
+import { syncMerchantPublicProjection } from "../lib/publicProjectionSync";
 
 const db = () => getFirestore();
 
@@ -77,14 +78,6 @@ export const onMerchantWriteSyncPublic = onDocumentWritten(
       }
     }
 
-    // Suppressed merchants should not appear in public listings
-    if (merchant.visibilityStatus === "suppressed") {
-      await db()
-        .doc(`merchant_public/${merchantId}`)
-        .set({ visibilityStatus: "suppressed", merchantId }, { merge: true });
-      return;
-    }
-
     // Fetch current signals (best-effort)
     const [signalsSnap] = await Promise.all([
       db().doc(`merchant_operational_signals/${merchantId}`).get(),
@@ -102,15 +95,11 @@ export const onMerchantWriteSyncPublic = onDocumentWritten(
       }
     }
 
-    await db()
-      .doc(`merchant_public/${merchantId}`)
-      .set(
-        {
-          ...projection,
-          syncedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: false }
-      );
+    await syncMerchantPublicProjection({
+      merchantId,
+      merchant,
+      signals,
+    });
 
     console.log(`[onMerchantWriteSyncPublic] Synced ${merchantId}`);
   }

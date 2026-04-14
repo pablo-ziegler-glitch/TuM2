@@ -1,160 +1,61 @@
-# TuM2-0068 — Carga masiva de turnos de farmacia (OWNER-12)
+# TuM2-0068 — Carga de turnos de farmacia (OWNER-09/10/11)
 
-Estado: DEFERRED (Post-MVP)  
-Fecha: 2026-04-08
+Estado: IMPLEMENTADA (MVP)  
+Última actualización: 2026-04-13  
+PR: #84
 
-## Objetivo
+## Alcance implementado
 
-> Nota de alcance:
-> Esta capacidad queda explícitamente fuera del alcance de TuM2-0068 MVP de carga manual.
-> No debe exponerse en navegación productiva hasta contar con backend de importación seguro.
+Se implementó la carga de turnos para OWNER en farmacia con foco en costo y seguridad:
 
-Agregar una capacidad de carga masiva de turnos para farmacias, permitiendo que una farmacia cargue:
+- calendario mensual con selección de fecha y multiselección,
+- alta, edición y eliminación de turnos,
+- publicación batch mensual desde cliente,
+- persistencia en `pharmacy_duties`,
+- actualización de proyección pública vía backend.
 
-- turnos de su propio comercio,
-- turnos de comercios cercanos que pertenezcan a su red habilitada.
+## Arquitectura aplicada
 
-El flujo debe reemplazar la carga 1 a 1 cuando el volumen operativo lo requiera.
+Flujo:
 
-## Alcance funcional
+`Flutter OWNER -> Callable upsertPharmacyDutiesBatch -> pharmacy_duties -> trigger/proyección -> merchant_public`
 
-Se incorpora una nueva pantalla OWNER:
+Decisiones clave:
 
-- `OWNER-12 — Carga masiva de turnos`
-- Ruta: `/owner/pharmacy-duties/bulk-upload`
-- Accesible desde:
-  - panel OWNER (acción rápida),
-  - vista OWNER para sesión ADMIN,
-  - pantalla de calendario de turnos (`OWNER-10`) mediante CTA de carga masiva.
+- patrón dual-collection respetado (`merchants` privado, `merchant_public` solo backend),
+- sin escritura cliente en `merchant_public`,
+- validación crítica server-side,
+- sin listeners realtime innecesarios para el calendario mensual.
 
-## Plantilla de archivo
+## Optimización de costos (aplicada)
 
-Formato objetivo: `.xlsx` (planilla oficial).
+- lectura mensual acotada (query por mes/rango) en vez de query por día,
+- upsert batch en una transacción por operación de publicación,
+- detección de filas sin cambios para evitar writes redundantes (`unchangedRows`),
+- validaciones de conflicto en backend usando query acotada por `merchantId` + fechas involucradas.
 
-Columnas obligatorias:
+## Seguridad y validaciones
 
-1. `fecha` (YYYY-MM-DD)
-2. `hora_desde` (HH:mm)
-3. `hora_hasta` (HH:mm)
-4. `farmacia_origen_id` (merchantId que realiza la carga)
-5. `farmacia_turno_id` (merchantId de la farmacia que quedará de turno)
-6. `tipo_turno` (ej: `regular`, `feriado`, `reemplazo`)
-7. `observaciones` (opcional, texto breve)
+En backend:
 
-## Reglas de negocio
+- Auth obligatoria + claims de rol,
+- validación de ownership (`merchantId` del usuario),
+- validación rubro farmacia,
+- validación formato de fecha/hora y máximos de lote (hasta 31 filas),
+- validación de fechas duplicadas y solapamientos.
 
-1. `farmacia_origen_id` debe coincidir con la farmacia del usuario autenticado o una farmacia gestionada por sesión admin.
-2. `farmacia_turno_id` debe ser:
-   - la propia farmacia origen, o
-   - una farmacia vinculada en la red autorizada.
-3. No permitir superposición horaria para la misma `farmacia_turno_id` y fecha.
-4. No permitir `hora_hasta <= hora_desde`.
-5. Evitar duplicados exactos de turno en una misma importación.
-6. Validar existencia y estado activo de farmacia destino.
+En frontend:
 
-## Resultado de importación
+- `zoneId` no editable por usuario,
+- mensajes de conflicto y recuperación de error,
+- confirmación explícita para eliminación.
 
-La importación debe ser parcialmente tolerante a errores:
+## Pantallas y rutas
 
-- filas válidas: se importan,
-- filas inválidas: se rechazan con motivo puntual.
+- `OWNER-09`: `/owner/pharmacy-duties`
+- `OWNER-11 (alta)`: `/owner/pharmacy-duties/new`
+- `OWNER-11 (edición)`: `/owner/pharmacy-duties/:dutyId/edit`
 
-Salida esperada:
+## Fuera de alcance (sigue diferido)
 
-- `totalRows`
-- `acceptedRows`
-- `rejectedRows`
-- `errors[]` por fila: `rowNumber`, `code`, `message`, `field`.
-
-## Contrato API propuesto
-
-Callable Functions:
-
-1. `pharmacyDutiesDownloadTemplate`
-   - entrada: `{ version?: string }`
-   - salida: `{ url: string, expiresAt: number, checksum: string }`
-
-2. `pharmacyDutiesBulkUpload`
-   - entrada:
-     - `fileUrl` (archivo subido temporalmente),
-     - `originMerchantId`,
-     - `timezone`,
-     - `dryRun` (bool)
-   - salida:
-     - `batchId`,
-     - `totalRows`,
-     - `acceptedRows`,
-     - `rejectedRows`,
-     - `errors[]`.
-
-## Modelo de datos propuesto
-
-Colección sugerida:
-
-`pharmacy_duty_import_batches/{batchId}`
-
-Campos:
-
-- `originMerchantId`
-- `uploadedByUid`
-- `status` (`processing`, `completed`, `failed`, `completed_with_errors`)
-- `totalRows`
-- `acceptedRows`
-- `rejectedRows`
-- `errors` (array acotado) o subcolección `errors`
-- `sourceFilePath`
-- `createdAt`
-- `updatedAt`
-
-Auditoría:
-
-- registro en `audit_logs` por cada batch aceptado.
-
-## Seguridad
-
-Validación server-side obligatoria:
-
-- claim `role` en (`owner`, `admin`, `super_admin`),
-- ownership sobre `originMerchantId` cuando `role=owner`,
-- pertenencia a red entre origen y destino en cada fila.
-
-No confiar en validación de cliente para autorización.
-
-## UX definida para OWNER-12
-
-1. Descargar plantilla.
-2. Ver columnas requeridas.
-3. Subir archivo.
-4. Ver resumen.
-5. Descargar reporte de errores.
-
-Microcopy clave:
-
-- “Importá múltiples turnos en un solo archivo”.
-- “Cada fila se valida en forma independiente”.
-- “Podés cargar turnos propios y de farmacias de tu red”.
-
-## Analytics sugerida
-
-- `owner_duties_bulk_screen_view`
-- `owner_duties_bulk_template_download`
-- `owner_duties_bulk_upload_start`
-- `owner_duties_bulk_upload_result`
-- `owner_duties_bulk_upload_error`
-
-## DoD (Definition of Done)
-
-- pantalla OWNER-12 accesible por ruta y por tarjetas del panel,
-- documentación de plantilla y reglas versionada,
-- backend de importación con resultado por fila,
-- validaciones de red y ownership aplicadas,
-- test unitarios de parsing/validación y test de integración de callable,
-- evento de analytics en puntos críticos del flujo.
-
-## TODOs de reactivación
-
-- Implementar callables `pharmacyDutiesDownloadTemplate` y `pharmacyDutiesBulkUpload` con `enforceAppCheck: true`.
-- Agregar validación de pertenencia de red entre origen/destino por fila en backend.
-- Incorporar storage temporal firmado para archivos y limpieza automática.
-- Añadir rate limiting por uid + merchantId para evitar abuso.
-- Exponer ruta UI solo detrás de feature flag explícito `owner_pharmacy_duties_bulk_enabled`.
+La **carga masiva por archivo** (`.xlsx`, parser/Storage/reportes por fila) no forma parte de TuM2-0068 MVP y se mantiene para tarjeta separada (ej: TuM2-0113).

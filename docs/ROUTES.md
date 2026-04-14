@@ -60,6 +60,8 @@ Guard: rol `owner` o `admin`. Customer → redirige a `/profile`.
 | `/owner/schedules` | OWNER-06 | Horarios y señales | owner, admin | Stack push |
 | `/owner/pharmacy-duties` | OWNER-09 | Turnos de farmacia | owner, admin | Stack push |
 | `/owner/duties` | OWNER-09 | Alias legado de turnos de farmacia | owner, admin | Stack push |
+| `/owner/pharmacy-duties/new` | OWNER-11 | Crear turno de farmacia | owner, admin | Stack push |
+| `/owner/pharmacy-duties/:dutyId/edit` | OWNER-11 | Editar turno de farmacia | owner, admin | Stack push |
 
 ---
 

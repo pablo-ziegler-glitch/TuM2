@@ -972,7 +972,20 @@ export const upsertPharmacyDutiesBatch = onCall<
         if (interval) existingIntervals.push(interval);
       }
 
-      const pendingIntervals: DutyInterval[] = [];
+      const workingIntervals: DutyInterval[] = [...existingIntervals];
+      const replaceWorkingInterval = (
+        dutyId: string,
+        nextInterval: DutyInterval | null
+      ): void => {
+        for (let i = workingIntervals.length - 1; i >= 0; i -= 1) {
+          if (workingIntervals[i].dutyId === dutyId) {
+            workingIntervals.splice(i, 1);
+          }
+        }
+        if (nextInterval) {
+          workingIntervals.push(nextInterval);
+        }
+      };
 
       for (const row of normalizedRows) {
         const sameDate = existingByDate.get(row.date) ?? [];
@@ -985,39 +998,24 @@ export const upsertPharmacyDutiesBatch = onCall<
         const existingForDate = sameDate[0];
         const excludedDutyId = existingForDate?.id;
 
-        for (const interval of existingIntervals) {
-          if (excludedDutyId && interval.dutyId === excludedDutyId) continue;
-          if (!areRangesOverlapping(
-            row.startsAtDate,
-            row.endsAtDate,
-            interval.startsAt,
-            interval.endsAt
-          )) {
-            continue;
+        if (row.status !== "cancelled") {
+          for (const interval of workingIntervals) {
+            if (excludedDutyId && interval.dutyId === excludedDutyId) continue;
+            if (!areRangesOverlapping(
+              row.startsAtDate,
+              row.endsAtDate,
+              interval.startsAt,
+              interval.endsAt
+            )) {
+              continue;
+            }
+            throw buildConflictError({
+              dutyId: interval.dutyId,
+              startsAtMillis: interval.startsAt.getTime(),
+              endsAtMillis: interval.endsAt.getTime(),
+              date: interval.date,
+            });
           }
-          throw buildConflictError({
-            dutyId: interval.dutyId,
-            startsAtMillis: interval.startsAt.getTime(),
-            endsAtMillis: interval.endsAt.getTime(),
-            date: interval.date,
-          });
-        }
-
-        for (const interval of pendingIntervals) {
-          if (!areRangesOverlapping(
-            row.startsAtDate,
-            row.endsAtDate,
-            interval.startsAt,
-            interval.endsAt
-          )) {
-            continue;
-          }
-          throw buildConflictError({
-            dutyId: interval.dutyId,
-            startsAtMillis: interval.startsAt.getTime(),
-            endsAtMillis: interval.endsAt.getTime(),
-            date: interval.date,
-          });
         }
 
         const previous = existingForDate?.data;
@@ -1036,12 +1034,17 @@ export const upsertPharmacyDutiesBatch = onCall<
           previousNotes === row.notes;
         if (isNoopUpdate) {
           unchangedRows += 1;
-          pendingIntervals.push({
-            dutyId: existingForDate.id,
-            date: row.date,
-            startsAt: row.startsAtDate,
-            endsAt: row.endsAtDate,
-          });
+          replaceWorkingInterval(
+            existingForDate.id,
+            row.status === "cancelled"
+              ? null
+              : {
+                dutyId: existingForDate.id,
+                date: row.date,
+                startsAt: row.startsAtDate,
+                endsAt: row.endsAtDate,
+              }
+          );
           continue;
         }
 
@@ -1093,22 +1096,32 @@ export const upsertPharmacyDutiesBatch = onCall<
             createdBy: uid,
           });
           createdRows += 1;
-          pendingIntervals.push({
-            dutyId: ref.id,
-            date: row.date,
-            startsAt: row.startsAtDate,
-            endsAt: row.endsAtDate,
-          });
+          replaceWorkingInterval(
+            ref.id,
+            row.status === "cancelled"
+              ? null
+              : {
+                dutyId: ref.id,
+                date: row.date,
+                startsAt: row.startsAtDate,
+                endsAt: row.endsAtDate,
+              }
+          );
         } else {
           const ref = db().doc(`pharmacy_duties/${existingForDate.id}`);
           tx.update(ref, payload);
           updatedRows += 1;
-          pendingIntervals.push({
-            dutyId: existingForDate.id,
-            date: row.date,
-            startsAt: row.startsAtDate,
-            endsAt: row.endsAtDate,
-          });
+          replaceWorkingInterval(
+            existingForDate.id,
+            row.status === "cancelled"
+              ? null
+              : {
+                dutyId: existingForDate.id,
+                date: row.date,
+                startsAt: row.startsAtDate,
+                endsAt: row.endsAtDate,
+              }
+          );
         }
       }
     });

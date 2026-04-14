@@ -46,6 +46,7 @@ class _OwnerPharmacyDutyEditorScreenState
   OwnerPharmacyDutyStatus _status = OwnerPharmacyDutyStatus.scheduled;
 
   bool get _isEditing => widget.dutyId != null;
+  bool get _canSave => !_saving && !_loadingDuty && (!_isEditing || _duty != null);
 
   @override
   void initState() {
@@ -322,7 +323,7 @@ class _OwnerPharmacyDutyEditorScreenState
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _saving ? null : () => _save(merchantId),
+            onPressed: _canSave ? () => _save(merchantId) : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary500,
               foregroundColor: Colors.white,
@@ -408,6 +409,13 @@ class _OwnerPharmacyDutyEditorScreenState
   }
 
   Future<void> _save(String merchantId) async {
+    if (_isEditing && (_duty == null || (widget.dutyId ?? '').isEmpty)) {
+      setState(() {
+        _errorMessage =
+            'No pudimos cargar el turno a editar. Reintentá desde el calendario.';
+      });
+      return;
+    }
     final startMinutes = _startsAt.hour * 60 + _startsAt.minute;
     final endMinutes = _endsAt.hour * 60 + _endsAt.minute;
     final overnight = endMinutes <= startMinutes;
@@ -418,7 +426,7 @@ class _OwnerPharmacyDutyEditorScreenState
     try {
       await _repository.upsertDuty(
         merchantId: merchantId,
-        dutyId: _duty?.id,
+        dutyId: _isEditing ? widget.dutyId : null,
         date: _dateKey,
         startsAtIso: _toIsoUtc3(_dateKey, _startsAt, dayOffset: 0),
         endsAtIso: _toIsoUtc3(_dateKey, _endsAt, dayOffset: overnight ? 1 : 0),

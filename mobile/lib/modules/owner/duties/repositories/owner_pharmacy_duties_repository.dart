@@ -13,6 +13,24 @@ class OwnerDutyMutationResult {
   final int updatedAtMillis;
 }
 
+class OwnerDutyBatchMutationResult {
+  const OwnerDutyBatchMutationResult({
+    required this.totalRows,
+    required this.acceptedRows,
+    required this.createdRows,
+    required this.updatedRows,
+    required this.unchangedRows,
+    required this.updatedAtMillis,
+  });
+
+  final int totalRows;
+  final int acceptedRows;
+  final int createdRows;
+  final int updatedRows;
+  final int unchangedRows;
+  final int updatedAtMillis;
+}
+
 class OwnerDutyException implements Exception {
   const OwnerDutyException({
     required this.code,
@@ -85,6 +103,20 @@ class OwnerPharmacyDutiesRepository {
     return duties;
   }
 
+  Future<OwnerPharmacyDuty?> getDutyById({
+    required String dutyId,
+  }) async {
+    final snap = await _firestore
+        .collection('pharmacy_duties')
+        .doc(dutyId)
+        .get()
+        .timeout(_timeout);
+    if (!snap.exists) return null;
+    final data = snap.data();
+    if (data == null) return null;
+    return OwnerPharmacyDuty.fromFirestore(snap.id, data);
+  }
+
   Future<OwnerDutyMutationResult> upsertDuty({
     required String merchantId,
     String? dutyId,
@@ -129,6 +161,52 @@ class OwnerPharmacyDutiesRepository {
       );
       return OwnerDutyMutationResult(
         dutyId: (data['dutyId'] as String?)?.trim() ?? dutyId,
+        updatedAtMillis: (data['updatedAtMillis'] as num?)?.toInt() ??
+            DateTime.now().millisecondsSinceEpoch,
+      );
+    } on PharmacyDutyCommandException catch (error) {
+      throw _mapFunctionError(error);
+    }
+  }
+
+  Future<OwnerDutyBatchMutationResult> upsertDutiesBatch({
+    required String merchantId,
+    required List<
+            ({
+              String date,
+              String startsAtIso,
+              String endsAtIso,
+              OwnerPharmacyDutyStatus status,
+              String? notes,
+            })>
+        duties,
+  }) async {
+    if (duties.isEmpty) {
+      throw const OwnerDutyException(
+        code: 'invalid_argument',
+        message: 'Seleccioná al menos una fecha.',
+      );
+    }
+    try {
+      final payload = duties
+          .map((row) => <String, dynamic>{
+                'date': row.date,
+                'startsAt': row.startsAtIso,
+                'endsAt': row.endsAtIso,
+                'status': statusToString(row.status),
+                'notes': row.notes,
+              })
+          .toList(growable: false);
+      final data = await _commandService.upsertDutiesBatch(
+        merchantId: merchantId,
+        duties: payload,
+      );
+      return OwnerDutyBatchMutationResult(
+        totalRows: (data['totalRows'] as num?)?.toInt() ?? payload.length,
+        acceptedRows: (data['acceptedRows'] as num?)?.toInt() ?? payload.length,
+        createdRows: (data['createdRows'] as num?)?.toInt() ?? 0,
+        updatedRows: (data['updatedRows'] as num?)?.toInt() ?? 0,
+        unchangedRows: (data['unchangedRows'] as num?)?.toInt() ?? 0,
         updatedAtMillis: (data['updatedAtMillis'] as num?)?.toInt() ??
             DateTime.now().millisecondsSinceEpoch,
       );

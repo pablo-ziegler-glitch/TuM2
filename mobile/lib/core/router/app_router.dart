@@ -30,6 +30,7 @@ import '../../modules/owner/screens/owner_products_screen.dart';
 import '../../modules/owner/screens/product_form_screen.dart';
 import '../../modules/owner/screens/product_saved_screen.dart';
 import '../../modules/owner/screens/owner_pharmacy_duties_screen.dart';
+import '../../modules/owner/screens/owner_pharmacy_duty_editor_screen.dart';
 import '../../modules/owner/pharmacy/presentation/upcoming_duty_confirmation_screen.dart';
 import '../../modules/owner/pharmacy/presentation/report_duty_incident_screen.dart';
 import '../../modules/owner/pharmacy/presentation/select_replacement_candidates_screen.dart';
@@ -365,6 +366,29 @@ List<RouteBase> _buildRoutes() {
         title: 'Turnos de farmacia',
         child: OwnerPharmacyDutiesScreen(),
       ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyNew,
+      builder: (_, state) => OwnerAccessGuardPage(
+        title: 'Nuevo turno',
+        child: OwnerPharmacyDutyEditorScreen(
+          initialDateKey: state.uri.queryParameters['date'],
+        ),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyEdit,
+      builder: (_, state) {
+        final dutyId = state.pathParameters['dutyId']!;
+        final extra = state.extra as OwnerPharmacyDutyEditorExtra?;
+        return OwnerAccessGuardPage(
+          title: 'Editar turno',
+          child: OwnerPharmacyDutyEditorScreen(
+            dutyId: dutyId,
+            extra: extra,
+          ),
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.ownerPharmacyDutyUpcoming,

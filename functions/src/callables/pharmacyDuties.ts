@@ -166,6 +166,30 @@ interface UpsertPharmacyDutyResponse {
   updatedAtMillis: number;
 }
 
+interface BatchDutyInput {
+  date?: string;
+  startsAt?: string;
+  endsAt?: string;
+  status?: string;
+  notes?: string | null;
+}
+
+interface UpsertPharmacyDutiesBatchRequest {
+  merchantId?: string;
+  duties?: BatchDutyInput[];
+}
+
+interface UpsertPharmacyDutiesBatchResponse {
+  merchantId: string;
+  zoneId: string;
+  totalRows: number;
+  acceptedRows: number;
+  createdRows: number;
+  updatedRows: number;
+  unchangedRows: number;
+  updatedAtMillis: number;
+}
+
 interface ChangePharmacyDutyStatusRequest {
   dutyId?: string;
   status?: string;
@@ -266,6 +290,13 @@ interface ConflictResult {
   startsAtMillis: number;
   endsAtMillis: number;
   date: string;
+}
+
+interface DutyInterval {
+  dutyId: string;
+  date: string;
+  startsAt: Date;
+  endsAt: Date;
 }
 
 function parseIsoDate(value: unknown, field: string): Date {
@@ -561,6 +592,17 @@ async function findDutyConflict(params: {
   return null;
 }
 
+function toDutyInterval(
+  dutyId: string,
+  duty: Partial<PharmacyDutyDoc>
+): DutyInterval | null {
+  const startsAt = toDutyDate(duty.startsAt);
+  const endsAt = toDutyDate(duty.endsAt);
+  const date = typeof duty.date === "string" ? duty.date : "";
+  if (!startsAt || !endsAt || !date) return null;
+  return { dutyId, date, startsAt, endsAt };
+}
+
 function applyDerivedDutyState(input: {
   status: DutyStatus;
   confirmationStatus: DutyConfirmationStatus;
@@ -801,6 +843,296 @@ export const upsertPharmacyDuty = onCall<
       date: dateKey,
       created: dutyId.length === 0,
       updatedAtMillis: saved?.updatedAt?.toMillis() ?? Date.now(),
+    };
+  }
+);
+
+export const upsertPharmacyDutiesBatch = onCall<
+  UpsertPharmacyDutiesBatchRequest,
+  Promise<UpsertPharmacyDutiesBatchResponse>
+>(
+  { enforceAppCheck: true },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Autenticación requerida.");
+    }
+
+    const correlationId = resolveCorrelationId(request);
+    const uid = request.auth.uid;
+    const role = resolveActorRole(request.auth.token.role);
+    const claimMerchantId = parseClaimMerchantId(request.auth.token.merchantId);
+    assertMutableRole(role);
+
+    const merchantId = (request.data.merchantId ?? "").trim();
+    if (merchantId.length === 0) {
+      throw new HttpsError("invalid-argument", "merchantId es requerido.");
+    }
+
+    const inputRows = request.data.duties;
+    if (!Array.isArray(inputRows) || inputRows.length === 0) {
+      throw new HttpsError(
+        "invalid-argument",
+        "duties debe ser un array con al menos una fila."
+      );
+    }
+    if (inputRows.length > 31) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Máximo 31 turnos por operación."
+      );
+    }
+
+    const seenDates = new Set<string>();
+    const normalizedRows = inputRows.map((row, index) => {
+      const dateKey = (row.date ?? "").trim();
+      if (!isValidDateKey(dateKey)) {
+        throw new HttpsError(
+          "invalid-argument",
+          `Fila ${index + 1}: date debe ser YYYY-MM-DD.`
+        );
+      }
+      if (seenDates.has(dateKey)) {
+        throw new HttpsError(
+          "already-exists",
+          `Fila ${index + 1}: fecha duplicada en la misma carga.`
+        );
+      }
+      seenDates.add(dateKey);
+      assertOwnerCanEditPastDate(role, dateKey);
+
+      const startsAtDate = parseIsoDate(row.startsAt, "startsAt");
+      const endsAtDate = parseIsoDate(row.endsAt, "endsAt");
+      if (startsAtDate >= endsAtDate) {
+        throw new HttpsError(
+          "invalid-argument",
+          `Fila ${index + 1}: hora fin debe ser posterior a inicio.`
+        );
+      }
+      const startsAtDateKey = formatDateInArgentina(startsAtDate);
+      if (startsAtDateKey !== dateKey) {
+        throw new HttpsError(
+          "invalid-argument",
+          `Fila ${index + 1}: date debe coincidir con el día operativo de startsAt (UTC-3).`
+        );
+      }
+      const requestedStatus = normalizeDutyStatus(row.status);
+      const status: DutyStatus = requestedStatus === "cancelled"
+        ? "cancelled"
+        : "scheduled";
+
+      return {
+        date: dateKey,
+        startsAtDate,
+        endsAtDate,
+        startsAtTs: Timestamp.fromDate(startsAtDate),
+        endsAtTs: Timestamp.fromDate(endsAtDate),
+        status,
+        notes: normalizeNote(row.notes),
+      };
+    }).sort((a, b) => a.date.localeCompare(b.date));
+
+    const minDate = normalizedRows[0]?.date ?? "";
+    const maxDate = normalizedRows[normalizedRows.length - 1]?.date ?? "";
+    const fromDate = addDaysToDateKey(minDate, -1);
+    const toDate = addDaysToDateKey(maxDate, 1);
+
+    let zoneId = "";
+    let createdRows = 0;
+    let updatedRows = 0;
+    let unchangedRows = 0;
+
+    await db().runTransaction(async (tx) => {
+      const merchantContext = await assertMerchantAccessAndGetContext(
+        merchantId,
+        uid,
+        role,
+        claimMerchantId,
+        tx
+      );
+      zoneId = merchantContext.zoneId;
+
+      const existingSnap = await tx.get(
+        db()
+          .collection("pharmacy_duties")
+          .where("merchantId", "==", merchantId)
+          .where("date", ">=", fromDate)
+          .where("date", "<=", toDate)
+      );
+
+      const existingByDate = new Map<string, Array<{ id: string; data: PharmacyDutyDoc }>>();
+      const existingIntervals: DutyInterval[] = [];
+      for (const doc of existingSnap.docs) {
+        const data = doc.data() as PharmacyDutyDoc;
+        const current = existingByDate.get(data.date) ?? [];
+        current.push({ id: doc.id, data });
+        existingByDate.set(data.date, current);
+        const status = normalizeDutyStatus(data.status);
+        if (status === "cancelled") continue;
+        const interval = toDutyInterval(doc.id, data);
+        if (interval) existingIntervals.push(interval);
+      }
+
+      const pendingIntervals: DutyInterval[] = [];
+
+      for (const row of normalizedRows) {
+        const sameDate = existingByDate.get(row.date) ?? [];
+        if (sameDate.length > 1) {
+          throw new HttpsError(
+            "failed-precondition",
+            `Hay más de un turno existente para ${row.date}. Resolvelo antes de carga masiva.`
+          );
+        }
+        const existingForDate = sameDate[0];
+        const excludedDutyId = existingForDate?.id;
+
+        for (const interval of existingIntervals) {
+          if (excludedDutyId && interval.dutyId === excludedDutyId) continue;
+          if (!areRangesOverlapping(
+            row.startsAtDate,
+            row.endsAtDate,
+            interval.startsAt,
+            interval.endsAt
+          )) {
+            continue;
+          }
+          throw buildConflictError({
+            dutyId: interval.dutyId,
+            startsAtMillis: interval.startsAt.getTime(),
+            endsAtMillis: interval.endsAt.getTime(),
+            date: interval.date,
+          });
+        }
+
+        for (const interval of pendingIntervals) {
+          if (!areRangesOverlapping(
+            row.startsAtDate,
+            row.endsAtDate,
+            interval.startsAt,
+            interval.endsAt
+          )) {
+            continue;
+          }
+          throw buildConflictError({
+            dutyId: interval.dutyId,
+            startsAtMillis: interval.startsAt.getTime(),
+            endsAtMillis: interval.endsAt.getTime(),
+            date: interval.date,
+          });
+        }
+
+        const previous = existingForDate?.data;
+        const previousStartsAt = previous ? toDutyDate(previous.startsAt) : null;
+        const previousEndsAt = previous ? toDutyDate(previous.endsAt) : null;
+        const previousStatus = previous
+          ? normalizeDutyStatus(previous.status)
+          : null;
+        const previousNotes = previous ? normalizeNote(previous.notes) : null;
+        const isNoopUpdate = previous != null &&
+          previousStartsAt != null &&
+          previousEndsAt != null &&
+          previousStatus === row.status &&
+          previousStartsAt.getTime() === row.startsAtDate.getTime() &&
+          previousEndsAt.getTime() === row.endsAtDate.getTime() &&
+          previousNotes === row.notes;
+        if (isNoopUpdate) {
+          unchangedRows += 1;
+          pendingIntervals.push({
+            dutyId: existingForDate.id,
+            date: row.date,
+            startsAt: row.startsAtDate,
+            endsAt: row.endsAtDate,
+          });
+          continue;
+        }
+
+        const confirmationStatus: DutyConfirmationStatus =
+          previous?.confirmationStatus === "confirmed" ||
+            previous?.confirmationStatus === "overdue" ||
+            previous?.confirmationStatus === "incident_reported" ||
+            previous?.confirmationStatus === "replaced"
+            ? previous.confirmationStatus
+            : "pending";
+        const incidentOpen = previous?.incidentOpen === true;
+        const derived = applyDerivedDutyState({
+          status: row.status,
+          confirmationStatus,
+          incidentOpen,
+        });
+
+        const payload: Record<string, unknown> = {
+          merchantId,
+          originMerchantId: previous?.originMerchantId ?? merchantId,
+          zoneId: merchantContext.zoneId,
+          date: row.date,
+          startsAt: row.startsAtTs,
+          endsAt: row.endsAtTs,
+          status: row.status,
+          confirmationStatus,
+          verificationStatus: previous?.verificationStatus ??
+            (role === "owner" ? "claimed" : "validated"),
+          sourceType: previous?.sourceType ??
+            (role === "owner" ? "owner_created" : "admin_created"),
+          notes: row.notes,
+          incidentOpen,
+          incidentId: previous?.incidentId ?? null,
+          replacementRoundOpen: previous?.replacementRoundOpen ?? false,
+          replacementMerchantId: previous?.replacementMerchantId ?? null,
+          replacementAcceptedAt: previous?.replacementAcceptedAt ?? null,
+          confidenceLevel: derived.confidenceLevel,
+          publicStatusLabel: derived.publicStatusLabel,
+          lastStatusChangedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedBy: uid,
+        };
+
+        if (!previous) {
+          const ref = db().collection("pharmacy_duties").doc();
+          tx.set(ref, {
+            ...payload,
+            createdAt: FieldValue.serverTimestamp(),
+            createdBy: uid,
+          });
+          createdRows += 1;
+          pendingIntervals.push({
+            dutyId: ref.id,
+            date: row.date,
+            startsAt: row.startsAtDate,
+            endsAt: row.endsAtDate,
+          });
+        } else {
+          const ref = db().doc(`pharmacy_duties/${existingForDate.id}`);
+          tx.update(ref, payload);
+          updatedRows += 1;
+          pendingIntervals.push({
+            dutyId: existingForDate.id,
+            date: row.date,
+            startsAt: row.startsAtDate,
+            endsAt: row.endsAtDate,
+          });
+        }
+      }
+    });
+
+    logStructured("pharmacy_duty_batch_upserted", {
+      actorUserId: uid,
+      actorMerchantId: merchantId,
+      zoneId,
+      totalRows: normalizedRows.length,
+      createdRows,
+      updatedRows,
+      unchangedRows,
+      correlationId,
+    });
+
+    return {
+      merchantId,
+      zoneId,
+      totalRows: normalizedRows.length,
+      acceptedRows: normalizedRows.length,
+      createdRows,
+      updatedRows,
+      unchangedRows,
+      updatedAtMillis: Date.now(),
     };
   }
 );

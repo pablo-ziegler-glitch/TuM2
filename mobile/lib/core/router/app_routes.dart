@@ -41,6 +41,8 @@ abstract class AppRoutes {
   static const ownerSignals = '/owner/signals';
   static const ownerPharmacyDuties = '/owner/pharmacy-duties';
   static const ownerDuties = '/owner/duties';
+  static const ownerPharmacyDutyNew = '/owner/pharmacy-duties/new';
+  static const ownerPharmacyDutyEdit = '/owner/pharmacy-duties/:dutyId/edit';
   static const ownerPharmacyDutyUpcoming = '/owner/pharmacy-duty/upcoming';
   static const ownerPharmacyDutyIncidentReport =
       '/owner/pharmacy-duty/:dutyId/report-incident';
@@ -85,6 +87,14 @@ abstract class AppRoutes {
 
   static String ownerPharmacyDutyIncidentReportPath(String dutyId) =>
       '/owner/pharmacy-duty/$dutyId/report-incident';
+
+  static String ownerPharmacyDutyEditPath(String dutyId) =>
+      '/owner/pharmacy-duties/$dutyId/edit';
+
+  static String ownerPharmacyDutyNewPath({String? date}) {
+    if (date == null || date.isEmpty) return ownerPharmacyDutyNew;
+    return '$ownerPharmacyDutyNew?date=$date';
+  }
 
   static String ownerPharmacyDutySelectCandidatesPath(String dutyId) =>
       '/owner/pharmacy-duty/$dutyId/select-candidates';

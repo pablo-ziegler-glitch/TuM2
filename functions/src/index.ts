@@ -43,6 +43,7 @@ export { onboardingOwnerSubmit } from "./callables/onboardingOwnerSubmit";
 export { checkMerchantDuplicates } from "./callables/checkMerchantDuplicates";
 export {
   upsertPharmacyDuty,
+  upsertPharmacyDutiesBatch,
   changePharmacyDutyStatus,
   confirmPharmacyDuty,
   reportPharmacyDutyIncident,

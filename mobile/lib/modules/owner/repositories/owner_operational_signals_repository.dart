@@ -44,7 +44,13 @@ class FirestoreOwnerOperationalSignalsDataSource
     if (!snapshot.exists) return null;
     final data = snapshot.data() ?? const <String, dynamic>{};
     final ownerUserId = (data['ownerUserId'] as String?)?.trim();
-    if (ownerUserId == null || ownerUserId.isEmpty) return null;
+    final updatedByUid = (data['updatedByUid'] as String?)?.trim();
+    // Mantener parseo aun en docs de origen scheduler sin ownerUserId.
+    final resolvedOwnerUserId = ownerUserId != null && ownerUserId.isNotEmpty
+        ? ownerUserId
+        : (updatedByUid != null && updatedByUid.isNotEmpty
+            ? updatedByUid
+            : '__system__');
 
     DateTime? readDate(dynamic value) {
       if (value is Timestamp) return value.toDate();
@@ -68,7 +74,7 @@ class FirestoreOwnerOperationalSignalsDataSource
 
     return OwnerOperationalSignal(
       merchantId: merchantId,
-      ownerUserId: ownerUserId,
+      ownerUserId: resolvedOwnerUserId,
       signalType: effectiveType,
       isActive: effectiveType == OperationalSignalType.none ? false : isActive,
       message: (data['message'] as String?)?.trim(),

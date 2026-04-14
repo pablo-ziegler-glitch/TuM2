@@ -7,7 +7,8 @@ const db = () => getFirestore();
 export interface SyncMerchantPublicProjectionInput {
   merchantId: string;
   merchant?: MerchantDoc;
-  signals?: OperationalSignals;
+  // `undefined` => no se resolvió aún; `null` => resuelto y ausente.
+  signals?: OperationalSignals | null;
 }
 
 export interface SyncMerchantPublicProjectionResult {
@@ -74,12 +75,12 @@ export async function syncMerchantPublicProjection(
   }
 
   let signals = input.signals;
-  if (!signals) {
+  if (signals === undefined) {
     const signalsSnap = await db().doc(`merchant_operational_signals/${merchantId}`).get();
-    signals = signalsSnap.exists ? (signalsSnap.data() as OperationalSignals) : undefined;
+    signals = signalsSnap.exists ? (signalsSnap.data() as OperationalSignals) : null;
   }
 
-  const projection = computeMerchantPublicProjection(merchant, signals);
+  const projection = computeMerchantPublicProjection(merchant, signals ?? undefined);
   await db()
     .doc(`merchant_public/${merchantId}`)
     .set(

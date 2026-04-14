@@ -85,11 +85,14 @@ export const onMerchantWriteSyncPublic = onDocumentWritten(
 
     const signals = signalsSnap.exists
       ? (signalsSnap.data() as OperationalSignals)
-      : undefined;
+      : null;
 
-    const projection = computeMerchantPublicProjection(merchant, signals);
+    const projection = computeMerchantPublicProjection(merchant, signals ?? undefined);
     if (beforeMerchant) {
-      const beforeProjection = computeMerchantPublicProjection(beforeMerchant, signals);
+      const beforeProjection = computeMerchantPublicProjection(
+        beforeMerchant,
+        signals ?? undefined
+      );
       if (projectionSignature(beforeProjection) === projectionSignature(projection)) {
         return;
       }

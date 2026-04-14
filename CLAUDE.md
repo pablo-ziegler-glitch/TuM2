@@ -243,9 +243,9 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 14: Legal / compliance
 - [0100] **Redactar política de privacidad** — P0 — `Legal, Seguridad, Lanzamiento`
 - [0101] **Redactar términos y condiciones** — P0 — `Legal, Lanzamiento`
-- [0102] **Definir disclaimer para información operativa y farmacias** — P0 — `Legal, Operaciones, Lanzamiento`
-- [0103] **Definir consentimiento y permisos de ubicación** — P1 — `Legal, UX/UI, Mobile, Lanzamiento`
-- [0104] **Definir política básica de moderación y reportes** — P0 — `Legal, Admin, Seguridad, Lanzamiento`
+- [0102] **Definir consentimiento y tratamiento de evidencia documental (claims)** — P0 — `Legal, Seguridad, Lanzamiento`
+- [0103] **Definir derechos de rectificación/eliminación/revisión de datos de claim** — P0 — `Legal, Seguridad, Lanzamiento`
+- [0104] **Definir política de retención, acceso interno y resguardo de datos sensibles** — P0 — `Legal, Admin, Seguridad, Lanzamiento`
 
 ### ÉPICA 15: Growth / comunidad
 - [0105] **Diseñar sistema de propuestas y votos usable** — P1 — `Growth, Producto, MVP`
@@ -281,6 +281,17 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - PR #59: incidente → candidatas por `zoneId` + distancia + `limit` → ronda abierta con requests paralelos y cierre por primera aceptación.
   - Costo: scans programados incrementales (`limit` fijo) para recordatorios/expiraciones, sin listeners globales.
 
+### ÉPICA 18: Reclamo de titularidad de comercio
+- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP`
+- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP`
+- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP`
+- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP`
+- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP`
+- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP`
+- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP`
+- [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
+- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP`
+
 ---
 
 ## Orden real de ejecución recomendado
@@ -312,15 +323,26 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0082 / 0083 / 0087 analytics base
 - TuM2-0090 / 0091 / 0092 QA y seguridad operativa
 
-### Fase C — Lanzamiento controlado
+### Fase C — Claims de titularidad (MVP inmediato)
+- TuM2-0125 épica madre
+- TuM2-0126 flujo de claim
+- TuM2-0127 validación automática inicial
+- TuM2-0128 revisión manual en Admin
+- TuM2-0129 evidencia por categoría
+- TuM2-0130 seguridad de datos sensibles
+- TuM2-0131 integración con OWNER / owner_pending
+- Actualización obligatoria: TuM2-0004, 0053, 0054, 0064
+- Actualización legal obligatoria: TuM2-0100, 0101, 0102, 0103, 0104
+
+### Fase D — Lanzamiento controlado
 - TuM2-0094 / 0095 piloto y rubros
 - TuM2-0097 material para farmacias
-- TuM2-0100 / 0101 / 0102 / 0104 legal mínimo
+- TuM2-0100 / 0101 / 0102 / 0103 / 0104 legal mínimo
 - TuM2-0089 / 0093 observabilidad
 - TuM2-0098 / 0099 beta y metadata
 - TuM2-0051 CI/CD mínimo
 
-### Fase D — Expansión MVP+
+### Fase E — Expansión MVP+
 - TuM2-0029 / 0032 / 0034 / 0041
 - TuM2-0122 ✅ (completado adelantado)
 - TuM2-0055 / 0059 / 0062 / 0063 / 0069 (TuM2-0057 ✅ completado adelantado)
@@ -328,6 +350,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0077 a 0081
 - TuM2-0084 / 0085 / 0086
 - TuM2-0105 / 0106 / 0107
+- TuM2-0132 verificación de teléfono (fase 2)
+- TuM2-0133 automatización avanzada de disputas (si aplica)
 
 ---
 
@@ -346,11 +370,12 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0030, 0031, 0033, 0035, 0036, 0037, 0038, 0039, 0040
 - TuM2-0049, 0053, 0054, 0056, 0058, 0060, 0061
 - TuM2-0064, 0065, 0066, 0067, 0068
+- TuM2-0125, 0126, 0127, 0128, 0129, 0130, 0131, 0133
 - TuM2-0072, 0074, 0075
 - TuM2-0082, 0083, 0087
 - TuM2-0090, 0091, 0092
 - TuM2-0094, 0095, 0097
-- TuM2-0100, 0101, 0102, 0104
+- TuM2-0100, 0101, 0102, 0103, 0104
 - TuM2-0077 ✅, TuM2-0078, 0079, 0080, 0081, TuM2-0122 ✅, TuM2-0123 ✅, TuM2-0124 ✅
 
 ---
@@ -367,8 +392,8 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - TuM2-0082 — Definir eventos analytics
 - TuM2-0094 — Definir piloto geográfico
 - TuM2-0095 — Definir rubros iniciales de salida
-- TuM2-0102 — Disclaimer operativo y farmacias
-- TuM2-0104 — Política básica de moderación
+- TuM2-0102 — Consentimiento de evidencia documental para claims
+- TuM2-0104 — Retención y acceso interno de datos sensibles
 - TuM2-0099 — Metadata de stores y canales
 
 ---
@@ -379,17 +404,17 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Backend:** TuM2-0042, 0043, 0044, 0045, 0046, 0048, 0049, 0050, 0123 ✅, 0124 ✅
 
-**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅
+**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅, 0126, 0131
 
 **Web:** TuM2-0070, 0071, 0072, 0074, 0075
 
-**Admin / Web portal:** TuM2-0077 ✅, TuM2-0122 ✅, TuM2-0123 ✅, TuM2-0078, 0079, 0080, 0081
+**Admin / Web portal:** TuM2-0077 ✅, TuM2-0122 ✅, TuM2-0123 ✅, TuM2-0078, 0079, 0080, 0081, 0128, 0130, 0133
 
-**Analytics / QA / Seguridad:** TuM2-0082, 0083, 0087, 0089, 0090, 0091, 0092
+**Analytics / QA / Seguridad:** TuM2-0082, 0083, 0087, 0089, 0090, 0091, 0092, 0127, 0130
 
 **Lanzamiento:** TuM2-0094, 0095, 0097, 0098, 0099
 
-**Legal:** TuM2-0100, 0101, 0102, 0104
+**Legal:** TuM2-0100, 0101, 0102, 0103, 0104, 0125
 
 ---
 
@@ -398,6 +423,30 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 **Claramente Post-MVP:** TuM2-0026, 0108, 0109, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117, 0118, 0119, 0120
 
 **MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
+
+---
+
+## Impacto cruzado: dominio de claim de titularidad (2026-04-14)
+
+Se incorpora la épica TuM2-0125 y tarjetas hijas 0126–0133 como backlog activo de MVP.
+
+Actualizaciones obligatorias sincronizadas por impacto:
+- TuM2-0004 — Role / Segment Architecture
+- TuM2-0054 — Auth completa
+- TuM2-0053 — Shell mobile
+- TuM2-0064 — Módulo OWNER
+- TuM2-0081 — Revisión/edición de perfil vinculada a estado de claim
+- TuM2-0100 a TuM2-0104 — Legal y consentimientos del flujo claim
+
+Reglas canónicas transversales del dominio claim:
+- El email del claim es siempre el email autenticado del usuario.
+- Teléfono en MVP: opcional y sin verificación.
+- Verificación de teléfono: fuera de MVP (TuM2-0132).
+- Todo claim pasa por validación automática antes de revisión humana.
+- Casos dudosos/conflictivos pasan a revisión manual en Admin.
+- Datos sensibles en Admin: masking por defecto, reveal temporal y auditoría.
+- Si un dato requiere revisión humana, debe existir cifrado reversible con control de acceso.
+- Privacidad/Términos/consentimientos deben cubrir explícitamente el flujo de claims.
 
 ---
 

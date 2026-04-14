@@ -83,6 +83,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0058]** Implementar ficha de comercio ✅ | Mobile app — DETAIL-01 implementado con navegación real desde search/home/deep links |
 | **[0060]** Implementar vista Abierto ahora ✅ | Mobile app — HOME-02 implementado con filtros por rubro MVP y navegación al mapa |
 | **[0066]** Implementar carga de horarios ✅ | Mobile app — OWNER-06 implementado con UI Stitch completa, validaciones, excepciones/cierres, persistencia en subcolecciones, triggers backend de recompute, feature flag Remote Config y analytics de módulo |
+| **[0067]** Implementar carga de señales operativas ✅ | Mobile app / Backend — OWNER-08 migrado a señal operativa manual (`vacation`, `temporary_closure`, `delay`) con mensaje opcional (80), persistencia en `merchant_operational_signals`, precedencia server-side (`manual override > horario`) y proyección pública sincronizada por trigger con no-op write avoidance |
 | **[0068]** Implementar carga de turnos farmacia ✅ | Mobile app / Backend — OWNER-09/10/11 implementado con calendario mensual, alta/edición/borrado, publicación batch costo-optimizada, validaciones server-side y proyección pública vía Cloud Functions |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
@@ -188,10 +189,10 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` ✅
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
-- [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP`
+- [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `IN_PROGRESS`
 - [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP`
 - [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` ✅
-- [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP`
+- [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP` ✅
 - [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP` ✅
 - [0069] **Implementar módulo de propuestas y votos** — P1 — `Mobile, Growth, MVP`
 
@@ -423,6 +424,9 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - [0066] Implementadas excepciones por fecha y cierres temporales por rango con alta/edición/eliminación.
 - [0066] Integración Firestore sobre `schedule_config/weekly`, `schedule_exceptions` y `schedule_exceptions_ranges`, con reglas y triggers backend para recompute de proyección pública.
 - [0066] Integrado feature flag `owner_schedule_editor_enabled` vía Firebase Remote Config + eventos analytics `owner_schedule_*` para seguimiento de adopción y errores.
+- [0067] OWNER-08 implementado con flujo de señal manual activa/inactiva (sin listeners permanentes), tipos MVP (`vacation`, `temporary_closure`, `delay`), validación de mensaje (80 chars) y desactivación explícita.
+- [0067] Backend unificado en trigger `merchant_operational_signals -> merchant_public` con función canónica de precedencia: `vacation/temporary_closure` fuerzan cerrado, `delay` es informativa y preserva `isOpenNow` automático.
+- [0067] Reglas Firestore endurecidas: `merchant_public` client write deny, `merchant_operational_signals` restringido a owner/admin con validaciones de enum/tipos/ownership/path consistency y bloqueo de campos derivados en writes owner.
 - [0123] Límites de catálogo cerrados (PR #58, 2026-04-09): configuración global/categoría/override en `admin_configs/catalog_limits`, alta de producto vía callable transaccional y bloqueo duro por cupo.
 - [0123] UI OWNER/ADMIN integrada con capacidad (`used/limit/source`), eventos analytics de warning/bloqueo y controles de costo (`limit` en búsquedas admin + cache TTL de config).
 - [0124] Mitigación de guardias cerrada (PR #59, 2026-04-09): confirmación de guardia, reporte de incidente, selección de candidatas por zona/distancia y ronda de reasignación con primera aceptación ganadora.

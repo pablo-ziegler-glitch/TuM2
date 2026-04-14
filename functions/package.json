@@ -3,7 +3,9 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
-    "test": "npm run build && node --test lib/admin/__tests__/backfillKeywords.test.js lib/lib/__tests__/projection.test.js lib/lib/__tests__/pharmacyDuties.test.js lib/lib/__tests__/pharmacyDutyMitigation.test.js lib/lib/__tests__/catalogLimits.test.js",
+    "test": "npm run build && node --test lib/admin/__tests__/backfillKeywords.test.js lib/lib/__tests__/projection.test.js lib/lib/__tests__/operationalSignals.test.js lib/lib/__tests__/pharmacyDuties.test.js lib/lib/__tests__/pharmacyDutyMitigation.test.js lib/lib/__tests__/catalogLimits.test.js",
+    "test:rules:unit": "node --test lib/rules/__tests__/merchantOperationalSignals.rules.test.js",
+    "test:rules": "npm run build && firebase emulators:exec --config ../firebase.json --project tum2-dev-6283d --only firestore \"npm run test:rules:unit\"",
     "test:integration:pharmacy-duties": "npm run build && node --test lib/callables/__tests__/pharmacyDuties.integration.test.js",
     "cost:guard": "node scripts/firestore_cost_guard.js",
     "finops:summary": "node scripts/finops_summary.js",
@@ -26,9 +28,11 @@
     "geofire-common": "^6.0.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.3",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.57.0",
+    "firebase": "^10.12.5",
     "typescript": "^5.4.0"
   },
   "private": true

@@ -41,6 +41,16 @@ export interface MerchantScheduleDoc {
 }
 
 export interface OperationalSignals {
+  signalType?: "none" | "vacation" | "temporary_closure" | "delay";
+  isActive?: boolean;
+  message?: string | null;
+  forceClosed?: boolean;
+  hasOperationalSignal?: boolean;
+  manualOverrideMode?: "none" | "force_closed" | "informational";
+  operationalStatusLabel?: string | null;
+  ownerUserId?: string;
+  updatedByUid?: string;
+  schemaVersion?: number;
   isOpenNow?: boolean;
   todayScheduleLabel?: string;
   temporaryClosed?: boolean;
@@ -155,6 +165,12 @@ export interface MerchantPublicDoc {
   verificationStatus: VerificationStatus;
   visibilityStatus: VisibilityStatus;
   isOpenNow?: boolean;
+  hasOperationalSignal?: boolean;
+  operationalSignalType?: "none" | "vacation" | "temporary_closure" | "delay";
+  operationalSignalMessage?: string | null;
+  operationalSignalUpdatedAt?: FirebaseFirestore.Timestamp | null;
+  manualOverrideMode?: "none" | "force_closed" | "informational";
+  operationalStatusLabel?: string | null;
   todayScheduleLabel?: string;
   hasPharmacyDutyToday?: boolean;
   isOnDutyToday?: boolean;

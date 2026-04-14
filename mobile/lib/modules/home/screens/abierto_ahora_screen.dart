@@ -359,6 +359,8 @@ class _OpenNowCompactCard extends StatelessWidget {
         ? AppColors.primary500
         : AppColors.secondary500;
     final badgeLabel = merchant.isSpecialOnDutyHealth ? 'DE TURNO' : 'ABIERTO';
+    final operationalLabel = _operationalLabel(merchant);
+    final operationalColor = _operationalColor(merchant);
 
     return InkWell(
       onTap: onTap,
@@ -398,6 +400,28 @@ class _OpenNowCompactCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 3),
+                  if (operationalLabel != null) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: operationalColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        operationalLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: operationalColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
                   Wrap(
                     spacing: 10,
                     runSpacing: 3,
@@ -450,6 +474,34 @@ class _OpenNowCompactCard extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes} min';
     if (diff.inHours < 24) return '${diff.inHours} h';
     return DateFormat('dd/MM').format(refreshAt);
+  }
+
+  String? _operationalLabel(OpenNowMerchant merchant) {
+    if (!merchant.hasOperationalSignal) return null;
+    final custom = merchant.operationalStatusLabel?.trim();
+    if (custom != null && custom.isNotEmpty) return custom;
+    switch (merchant.operationalSignalType) {
+      case 'vacation':
+        return 'Cerrado por vacaciones';
+      case 'temporary_closure':
+        return 'Cerrado temporalmente';
+      case 'delay':
+        return 'Abre más tarde';
+      default:
+        return null;
+    }
+  }
+
+  Color _operationalColor(OpenNowMerchant merchant) {
+    switch (merchant.operationalSignalType) {
+      case 'vacation':
+      case 'temporary_closure':
+        return AppColors.errorFg;
+      case 'delay':
+        return AppColors.tertiary700;
+      default:
+        return AppColors.primary600;
+    }
   }
 }
 

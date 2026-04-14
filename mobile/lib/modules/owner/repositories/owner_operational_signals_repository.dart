@@ -7,15 +7,20 @@ class OwnerOperationalSignalsUnauthorizedException implements Exception {
 }
 
 abstract interface class OwnerOperationalSignalsDataSource {
-  Future<OperationalSignalsSnapshot> fetchSignals({
+  Future<OwnerOperationalSignal?> fetchSignal({
     required String merchantId,
   });
 
-  Future<void> saveSignalsIfOwned({
+  Future<void> upsertSignal({
     required String merchantId,
     required String ownerUserId,
-    required String updatedBy,
-    required Map<OperationalSignalKey, bool> values,
+    required OperationalSignalType signalType,
+    required String? message,
+  });
+
+  Future<void> clearSignal({
+    required String merchantId,
+    required String ownerUserId,
   });
 }
 
@@ -28,61 +33,112 @@ class FirestoreOwnerOperationalSignalsDataSource
   final FirebaseFirestore _firestore;
 
   @override
-  Future<OperationalSignalsSnapshot> fetchSignals({
+  Future<OwnerOperationalSignal?> fetchSignal({
     required String merchantId,
   }) async {
     final snapshot = await _firestore
         .collection('merchant_operational_signals')
-        .doc(
-          merchantId,
-        )
+        .doc(merchantId)
         .get();
 
-    if (!snapshot.exists) return OperationalSignalsSnapshot.defaults;
+    if (!snapshot.exists) return null;
+    final data = snapshot.data() ?? const <String, dynamic>{};
+    final ownerUserId = (data['ownerUserId'] as String?)?.trim();
+    final updatedByUid = (data['updatedByUid'] as String?)?.trim();
+    // Mantener parseo aun en docs de origen scheduler sin ownerUserId.
+    final resolvedOwnerUserId = ownerUserId != null && ownerUserId.isNotEmpty
+        ? ownerUserId
+        : (updatedByUid != null && updatedByUid.isNotEmpty
+            ? updatedByUid
+            : '__system__');
 
-    final data = snapshot.data();
-    final signals = (data?['signals'] as Map<String, dynamic>?);
-    final updatedAtRaw = data?['updatedAt'];
-    DateTime? updatedAt;
-    if (updatedAtRaw is Timestamp) {
-      updatedAt = updatedAtRaw.toDate();
-    } else if (updatedAtRaw is DateTime) {
-      updatedAt = updatedAtRaw;
+    DateTime? readDate(dynamic value) {
+      if (value is Timestamp) return value.toDate();
+      if (value is DateTime) return value;
+      return null;
     }
 
-    return OperationalSignalsSnapshot(
-      signals: OperationalSignals.fromMap(signals),
-      updatedAt: updatedAt,
-      updatedBy: (data?['updatedBy'] as String?)?.trim(),
+    // Compatibilidad de migración desde esquema legacy.
+    final legacyTemporaryClosed = data['temporaryClosed'] == true ||
+        (data['signals'] is Map<String, dynamic> &&
+            (data['signals'] as Map<String, dynamic>)['temporaryClosed'] ==
+                true);
+    final signalType = OperationalSignalTypeX.fromFirestoreValue(
+      data['signalType'] as String?,
+    );
+    final isActive = data['isActive'] == true || legacyTemporaryClosed;
+    final effectiveType =
+        legacyTemporaryClosed && signalType == OperationalSignalType.none
+            ? OperationalSignalType.temporaryClosure
+            : signalType;
+
+    return OwnerOperationalSignal(
+      merchantId: merchantId,
+      ownerUserId: resolvedOwnerUserId,
+      signalType: effectiveType,
+      isActive: effectiveType == OperationalSignalType.none ? false : isActive,
+      message: (data['message'] as String?)?.trim(),
+      forceClosed: data['forceClosed'] == true ||
+          effectiveType == OperationalSignalType.vacation ||
+          effectiveType == OperationalSignalType.temporaryClosure,
+      schemaVersion: (data['schemaVersion'] as num?)?.toInt() ??
+          operationalSignalSchemaVersion,
+      updatedAt: readDate(data['updatedAt']),
+      createdAt: readDate(data['createdAt']),
+      updatedByUid: (data['updatedByUid'] as String?)?.trim(),
+      isOpenNow: data['isOpenNow'] is bool ? data['isOpenNow'] as bool : null,
+      todayScheduleLabel: (data['todayScheduleLabel'] as String?)?.trim(),
+      hasScheduleConfigured: data['hasScheduleConfigured'] is bool
+          ? data['hasScheduleConfigured'] as bool
+          : null,
     );
   }
 
   @override
-  Future<void> saveSignalsIfOwned({
+  Future<void> upsertSignal({
     required String merchantId,
     required String ownerUserId,
-    required String updatedBy,
-    required Map<OperationalSignalKey, bool> values,
+    required OperationalSignalType signalType,
+    required String? message,
   }) async {
-    // Escritura privada en dual-collection:
-    // - Se actualiza solo `merchant_operational_signals/{merchantId}`
-    // - El trigger backend recompone `merchant_public`
-    // - Flutter nunca escribe `merchant_public`
-    // TODO(tum2-0067): agregar test de integración con emulador de Firestore
-    // para validar shape exacto del write y enforcement de Rules por ownership.
-    final payload = <String, dynamic>{
-      for (final entry in values.entries)
-        'signals.${entry.key.fieldName}': entry.value,
-    };
-    final signalsRef =
+    final normalizedMessage = (message ?? '').trim();
+    final signalRef =
         _firestore.collection('merchant_operational_signals').doc(merchantId);
 
-    await signalsRef.set(
+    await signalRef.set(
       {
-        ...payload,
-        'sourceType': ownerOperationalSignalsSourceType,
+        'merchantId': merchantId,
+        'ownerUserId': ownerUserId,
+        'signalType': signalType.firestoreValue,
+        'isActive': signalType != OperationalSignalType.none,
+        'message': normalizedMessage.isEmpty ? null : normalizedMessage,
+        'forceClosed': signalType.forcesClosed,
         'updatedAt': FieldValue.serverTimestamp(),
-        'updatedBy': updatedBy,
+        'updatedByUid': ownerUserId,
+        'schemaVersion': operationalSignalSchemaVersion,
+      },
+      SetOptions(merge: true),
+    );
+  }
+
+  @override
+  Future<void> clearSignal({
+    required String merchantId,
+    required String ownerUserId,
+  }) async {
+    final signalRef =
+        _firestore.collection('merchant_operational_signals').doc(merchantId);
+    await signalRef.set(
+      {
+        'merchantId': merchantId,
+        'ownerUserId': ownerUserId,
+        'signalType': OperationalSignalType.none.firestoreValue,
+        'isActive': false,
+        'message': null,
+        'forceClosed': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedByUid': ownerUserId,
+        'schemaVersion': operationalSignalSchemaVersion,
       },
       SetOptions(merge: true),
     );
@@ -96,12 +152,11 @@ class OwnerOperationalSignalsRepository {
 
   final OwnerOperationalSignalsDataSource _dataSource;
 
-  Future<OperationalSignalsSnapshot> fetchSignals({
+  Future<OwnerOperationalSignal?> fetchSignal({
     required String merchantId,
-    required String ownerUserId,
   }) async {
     try {
-      return _dataSource.fetchSignals(merchantId: merchantId);
+      return _dataSource.fetchSignal(merchantId: merchantId);
     } on FirebaseException catch (error) {
       if (error.code == 'permission-denied') {
         throw const OwnerOperationalSignalsUnauthorizedException();
@@ -110,18 +165,18 @@ class OwnerOperationalSignalsRepository {
     }
   }
 
-  Future<void> updateSignals({
+  Future<void> upsertSignal({
     required String merchantId,
     required String ownerUserId,
-    required Map<OperationalSignalKey, bool> values,
+    required OperationalSignalType signalType,
+    required String? message,
   }) async {
-    if (values.isEmpty) return;
     try {
-      await _dataSource.saveSignalsIfOwned(
+      await _dataSource.upsertSignal(
         merchantId: merchantId,
         ownerUserId: ownerUserId,
-        updatedBy: ownerUserId,
-        values: values,
+        signalType: signalType,
+        message: message,
       );
     } on FirebaseException catch (error) {
       if (error.code == 'permission-denied') {
@@ -131,16 +186,20 @@ class OwnerOperationalSignalsRepository {
     }
   }
 
-  Future<void> updateSignal({
+  Future<void> clearSignal({
     required String merchantId,
     required String ownerUserId,
-    required OperationalSignalKey key,
-    required bool value,
-  }) {
-    return updateSignals(
-      merchantId: merchantId,
-      ownerUserId: ownerUserId,
-      values: {key: value},
-    );
+  }) async {
+    try {
+      await _dataSource.clearSignal(
+        merchantId: merchantId,
+        ownerUserId: ownerUserId,
+      );
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied') {
+        throw const OwnerOperationalSignalsUnauthorizedException();
+      }
+      rethrow;
+    }
   }
 }

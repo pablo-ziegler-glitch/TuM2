@@ -217,24 +217,25 @@ class OperationalSignalsNotifier
         signalType: signalType,
         message: message.isEmpty ? null : message,
       );
-      final refreshed =
-          await _repository.fetchSignal(merchantId: state.merchantId);
-      final resolved = refreshed ??
-          OwnerOperationalSignal.empty(
-            merchantId: state.merchantId,
-            ownerUserId: state.ownerUserId,
-          );
+      final resolved = state.currentSignal.copyWith(
+        signalType: signalType,
+        isActive: true,
+        message: message.isEmpty ? null : message,
+        clearMessage: message.isEmpty,
+        forceClosed: signalType.forcesClosed,
+        schemaVersion: operationalSignalSchemaVersion,
+        updatedAt: DateTime.now(),
+        updatedByUid: state.ownerUserId,
+      );
       state = state.copyWith(
         currentSignal: resolved,
-        draftSignalType: resolved.hasActiveSignal
-            ? resolved.signalType
-            : OperationalSignalType.none,
+        draftSignalType: resolved.signalType,
         draftMessage: resolved.message ?? '',
         isInitialLoading: false,
         isSaving: false,
         saveStatus: OperationalSignalsSaveStatus.success,
         message: 'Señal operativa guardada.',
-        lastSuccessfulSaveAt: DateTime.now(),
+        lastSuccessfulSaveAt: resolved.updatedAt,
       );
       unawaited(OwnerOperationalSignalsAnalytics.logSaved(
         merchantId: state.merchantId,
@@ -273,13 +274,15 @@ class OperationalSignalsNotifier
         merchantId: state.merchantId,
         ownerUserId: state.ownerUserId,
       );
-      final refreshed =
-          await _repository.fetchSignal(merchantId: state.merchantId);
-      final resolved = refreshed ??
-          OwnerOperationalSignal.empty(
-            merchantId: state.merchantId,
-            ownerUserId: state.ownerUserId,
-          );
+      final resolved = state.currentSignal.copyWith(
+        signalType: OperationalSignalType.none,
+        isActive: false,
+        clearMessage: true,
+        forceClosed: false,
+        schemaVersion: operationalSignalSchemaVersion,
+        updatedAt: DateTime.now(),
+        updatedByUid: state.ownerUserId,
+      );
       state = state.copyWith(
         currentSignal: resolved,
         draftSignalType: OperationalSignalType.none,
@@ -288,7 +291,7 @@ class OperationalSignalsNotifier
         isSaving: false,
         saveStatus: OperationalSignalsSaveStatus.success,
         message: 'Señal operativa desactivada.',
-        lastSuccessfulSaveAt: DateTime.now(),
+        lastSuccessfulSaveAt: resolved.updatedAt,
       );
       unawaited(OwnerOperationalSignalsAnalytics.logDisabled(
         merchantId: state.merchantId,

@@ -28,6 +28,10 @@ class MerchantSearchCard extends StatelessWidget {
         _verificationRank(item.verificationStatus) >= 5;
     final imageUrl = _imageForCard(item: item, seed: imageSeed);
     final address = item.address.trim();
+    final operationalBanner = _operationalBannerText(item);
+    final hasOperationalBanner = operationalBanner != null;
+    final operationalBannerText = operationalBanner ?? '';
+    final operationalBannerColor = _operationalBannerColor(item);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -89,6 +93,32 @@ class MerchantSearchCard extends StatelessWidget {
                                 color: AppColors.surface,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (hasOperationalBanner)
+                        Positioned(
+                          left: 10,
+                          bottom: 10,
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 220),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: operationalBannerColor,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              operationalBannerText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodyXs.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
                               ),
                             ),
                           ),
@@ -156,6 +186,16 @@ class MerchantSearchCard extends StatelessWidget {
                               ),
                             ),
                           ],
+                        ),
+                      ],
+                      if (hasOperationalBanner) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Hoy opera con cambios',
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.neutral700,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -254,6 +294,34 @@ class MerchantSearchCard extends StatelessWidget {
     if (meters < 1000) return 'A ${meters.round()}m';
     final km = meters / 1000.0;
     return 'A ${km.toStringAsFixed(1)}km';
+  }
+
+  static String? _operationalBannerText(MerchantSearchItem item) {
+    if (!item.hasOperationalSignal) return null;
+    final custom = item.operationalStatusLabel?.trim();
+    if (custom != null && custom.isNotEmpty) return custom;
+    switch (item.operationalSignalType) {
+      case 'vacation':
+        return 'Cerrado por vacaciones';
+      case 'temporary_closure':
+        return 'Cerrado temporalmente';
+      case 'delay':
+        return 'Abre más tarde';
+      default:
+        return null;
+    }
+  }
+
+  static Color _operationalBannerColor(MerchantSearchItem item) {
+    switch (item.operationalSignalType) {
+      case 'vacation':
+      case 'temporary_closure':
+        return AppColors.errorFg.withValues(alpha: 0.9);
+      case 'delay':
+        return AppColors.tertiary700.withValues(alpha: 0.9);
+      default:
+        return AppColors.primary700.withValues(alpha: 0.9);
+    }
   }
 }
 

@@ -22,13 +22,19 @@ class OwnerOperationalSignalsScreen extends ConsumerStatefulWidget {
 
 class _OwnerOperationalSignalsScreenState
     extends ConsumerState<OwnerOperationalSignalsScreen> {
+  final _messageController = TextEditingController();
   bool _openedLogged = false;
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider).authState;
     final ownerMerchantAsync = ref.watch(ownerMerchantProvider);
-
     final ownerUserId =
         authState is AuthAuthenticated ? authState.user.uid : null;
 
@@ -66,102 +72,66 @@ class _OwnerOperationalSignalsScreenState
           merchantId: merchant.id,
           ownerUserId: ownerUserId,
         );
-
         final state = ref.watch(operationalSignalsNotifierProvider(scope));
         final notifier =
             ref.read(operationalSignalsNotifierProvider(scope).notifier);
         _logOpenedOnce(merchant.id);
 
+        if (_messageController.text != state.draftMessage) {
+          _messageController.text = state.draftMessage;
+          _messageController.selection = TextSelection.collapsed(
+            offset: _messageController.text.length,
+          );
+        }
+
+        final showsConnectionError =
+            state.hasError && (state.message ?? '').contains('conexión');
+        final showsEmptyOperationalState = !state.isInitialLoading &&
+            !state.hasActiveSignal &&
+            state.draftSignalType == OperationalSignalType.none &&
+            !showsConnectionError;
+
         return _SignalsScaffold(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              _MerchantPreviewHeader(
-                merchantName: merchant.name,
-                signals: state.signals,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Señales operativas',
-                      style: AppTextStyles.headingLg.copyWith(
-                        color: AppColors.neutral900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Avisale a tus vecinos cómo estás atendiendo hoy',
-                      style: AppTextStyles.bodySm.copyWith(
-                        color: AppColors.neutral700,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _FeedbackBanner(
-                      message: state.message,
-                      isError: state.hasError,
-                      isSuccess: state.hasSuccess,
-                      onDismiss: notifier.clearFeedback,
-                    ),
-                    if (state.isInitialLoading) ...[
-                      const SizedBox(height: 40),
-                      const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary500,
-                        ),
-                      ),
-                    ] else ...[
-                      _EmergencyCloseCard(
-                        value: state.signals.temporaryClosed,
-                        isSaving: state.savingKeys
-                            .contains(OperationalSignalKey.temporaryClosed),
-                        onChanged: (value) => notifier.updateSignal(
-                          key: OperationalSignalKey.temporaryClosed,
-                          value: value,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      _OpenNowManualCard(
-                        value: state.signals.openNowManualOverride,
-                        isDisabledByTemporaryClosed:
-                            state.signals.temporaryClosed,
-                        isSaving: state.savingKeys.contains(
-                            OperationalSignalKey.openNowManualOverride),
-                        onChanged: (value) => notifier.updateSignal(
-                          key: OperationalSignalKey.openNowManualOverride,
-                          value: value,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      _ServicesCard(
-                        hasDelivery: state.signals.hasDelivery,
-                        acceptsWhatsappOrders:
-                            state.signals.acceptsWhatsappOrders,
-                        isSavingDelivery: state.savingKeys
-                            .contains(OperationalSignalKey.hasDelivery),
-                        isSavingWhatsapp: state.savingKeys.contains(
-                            OperationalSignalKey.acceptsWhatsappOrders),
-                        onDeliveryChanged: (value) => notifier.updateSignal(
-                          key: OperationalSignalKey.hasDelivery,
-                          value: value,
-                        ),
-                        onWhatsappChanged: (value) => notifier.updateSignal(
-                          key: OperationalSignalKey.acceptsWhatsappOrders,
-                          value: value,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      _AutoSaveFooter(
-                        isSaving: state.isSavingAny,
-                        lastSuccessfulSaveAt: state.lastSuccessfulSaveAt,
-                      ),
-                    ],
-                  ],
+          child: RefreshIndicator(
+            onRefresh: notifier.load,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+              children: [
+                _MerchantHeader(
+                  merchantName: merchant.name,
+                  signal: state.currentSignal,
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                if (state.isInitialLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 42),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                          color: AppColors.primary500),
+                    ),
+                  )
+                else if (showsConnectionError)
+                  _ConnectionErrorCard(onRetry: notifier.load)
+                else if (showsEmptyOperationalState)
+                  _EmptySignalsCard(
+                    onCreatePressed: () => notifier
+                        .setDraftSignalType(OperationalSignalType.vacation),
+                  )
+                else
+                  _OperationalFormSection(
+                    state: state,
+                    messageController: _messageController,
+                    onTypeChanged: notifier.setDraftSignalType,
+                    onMessageChanged: notifier.setDraftMessage,
+                    onSave: notifier.saveDraft,
+                    onDeactivate: () => _confirmDeactivate(
+                      context: context,
+                      onConfirm: notifier.clearSignal,
+                    ),
+                    onDismissFeedback: notifier.clearFeedback,
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -174,6 +144,36 @@ class _OwnerOperationalSignalsScreenState
     unawaited(
       OwnerOperationalSignalsAnalytics.logOpened(merchantId: merchantId),
     );
+  }
+
+  Future<void> _confirmDeactivate({
+    required BuildContext context,
+    required Future<void> Function() onConfirm,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('¿Desactivar señal operativa?'),
+          content: const Text(
+            'Tu comercio volverá a mostrarse según el cálculo automático de horarios.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton.tonal(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Desactivar'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed == true) {
+      await onConfirm();
+    }
   }
 }
 
@@ -189,330 +189,135 @@ class _SignalsScaffold extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        scrolledUnderElevation: 0,
-        title: const Text('SignalHub', style: AppTextStyles.headingSm),
+        title: Text(
+          'TuM2 Operaciones',
+          style: AppTextStyles.headingSm.copyWith(
+            color: AppColors.primary600,
+          ),
+        ),
       ),
       body: child,
     );
   }
 }
 
-class _MerchantPreviewHeader extends StatelessWidget {
-  const _MerchantPreviewHeader({
+class _MerchantHeader extends StatelessWidget {
+  const _MerchantHeader({
     required this.merchantName,
-    required this.signals,
+    required this.signal,
   });
 
   final String merchantName;
-  final OperationalSignals signals;
+  final OwnerOperationalSignal signal;
 
   @override
   Widget build(BuildContext context) {
+    final hasSignal = signal.hasActiveSignal;
+    final statusText =
+        hasSignal ? signal.signalType.publicLabel : 'Sin señal activa';
+    final chipColor = signal.forceClosed
+        ? AppColors.errorFg.withValues(alpha: 0.12)
+        : AppColors.primary100;
+
     return Container(
-      color: AppColors.primary500,
-      padding: const EdgeInsets.fromLTRB(16, 22, 16, 18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary600, AppColors.primary500],
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ASÍ LO VEN TUS VECINOS',
-            style: AppTextStyles.labelSm.copyWith(
-              color: Colors.white70,
-              letterSpacing: 1.2,
+            merchantName,
+            style: AppTextStyles.headingMd.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.storefront_outlined,
-                  color: Colors.white,
-                ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: chipColor,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              statusText,
+              style: AppTextStyles.labelSm.copyWith(
+                color: Colors.white,
+                letterSpacing: 0.4,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      merchantName,
-                      style: AppTextStyles.headingMd.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        _PreviewChip(
-                          label: signals.temporaryClosed
-                              ? 'CERRADO TEMPORAL'
-                              : 'ABIERTO AHORA',
-                          color: signals.temporaryClosed
-                              ? AppColors.errorFg.withValues(alpha: 0.25)
-                              : AppColors.secondary500.withValues(alpha: 0.3),
-                        ),
-                        if (signals.hasDelivery)
-                          const _PreviewChip(
-                            label: 'DELIVERY',
-                            color: Colors.white24,
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
+          if ((signal.message ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              signal.message!.trim(),
+              style: AppTextStyles.bodySm.copyWith(color: Colors.white70),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _PreviewChip extends StatelessWidget {
-  const _PreviewChip({
-    required this.label,
-    required this.color,
+class _EmptySignalsCard extends StatelessWidget {
+  const _EmptySignalsCard({
+    required this.onCreatePressed,
   });
 
-  final String label;
-  final Color color;
+  final VoidCallback onCreatePressed;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(18, 22, 18, 20),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSm.copyWith(
-          color: Colors.white,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-}
-
-class _EmergencyCloseCard extends StatelessWidget {
-  const _EmergencyCloseCard({
-    required this.value,
-    required this.isSaving,
-    required this.onChanged,
-  });
-
-  final bool value;
-  final bool isSaving;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.errorBg,
+        color: AppColors.merchantSurfaceLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.errorFg.withValues(alpha: 0.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded, color: AppColors.errorFg),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Cerrado temporalmente',
-                  style: AppTextStyles.labelMd.copyWith(
-                    color: AppColors.errorFg,
-                  ),
-                ),
-              ),
-              _InlineSignalSwitch(
-                value: value,
-                isSaving: isSaving,
-                onChanged: onChanged,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text(
-            'Si activás esto, no aparecerás como abierto en el mapa. Ideal para cierres de emergencia o feriados imprevistos.',
-            style: AppTextStyles.bodySm.copyWith(color: AppColors.errorFg),
+            'Informá situaciones especiales',
+            style:
+                AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Si hoy tu comercio opera distinto a lo habitual, podés avisarlo en segundos.',
+            style: AppTextStyles.bodyMd.copyWith(color: AppColors.neutral700),
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: isSaving ? null : () => onChanged(!value),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.errorFg,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                value
-                    ? 'Desactivar cierre temporal'
-                    : 'Activar cierre temporal',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OpenNowManualCard extends StatelessWidget {
-  const _OpenNowManualCard({
-    required this.value,
-    required this.isDisabledByTemporaryClosed,
-    required this.isSaving,
-    required this.onChanged,
-  });
-
-  final bool value;
-  final bool isDisabledByTemporaryClosed;
-  final bool isSaving;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.neutral100),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.storefront_rounded, color: AppColors.primary500),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  '¿Estás abierto ahora?',
-                  style: AppTextStyles.labelMd,
-                ),
-              ),
-              _InlineSignalSwitch(
-                value: value,
-                isSaving: isSaving,
-                isDisabled: isDisabledByTemporaryClosed,
-                onChanged: onChanged,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Esto reemplaza temporalmente tu horario configurado. Los vecinos verán que estás atendiendo aunque sea fuera de hora.',
-            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
-          ),
-          if (value) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primary50,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'ESTADO: ABIERTO AHORA MANUAL',
-                style: AppTextStyles.labelSm.copyWith(
-                  color: AppColors.primary600,
-                  letterSpacing: 0.4,
-                ),
-              ),
-            ),
-          ],
-          if (isDisabledByTemporaryClosed) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Desactivá "Cerrado temporalmente" para habilitar esta opción.',
-              style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ServicesCard extends StatelessWidget {
-  const _ServicesCard({
-    required this.hasDelivery,
-    required this.acceptsWhatsappOrders,
-    required this.isSavingDelivery,
-    required this.isSavingWhatsapp,
-    required this.onDeliveryChanged,
-    required this.onWhatsappChanged,
-  });
-
-  final bool hasDelivery;
-  final bool acceptsWhatsappOrders;
-  final bool isSavingDelivery;
-  final bool isSavingWhatsapp;
-  final ValueChanged<bool> onDeliveryChanged;
-  final ValueChanged<bool> onWhatsappChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.neutral100),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.settings_suggest, color: AppColors.neutral600),
-              SizedBox(width: 8),
-              Text('Servicios y Pedidos', style: AppTextStyles.labelMd),
-            ],
+          ElevatedButton.icon(
+            onPressed: onCreatePressed,
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Crear señal'),
           ),
           const SizedBox(height: 16),
-          _ServiceRow(
-            title: '¿Hacés envíos?',
-            subtitle:
-                'Mostrar insignia DELIVERY en tu perfil para que todos lo sepan.',
-            value: hasDelivery,
-            isSaving: isSavingDelivery,
-            onChanged: onDeliveryChanged,
+          const _TipTile(
+            icon: Icons.schedule,
+            title: 'Horarios',
+            body: '¿Abrís más tarde o cerrás antes? Avisá el cambio temporal.',
           ),
           const SizedBox(height: 10),
-          const Divider(color: AppColors.neutral100, height: 1),
+          const _TipTile(
+            icon: Icons.delivery_dining,
+            title: 'Logística',
+            body: 'Informá demoras operativas para evitar falsas expectativas.',
+          ),
           const SizedBox(height: 10),
-          _ServiceRow(
-            title: '¿Recibís pedidos por WhatsApp?',
-            subtitle:
-                'Activa el botón de contacto directo para que te escriban con un clic.',
-            value: acceptsWhatsappOrders,
-            isSaving: isSavingWhatsapp,
-            onChanged: onWhatsappChanged,
+          const _TipTile(
+            icon: Icons.new_releases_outlined,
+            title: 'Novedades',
+            body: 'Publicá excepciones reales y mantené información confiable.',
           ),
         ],
       ),
@@ -520,44 +325,208 @@ class _ServicesCard extends StatelessWidget {
   }
 }
 
-class _ServiceRow extends StatelessWidget {
-  const _ServiceRow({
+class _TipTile extends StatelessWidget {
+  const _TipTile({
+    required this.icon,
     required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.isSaving,
-    required this.onChanged,
+    required this.body,
   });
 
+  final IconData icon;
   final String title;
-  final String subtitle;
-  final bool value;
-  final bool isSaving;
-  final ValueChanged<bool> onChanged;
+  final String body;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.primary600),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.labelMd),
+                const SizedBox(height: 2),
+                Text(
+                  body,
+                  style: AppTextStyles.bodyXs
+                      .copyWith(color: AppColors.neutral700),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OperationalFormSection extends StatelessWidget {
+  const _OperationalFormSection({
+    required this.state,
+    required this.messageController,
+    required this.onTypeChanged,
+    required this.onMessageChanged,
+    required this.onSave,
+    required this.onDeactivate,
+    required this.onDismissFeedback,
+  });
+
+  final OperationalSignalsState state;
+  final TextEditingController messageController;
+  final ValueChanged<OperationalSignalType> onTypeChanged;
+  final ValueChanged<String> onMessageChanged;
+  final VoidCallback onSave;
+  final VoidCallback onDeactivate;
+  final VoidCallback onDismissFeedback;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSaving = state.isSaving;
+    final message = state.validationError ?? state.message;
+    final showFeedback =
+        message != null && (state.hasError || state.hasSuccess);
+
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppTextStyles.labelMd),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style:
-                    AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
-              ),
-            ],
+        Text(
+          'PASO 01',
+          style: AppTextStyles.labelSm.copyWith(
+            color: AppColors.primary600,
+            letterSpacing: 1.2,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(width: 10),
-        _InlineSignalSwitch(
-          value: value,
-          isSaving: isSaving,
+        const SizedBox(height: 6),
+        Text(
+          '¿Qué tipo de señal deseas configurar?',
+          style: AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Seleccioná el motivo para ajustar la visibilidad pública.',
+          style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+        ),
+        const SizedBox(height: 12),
+        _SignalTypeCards(
+          selected: state.draftSignalType,
+          onChanged: onTypeChanged,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'PASO 02',
+          style: AppTextStyles.labelSm.copyWith(
+            color: AppColors.primary600,
+            letterSpacing: 1.2,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Mensaje breve para vecinos',
+          style: AppTextStyles.labelMd,
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: messageController,
+          maxLength: operationalSignalMaxMessageLength,
+          enabled: !isSaving,
+          minLines: 3,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            hintText: 'Ej: Hoy abrimos con demora',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: onMessageChanged,
+        ),
+        _PreviewCard(
+          signalType: state.draftSignalType,
+          message: state.draftMessage,
+        ),
+        if (showFeedback) ...[
+          const SizedBox(height: 10),
+          _FeedbackBanner(
+            message: message,
+            isError: state.hasError,
+            isSuccess: state.hasSuccess,
+            onDismiss: onDismissFeedback,
+          ),
+        ],
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: isSaving ? null : onSave,
+            icon: Icon(isSaving ? Icons.hourglass_top : Icons.send),
+            label: Text(isSaving ? 'Guardando...' : 'Guardar señal'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: isSaving || !state.hasActiveSignal ? null : onDeactivate,
+            child: const Text('Desactivar señal'),
+          ),
+        ),
+        if (state.hasSuccess) ...[
+          const SizedBox(height: 10),
+          _SuccessCard(lastSavedAt: state.lastSuccessfulSaveAt),
+        ],
+      ],
+    );
+  }
+}
+
+class _SignalTypeCards extends StatelessWidget {
+  const _SignalTypeCards({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final OperationalSignalType selected;
+  final ValueChanged<OperationalSignalType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _SignalTypeCard(
+          title: 'Vacaciones',
+          subtitle: 'Informa un periodo de descanso prolongado.',
+          icon: Icons.beach_access,
+          tone: AppColors.primary600,
+          type: OperationalSignalType.vacation,
+          selected: selected,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 8),
+        _SignalTypeCard(
+          title: 'Cierre temporal',
+          subtitle: 'Para reformas o incidencia operativa.',
+          icon: Icons.lock_clock,
+          tone: AppColors.errorFg,
+          type: OperationalSignalType.temporaryClosure,
+          selected: selected,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 8),
+        _SignalTypeCard(
+          title: 'Demora',
+          subtitle: 'No cierra comercio; muestra aviso informativo.',
+          icon: Icons.schedule,
+          tone: AppColors.tertiary700,
+          type: OperationalSignalType.delay,
+          selected: selected,
           onChanged: onChanged,
         ),
       ],
@@ -565,113 +534,204 @@ class _ServiceRow extends StatelessWidget {
   }
 }
 
-class _InlineSignalSwitch extends StatelessWidget {
-  const _InlineSignalSwitch({
-    required this.value,
-    required this.isSaving,
-    this.isDisabled = false,
+class _SignalTypeCard extends StatelessWidget {
+  const _SignalTypeCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.tone,
+    required this.type,
+    required this.selected,
     required this.onChanged,
   });
 
-  final bool value;
-  final bool isSaving;
-  final bool isDisabled;
-  final ValueChanged<bool> onChanged;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color tone;
+  final OperationalSignalType type;
+  final OperationalSignalType selected;
+  final ValueChanged<OperationalSignalType> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    if (isSaving) {
-      return const SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
-    }
-
-    return Switch.adaptive(
-      value: value,
-      onChanged: isDisabled ? null : onChanged,
-      activeThumbColor: AppColors.primary500,
-      activeTrackColor: AppColors.primary200,
+    final isSelected = selected == type;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => onChanged(type),
+      child: Ink(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : AppColors.merchantSurfaceLow,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primary600 : AppColors.neutral200,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: tone.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: tone),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTextStyles.labelMd),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.bodyXs
+                        .copyWith(color: AppColors.neutral700),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: AppColors.primary600),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _AutoSaveFooter extends StatelessWidget {
-  const _AutoSaveFooter({
-    required this.isSaving,
-    required this.lastSuccessfulSaveAt,
+class _PreviewCard extends StatelessWidget {
+  const _PreviewCard({
+    required this.signalType,
+    required this.message,
   });
 
-  final bool isSaving;
-  final DateTime? lastSuccessfulSaveAt;
+  final OperationalSignalType signalType;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    final label = isSaving
-        ? 'Guardando cambios...'
-        : _buildLastUpdateLabel(lastSuccessfulSaveAt);
+    final resolvedLabel = switch (signalType) {
+      OperationalSignalType.vacation => 'De vacaciones',
+      OperationalSignalType.temporaryClosure => 'Cerrado temporalmente',
+      OperationalSignalType.delay => 'Abre más tarde',
+      OperationalSignalType.none => 'Sin señal activa',
+    };
+    final previewMessage =
+        message.trim().isEmpty ? resolvedLabel : message.trim();
 
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.successBg,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.secondary200),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration: const BoxDecoration(
-                  color: AppColors.secondary500,
-                  shape: BoxShape.circle,
-                ),
-              ),
+              const Icon(Icons.visibility_outlined,
+                  size: 16, color: AppColors.neutral600),
               const SizedBox(width: 6),
               Text(
-                'DATO ACTUALIZADO',
-                style: AppTextStyles.labelSm.copyWith(
-                  color: AppColors.secondary700,
-                  letterSpacing: 0.4,
-                ),
+                'Vista previa pública',
+                style:
+                    AppTextStyles.labelSm.copyWith(color: AppColors.neutral700),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Los cambios se guardan automáticamente',
-          style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral800),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            previewMessage,
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral900),
+          ),
+        ],
+      ),
     );
   }
+}
 
-  String _buildLastUpdateLabel(DateTime? lastSuccessfulSaveAt) {
-    if (lastSuccessfulSaveAt == null) {
-      return 'Última actualización: pendiente';
-    }
-    final diff = DateTime.now().difference(lastSuccessfulSaveAt);
-    if (diff.inSeconds < 5) {
-      return 'Última actualización: recién ahora';
-    }
-    if (diff.inSeconds < 60) {
-      return 'Última actualización: hace ${diff.inSeconds} segundos';
-    }
-    if (diff.inMinutes < 60) {
-      return 'Última actualización: hace ${diff.inMinutes} minutos';
-    }
-    return 'Última actualización: hace ${diff.inHours} horas';
+class _ConnectionErrorCard extends StatelessWidget {
+  const _ConnectionErrorCard({
+    required this.onRetry,
+  });
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Error de conexión',
+            style:
+                AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No logramos conectar con el servidor. Reintentá para continuar.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar conexión'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuccessCard extends StatelessWidget {
+  const _SuccessCard({
+    required this.lastSavedAt,
+  });
+
+  final DateTime? lastSavedAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final savedLabel = lastSavedAt == null
+        ? 'Actualizada recientemente'
+        : 'Actualizada: ${lastSavedAt!.hour.toString().padLeft(2, '0')}:${lastSavedAt!.minute.toString().padLeft(2, '0')}';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.successBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: AppColors.successFg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Señal actualizada. $savedLabel',
+              style: AppTextStyles.bodySm.copyWith(color: AppColors.successFg),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -699,7 +759,6 @@ class _FeedbackBanner extends StatelessWidget {
     final icon = isError ? Icons.error_outline : Icons.check_circle_outline;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       decoration: BoxDecoration(
         color: bgColor,
@@ -718,6 +777,8 @@ class _FeedbackBanner extends StatelessWidget {
           IconButton(
             onPressed: onDismiss,
             icon: Icon(Icons.close, size: 18, color: fgColor),
+            splashRadius: 18,
+            tooltip: 'Cerrar',
           ),
         ],
       ),
@@ -742,19 +803,17 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const Icon(Icons.error_outline, color: AppColors.errorFg, size: 28),
+            const SizedBox(height: 12),
             Text(
               message,
-              style: AppTextStyles.bodyMd,
               textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMd.copyWith(color: AppColors.neutral800),
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
+              const SizedBox(height: 12),
+              OutlinedButton(
                 onPressed: onRetry,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary500,
-                  foregroundColor: Colors.white,
-                ),
                 child: const Text('Reintentar'),
               ),
             ],

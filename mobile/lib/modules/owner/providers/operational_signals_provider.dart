@@ -41,49 +41,60 @@ class OperationalSignalsState {
   const OperationalSignalsState({
     required this.merchantId,
     required this.ownerUserId,
-    this.signals = OperationalSignals.defaults,
-    this.isInitialLoading = true,
-    this.savingKeys = const <OperationalSignalKey>{},
-    this.saveStatus = OperationalSignalsSaveStatus.idle,
+    required this.currentSignal,
+    required this.draftSignalType,
+    required this.draftMessage,
+    this.validationError,
     this.message,
     this.lastSuccessfulSaveAt,
-    this.lastUpdatedBy,
+    this.isInitialLoading = true,
+    this.isSaving = false,
+    this.saveStatus = OperationalSignalsSaveStatus.idle,
   });
 
   final String merchantId;
   final String ownerUserId;
-  final OperationalSignals signals;
-  final bool isInitialLoading;
-  final Set<OperationalSignalKey> savingKeys;
-  final OperationalSignalsSaveStatus saveStatus;
+  final OwnerOperationalSignal currentSignal;
+  final OperationalSignalType draftSignalType;
+  final String draftMessage;
+  final String? validationError;
   final String? message;
   final DateTime? lastSuccessfulSaveAt;
-  final String? lastUpdatedBy;
+  final bool isInitialLoading;
+  final bool isSaving;
+  final OperationalSignalsSaveStatus saveStatus;
 
-  bool get isSavingAny => savingKeys.isNotEmpty;
   bool get hasError => saveStatus == OperationalSignalsSaveStatus.error;
   bool get hasSuccess => saveStatus == OperationalSignalsSaveStatus.success;
+  bool get hasActiveSignal => currentSignal.hasActiveSignal;
 
   OperationalSignalsState copyWith({
-    OperationalSignals? signals,
-    bool? isInitialLoading,
-    Set<OperationalSignalKey>? savingKeys,
-    OperationalSignalsSaveStatus? saveStatus,
+    OwnerOperationalSignal? currentSignal,
+    OperationalSignalType? draftSignalType,
+    String? draftMessage,
+    String? validationError,
+    bool clearValidationError = false,
     String? message,
     bool clearMessage = false,
     DateTime? lastSuccessfulSaveAt,
-    String? lastUpdatedBy,
+    bool? isInitialLoading,
+    bool? isSaving,
+    OperationalSignalsSaveStatus? saveStatus,
   }) {
     return OperationalSignalsState(
       merchantId: merchantId,
       ownerUserId: ownerUserId,
-      signals: signals ?? this.signals,
-      isInitialLoading: isInitialLoading ?? this.isInitialLoading,
-      savingKeys: savingKeys ?? this.savingKeys,
-      saveStatus: saveStatus ?? this.saveStatus,
+      currentSignal: currentSignal ?? this.currentSignal,
+      draftSignalType: draftSignalType ?? this.draftSignalType,
+      draftMessage: draftMessage ?? this.draftMessage,
+      validationError: clearValidationError
+          ? null
+          : (validationError ?? this.validationError),
       message: clearMessage ? null : (message ?? this.message),
       lastSuccessfulSaveAt: lastSuccessfulSaveAt ?? this.lastSuccessfulSaveAt,
-      lastUpdatedBy: lastUpdatedBy ?? this.lastUpdatedBy,
+      isInitialLoading: isInitialLoading ?? this.isInitialLoading,
+      isSaving: isSaving ?? this.isSaving,
+      saveStatus: saveStatus ?? this.saveStatus,
     );
   }
 }
@@ -98,30 +109,43 @@ class OperationalSignalsNotifier
           OperationalSignalsState(
             merchantId: scope.merchantId,
             ownerUserId: scope.ownerUserId,
+            currentSignal: OwnerOperationalSignal.empty(
+              merchantId: scope.merchantId,
+              ownerUserId: scope.ownerUserId,
+            ),
+            draftSignalType: OperationalSignalType.none,
+            draftMessage: '',
           ),
         ) {
-    unawaited(_load());
+    unawaited(load());
   }
 
   final OwnerOperationalSignalsRepository _repository;
 
-  Future<void> _load() async {
+  Future<void> load() async {
     state = state.copyWith(
       isInitialLoading: true,
       saveStatus: OperationalSignalsSaveStatus.idle,
+      clearValidationError: true,
       clearMessage: true,
     );
 
     try {
-      final snapshot = await _repository.fetchSignals(
-        merchantId: state.merchantId,
-        ownerUserId: state.ownerUserId,
-      );
+      final signal =
+          await _repository.fetchSignal(merchantId: state.merchantId);
+      final resolved = signal ??
+          OwnerOperationalSignal.empty(
+            merchantId: state.merchantId,
+            ownerUserId: state.ownerUserId,
+          );
       state = state.copyWith(
-        signals: snapshot.signals,
+        currentSignal: resolved,
+        draftSignalType: resolved.hasActiveSignal
+            ? resolved.signalType
+            : OperationalSignalType.none,
+        draftMessage: resolved.message ?? '',
         isInitialLoading: false,
-        lastSuccessfulSaveAt: snapshot.updatedAt,
-        lastUpdatedBy: snapshot.updatedBy,
+        lastSuccessfulSaveAt: resolved.updatedAt,
       );
     } on OwnerOperationalSignalsUnauthorizedException {
       state = state.copyWith(
@@ -133,136 +157,182 @@ class OperationalSignalsNotifier
       state = state.copyWith(
         isInitialLoading: false,
         saveStatus: OperationalSignalsSaveStatus.error,
-        message:
-            'No pudimos cargar las señales operativas. Intentá nuevamente.',
+        message: 'No pudimos cargar la señal operativa. Intentá nuevamente.',
       );
     }
   }
 
-  Future<void> updateSignal({
-    required OperationalSignalKey key,
-    required bool value,
-  }) async {
-    if (state.isInitialLoading) return;
-    if (state.savingKeys.contains(key)) return;
+  void setDraftSignalType(OperationalSignalType type) {
+    state = state.copyWith(
+      draftSignalType: type,
+      saveStatus: OperationalSignalsSaveStatus.idle,
+      clearValidationError: true,
+      clearMessage: true,
+    );
+  }
 
-    if (key == OperationalSignalKey.openNowManualOverride &&
-        value &&
-        state.signals.temporaryClosed) {
+  void setDraftMessage(String value) {
+    final trimmed = value.trimLeft();
+    state = state.copyWith(
+      draftMessage: trimmed,
+      saveStatus: OperationalSignalsSaveStatus.idle,
+      clearValidationError: true,
+      clearMessage: true,
+    );
+  }
+
+  Future<void> saveDraft() async {
+    if (state.isSaving || state.isInitialLoading) return;
+
+    final signalType = state.draftSignalType;
+    final message = state.draftMessage.trim();
+
+    if (signalType == OperationalSignalType.none) {
       state = state.copyWith(
         saveStatus: OperationalSignalsSaveStatus.error,
-        message:
-            'No podés marcar "Abierto ahora" mientras esté activo "Cerrado temporalmente".',
+        validationError: 'Elegí una señal operativa para guardar.',
+      );
+      return;
+    }
+    if (message.length > operationalSignalMaxMessageLength) {
+      state = state.copyWith(
+        saveStatus: OperationalSignalsSaveStatus.error,
+        validationError:
+            'El mensaje puede tener hasta $operationalSignalMaxMessageLength caracteres.',
       );
       return;
     }
 
-    final previousSignals = state.signals;
-    var nextSignals = state.signals.withValue(key, value);
-    final payload = <OperationalSignalKey, bool>{key: value};
-    if (key == OperationalSignalKey.temporaryClosed && value) {
-      // Regla de conflicto MVP: si hay cierre temporal, se apaga "abierto ahora".
-      nextSignals = nextSignals.copyWith(openNowManualOverride: false);
-      if (previousSignals.openNowManualOverride) {
-        payload[OperationalSignalKey.openNowManualOverride] = false;
-      }
-    }
-
-    final nextSavingKeys = {...state.savingKeys, key};
-    if (payload.containsKey(OperationalSignalKey.openNowManualOverride)) {
-      nextSavingKeys.add(OperationalSignalKey.openNowManualOverride);
-    }
-
-    // Optimistic update: se refleja en UI antes de persistir en Firestore.
     state = state.copyWith(
-      signals: nextSignals,
-      savingKeys: nextSavingKeys,
+      isSaving: true,
       saveStatus: OperationalSignalsSaveStatus.idle,
+      clearValidationError: true,
       clearMessage: true,
     );
 
     try {
-      await _repository.updateSignals(
+      await _repository.upsertSignal(
         merchantId: state.merchantId,
         ownerUserId: state.ownerUserId,
-        values: payload,
+        signalType: signalType,
+        message: message.isEmpty ? null : message,
       );
-
-      final remainingSavingKeys = {...state.savingKeys}
-        ..removeAll(payload.keys);
-      final hasRemainingPendingWrites = remainingSavingKeys.isNotEmpty;
+      final refreshed =
+          await _repository.fetchSignal(merchantId: state.merchantId);
+      final resolved = refreshed ??
+          OwnerOperationalSignal.empty(
+            merchantId: state.merchantId,
+            ownerUserId: state.ownerUserId,
+          );
       state = state.copyWith(
-        signals: state.signals,
-        savingKeys: remainingSavingKeys,
-        saveStatus: hasRemainingPendingWrites
-            ? OperationalSignalsSaveStatus.idle
-            : OperationalSignalsSaveStatus.success,
-        message: hasRemainingPendingWrites ? null : 'Cambios guardados.',
-        clearMessage: hasRemainingPendingWrites,
+        currentSignal: resolved,
+        draftSignalType: resolved.hasActiveSignal
+            ? resolved.signalType
+            : OperationalSignalType.none,
+        draftMessage: resolved.message ?? '',
+        isInitialLoading: false,
+        isSaving: false,
+        saveStatus: OperationalSignalsSaveStatus.success,
+        message: 'Señal operativa guardada.',
         lastSuccessfulSaveAt: DateTime.now(),
-        lastUpdatedBy: state.ownerUserId,
       );
       unawaited(OwnerOperationalSignalsAnalytics.logSaved(
         merchantId: state.merchantId,
-        payload: _payloadFromSignals(state.signals),
+        payload: OperationalSignalsAnalyticsPayload(
+          signalType: signalType,
+          isActive: true,
+          forceClosed: signalType.forcesClosed,
+        ),
       ));
     } on OwnerOperationalSignalsUnauthorizedException {
-      _rollbackAndTrackFailure(
-        previousSignals: previousSignals,
-        payloadKeys: payload.keys,
+      _setSaveError(
         message: 'Tu sesión no puede editar este comercio.',
-        reason: 'unauthorized',
+        reason: 'permission_denied',
       );
     } catch (_) {
-      _rollbackAndTrackFailure(
-        previousSignals: previousSignals,
-        payloadKeys: payload.keys,
-        message: 'No pudimos guardar el cambio. Revisá tu conexión.',
-        reason: 'save_failed',
+      _setSaveError(
+        message: 'No pudimos guardar la señal. Revisá tu conexión.',
+        reason: 'network_or_backend_error',
       );
     }
   }
 
-  Future<void> retryLoad() => _load();
+  Future<void> clearSignal() async {
+    if (state.isSaving || state.isInitialLoading || !state.hasActiveSignal) {
+      return;
+    }
+    state = state.copyWith(
+      isSaving: true,
+      saveStatus: OperationalSignalsSaveStatus.idle,
+      clearValidationError: true,
+      clearMessage: true,
+    );
+
+    try {
+      await _repository.clearSignal(
+        merchantId: state.merchantId,
+        ownerUserId: state.ownerUserId,
+      );
+      final refreshed =
+          await _repository.fetchSignal(merchantId: state.merchantId);
+      final resolved = refreshed ??
+          OwnerOperationalSignal.empty(
+            merchantId: state.merchantId,
+            ownerUserId: state.ownerUserId,
+          );
+      state = state.copyWith(
+        currentSignal: resolved,
+        draftSignalType: OperationalSignalType.none,
+        draftMessage: '',
+        isInitialLoading: false,
+        isSaving: false,
+        saveStatus: OperationalSignalsSaveStatus.success,
+        message: 'Señal operativa desactivada.',
+        lastSuccessfulSaveAt: DateTime.now(),
+      );
+      unawaited(OwnerOperationalSignalsAnalytics.logDisabled(
+        merchantId: state.merchantId,
+      ));
+    } on OwnerOperationalSignalsUnauthorizedException {
+      _setSaveError(
+        message: 'Tu sesión no puede editar este comercio.',
+        reason: 'permission_denied',
+      );
+    } catch (_) {
+      _setSaveError(
+        message: 'No pudimos desactivar la señal. Revisá tu conexión.',
+        reason: 'network_or_backend_error',
+      );
+    }
+  }
 
   void clearFeedback() {
     state = state.copyWith(
       saveStatus: OperationalSignalsSaveStatus.idle,
       clearMessage: true,
+      clearValidationError: true,
     );
   }
 
-  void _rollbackAndTrackFailure({
-    required OperationalSignals previousSignals,
-    required Iterable<OperationalSignalKey> payloadKeys,
+  void _setSaveError({
     required String message,
     required String reason,
   }) {
-    final remainingSavingKeys = {...state.savingKeys}..removeAll(payloadKeys);
-    // Rollback: si falla la persistencia, restauramos el estado previo.
     state = state.copyWith(
-      signals: previousSignals,
-      savingKeys: remainingSavingKeys,
+      isSaving: false,
       saveStatus: OperationalSignalsSaveStatus.error,
       message: message,
     );
     unawaited(OwnerOperationalSignalsAnalytics.logSaveFailed(
       merchantId: state.merchantId,
       reason: reason,
-      payload: _payloadFromSignals(previousSignals),
+      payload: OperationalSignalsAnalyticsPayload(
+        signalType: state.draftSignalType,
+        isActive: state.draftSignalType != OperationalSignalType.none,
+        forceClosed: state.draftSignalType.forcesClosed,
+      ),
     ));
   }
-}
-
-OperationalSignalsAnalyticsPayload _payloadFromSignals(
-  OperationalSignals signals,
-) {
-  return OperationalSignalsAnalyticsPayload(
-    temporaryClosed: signals.temporaryClosed,
-    hasDelivery: signals.hasDelivery,
-    acceptsWhatsappOrders: signals.acceptsWhatsappOrders,
-    openNowManualOverride: signals.openNowManualOverride,
-  );
 }
 
 final operationalSignalsNotifierProvider = StateNotifierProvider.autoDispose

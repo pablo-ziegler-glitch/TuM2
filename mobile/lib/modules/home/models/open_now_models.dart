@@ -59,6 +59,11 @@ class OpenNowMerchant {
     required this.isOpenNow,
     required this.openStatusLabel,
     required this.todayScheduleLabel,
+    this.hasOperationalSignal = false,
+    this.operationalSignalType = 'none',
+    this.operationalSignalMessage,
+    this.operationalStatusLabel,
+    this.manualOverrideMode = 'none',
     required this.lastDataRefreshAt,
     required this.sortBoost,
     required this.lat,
@@ -78,6 +83,11 @@ class OpenNowMerchant {
   final bool isOpenNow;
   final String openStatusLabel;
   final String todayScheduleLabel;
+  final bool hasOperationalSignal;
+  final String operationalSignalType;
+  final String? operationalSignalMessage;
+  final String? operationalStatusLabel;
+  final String manualOverrideMode;
   final DateTime? lastDataRefreshAt;
   final double sortBoost;
   final double? lat;
@@ -134,6 +144,11 @@ class OpenNowMerchant {
       isOpenNow: isOpenNow,
       openStatusLabel: openStatusLabel,
       todayScheduleLabel: todayScheduleLabel,
+      hasOperationalSignal: hasOperationalSignal,
+      operationalSignalType: operationalSignalType,
+      operationalSignalMessage: operationalSignalMessage,
+      operationalStatusLabel: operationalStatusLabel,
+      manualOverrideMode: manualOverrideMode,
       lastDataRefreshAt: lastDataRefreshAt,
       sortBoost: sortBoost,
       lat: lat,
@@ -176,6 +191,15 @@ class OpenNowMerchant {
       isOpenNow: data['isOpenNow'] == true,
       openStatusLabel: (data['openStatusLabel'] as String?)?.trim() ?? '',
       todayScheduleLabel: (data['todayScheduleLabel'] as String?)?.trim() ?? '',
+      hasOperationalSignal: data['hasOperationalSignal'] == true,
+      operationalSignalType:
+          (data['operationalSignalType'] as String?)?.trim() ?? 'none',
+      operationalSignalMessage:
+          (data['operationalSignalMessage'] as String?)?.trim(),
+      operationalStatusLabel:
+          (data['operationalStatusLabel'] as String?)?.trim(),
+      manualOverrideMode:
+          (data['manualOverrideMode'] as String?)?.trim() ?? 'none',
       lastDataRefreshAt: _asDateTime(data['lastDataRefreshAt']),
       sortBoost: (data['sortBoost'] as num?)?.toDouble() ?? 0,
       lat: _resolveLatitude(data, location),

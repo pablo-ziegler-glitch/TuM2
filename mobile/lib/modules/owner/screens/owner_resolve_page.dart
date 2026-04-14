@@ -82,7 +82,7 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!hasMerchant) {
-        context.go(AppRoutes.onboardingOwner);
+        context.go(AppRoutes.ownerDashboard);
         return;
       }
 

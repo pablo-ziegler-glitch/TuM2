@@ -78,6 +78,16 @@ class PharmacyDutyCommandService {
     });
   }
 
+  Future<Map<String, dynamic>> upsertDutiesBatch({
+    required String merchantId,
+    required List<Map<String, dynamic>> duties,
+  }) {
+    return _call('upsertPharmacyDutiesBatch', {
+      'merchantId': merchantId,
+      'duties': duties,
+    });
+  }
+
   Future<void> confirmPharmacyDuty({
     required String dutyId,
   }) async {

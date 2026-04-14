@@ -83,6 +83,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0058]** Implementar ficha de comercio ✅ | Mobile app — DETAIL-01 implementado con navegación real desde search/home/deep links |
 | **[0060]** Implementar vista Abierto ahora ✅ | Mobile app — HOME-02 implementado con filtros por rubro MVP y navegación al mapa |
 | **[0066]** Implementar carga de horarios ✅ | Mobile app — OWNER-06 implementado con UI Stitch completa, validaciones, excepciones/cierres, persistencia en subcolecciones, triggers backend de recompute, feature flag Remote Config y analytics de módulo |
+| **[0068]** Implementar carga de turnos farmacia ✅ | Mobile app / Backend — OWNER-09/10/11 implementado con calendario mensual, alta/edición/borrado, publicación batch costo-optimizada, validaciones server-side y proyección pública vía Cloud Functions |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
 | **[0123]** Enforce de capacidad de catálogo por comercio ✅ | Backend / Mobile / Admin Web — límites globales/categoría/override en `admin_configs/catalog_limits`, creación de productos vía callable con validación transaccional y hard-block por cupo, telemetría de warning/bloqueo y gestión admin de límites |
@@ -191,7 +192,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP`
 - [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` ✅
 - [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP`
-- [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP`
+- [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP` ✅
 - [0069] **Implementar módulo de propuestas y votos** — P1 — `Mobile, Growth, MVP`
 
 ### ÉPICA 9: Web pública

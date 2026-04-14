@@ -10,6 +10,7 @@ import '../../../core/theme/app_text_styles.dart';
 import '../duties/models/owner_pharmacy_duty.dart';
 import '../duties/repositories/owner_pharmacy_duties_repository.dart';
 import '../providers/owner_providers.dart';
+import 'owner_pharmacy_duty_editor_screen.dart';
 
 final ownerPharmacyDutiesRepositoryProvider =
     Provider<OwnerPharmacyDutiesRepository>((ref) {
@@ -44,6 +45,8 @@ class _OwnerPharmacyDutiesScreenState
   TimeOfDay _startsAt = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay _endsAt = const TimeOfDay(hour: 20, minute: 0);
   OwnerPharmacyDutyStatus _draftStatus = OwnerPharmacyDutyStatus.scheduled;
+  bool _multiSelectMode = false;
+  final Set<String> _selectedBatchDates = <String>{};
 
   @override
   Widget build(BuildContext context) {
@@ -97,34 +100,51 @@ class _OwnerPharmacyDutiesScreenState
               body: Column(
                 children: [
                   if (_feedbackMessage != null) _buildFeedbackBanner(),
+                  if (_showRetrySavePanel()) _buildRetrySaveCard(),
                   Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () => _loadMonth(merchant.id),
-                      child: ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                        children: [
-                          _buildHeroCard(),
-                          const SizedBox(height: 12),
-                          _buildOperationalActionsCard(selectedDuties),
-                          const SizedBox(height: 12),
-                          _buildMonthHeader(merchant.id),
-                          const SizedBox(height: 10),
-                          _buildCalendarCard(),
-                          const SizedBox(height: 14),
-                          _buildLegend(),
-                          if (_lastConflict != null) ...[
-                            const SizedBox(height: 14),
-                            _buildConflictCard(_lastConflict!),
-                          ],
-                          const SizedBox(height: 14),
-                          _buildSelectedDateCard(selectedDuties),
-                          const SizedBox(height: 16),
-                          _buildEditorCard(
-                            merchantId: merchant.id,
-                            selectedDateKey: selectedDateKey,
+                    child: Stack(
+                      children: [
+                        RefreshIndicator(
+                          onRefresh: () => _loadMonth(merchant.id),
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                            children: [
+                              _buildHeroCard(),
+                              const SizedBox(height: 12),
+                              _buildMonthSummaryCard(),
+                              const SizedBox(height: 12),
+                              _buildOperationalActionsCard(selectedDuties),
+                              if (_monthDuties.isEmpty) ...[
+                                const SizedBox(height: 12),
+                                _buildEmptyMonthStateCard(),
+                              ],
+                              const SizedBox(height: 12),
+                              _buildMonthHeader(merchant.id),
+                              const SizedBox(height: 10),
+                              _buildCalendarCard(),
+                              const SizedBox(height: 14),
+                              _buildLegend(),
+                              if (_lastConflict != null) ...[
+                                const SizedBox(height: 14),
+                                _buildConflictCard(_lastConflict!),
+                              ],
+                              const SizedBox(height: 14),
+                              _buildSelectedDateCard(selectedDuties),
+                              const SizedBox(height: 16),
+                              _multiSelectMode
+                                  ? _buildEditorCard(
+                                      merchantId: merchant.id,
+                                      selectedDateKey: selectedDateKey,
+                                    )
+                                  : _buildSingleDutyEntryCard(
+                                      selectedDateKey: selectedDateKey,
+                                      selectedDuties: selectedDuties,
+                                    ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        if (_saving) _buildSavingOverlay(),
+                      ],
                     ),
                   ),
                 ],
@@ -133,6 +153,111 @@ class _OwnerPharmacyDutiesScreenState
           },
         );
       },
+    );
+  }
+
+  bool _showRetrySavePanel() {
+    if (!_feedbackError) return false;
+    final message = (_feedbackMessage ?? '').toLowerCase();
+    return message.contains('revisá tu conexión') ||
+        message.contains('no pudimos guardar');
+  }
+
+  Widget _buildRetrySaveCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.errorBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.errorFg.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'No pudimos guardar el turno',
+            style: AppTextStyles.labelMd.copyWith(color: AppColors.errorFg),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Revisá tu conexión e intentá de nuevo.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.errorFg),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: _saving ? null : _retrySaveForSelectedDate,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary500,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Intentar de nuevo'),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: _saving
+                    ? null
+                    : () => setState(() {
+                          _feedbackMessage = null;
+                        }),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Volver'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSavingOverlay() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Container(
+          color: AppColors.surface.withValues(alpha: 0.72),
+          child: Center(
+            child: Container(
+              width: 260,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.88),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.neutral100),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      color: AppColors.primary500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Guardando turno...',
+                    style: AppTextStyles.headingSm.copyWith(
+                      color: AppColors.neutral900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Esto puede tardar unos segundos.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySm
+                        .copyWith(color: AppColors.neutral700),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -239,6 +364,134 @@ class _OwnerPharmacyDutiesScreenState
     );
   }
 
+  Widget _buildMonthSummaryCard() {
+    final nonCancelled = _monthDuties
+        .where((duty) => duty.status != OwnerPharmacyDutyStatus.cancelled);
+    final coveredDays = nonCancelled.map((duty) => duty.dateKey).toSet().length;
+    final activeCount = nonCancelled.length;
+    final cancelledCount = _monthDuties
+        .where((duty) => duty.status == OwnerPharmacyDutyStatus.cancelled)
+        .length;
+
+    Widget tile({
+      required IconData icon,
+      required String label,
+      required String value,
+      required Color color,
+    }) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.neutral100),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(height: 8),
+              Text(value, style: AppTextStyles.headingSm),
+              Text(
+                label,
+                style:
+                    AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        tile(
+          icon: Icons.calendar_month_outlined,
+          label: 'Turnos del mes',
+          value: '$activeCount',
+          color: AppColors.primary500,
+        ),
+        const SizedBox(width: 10),
+        tile(
+          icon: Icons.health_and_safety_outlined,
+          label: 'Días cubiertos',
+          value: '$coveredDays',
+          color: AppColors.secondary500,
+        ),
+        const SizedBox(width: 10),
+        tile(
+          icon: Icons.cancel_outlined,
+          label: 'Cancelados',
+          value: '$cancelledCount',
+          color: AppColors.warningFg,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyMonthStateCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primary100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.local_pharmacy_outlined,
+                  color: AppColors.primary600,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Todavía no cargaste guardias para este mes.',
+                  style: AppTextStyles.labelMd
+                      .copyWith(color: AppColors.neutral900),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Cargá tu primer turno para aparecer en la vista pública de farmacias de turno.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+          ),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: _saving
+                ? null
+                : () {
+                    setState(() {
+                      _selectedDate = DateTime(
+                        _focusedMonth.year,
+                        _focusedMonth.month,
+                        1,
+                      );
+                    });
+                    _resetEditor();
+                  },
+            icon: const Icon(Icons.add_circle_outline),
+            label: const Text('Agregar primer turno'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOperationalActionsCard(List<OwnerPharmacyDuty> selectedDuties) {
     final selectedDuty =
         selectedDuties.isNotEmpty ? selectedDuties.first : null;
@@ -291,6 +544,50 @@ class _OwnerPharmacyDutiesScreenState
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.neutral50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.neutral100),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _multiSelectMode
+                        ? 'Selección múltiple activa (${_selectedBatchDates.length})'
+                        : 'Carga rápida mensual (múltiples días)',
+                    style: AppTextStyles.bodySm,
+                  ),
+                ),
+                Switch.adaptive(
+                  value: _multiSelectMode,
+                  onChanged: _saving
+                      ? null
+                      : (enabled) {
+                          setState(() {
+                            _multiSelectMode = enabled;
+                            if (!enabled) {
+                              _selectedBatchDates.clear();
+                            }
+                          });
+                        },
+                ),
+              ],
+            ),
+          ),
+          if (_multiSelectMode && _selectedBatchDates.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _saving
+                    ? null
+                    : () => setState(() => _selectedBatchDates.clear()),
+                child: const Text('Limpiar selección'),
+              ),
+            ),
         ],
       ),
     );
@@ -379,20 +676,38 @@ class _OwnerPharmacyDutiesScreenState
               );
               final dayKey = _dateKey(dayDate);
               final selected = DateUtils.isSameDay(dayDate, _selectedDate);
+              final multiSelected = _selectedBatchDates.contains(dayKey);
               final status = statusByDate[dayKey];
 
               return InkWell(
                 borderRadius: BorderRadius.circular(10),
-                onTap: () => setState(() => _selectedDate = dayDate),
+                onTap: () {
+                  setState(() {
+                    _selectedDate = dayDate;
+                    if (_multiSelectMode) {
+                      if (multiSelected) {
+                        _selectedBatchDates.remove(dayKey);
+                      } else {
+                        _selectedBatchDates.add(dayKey);
+                      }
+                    }
+                  });
+                },
                 child: Container(
                   margin: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.primary50 : Colors.transparent,
+                    color: multiSelected
+                        ? AppColors.errorBg
+                        : selected
+                            ? AppColors.primary50
+                            : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: selected
-                          ? AppColors.primary400
-                          : AppColors.neutral100,
+                      color: multiSelected
+                          ? AppColors.errorFg
+                          : selected
+                              ? AppColors.primary400
+                              : AppColors.neutral100,
                     ),
                   ),
                   child: Column(
@@ -474,6 +789,7 @@ class _OwnerPharmacyDutiesScreenState
         item(AppColors.secondary500, 'Programado'),
         item(AppColors.warningFg, 'Incidente / cobertura'),
         item(AppColors.errorFg, 'Activo / reasignado'),
+        if (_multiSelectMode) item(AppColors.errorFg, 'Selección múltiple'),
       ],
     );
   }
@@ -533,7 +849,7 @@ class _OwnerPharmacyDutiesScreenState
                   ),
                   const SizedBox(height: 10),
                   TextButton.icon(
-                    onPressed: _saving ? null : _resetEditor,
+                    onPressed: _saving ? null : _openNewDutyForm,
                     icon: const Icon(Icons.add),
                     label: const Text('Agregar turno'),
                   ),
@@ -541,6 +857,57 @@ class _OwnerPharmacyDutiesScreenState
               ),
             ),
           if (selectedDuties.isNotEmpty) ...selectedDuties.map(_buildDutyItem),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSingleDutyEntryCard({
+    required String selectedDateKey,
+    required List<OwnerPharmacyDuty> selectedDuties,
+  }) {
+    final editingDuty = selectedDuties.isNotEmpty ? selectedDuties.first : null;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.neutral100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            editingDuty == null ? 'Nuevo turno' : 'Editar turno',
+            style: AppTextStyles.headingSm,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Fecha: $selectedDateKey',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _saving
+                  ? null
+                  : editingDuty == null
+                      ? _openNewDutyForm
+                      : () => _openEditDutyForm(editingDuty),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary500,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: Icon(
+                editingDuty == null ? Icons.add : Icons.edit_calendar_outlined,
+              ),
+              label: Text(
+                editingDuty == null ? 'Crear turno' : 'Editar turno',
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -599,7 +966,7 @@ class _OwnerPharmacyDutiesScreenState
             spacing: 8,
             children: [
               TextButton(
-                onPressed: _saving ? null : () => _startEditing(duty),
+                onPressed: _saving ? null : () => _openEditDutyForm(duty),
                 child: const Text('Editar'),
               ),
               if (duty.status == OwnerPharmacyDutyStatus.cancelled)
@@ -614,13 +981,8 @@ class _OwnerPharmacyDutiesScreenState
                 ),
               if (duty.status != OwnerPharmacyDutyStatus.cancelled)
                 TextButton(
-                  onPressed: _saving
-                      ? null
-                      : () => _changeStatus(
-                            duty,
-                            OwnerPharmacyDutyStatus.cancelled,
-                          ),
-                  child: const Text('Cancelar'),
+                  onPressed: _saving ? null : () => _confirmCancelDuty(duty),
+                  child: const Text('Eliminar turno'),
                 ),
             ],
           ),
@@ -634,6 +996,8 @@ class _OwnerPharmacyDutiesScreenState
     required String selectedDateKey,
   }) {
     final isEditing = _editingDutyId != null;
+    final batchCount = _selectedBatchDates.length;
+    final isBatchSave = _multiSelectMode && !isEditing && batchCount > 0;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -645,12 +1009,18 @@ class _OwnerPharmacyDutiesScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isEditing ? 'Editar turno' : 'Agregar turno',
+            isEditing
+                ? 'Editar turno'
+                : isBatchSave
+                    ? 'Carga múltiple de turnos'
+                    : 'Agregar turno',
             style: AppTextStyles.headingSm,
           ),
           const SizedBox(height: 10),
           Text(
-            'Fecha: $selectedDateKey',
+            isBatchSave
+                ? 'Fechas seleccionadas: $batchCount'
+                : 'Fecha: $selectedDateKey',
             style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
           ),
           const SizedBox(height: 12),
@@ -718,15 +1088,33 @@ class _OwnerPharmacyDutiesScreenState
                   ? 'Guardando...'
                   : isEditing
                       ? 'Guardar cambios'
-                      : 'Guardar turno'),
+                      : isBatchSave
+                          ? 'Publicar $batchCount turnos'
+                          : 'Guardar turno'),
             ),
           ),
           if (isEditing)
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _saving ? null : _resetEditor,
-                child: const Text('Cancelar edición'),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: _saving ? null : _resetEditor,
+                    child: const Text('Cancelar edición'),
+                  ),
+                  TextButton.icon(
+                    onPressed: _saving
+                        ? null
+                        : () {
+                            final duty = _findEditingDuty();
+                            if (duty == null) return;
+                            _confirmCancelDuty(duty);
+                          },
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Eliminar turno'),
+                  ),
+                ],
               ),
             ),
         ],
@@ -861,6 +1249,35 @@ class _OwnerPharmacyDutiesScreenState
             'Se superpone con un turno publicado existente: $label',
             style: AppTextStyles.bodySm.copyWith(color: AppColors.errorFg),
           ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _saving
+                    ? null
+                    : () {
+                        setState(() {
+                          _selectedDate = _dateKeyToDate(conflict.date);
+                        });
+                      },
+                icon: const Icon(Icons.edit_calendar_outlined),
+                label: const Text('Editar horario'),
+              ),
+              TextButton.icon(
+                onPressed: _saving
+                    ? null
+                    : () {
+                        setState(() {
+                          _lastConflict = null;
+                        });
+                      },
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Volver al calendario'),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -933,39 +1350,89 @@ class _OwnerPharmacyDutiesScreenState
     required String merchantId,
     required String selectedDateKey,
   }) async {
+    if (_multiSelectMode &&
+        _editingDutyId == null &&
+        _selectedBatchDates.isEmpty) {
+      setState(() {
+        _feedbackError = true;
+        _feedbackMessage = 'Seleccioná al menos un día del calendario.';
+      });
+      return;
+    }
+
     final startMinutes = _startsAt.hour * 60 + _startsAt.minute;
     final endMinutes = _endsAt.hour * 60 + _endsAt.minute;
     final overnight = endMinutes <= startMinutes;
+    final shouldBatchSave = _multiSelectMode &&
+        _editingDutyId == null &&
+        _selectedBatchDates.isNotEmpty;
 
     setState(() => _saving = true);
     try {
       final repository = ref.read(ownerPharmacyDutiesRepositoryProvider);
-      await repository.upsertDuty(
-        merchantId: merchantId,
-        dutyId: _editingDutyId,
-        date: selectedDateKey,
-        startsAtIso: _toIsoUtc3(selectedDateKey, _startsAt, dayOffset: 0),
-        endsAtIso: _toIsoUtc3(
+      if (shouldBatchSave) {
+        final orderedDates = _selectedBatchDates.toList(growable: false)
+          ..sort();
+        final batchRows = orderedDates
+            .map((dateKey) => (
+                  date: dateKey,
+                  startsAtIso: _toIsoUtc3(dateKey, _startsAt, dayOffset: 0),
+                  endsAtIso: _toIsoUtc3(
+                    dateKey,
+                    _endsAt,
+                    dayOffset: overnight ? 1 : 0,
+                  ),
+                  status: _draftStatus,
+                  notes: null,
+                ))
+            .toList(growable: false);
+        final result = await repository.upsertDutiesBatch(
+          merchantId: merchantId,
+          duties: batchRows,
+        );
+        if (!mounted) return;
+        await _loadMonth(merchantId);
+        if (!mounted) return;
+        setState(() {
+          _feedbackError = false;
+          _feedbackMessage =
+              'Turnos procesados: ${result.acceptedRows} (${result.createdRows} nuevos, ${result.updatedRows} actualizados, ${result.unchangedRows} sin cambios).';
+          _lastConflict = null;
+          _selectedBatchDates.clear();
+        });
+        await _showSavedDialog(
+          '${result.acceptedRows} fechas',
+          'Carga mensual completada',
+        );
+      } else {
+        await repository.upsertDuty(
+          merchantId: merchantId,
+          dutyId: _editingDutyId,
+          date: selectedDateKey,
+          startsAtIso: _toIsoUtc3(selectedDateKey, _startsAt, dayOffset: 0),
+          endsAtIso: _toIsoUtc3(
+            selectedDateKey,
+            _endsAt,
+            dayOffset: overnight ? 1 : 0,
+          ),
+          status: _draftStatus,
+          expectedUpdatedAtMillis: _editingExpectedUpdatedAt,
+        );
+        if (!mounted) return;
+        _resetEditor();
+        await _loadMonth(merchantId);
+        if (!mounted) return;
+        setState(() {
+          _feedbackError = false;
+          _feedbackMessage = 'Turno programado correctamente.';
+          _lastConflict = null;
+        });
+        await _showSavedDialog(
           selectedDateKey,
-          _endsAt,
-          dayOffset: overnight ? 1 : 0,
-        ),
-        status: _draftStatus,
-        expectedUpdatedAtMillis: _editingExpectedUpdatedAt,
-      );
+          'Turno guardado',
+        );
+      }
       if (!mounted) return;
-      _resetEditor();
-      await _loadMonth(merchantId);
-      if (!mounted) return;
-      setState(() {
-        _feedbackError = false;
-        _feedbackMessage = 'Turno programado correctamente.';
-        _lastConflict = null;
-      });
-      await _showSavedDialog(
-        selectedDateKey,
-        'Turno guardado',
-      );
     } on OwnerDutyException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -984,6 +1451,39 @@ class _OwnerPharmacyDutiesScreenState
         setState(() => _saving = false);
       }
     }
+  }
+
+  Future<void> _retrySaveForSelectedDate() async {
+    final merchantId =
+        ref.read(ownerMerchantProvider).value?.primaryMerchant?.id;
+    if (merchantId == null) return;
+    await _saveDuty(
+      merchantId: merchantId,
+      selectedDateKey: _dateKey(_selectedDate),
+    );
+  }
+
+  Future<void> _openNewDutyForm() async {
+    final result = await context.push<bool>(
+      AppRoutes.ownerPharmacyDutyNewPath(date: _dateKey(_selectedDate)),
+    );
+    if (result != true) return;
+    final merchantId =
+        ref.read(ownerMerchantProvider).value?.primaryMerchant?.id;
+    if (merchantId == null) return;
+    await _loadMonth(merchantId);
+  }
+
+  Future<void> _openEditDutyForm(OwnerPharmacyDuty duty) async {
+    final result = await context.push<bool>(
+      AppRoutes.ownerPharmacyDutyEditPath(duty.id),
+      extra: OwnerPharmacyDutyEditorExtra(duty: duty),
+    );
+    if (result != true) return;
+    final merchantId =
+        ref.read(ownerMerchantProvider).value?.primaryMerchant?.id;
+    if (merchantId == null) return;
+    await _loadMonth(merchantId);
   }
 
   Future<void> _changeStatus(
@@ -1029,17 +1529,36 @@ class _OwnerPharmacyDutiesScreenState
     }
   }
 
-  void _startEditing(OwnerPharmacyDuty duty) {
-    setState(() {
-      _editingDutyId = duty.id;
-      _editingExpectedUpdatedAt = duty.updatedAt?.millisecondsSinceEpoch;
-      _draftStatus = OwnerPharmacyDutyStatus.scheduled;
-      _startsAt = TimeOfDay.fromDateTime(duty.startsAt.toLocal());
-      _endsAt = TimeOfDay.fromDateTime(duty.endsAt.toLocal());
-      final selected = _dateKeyToDate(duty.dateKey);
-      _selectedDate = selected;
-      _focusedMonth = DateTime(selected.year, selected.month);
-    });
+  Future<void> _confirmCancelDuty(OwnerPharmacyDuty duty) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Eliminar este turno?'),
+        content: const Text('Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.errorFg),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _changeStatus(duty, OwnerPharmacyDutyStatus.cancelled);
+  }
+
+  OwnerPharmacyDuty? _findEditingDuty() {
+    final editingId = _editingDutyId;
+    if (editingId == null || editingId.isEmpty) return null;
+    for (final duty in _monthDuties) {
+      if (duty.id == editingId) return duty;
+    }
+    return null;
   }
 
   void _resetEditor() {
@@ -1153,6 +1672,20 @@ class _OwnerPharmacyDutiesScreenState
                       foregroundColor: Colors.white,
                     ),
                     child: const Text('Volver al calendario'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _resetEditor();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.neutral300),
+                    ),
+                    child: const Text('Cargar otro turno'),
                   ),
                 ),
               ],

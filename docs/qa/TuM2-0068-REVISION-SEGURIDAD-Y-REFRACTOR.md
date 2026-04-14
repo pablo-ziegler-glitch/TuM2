@@ -1,6 +1,6 @@
 # TuM2-0068 — Revisión de seguridad y refactor
 
-Fecha: 2026-04-09  
+Fecha: 2026-04-13  
 Alcance: `pharmacy_duties` (Functions, Rules, Mobile OWNER, documentación)
 
 ## Resumen ejecutivo
@@ -26,7 +26,7 @@ Resultado general:
 
 2. Validaciones sensibles dispersas en cliente.
 - Estado: RESUELTO.
-- Acción: `upsertPharmacyDuty` y `changePharmacyDutyStatus` centralizan ownership, rubro farmacia, conflicto y timestamps server-side.
+- Acción: `upsertPharmacyDutiesBatch` centraliza ownership, rubro farmacia, conflicto y timestamps server-side.
 
 3. Superposición de turnos publicados.
 - Estado: RESUELTO.
@@ -43,6 +43,10 @@ Resultado general:
 6. TOCTOU en resolución de merchant para upsert.
 - Estado: RESUELTO.
 - Acción: lectura de merchant movida dentro de transacción.
+
+7. Writes redundantes en publicación mensual.
+- Estado: RESUELTO.
+- Acción: callable batch con detección de filas sin cambios (`unchangedRows`) para evitar escrituras innecesarias.
 
 ## Riesgos abiertos (no bloqueantes MVP)
 
@@ -74,7 +78,7 @@ Resultado general:
 ## TODOs priorizados
 
 P0 (siguiente sprint):
-- Agregar test de integración de callables (`upsert/change status`) en emulator suite.
+- Agregar test de integración de callable batch (`upsertPharmacyDutiesBatch`) en emulator suite.
 - Agregar observabilidad por acción: `action`, `result`, `conflictReason`, `merchantId`, `dutyId`.
 
 P1:
@@ -83,4 +87,3 @@ P1:
 
 P2:
 - Preparar OWNER-12 (bulk) con backend dedicado y seguridad por fila antes de reactivar navegación.
-

@@ -245,6 +245,7 @@ class OperationalSignalsNotifier
           forceClosed: signalType.forcesClosed,
         ),
       ));
+      unawaited(_refreshSignalFromRepositoryBestEffort());
     } on OwnerOperationalSignalsUnauthorizedException {
       _setSaveError(
         message: 'Tu sesión no puede editar este comercio.',
@@ -296,6 +297,7 @@ class OperationalSignalsNotifier
       unawaited(OwnerOperationalSignalsAnalytics.logDisabled(
         merchantId: state.merchantId,
       ));
+      unawaited(_refreshSignalFromRepositoryBestEffort());
     } on OwnerOperationalSignalsUnauthorizedException {
       _setSaveError(
         message: 'Tu sesión no puede editar este comercio.',
@@ -335,6 +337,26 @@ class OperationalSignalsNotifier
         forceClosed: state.draftSignalType.forcesClosed,
       ),
     ));
+  }
+
+  Future<void> _refreshSignalFromRepositoryBestEffort() async {
+    try {
+      final refreshed =
+          await _repository.fetchSignal(merchantId: state.merchantId);
+      if (refreshed == null) return;
+      state = state.copyWith(
+        currentSignal: refreshed,
+        draftSignalType: refreshed.hasActiveSignal
+            ? refreshed.signalType
+            : OperationalSignalType.none,
+        draftMessage: refreshed.message ?? '',
+        lastSuccessfulSaveAt: refreshed.updatedAt ?? state.lastSuccessfulSaveAt,
+      );
+    } on OwnerOperationalSignalsUnauthorizedException {
+      // No degradamos el save si falla el refresh post-write.
+    } catch (_) {
+      // Best-effort: evita falsos negativos de guardado por fallas de lectura.
+    }
   }
 }
 

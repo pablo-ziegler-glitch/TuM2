@@ -113,6 +113,7 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
 
   bool _isAllowedOwnerPath(String path) {
     return path == AppRoutes.ownerDashboard ||
+        path == AppRoutes.ownerEdit ||
         path == AppRoutes.ownerProducts ||
         path == AppRoutes.ownerProductsNew ||
         path == AppRoutes.ownerProductsSaved ||
@@ -122,7 +123,17 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
         path == AppRoutes.ownerPharmacyDuties ||
         path == AppRoutes.ownerDuties ||
         path == AppRoutes.ownerPharmacyDutyNew ||
-        (path.startsWith('/owner/pharmacy-duties/') && path.endsWith('/edit'));
+        (path.startsWith('/owner/pharmacy-duties/') && path.endsWith('/edit')) ||
+        (path.startsWith('/owner/pharmacy-duty/') &&
+            path.endsWith('/report-incident')) ||
+        (path.startsWith('/owner/pharmacy-duty/') &&
+            path.endsWith('/select-candidates')) ||
+        (path.startsWith('/owner/pharmacy-duty/') &&
+            path.endsWith('/tracking')) ||
+        path == AppRoutes.ownerPharmacyDutyUpcoming ||
+        path == AppRoutes.ownerPharmacyDutyCoverageResult ||
+        path == AppRoutes.ownerPharmacyDutyPublicStatus ||
+        path.startsWith('/owner/pharmacy-duty/invitation/');
   }
 }
 

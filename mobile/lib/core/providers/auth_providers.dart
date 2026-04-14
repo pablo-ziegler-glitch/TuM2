@@ -13,7 +13,6 @@ import '../router/pending_route_provider.dart';
 
 const _kOnboardingSeenKey = 'onboarding_seen';
 const _kPendingEmailLinkKey = 'pending_email_link';
-const _kOnboardingOwnerDraftKey = 'onboarding_owner_draft';
 
 /// URL base para magic links. En producción apunta al dominio real.
 /// En desarrollo se puede usar el emulador de Auth.
@@ -398,13 +397,10 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
       print('[AuthNotifier.signOut] Error en Firebase signOut: $e');
     }
 
-    // Acción 2: limpiar SharedPreferences (no limpiar onboarding_seen)
+    // Acción 2: limpiar SharedPreferences
     try {
       final prefs = await ref.read(sharedPreferencesProvider);
-      await Future.wait([
-        prefs.remove(_kPendingEmailLinkKey),
-        prefs.remove(_kOnboardingOwnerDraftKey),
-      ]);
+      await prefs.clear();
     } catch (e) {
       // ignore: avoid_print
       print('[AuthNotifier.signOut] Error limpiando SharedPreferences: $e');

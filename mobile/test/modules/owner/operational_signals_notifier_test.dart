@@ -56,7 +56,7 @@ void main() {
 
     test('carga inicial con señal activa', () async {
       final dataSource = _FakeDataSource(
-        stored: OwnerOperationalSignal(
+        stored: const OwnerOperationalSignal(
           merchantId: 'm1',
           ownerUserId: 'owner-1',
           signalType: OperationalSignalType.delay,
@@ -115,7 +115,7 @@ void main() {
 
     test('limpiar señal activa', () async {
       final dataSource = _FakeDataSource(
-        stored: OwnerOperationalSignal(
+        stored: const OwnerOperationalSignal(
           merchantId: 'm1',
           ownerUserId: 'owner-1',
           signalType: OperationalSignalType.vacation,

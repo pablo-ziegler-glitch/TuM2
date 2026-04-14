@@ -50,7 +50,6 @@ class FakeMerchantDetailRepository implements MerchantDetailDataSource {
     return handler(merchantId);
   }
 
-  @override
   Future<MerchantOperationalSignalsDto?> fetchSignals(String merchantId) {
     final handler = fetchSignalsHandler;
     if (handler == null) return Future.value(null);

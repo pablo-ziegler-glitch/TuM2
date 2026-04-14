@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/auth/auth_state.dart';
+import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -76,9 +77,27 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
       );
     }
 
+    final dashboardEnabledAsync = ref.watch(ownerDashboardEnabledProvider);
+    if (dashboardEnabledAsync.isLoading) {
+      return const _OwnerDashboardScaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary500),
+        ),
+      );
+    }
+    if (dashboardEnabledAsync.hasError ||
+        (dashboardEnabledAsync.valueOrNull ?? true) == false) {
+      return const _OwnerDashboardScaffold(
+        body: _OwnerDashboardUnauthorized(
+          message:
+              'El panel OWNER no está disponible en este momento. Intentá nuevamente más tarde.',
+        ),
+      );
+    }
+
     if (authState.ownerPending) {
       return const _OwnerDashboardScaffold(
-        body: _OwnerPendingState(),
+        body: _OwnerReviewPendingDashboard(),
       );
     }
 
@@ -290,53 +309,132 @@ class _OwnerDashboardUnauthorized extends StatelessWidget {
   }
 }
 
-class _OwnerPendingState extends StatelessWidget {
-  const _OwnerPendingState();
+class _OwnerReviewPendingDashboard extends StatelessWidget {
+  const _OwnerReviewPendingDashboard();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.warningBg,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Text(
+                  'PENDIENTE',
+                  style: AppTextStyles.labelSm.copyWith(
+                    color: AppColors.tertiary700,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Estamos revisando tu comercio',
+                style: AppTextStyles.headingMd,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Nuestro equipo de soporte está validando tus datos. Recibirás una notificación en cuanto esté listo.',
+                style:
+                    AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.schedule,
+                    size: 14,
+                    color: AppColors.neutral600,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Tiempo estimado: 24 - 48 horas',
+                    style: AppTextStyles.bodyXs.copyWith(
+                      color: AppColors.neutral600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        Row(
           children: [
+            Text(
+              'ACCIONES RÁPIDAS',
+              style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.neutral600,
+                letterSpacing: 1,
+              ),
+            ),
+            const Spacer(),
             Container(
-              width: 54,
-              height: 54,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.warningBg,
-                borderRadius: BorderRadius.circular(18),
+                color: AppColors.neutral100,
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.hourglass_top_rounded,
-                color: AppColors.tertiary700,
+              child: Text(
+                'MODO LECTURA',
+                style:
+                    AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600),
               ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Tu validación de dueño está pendiente',
-              style: AppTextStyles.headingSm,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Cuando finalice la revisión vas a poder operar tu comercio desde este panel.',
-              style: AppTextStyles.bodySm,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 14),
-            FilledButton(
-              onPressed: () => context.go(AppRoutes.profile),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary500,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Ir a Perfil'),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 10),
+        const _ReadOnlyQuickActions(),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.infoBg,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '¿Necesitás ayuda con tu registro?',
+                style:
+                    AppTextStyles.labelMd.copyWith(color: AppColors.primary700),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Si tenés dudas sobre documentos requeridos, revisá nuestra guía rápida de validación.',
+                style:
+                    AppTextStyles.bodySm.copyWith(color: AppColors.primary700),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => context.go(AppRoutes.profile),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text('Ver guía'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -365,7 +463,7 @@ class _OwnerDashboardNoMerchant extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Completá el alta para empezar a mostrarlo a vecinos de tu zona.',
+              'Necesitás vincular o reclamar un comercio para empezar a gestionarlo.',
               style: AppTextStyles.bodySm,
               textAlign: TextAlign.center,
             ),
@@ -379,9 +477,93 @@ class _OwnerDashboardNoMerchant extends StatelessWidget {
               ),
               label: const Text('Vincular comercio'),
             ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => context.go(AppRoutes.onboardingOwner),
+              child: const Text('¿Tu comercio ya existe? Reclamar ahora'),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ReadOnlyQuickActions extends StatelessWidget {
+  const _ReadOnlyQuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    const actions = <({IconData icon, String title, String subtitle})>[
+      (
+        icon: Icons.inventory_2_outlined,
+        title: 'Productos',
+        subtitle: 'Gestionar catálogo de inventario',
+      ),
+      (
+        icon: Icons.payments_outlined,
+        title: 'Finanzas',
+        subtitle: 'Ver ingresos y reportes',
+      ),
+      (
+        icon: Icons.settings_suggest_outlined,
+        title: 'Ajustes',
+        subtitle: 'Configuración del comercio',
+      ),
+      (
+        icon: Icons.support_agent_outlined,
+        title: 'Soporte',
+        subtitle: 'Hablar con nuestro equipo',
+      ),
+    ];
+    return Column(
+      children: actions
+          .map(
+            (action) => Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.neutral100,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(action.icon,
+                        color: AppColors.neutral600, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          action.title,
+                          style: AppTextStyles.labelMd.copyWith(
+                            color: AppColors.neutral700,
+                          ),
+                        ),
+                        Text(
+                          action.subtitle,
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.neutral600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.lock, size: 16, color: AppColors.neutral500),
+                ],
+              ),
+            ),
+          )
+          .toList(growable: false),
     );
   }
 }
@@ -410,39 +592,62 @@ class _OwnerDashboardBody extends ConsumerWidget {
       ownerPending: ownerPending,
       signal: signal,
     );
+    final isReviewPending = merchant.visibilityStatus == 'review_pending';
+    final isNoVisible = merchant.visibilityStatus == 'hidden' ||
+        merchant.visibilityStatus == 'suppressed';
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
       children: [
+        const Text('Eficiencia Operativa', style: AppTextStyles.headingMd),
+        const SizedBox(height: 12),
         _OwnerMerchantHeader(merchant: merchant),
-        const SizedBox(height: 14),
-        _OperationalSummaryCard(summary: operationalSummary),
-        if (hasMultipleMerchants) ...[
+        if (!isReviewPending && !isNoVisible) ...[
           const SizedBox(height: 12),
-          const _InconsistencyBanner(),
+          _OperationalSummaryCard(summary: operationalSummary),
         ],
-        if (alerts.isNotEmpty) ...[
-          const SizedBox(height: 14),
-          _OwnerAlertsList(
+        if (isReviewPending) ...[
+          const SizedBox(height: 12),
+          const _ReviewPendingCard(),
+        ],
+        if (isNoVisible) ...[
+          const SizedBox(height: 12),
+          _NoVisibleDashboardBlock(
             merchantId: merchant.id,
             alerts: alerts,
           ),
         ],
+        if (hasMultipleMerchants) ...[
+          const SizedBox(height: 12),
+          const _InconsistencyBanner(),
+        ],
+        if (!isNoVisible && alerts.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _CriticalTasksCard(
+            merchantId: merchant.id,
+            alerts: alerts,
+          ),
+        ],
+        if (!isReviewPending) ...[
+          const SizedBox(height: 14),
+          _MerchantStatusCard(merchant: merchant),
+        ],
         const SizedBox(height: 14),
-        _MerchantStatusCard(merchant: merchant),
-        const SizedBox(height: 14),
-        _OwnerQuickActions(
-          merchant: merchant,
-          onActionTap: (actionId) {
-            unawaited(
-              OwnerDashboardAnalytics.logQuickActionTapped(
-                merchantId: merchant.id,
-                actionId: actionId,
-              ),
-            );
-          },
-        ),
-        if (!merchant.hasProducts) ...[
+        if (isReviewPending)
+          const _ReadOnlyQuickActions()
+        else
+          _OwnerQuickActions(
+            merchant: merchant,
+            onActionTap: (actionId) {
+              unawaited(
+                OwnerDashboardAnalytics.logQuickActionTapped(
+                  merchantId: merchant.id,
+                  actionId: actionId,
+                ),
+              );
+            },
+          ),
+        if (!merchant.hasProducts && !isReviewPending) ...[
           const SizedBox(height: 14),
           const _EmptyProductsCard(),
         ],
@@ -603,8 +808,51 @@ class _OperationalSummaryCard extends StatelessWidget {
   }
 }
 
-class _OwnerAlertsList extends StatelessWidget {
-  const _OwnerAlertsList({
+class _ReviewPendingCard extends StatelessWidget {
+  const _ReviewPendingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.warningBg,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Text(
+              'PENDIENTE',
+              style:
+                  AppTextStyles.labelSm.copyWith(color: AppColors.tertiary700),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Estamos revisando tu comercio',
+            style: AppTextStyles.headingMd,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Nuestro equipo de soporte está validando tus datos. Te avisamos apenas esté listo para empezar a vender.',
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoVisibleDashboardBlock extends StatelessWidget {
+  const _NoVisibleDashboardBlock({
     required this.merchantId,
     required this.alerts,
   });
@@ -615,24 +863,153 @@ class _OwnerAlertsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: alerts
-          .take(3)
-          .map(
-            (alert) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _OwnerAlertCard(
-                merchantId: merchantId,
-                alert: alert,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.warningBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.visibility_off_outlined,
+                color: AppColors.tertiary700,
+                size: 20,
               ),
-            ),
-          )
-          .toList(growable: false),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tu comercio no está visible en este momento',
+                      style: AppTextStyles.labelMd,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tu negocio está pausado temporalmente del directorio público.',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.neutral700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'TAREAS PRIORITARIAS',
+          style: AppTextStyles.labelSm.copyWith(
+            color: AppColors.neutral600,
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _CriticalTasksCard(
+          merchantId: merchantId,
+          alerts: alerts,
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.infoBg,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tu concierge recomienda',
+                style: AppTextStyles.labelSm.copyWith(
+                  color: AppColors.primary700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Actualizar tus fotos de catálogo mientras esperás la validación puede mejorar tu posicionamiento una vez reactivado.',
+                style:
+                    AppTextStyles.bodySm.copyWith(color: AppColors.primary700),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.center,
+          child: TextButton.icon(
+            onPressed: () => context.go(AppRoutes.profile),
+            icon: const Icon(Icons.support_agent_outlined),
+            label: const Text('Contactar soporte'),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _OwnerAlertCard extends StatelessWidget {
-  const _OwnerAlertCard({
+class _CriticalTasksCard extends StatelessWidget {
+  const _CriticalTasksCard({
+    required this.merchantId,
+    required this.alerts,
+  });
+
+  final String merchantId;
+  final List<OwnerDashboardAlert> alerts;
+
+  @override
+  Widget build(BuildContext context) {
+    final topAlerts = alerts.take(3).toList(growable: false);
+    if (topAlerts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.warningBg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.assignment_late, color: AppColors.tertiary700),
+              const SizedBox(width: 8),
+              Text(
+                'Lista de Tareas Cruciales',
+                style:
+                    AppTextStyles.labelMd.copyWith(color: AppColors.neutral900),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...topAlerts.map(
+            (alert) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _CriticalTaskTile(
+                merchantId: merchantId,
+                alert: alert,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CriticalTaskTile extends StatelessWidget {
+  const _CriticalTaskTile({
     required this.merchantId,
     required this.alert,
   });
@@ -642,61 +1019,53 @@ class _OwnerAlertCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool critical =
-        alert.severity == OwnerDashboardAlertSeverity.critical;
-    final bool warning = alert.severity == OwnerDashboardAlertSeverity.warning;
-    final Color bg = critical
-        ? AppColors.errorBg
-        : warning
-            ? AppColors.warningBg
-            : AppColors.infoBg;
-    final Color fg = critical
-        ? AppColors.errorFg
-        : warning
-            ? AppColors.tertiary700
-            : AppColors.primary700;
-
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            alert.title,
-            style: AppTextStyles.labelMd.copyWith(color: fg),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            alert.message,
-            style: AppTextStyles.bodySm.copyWith(color: fg),
-          ),
-          if (alert.ctaRoute != null && alert.ctaLabel != null) ...[
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: () {
-                unawaited(
-                  OwnerDashboardAnalytics.logAlertTapped(
-                    merchantId: merchantId,
-                    alertId: alert.id,
+          const Icon(Icons.check_box_outline_blank,
+              color: AppColors.neutral500),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(alert.title, style: AppTextStyles.labelMd),
+                const SizedBox(height: 2),
+                Text(
+                  alert.message,
+                  style: AppTextStyles.bodyXs
+                      .copyWith(color: AppColors.neutral600),
+                ),
+                if (alert.ctaRoute != null && alert.ctaLabel != null) ...[
+                  const SizedBox(height: 6),
+                  TextButton(
+                    onPressed: () {
+                      unawaited(
+                        OwnerDashboardAnalytics.logAlertTapped(
+                          merchantId: merchantId,
+                          alertId: alert.id,
+                        ),
+                      );
+                      context.push(alert.ctaRoute!);
+                    },
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(alert.ctaLabel!),
                   ),
-                );
-                context.push(alert.ctaRoute!);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: fg,
-                textStyle: AppTextStyles.labelSm,
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(alert.ctaLabel!),
+                ],
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -883,29 +1252,29 @@ class _OwnerQuickActions extends StatelessWidget {
     final actions = <_OwnerAction>[
       const _OwnerAction(
         id: 'products',
-        label: 'Gestionar productos',
-        subtitle: 'Stock y precios',
+        label: 'PRODUCTOS: Añadir novedad',
+        subtitle: 'Carga nuevos ítems al catálogo.',
         icon: Icons.inventory_2_outlined,
         route: AppRoutes.ownerProducts,
       ),
       const _OwnerAction(
         id: 'schedules',
-        label: 'Editar horarios',
-        subtitle: 'Atención y apertura',
+        label: 'HORARIOS: Ajustar apertura',
+        subtitle: 'Modificá tu disponibilidad actual.',
         icon: Icons.schedule_outlined,
         route: AppRoutes.ownerSchedules,
       ),
       const _OwnerAction(
         id: 'signals',
-        label: 'Señales operativas',
-        subtitle: 'Estados del comercio',
+        label: 'SEÑALES: Lanzar aviso',
+        subtitle: 'Notificá novedades en tiempo real.',
         icon: Icons.campaign_outlined,
         route: AppRoutes.ownerSignals,
       ),
       const _OwnerAction(
         id: 'profile_status',
-        label: 'Revisar perfil',
-        subtitle: 'Estado del comercio',
+        label: 'PERFIL: Revisar datos',
+        subtitle: 'Actualizá la ficha del comercio.',
         icon: Icons.fact_check_outlined,
         route: AppRoutes.ownerEdit,
       ),

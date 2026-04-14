@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tum2/core/auth/auth_state.dart';
+import 'package:tum2/core/providers/feature_flags_provider.dart';
 import 'package:tum2/modules/owner/models/operational_signals.dart';
 import 'package:tum2/modules/owner/models/owner_merchant_summary.dart';
 import 'package:tum2/modules/owner/providers/owner_providers.dart';
@@ -52,6 +53,7 @@ void main() {
       ProviderScope(
         overrides: [
           ownerAuthStateProvider.overrideWith((ref) => authState),
+          ownerDashboardEnabledProvider.overrideWith((ref) async => true),
           ownerMerchantProvider.overrideWith(merchantLoader),
           if (signalLoader != null)
             ownerOperationalSignalProvider.overrideWith(signalLoader),
@@ -77,7 +79,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Tu validación de dueño está pendiente'), findsOneWidget);
+    expect(find.text('Estamos revisando tu comercio'), findsOneWidget);
   });
 
   testWidgets('muestra estado sin comercio vinculado', (tester) async {
@@ -126,6 +128,6 @@ void main() {
     );
 
     expect(find.text('Abierto ahora'), findsOneWidget);
-    expect(find.text('Revisar perfil'), findsOneWidget);
+    expect(find.text('PERFIL: Revisar datos'), findsOneWidget);
   });
 }

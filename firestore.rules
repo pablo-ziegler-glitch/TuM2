@@ -300,8 +300,11 @@ service cloud.firestore {
           && request.resource.data.merchantId is string
           && request.resource.data.merchantId == merchantId
           && request.resource.data.ownerUserId is string
-          && request.resource.data.ownerUserId == resource.data.ownerUserId
           && request.resource.data.ownerUserId == request.auth.uid
+          && (
+            !('ownerUserId' in resource.data)
+            || request.resource.data.ownerUserId == resource.data.ownerUserId
+          )
           && request.resource.data.updatedByUid is string
           && request.resource.data.updatedByUid == request.auth.uid
           && request.resource.data.signalType is string

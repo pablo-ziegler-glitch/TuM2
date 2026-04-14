@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_notifier.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/router/app_router.dart';
@@ -31,6 +32,27 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
   String? _lastViewedMerchantId;
   bool _errorEventLogged = false;
   bool _emptyEventLogged = false;
+  bool _isRefreshingPermissions = false;
+
+  Future<void> _refreshPermissionsAndData() async {
+    if (_isRefreshingPermissions) return;
+    setState(() => _isRefreshingPermissions = true);
+    try {
+      await ref.read(authNotifierProvider).refreshClaimsOnDemand();
+      ref.invalidate(ownerMerchantProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Permisos actualizados.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshingPermissions = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,18 +99,25 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
       );
     }
 
+    final refreshAction = _OwnerPermissionsRefreshAction(
+      isLoading: _isRefreshingPermissions,
+      onPressed: _refreshPermissionsAndData,
+    );
+
     final dashboardEnabledAsync = ref.watch(ownerDashboardEnabledProvider);
     if (dashboardEnabledAsync.isLoading) {
-      return const _OwnerDashboardScaffold(
-        body: Center(
+      return _OwnerDashboardScaffold(
+        appBarActions: [refreshAction],
+        body: const Center(
           child: CircularProgressIndicator(color: AppColors.primary500),
         ),
       );
     }
     if (dashboardEnabledAsync.hasError ||
         (dashboardEnabledAsync.valueOrNull ?? true) == false) {
-      return const _OwnerDashboardScaffold(
-        body: _OwnerDashboardUnauthorized(
+      return _OwnerDashboardScaffold(
+        appBarActions: [refreshAction],
+        body: const _OwnerDashboardUnauthorized(
           message:
               'El panel OWNER no está disponible en este momento. Intentá nuevamente más tarde.',
         ),
@@ -96,14 +125,16 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
     }
 
     if (authState.ownerPending) {
-      return const _OwnerDashboardScaffold(
-        body: _OwnerReviewPendingDashboard(),
+      return _OwnerDashboardScaffold(
+        appBarActions: [refreshAction],
+        body: const _OwnerReviewPendingDashboard(),
       );
     }
 
     final ownerMerchantAsync = ref.watch(ownerMerchantProvider);
 
     return _OwnerDashboardScaffold(
+      appBarActions: [refreshAction],
       body: ownerMerchantAsync.when(
         loading: () => const Center(
           child: CircularProgressIndicator(color: AppColors.primary500),
@@ -146,9 +177,13 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
 }
 
 class _OwnerDashboardScaffold extends StatelessWidget {
-  const _OwnerDashboardScaffold({required this.body});
+  const _OwnerDashboardScaffold({
+    required this.body,
+    this.appBarActions,
+  });
 
   final Widget body;
+  final List<Widget>? appBarActions;
 
   @override
   Widget build(BuildContext context) {
@@ -169,8 +204,34 @@ class _OwnerDashboardScaffold extends StatelessWidget {
           },
         ),
         title: const Text('Mi comercio', style: AppTextStyles.headingSm),
+        actions: appBarActions,
       ),
       body: body,
+    );
+  }
+}
+
+class _OwnerPermissionsRefreshAction extends StatelessWidget {
+  const _OwnerPermissionsRefreshAction({
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Actualizar permisos',
+      onPressed: isLoading ? null : onPressed,
+      icon: isLoading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.refresh_rounded),
     );
   }
 }

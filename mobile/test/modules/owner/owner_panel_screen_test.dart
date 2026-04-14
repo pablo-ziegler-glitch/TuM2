@@ -130,4 +130,23 @@ void main() {
     expect(find.text('Abierto ahora'), findsOneWidget);
     expect(find.text('PERFIL: Revisar datos'), findsOneWidget);
   });
+
+  testWidgets('muestra acción de actualizar permisos para owner',
+      (tester) async {
+    final merchant = buildMerchant();
+    await pumpDashboard(
+      tester,
+      authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
+      merchantLoader: (ref) async => OwnerMerchantResolution(
+        primaryMerchant: merchant,
+        allMerchants: [merchant],
+      ),
+      signalLoader: (ref, merchantId) async => OwnerOperationalSignal.empty(
+        merchantId: merchantId,
+        ownerUserId: 'owner-1',
+      ),
+    );
+
+    expect(find.byTooltip('Actualizar permisos'), findsOneWidget);
+  });
 }

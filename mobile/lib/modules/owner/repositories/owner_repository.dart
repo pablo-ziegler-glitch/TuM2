@@ -19,6 +19,7 @@ class OwnerRepository {
 
   final FirebaseFirestore _firestore;
   final OwnerOperationalSignalsRepository _operationalSignalsRepository;
+  static const int _ownerMerchantQueryLimit = 10;
 
   Future<OwnerMerchantResolution> resolveOwnerMerchant(
     String ownerUserId, {
@@ -50,7 +51,7 @@ class OwnerRepository {
     final snapshot = await _firestore
         .collection('merchants')
         .where('ownerUserId', isEqualTo: ownerUserId)
-        .limit(3)
+        .limit(_ownerMerchantQueryLimit)
         .get();
 
     final merchants = snapshot.docs
@@ -93,7 +94,10 @@ class OwnerRepository {
     if (aUpdated == null && bUpdated == null) return 0;
     if (aUpdated == null) return 1;
     if (bUpdated == null) return -1;
-    return bUpdated.compareTo(aUpdated);
+    final byDate = bUpdated.compareTo(aUpdated);
+    if (byDate != 0) return byDate;
+    // Tie-break estable para evitar saltos de comercio primario entre sesiones.
+    return a.id.compareTo(b.id);
   }
 
   Future<void> updateMerchantProfile({

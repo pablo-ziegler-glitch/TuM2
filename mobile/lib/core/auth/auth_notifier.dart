@@ -27,6 +27,14 @@ class AuthNotifier extends ChangeNotifier {
     _authSub = FirebaseAuth.instance.authStateChanges().listen(_onUserChanged);
   }
 
+  /// Fuerza una reevaluación inmediata de claims/rol para el usuario actual.
+  ///
+  /// Uso recomendado: acciones explícitas del usuario (p.ej. "Actualizar permisos")
+  /// o al completar flujos que cambian claims en backend.
+  Future<void> refreshClaimsOnDemand() async {
+    await _onUserChanged(FirebaseAuth.instance.currentUser);
+  }
+
   Future<void> _onUserChanged(User? user) async {
     final version = ++_eventVersion;
 

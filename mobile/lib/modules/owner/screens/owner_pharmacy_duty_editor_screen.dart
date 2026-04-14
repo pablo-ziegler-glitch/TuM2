@@ -46,7 +46,8 @@ class _OwnerPharmacyDutyEditorScreenState
   OwnerPharmacyDutyStatus _status = OwnerPharmacyDutyStatus.scheduled;
 
   bool get _isEditing => widget.dutyId != null;
-  bool get _canSave => !_saving && !_loadingDuty && (!_isEditing || _duty != null);
+  bool get _canSave =>
+      !_saving && !_loadingDuty && (!_isEditing || _duty != null);
 
   @override
   void initState() {

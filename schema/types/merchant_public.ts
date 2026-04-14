@@ -1,6 +1,10 @@
 import type { Timestamp } from 'firebase/firestore';
 import type { MerchantVerificationStatus, MerchantVisibilityStatus } from './merchant';
 import type { PharmacyDutyConfidenceLevel, PharmacyDutyPublicStatusLabel } from './pharmacy_duties';
+import type {
+  ManualOverrideMode,
+  MerchantOperationalSignalType,
+} from './merchant_operational_signals';
 
 export type MerchantBadge =
   | 'verified'
@@ -10,10 +14,15 @@ export type MerchantBadge =
   | 'pharmacy_on_duty';
 
 export interface OperationalSignalsSnapshot {
+  signalType?: MerchantOperationalSignalType;
+  isActive?: boolean;
+  message?: string | null;
+  forceClosed?: boolean;
+  hasOperationalSignal?: boolean;
+  manualOverrideMode?: ManualOverrideMode;
+  operationalStatusLabel?: string | null;
   temporaryClosed?: boolean;
-  hasDelivery?: boolean;
-  acceptsWhatsappOrders?: boolean;
-  [key: string]: boolean | undefined;
+  [key: string]: boolean | string | null | undefined;
 }
 
 /**
@@ -41,6 +50,12 @@ export interface MerchantPublicDocument {
   badges: MerchantBadge[];
   /** null when schedule info is unavailable or unverified */
   isOpenNow: boolean | null;
+  hasOperationalSignal?: boolean;
+  operationalSignalType?: MerchantOperationalSignalType;
+  operationalSignalMessage?: string | null;
+  operationalSignalUpdatedAt?: Timestamp | null;
+  manualOverrideMode?: ManualOverrideMode;
+  operationalStatusLabel?: string | null;
   openStatusLabel: string;
   hasPharmacyDutyToday: boolean;
   isOnDutyToday?: boolean;

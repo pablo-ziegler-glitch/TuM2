@@ -201,6 +201,38 @@ List<MerchantOperationalSignalViewData> mapOperationalSignalsMapToViewData(
   if (source.isEmpty) return const [];
 
   final signals = <MerchantOperationalSignalViewData>[];
+  final signalType = _stringValue(source['signalType']);
+  final isActive = _boolValue(source['isActive']) == true ||
+      _boolValue(source['hasOperationalSignal']) == true;
+  final message = _stringValue(source['message']);
+
+  if (isActive) {
+    if (signalType == 'vacation') {
+      signals.add(
+        MerchantOperationalSignalViewData(
+          id: 'operationalSignalType',
+          label: message.isNotEmpty ? message : 'De vacaciones',
+          isAlert: true,
+        ),
+      );
+    } else if (signalType == 'temporary_closure') {
+      signals.add(
+        MerchantOperationalSignalViewData(
+          id: 'operationalSignalType',
+          label: message.isNotEmpty ? message : 'Cerrado temporalmente',
+          isAlert: true,
+        ),
+      );
+    } else if (signalType == 'delay') {
+      signals.add(
+        MerchantOperationalSignalViewData(
+          id: 'operationalSignalType',
+          label: message.isNotEmpty ? message : 'Abre más tarde',
+          isAlert: false,
+        ),
+      );
+    }
+  }
 
   void addSignal(
     String key,

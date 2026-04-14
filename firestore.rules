@@ -200,12 +200,137 @@ service cloud.firestore {
     }
 
     // ─── merchant_operational_signals/{merchantId} ───────────────────────────
-    // Public read. Owners write their own. Admins write all.
+    // Privado owner/admin. merchant_public es la salida pública.
 
     match /merchant_operational_signals/{merchantId} {
-      allow read: if true;
-      allow write: if isAdmin();
-      allow write: if isOwnerRole() && merchantBelongsToUser(merchantId);
+      function allowedSignalKeys() {
+        return [
+          'merchantId',
+          'ownerUserId',
+          'signalType',
+          'isActive',
+          'message',
+          'forceClosed',
+          'updatedAt',
+          'updatedByUid',
+          'createdAt',
+          'schemaVersion',
+          // Campos derivados backend (se permiten persistidos, no editables por owner)
+          'isOpenNow',
+          'todayScheduleLabel',
+          'hasPharmacyDutyToday',
+          'hasScheduleConfigured',
+          'closesAt',
+          'opensNextAt',
+          // Compatibilidad con esquema legacy de señales (migración progresiva).
+          'signals',
+          'derivedSignals',
+          'sourceType',
+          'updatedBy',
+          'temporaryClosed',
+          'temporaryClosedNote',
+          'hasDelivery',
+          'acceptsWhatsappOrders',
+          'openNowManualOverride',
+          'manualOverrides',
+        ];
+      }
+
+      function isValidSignalType(value) {
+        return value in ['none', 'vacation', 'temporary_closure', 'delay'];
+      }
+
+      function hasValidSignalMessage() {
+        return !('message' in request.resource.data)
+          || request.resource.data.message == null
+          || (
+            request.resource.data.message is string
+            && request.resource.data.message.size() <= 80
+            && !request.resource.data.message.matches('.*<[^>]*>.*')
+            && !request.resource.data.message.matches('.*https?://.*')
+            && !request.resource.data.message.matches('.*http://.*')
+            && !request.resource.data.message.matches('.*https://.*')
+          );
+      }
+
+      function ownerFieldsAreValidForCreate() {
+        return request.resource.data.keys().hasOnly(allowedSignalKeys())
+          && request.resource.data.merchantId is string
+          && request.resource.data.merchantId == merchantId
+          && request.resource.data.ownerUserId is string
+          && request.resource.data.ownerUserId == request.auth.uid
+          && request.resource.data.updatedByUid is string
+          && request.resource.data.updatedByUid == request.auth.uid
+          && request.resource.data.signalType is string
+          && isValidSignalType(request.resource.data.signalType)
+          && request.resource.data.isActive is bool
+          && request.resource.data.forceClosed is bool
+          && request.resource.data.updatedAt is timestamp
+          && request.resource.data.schemaVersion is int
+          && request.resource.data.schemaVersion == 1
+          && hasValidSignalMessage()
+          && (
+            (request.resource.data.signalType in ['vacation', 'temporary_closure']
+              && request.resource.data.isActive == true
+              && request.resource.data.forceClosed == true)
+            || (request.resource.data.signalType == 'delay'
+              && request.resource.data.isActive == true
+              && request.resource.data.forceClosed == false)
+            || (request.resource.data.signalType == 'none'
+              && request.resource.data.isActive == false
+              && request.resource.data.forceClosed == false)
+          );
+      }
+
+      function ownerFieldsAreValidForUpdate() {
+        let changed = request.resource.data.diff(resource.data).affectedKeys();
+        return request.resource.data.keys().hasOnly(allowedSignalKeys())
+          && request.resource.data.merchantId is string
+          && request.resource.data.merchantId == merchantId
+          && request.resource.data.ownerUserId is string
+          && request.resource.data.ownerUserId == resource.data.ownerUserId
+          && request.resource.data.ownerUserId == request.auth.uid
+          && request.resource.data.updatedByUid is string
+          && request.resource.data.updatedByUid == request.auth.uid
+          && request.resource.data.signalType is string
+          && isValidSignalType(request.resource.data.signalType)
+          && request.resource.data.isActive is bool
+          && request.resource.data.forceClosed is bool
+          && request.resource.data.updatedAt is timestamp
+          && request.resource.data.schemaVersion is int
+          && request.resource.data.schemaVersion == 1
+          && (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt)
+          && !('isOpenNow' in changed)
+          && !('todayScheduleLabel' in changed)
+          && !('hasPharmacyDutyToday' in changed)
+          && !('hasScheduleConfigured' in changed)
+          && !('closesAt' in changed)
+          && !('opensNextAt' in changed)
+          && hasValidSignalMessage()
+          && (
+            (request.resource.data.signalType in ['vacation', 'temporary_closure']
+              && request.resource.data.isActive == true
+              && request.resource.data.forceClosed == true)
+            || (request.resource.data.signalType == 'delay'
+              && request.resource.data.isActive == true
+              && request.resource.data.forceClosed == false)
+            || (request.resource.data.signalType == 'none'
+              && request.resource.data.isActive == false
+              && request.resource.data.forceClosed == false)
+          );
+      }
+
+      allow read: if isAdmin() || (isOwnerRole() && merchantBelongsToUser(merchantId));
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+      allow create: if isOwnerRole()
+        && merchantBelongsToUser(merchantId)
+        && ownerFieldsAreValidForCreate();
+      allow update: if isOwnerRole()
+        && merchantBelongsToUser(merchantId)
+        && ownerFieldsAreValidForUpdate();
+      allow delete: if false;
     }
 
     // ─── merchant_products/{productId} ──────────────────────────────────────

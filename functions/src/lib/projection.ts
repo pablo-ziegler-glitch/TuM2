@@ -5,6 +5,7 @@ import {
   OperationalSignals,
   VerificationStatus,
 } from "./types";
+import { resolveOperationalPublicState } from "./operationalSignals";
 
 const VERIFICATION_BOOST: Record<VerificationStatus, number> = {
   verified: 40,
@@ -221,12 +222,16 @@ export function computeMerchantPublicProjection(
   if (merchant.address) projection.address = merchant.address;
   if (merchant.isPharmacy) projection.isPharmacy = merchant.isPharmacy;
 
-  if (signals) {
-    projection.isOpenNow = signals.isOpenNow ?? false;
-    projection.todayScheduleLabel = signals.todayScheduleLabel ?? "";
-    projection.hasPharmacyDutyToday = signals.hasPharmacyDutyToday ?? false;
-    projection.operationalSignals = signals;
-  }
+  const resolvedOperational = resolveOperationalPublicState(signals);
+  projection.isOpenNow = resolvedOperational.isOpenNow;
+  projection.todayScheduleLabel = resolvedOperational.todayScheduleLabel;
+  projection.hasPharmacyDutyToday = resolvedOperational.hasPharmacyDutyToday;
+  projection.hasOperationalSignal = resolvedOperational.hasOperationalSignal;
+  projection.operationalSignalType = resolvedOperational.operationalSignalType;
+  projection.operationalSignalMessage = resolvedOperational.operationalSignalMessage;
+  projection.manualOverrideMode = resolvedOperational.manualOverrideMode;
+  projection.operationalStatusLabel = resolvedOperational.operationalStatusLabel;
+  projection.operationalSignals = resolvedOperational.operationalSignals;
 
   return projection;
 }

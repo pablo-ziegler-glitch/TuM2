@@ -4,221 +4,174 @@ import 'package:tum2/modules/owner/providers/operational_signals_provider.dart';
 import 'package:tum2/modules/owner/repositories/owner_operational_signals_repository.dart';
 
 void main() {
-  group('OperationalSignals model', () {
-    test('usa defaults en campos faltantes y serializa claves canónicas', () {
-      final model = OperationalSignals.fromMap({
-        'temporaryClosed': true,
-      });
-
-      expect(model.temporaryClosed, isTrue);
-      expect(model.hasDelivery, isFalse);
-      expect(model.acceptsWhatsappOrders, isFalse);
-      expect(model.openNowManualOverride, isFalse);
-
-      final map = model.toMap();
+  group('OperationalSignalType', () {
+    test('mapea firestore values canónicos', () {
       expect(
-          map.keys,
-          containsAll(const [
-            'temporaryClosed',
-            'hasDelivery',
-            'acceptsWhatsappOrders',
-            'openNowManualOverride',
-          ]));
+        OperationalSignalTypeX.fromFirestoreValue('vacation'),
+        OperationalSignalType.vacation,
+      );
+      expect(
+        OperationalSignalTypeX.fromFirestoreValue('temporary_closure'),
+        OperationalSignalType.temporaryClosure,
+      );
+      expect(
+        OperationalSignalTypeX.fromFirestoreValue('delay'),
+        OperationalSignalType.delay,
+      );
+      expect(
+        OperationalSignalTypeX.fromFirestoreValue('otro'),
+        OperationalSignalType.none,
+      );
     });
   });
 
   group('OwnerOperationalSignalsRepository', () {
-    test('guarda señales con metadata canónica', () async {
-      final dataSource = _FakeDataSource(
-        ownerByMerchantId: const {'m1': 'owner-1'},
-      );
-      final repository = OwnerOperationalSignalsRepository(
-        dataSource: dataSource,
-      );
+    test('upsert guarda tipo + fuerza de cierre', () async {
+      final dataSource = _FakeDataSource();
+      final repository =
+          OwnerOperationalSignalsRepository(dataSource: dataSource);
 
-      await repository.updateSignal(
+      await repository.upsertSignal(
         merchantId: 'm1',
         ownerUserId: 'owner-1',
-        key: OperationalSignalKey.hasDelivery,
-        value: true,
+        signalType: OperationalSignalType.vacation,
+        message: 'Cerrado por vacaciones',
       );
 
-      expect(dataSource.saved.length, 1);
-      expect(dataSource.saved.first.merchantId, 'm1');
-      expect(dataSource.saved.first.updatedBy, 'owner-1');
-      expect(dataSource.saved.first.key, OperationalSignalKey.hasDelivery);
-      expect(dataSource.saved.first.value, isTrue);
+      expect(dataSource.savedType, OperationalSignalType.vacation);
+      expect(dataSource.savedMessage, 'Cerrado por vacaciones');
     });
   });
 
   group('OperationalSignalsNotifier', () {
-    test('aplica optimistic update y confirma success', () async {
-      final dataSource = _FakeDataSource(
-        ownerByMerchantId: const {'m1': 'owner-1'},
-      );
-      final repository = OwnerOperationalSignalsRepository(
-        dataSource: dataSource,
-      );
-
-      final notifier = OperationalSignalsNotifier(
-        repository: repository,
-        scope: const OwnerOperationalSignalsScope(
-          merchantId: 'm1',
-          ownerUserId: 'owner-1',
-        ),
-      );
+    test('carga inicial sin señal activa', () async {
+      final dataSource = _FakeDataSource();
+      final notifier = _buildNotifier(dataSource);
       await _waitForLoad(notifier);
 
-      final future = notifier.updateSignal(
-        key: OperationalSignalKey.temporaryClosed,
-        value: true,
-      );
-
-      expect(notifier.state.signals.temporaryClosed, isTrue);
+      expect(notifier.state.hasActiveSignal, isFalse);
       expect(
-        notifier.state.savingKeys,
-        contains(OperationalSignalKey.temporaryClosed),
-      );
-
-      await future;
-
-      expect(notifier.state.signals.temporaryClosed, isTrue);
-      expect(notifier.state.savingKeys, isEmpty);
-      expect(
-        notifier.state.saveStatus,
-        OperationalSignalsSaveStatus.success,
-      );
+          notifier.state.currentSignal.signalType, OperationalSignalType.none);
     });
 
-    test('hace rollback cuando falla la persistencia', () async {
+    test('carga inicial con señal activa', () async {
       final dataSource = _FakeDataSource(
-        ownerByMerchantId: const {'m1': 'owner-1'},
-        throwOnSave: true,
-      );
-      final repository = OwnerOperationalSignalsRepository(
-        dataSource: dataSource,
-      );
-
-      final notifier = OperationalSignalsNotifier(
-        repository: repository,
-        scope: const OwnerOperationalSignalsScope(
+        stored: OwnerOperationalSignal(
           merchantId: 'm1',
           ownerUserId: 'owner-1',
+          signalType: OperationalSignalType.delay,
+          isActive: true,
+          message: 'Abrimos a las 10:00',
+          forceClosed: false,
+          schemaVersion: operationalSignalSchemaVersion,
         ),
       );
+      final notifier = _buildNotifier(dataSource);
       await _waitForLoad(notifier);
 
-      final future = notifier.updateSignal(
-        key: OperationalSignalKey.acceptsWhatsappOrders,
-        value: true,
-      );
-
-      expect(notifier.state.signals.acceptsWhatsappOrders, isTrue);
-      await future;
-
-      expect(notifier.state.signals.acceptsWhatsappOrders, isFalse);
-      expect(
-        notifier.state.saveStatus,
-        OperationalSignalsSaveStatus.error,
-      );
+      expect(notifier.state.hasActiveSignal, isTrue);
+      expect(notifier.state.draftSignalType, OperationalSignalType.delay);
     });
 
-    test('marca error de permisos si ownership no coincide', () async {
+    test('guardar vacation', () async {
+      final dataSource = _FakeDataSource();
+      final notifier = _buildNotifier(dataSource);
+      await _waitForLoad(notifier);
+
+      notifier.setDraftSignalType(OperationalSignalType.vacation);
+      notifier.setDraftMessage('Volvemos el lunes');
+      await notifier.saveDraft();
+
+      expect(dataSource.savedType, OperationalSignalType.vacation);
+      expect(notifier.state.hasSuccess, isTrue);
+      expect(notifier.state.currentSignal.forceClosed, isTrue);
+    });
+
+    test('guardar temporary_closure', () async {
+      final dataSource = _FakeDataSource();
+      final notifier = _buildNotifier(dataSource);
+      await _waitForLoad(notifier);
+
+      notifier.setDraftSignalType(OperationalSignalType.temporaryClosure);
+      notifier.setDraftMessage('Mantenimiento');
+      await notifier.saveDraft();
+
+      expect(dataSource.savedType, OperationalSignalType.temporaryClosure);
+      expect(notifier.state.currentSignal.forceClosed, isTrue);
+    });
+
+    test('guardar delay', () async {
+      final dataSource = _FakeDataSource();
+      final notifier = _buildNotifier(dataSource);
+      await _waitForLoad(notifier);
+
+      notifier.setDraftSignalType(OperationalSignalType.delay);
+      notifier.setDraftMessage('Abrimos con demora');
+      await notifier.saveDraft();
+
+      expect(dataSource.savedType, OperationalSignalType.delay);
+      expect(notifier.state.currentSignal.forceClosed, isFalse);
+    });
+
+    test('limpiar señal activa', () async {
       final dataSource = _FakeDataSource(
-        ownerByMerchantId: const {'m1': 'owner-99'},
-      );
-      final repository = OwnerOperationalSignalsRepository(
-        dataSource: dataSource,
-      );
-      final notifier = OperationalSignalsNotifier(
-        repository: repository,
-        scope: const OwnerOperationalSignalsScope(
+        stored: OwnerOperationalSignal(
           merchantId: 'm1',
           ownerUserId: 'owner-1',
+          signalType: OperationalSignalType.vacation,
+          isActive: true,
+          message: 'Cerrado por vacaciones',
+          forceClosed: true,
+          schemaVersion: operationalSignalSchemaVersion,
         ),
       );
-
+      final notifier = _buildNotifier(dataSource);
       await _waitForLoad(notifier);
-      await notifier.updateSignal(
-        key: OperationalSignalKey.hasDelivery,
-        value: true,
-      );
+
+      await notifier.clearSignal();
+
+      expect(dataSource.clearCalled, isTrue);
+      expect(
+          notifier.state.currentSignal.signalType, OperationalSignalType.none);
+      expect(notifier.state.hasActiveSignal, isFalse);
+    });
+
+    test('error de permisos', () async {
+      final dataSource = _FakeDataSource(unauthorizedOnSave: true);
+      final notifier = _buildNotifier(dataSource);
+      await _waitForLoad(notifier);
+
+      notifier.setDraftSignalType(OperationalSignalType.delay);
+      await notifier.saveDraft();
 
       expect(notifier.state.hasError, isTrue);
-      expect(notifier.state.message, contains('editar este comercio'));
+      expect(notifier.state.message, contains('no puede editar'));
     });
 
-    test('bloquea abierto ahora manual cuando hay cierre temporal', () async {
-      final dataSource = _FakeDataSource(
-        ownerByMerchantId: const {'m1': 'owner-1'},
-      );
-      final repository = OwnerOperationalSignalsRepository(
-        dataSource: dataSource,
-      );
-      final notifier = OperationalSignalsNotifier(
-        repository: repository,
-        scope: const OwnerOperationalSignalsScope(
-          merchantId: 'm1',
-          ownerUserId: 'owner-1',
-        ),
-      );
-
+    test('error de red', () async {
+      final dataSource = _FakeDataSource(throwOnSave: true);
+      final notifier = _buildNotifier(dataSource);
       await _waitForLoad(notifier);
 
-      await notifier.updateSignal(
-        key: OperationalSignalKey.temporaryClosed,
-        value: true,
-      );
-      await notifier.updateSignal(
-        key: OperationalSignalKey.openNowManualOverride,
-        value: true,
-      );
+      notifier.setDraftSignalType(OperationalSignalType.delay);
+      await notifier.saveDraft();
 
-      expect(notifier.state.signals.temporaryClosed, isTrue);
-      expect(notifier.state.signals.openNowManualOverride, isFalse);
       expect(notifier.state.hasError, isTrue);
-      expect(notifier.state.message, contains('Abierto ahora'));
-    });
-
-    test('mantiene toggles optimistas cuando hay saves concurrentes', () async {
-      final dataSource = _FakeDataSource(
-        ownerByMerchantId: const {'m1': 'owner-1'},
-        saveDelay: const Duration(milliseconds: 20),
-      );
-      final repository = OwnerOperationalSignalsRepository(
-        dataSource: dataSource,
-      );
-      final notifier = OperationalSignalsNotifier(
-        repository: repository,
-        scope: const OwnerOperationalSignalsScope(
-          merchantId: 'm1',
-          ownerUserId: 'owner-1',
-        ),
-      );
-      await _waitForLoad(notifier);
-
-      final saveA = notifier.updateSignal(
-        key: OperationalSignalKey.hasDelivery,
-        value: true,
-      );
-      final saveB = notifier.updateSignal(
-        key: OperationalSignalKey.acceptsWhatsappOrders,
-        value: true,
-      );
-      await Future.wait([saveA, saveB]);
-
-      expect(notifier.state.signals.hasDelivery, isTrue);
-      expect(notifier.state.signals.acceptsWhatsappOrders, isTrue);
-      expect(notifier.state.savingKeys, isEmpty);
+      expect(notifier.state.message, contains('No pudimos guardar'));
     });
   });
 }
 
-// TODO(tum2-0067): agregar test de integración con emulador Firestore para:
-// - validar que `updatedAt` llegue como serverTimestamp real
-// - verificar que Rules bloqueen escritura de merchant ajeno (IDOR)
-// - verificar que write en `merchant_operational_signals` dispare trigger backend
-//   y recomponga `merchant_public` con prioridad de `temporaryClosed`.
+OperationalSignalsNotifier _buildNotifier(_FakeDataSource dataSource) {
+  final repository = OwnerOperationalSignalsRepository(dataSource: dataSource);
+  return OperationalSignalsNotifier(
+    repository: repository,
+    scope: const OwnerOperationalSignalsScope(
+      merchantId: 'm1',
+      ownerUserId: 'owner-1',
+    ),
+  );
+}
 
 Future<void> _waitForLoad(OperationalSignalsNotifier notifier) async {
   for (var i = 0; i < 20; i++) {
@@ -227,77 +180,67 @@ Future<void> _waitForLoad(OperationalSignalsNotifier notifier) async {
   }
 }
 
-class _SavedSignal {
-  const _SavedSignal({
-    required this.merchantId,
-    required this.updatedBy,
-    required this.key,
-    required this.value,
-  });
-
-  final String merchantId;
-  final String updatedBy;
-  final OperationalSignalKey key;
-  final bool value;
-}
-
 class _FakeDataSource implements OwnerOperationalSignalsDataSource {
   _FakeDataSource({
-    this.ownerByMerchantId = const {},
+    this.stored,
     this.throwOnSave = false,
-    this.saveDelay = Duration.zero,
+    this.unauthorizedOnSave = false,
   });
 
-  final Map<String, String> ownerByMerchantId;
+  OwnerOperationalSignal? stored;
   final bool throwOnSave;
-  final Duration saveDelay;
-  final List<_SavedSignal> saved = [];
-  final Map<String, OperationalSignals> _signalsByMerchant = {};
-  final Map<String, DateTime> _updatedAtByMerchant = {};
+  final bool unauthorizedOnSave;
+  bool clearCalled = false;
+  OperationalSignalType? savedType;
+  String? savedMessage;
 
   @override
-  Future<OperationalSignalsSnapshot> fetchSignals({
+  Future<void> clearSignal({
     required String merchantId,
+    required String ownerUserId,
   }) async {
-    return OperationalSignalsSnapshot(
-      signals: _signalsByMerchant[merchantId] ?? OperationalSignals.defaults,
-      updatedAt: _updatedAtByMerchant[merchantId],
-      updatedBy: ownerByMerchantId[merchantId],
+    if (unauthorizedOnSave) {
+      throw const OwnerOperationalSignalsUnauthorizedException();
+    }
+    clearCalled = true;
+    stored = OwnerOperationalSignal.empty(
+      merchantId: merchantId,
+      ownerUserId: ownerUserId,
     );
   }
 
   @override
-  Future<void> saveSignalsIfOwned({
+  Future<OwnerOperationalSignal?> fetchSignal({
+    required String merchantId,
+  }) async {
+    return stored;
+  }
+
+  @override
+  Future<void> upsertSignal({
     required String merchantId,
     required String ownerUserId,
-    required String updatedBy,
-    required Map<OperationalSignalKey, bool> values,
+    required OperationalSignalType signalType,
+    required String? message,
   }) async {
-    if (saveDelay > Duration.zero) {
-      await Future<void>.delayed(saveDelay);
-    }
-    if (throwOnSave) {
-      throw Exception('save failed');
-    }
-    final expectedOwnerUserId = ownerByMerchantId[merchantId];
-    if (expectedOwnerUserId == null || expectedOwnerUserId != ownerUserId) {
+    if (unauthorizedOnSave) {
       throw const OwnerOperationalSignalsUnauthorizedException();
     }
-    final current =
-        _signalsByMerchant[merchantId] ?? OperationalSignals.defaults;
-    var next = current;
-    for (final entry in values.entries) {
-      next = next.withValue(entry.key, entry.value);
-      saved.add(
-        _SavedSignal(
-          merchantId: merchantId,
-          updatedBy: updatedBy,
-          key: entry.key,
-          value: entry.value,
-        ),
-      );
+    if (throwOnSave) {
+      throw Exception('network');
     }
-    _signalsByMerchant[merchantId] = next;
-    _updatedAtByMerchant[merchantId] = DateTime(2026, 4, 8, 14, 0, 0);
+    savedType = signalType;
+    savedMessage = message;
+    stored = OwnerOperationalSignal(
+      merchantId: merchantId,
+      ownerUserId: ownerUserId,
+      signalType: signalType,
+      isActive: signalType != OperationalSignalType.none,
+      message: message,
+      forceClosed: signalType.forcesClosed,
+      schemaVersion: operationalSignalSchemaVersion,
+      updatedAt: DateTime(2026, 4, 13, 14),
+      updatedByUid: ownerUserId,
+    );
   }
 }

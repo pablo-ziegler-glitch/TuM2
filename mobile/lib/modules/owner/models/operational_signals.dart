@@ -1,129 +1,145 @@
-/// Claves permitidas para `merchant_operational_signals/{merchantId}.signals`.
-///
-/// Se definen como enum para evitar mass assignment y escrituras arbitrarias.
-enum OperationalSignalKey {
-  temporaryClosed,
-  hasDelivery,
-  acceptsWhatsappOrders,
-  openNowManualOverride,
+enum OperationalSignalType {
+  none,
+  vacation,
+  temporaryClosure,
+  delay,
 }
 
-extension OperationalSignalKeyX on OperationalSignalKey {
-  String get fieldName {
+extension OperationalSignalTypeX on OperationalSignalType {
+  String get firestoreValue {
     switch (this) {
-      case OperationalSignalKey.temporaryClosed:
-        return 'temporaryClosed';
-      case OperationalSignalKey.hasDelivery:
-        return 'hasDelivery';
-      case OperationalSignalKey.acceptsWhatsappOrders:
-        return 'acceptsWhatsappOrders';
-      case OperationalSignalKey.openNowManualOverride:
-        return 'openNowManualOverride';
+      case OperationalSignalType.none:
+        return 'none';
+      case OperationalSignalType.vacation:
+        return 'vacation';
+      case OperationalSignalType.temporaryClosure:
+        return 'temporary_closure';
+      case OperationalSignalType.delay:
+        return 'delay';
+    }
+  }
+
+  String get publicLabel {
+    switch (this) {
+      case OperationalSignalType.none:
+        return 'Sin señal activa';
+      case OperationalSignalType.vacation:
+        return 'De vacaciones';
+      case OperationalSignalType.temporaryClosure:
+        return 'Cerrado temporalmente';
+      case OperationalSignalType.delay:
+        return 'Abre más tarde';
+    }
+  }
+
+  bool get forcesClosed =>
+      this == OperationalSignalType.vacation ||
+      this == OperationalSignalType.temporaryClosure;
+
+  static OperationalSignalType fromFirestoreValue(String? value) {
+    switch (value) {
+      case 'vacation':
+        return OperationalSignalType.vacation;
+      case 'temporary_closure':
+        return OperationalSignalType.temporaryClosure;
+      case 'delay':
+        return OperationalSignalType.delay;
+      default:
+        return OperationalSignalType.none;
     }
   }
 }
 
-const String ownerOperationalSignalsSourceType = 'owner_created';
+const int operationalSignalSchemaVersion = 1;
+const int operationalSignalMaxMessageLength = 80;
 
-class OperationalSignalsSnapshot {
-  const OperationalSignalsSnapshot({
-    required this.signals,
+class OwnerOperationalSignal {
+  const OwnerOperationalSignal({
+    required this.merchantId,
+    required this.ownerUserId,
+    required this.signalType,
+    required this.isActive,
+    required this.message,
+    required this.forceClosed,
+    required this.schemaVersion,
     this.updatedAt,
-    this.updatedBy,
+    this.updatedByUid,
+    this.createdAt,
+    this.isOpenNow,
+    this.todayScheduleLabel,
+    this.hasScheduleConfigured,
   });
 
-  final OperationalSignals signals;
+  final String merchantId;
+  final String ownerUserId;
+  final OperationalSignalType signalType;
+  final bool isActive;
+  final String? message;
+  final bool forceClosed;
+  final int schemaVersion;
   final DateTime? updatedAt;
-  final String? updatedBy;
+  final String? updatedByUid;
+  final DateTime? createdAt;
+  final bool? isOpenNow;
+  final String? todayScheduleLabel;
+  final bool? hasScheduleConfigured;
 
-  static const defaults = OperationalSignalsSnapshot(
-    signals: OperationalSignals.defaults,
-  );
-}
+  bool get hasActiveSignal =>
+      isActive && signalType != OperationalSignalType.none;
+  bool get isInformational => hasActiveSignal && !forceClosed;
 
-class OperationalSignals {
-  const OperationalSignals({
-    required this.temporaryClosed,
-    required this.hasDelivery,
-    required this.acceptsWhatsappOrders,
-    required this.openNowManualOverride,
-  });
-
-  final bool temporaryClosed;
-  final bool hasDelivery;
-  final bool acceptsWhatsappOrders;
-  final bool openNowManualOverride;
-
-  static const defaults = OperationalSignals(
-    temporaryClosed: false,
-    hasDelivery: false,
-    acceptsWhatsappOrders: false,
-    openNowManualOverride: false,
-  );
-
-  bool valueFor(OperationalSignalKey key) {
-    switch (key) {
-      case OperationalSignalKey.temporaryClosed:
-        return temporaryClosed;
-      case OperationalSignalKey.hasDelivery:
-        return hasDelivery;
-      case OperationalSignalKey.acceptsWhatsappOrders:
-        return acceptsWhatsappOrders;
-      case OperationalSignalKey.openNowManualOverride:
-        return openNowManualOverride;
-    }
-  }
-
-  OperationalSignals copyWith({
-    bool? temporaryClosed,
-    bool? hasDelivery,
-    bool? acceptsWhatsappOrders,
-    bool? openNowManualOverride,
+  static OwnerOperationalSignal empty({
+    required String merchantId,
+    required String ownerUserId,
   }) {
-    return OperationalSignals(
-      temporaryClosed: temporaryClosed ?? this.temporaryClosed,
-      hasDelivery: hasDelivery ?? this.hasDelivery,
-      acceptsWhatsappOrders:
-          acceptsWhatsappOrders ?? this.acceptsWhatsappOrders,
-      openNowManualOverride:
-          openNowManualOverride ?? this.openNowManualOverride,
+    return OwnerOperationalSignal(
+      merchantId: merchantId,
+      ownerUserId: ownerUserId,
+      signalType: OperationalSignalType.none,
+      isActive: false,
+      message: null,
+      forceClosed: false,
+      schemaVersion: operationalSignalSchemaVersion,
     );
   }
 
-  OperationalSignals withValue(OperationalSignalKey key, bool value) {
-    switch (key) {
-      case OperationalSignalKey.temporaryClosed:
-        return copyWith(temporaryClosed: value);
-      case OperationalSignalKey.hasDelivery:
-        return copyWith(hasDelivery: value);
-      case OperationalSignalKey.acceptsWhatsappOrders:
-        return copyWith(acceptsWhatsappOrders: value);
-      case OperationalSignalKey.openNowManualOverride:
-        return copyWith(openNowManualOverride: value);
-    }
-  }
-
-  Map<String, bool> toMap() {
-    return {
-      OperationalSignalKey.temporaryClosed.fieldName: temporaryClosed,
-      OperationalSignalKey.hasDelivery.fieldName: hasDelivery,
-      OperationalSignalKey.acceptsWhatsappOrders.fieldName:
-          acceptsWhatsappOrders,
-      OperationalSignalKey.openNowManualOverride.fieldName:
-          openNowManualOverride,
-    };
-  }
-
-  factory OperationalSignals.fromMap(Map<String, dynamic>? map) {
-    final raw = map ?? const <String, dynamic>{};
-    return OperationalSignals(
-      temporaryClosed:
-          raw[OperationalSignalKey.temporaryClosed.fieldName] == true,
-      hasDelivery: raw[OperationalSignalKey.hasDelivery.fieldName] == true,
-      acceptsWhatsappOrders:
-          raw[OperationalSignalKey.acceptsWhatsappOrders.fieldName] == true,
-      openNowManualOverride:
-          raw[OperationalSignalKey.openNowManualOverride.fieldName] == true,
+  OwnerOperationalSignal copyWith({
+    String? merchantId,
+    String? ownerUserId,
+    OperationalSignalType? signalType,
+    bool? isActive,
+    String? message,
+    bool clearMessage = false,
+    bool? forceClosed,
+    int? schemaVersion,
+    DateTime? updatedAt,
+    String? updatedByUid,
+    DateTime? createdAt,
+    bool? isOpenNow,
+    bool clearIsOpenNow = false,
+    String? todayScheduleLabel,
+    bool clearTodayScheduleLabel = false,
+    bool? hasScheduleConfigured,
+    bool clearHasScheduleConfigured = false,
+  }) {
+    return OwnerOperationalSignal(
+      merchantId: merchantId ?? this.merchantId,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      signalType: signalType ?? this.signalType,
+      isActive: isActive ?? this.isActive,
+      message: clearMessage ? null : (message ?? this.message),
+      forceClosed: forceClosed ?? this.forceClosed,
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      updatedAt: updatedAt ?? this.updatedAt,
+      updatedByUid: updatedByUid ?? this.updatedByUid,
+      createdAt: createdAt ?? this.createdAt,
+      isOpenNow: clearIsOpenNow ? null : (isOpenNow ?? this.isOpenNow),
+      todayScheduleLabel: clearTodayScheduleLabel
+          ? null
+          : (todayScheduleLabel ?? this.todayScheduleLabel),
+      hasScheduleConfigured: clearHasScheduleConfigured
+          ? null
+          : (hasScheduleConfigured ?? this.hasScheduleConfigured),
     );
   }
 }

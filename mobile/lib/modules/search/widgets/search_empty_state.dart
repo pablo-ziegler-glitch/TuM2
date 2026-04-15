@@ -133,10 +133,10 @@ class SearchEmptyState extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        SingleChildScrollView(
+        const SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: const [
+            children: [
               _CategoryPill(
                 icon: Icons.local_pharmacy_outlined,
                 iconBg: AppColors.secondary100,
@@ -161,8 +161,8 @@ class SearchEmptyState extends StatelessWidget {
           ),
         ),
         if (isColdStart)
-          Padding(
-            padding: const EdgeInsets.only(top: 18),
+          const Padding(
+            padding: EdgeInsets.only(top: 18),
             child: Text(
               'Esta zona está creciendo. Pronto vas a ver más comercios.',
               textAlign: TextAlign.center,

@@ -1,47 +1,36 @@
 import type { Timestamp } from 'firebase/firestore';
-import type { MerchantSourceType } from './merchant';
 
-export type IsOpenNowSource =
-  | 'schedule'
-  | 'manual_override'
-  | 'signal'
-  | 'unknown';
+export type MerchantOperationalSignalType =
+  | 'none'
+  | 'vacation'
+  | 'temporary_closure'
+  | 'delay';
 
-export type IsOpenNowConfidence = 'high' | 'medium' | 'low' | 'unknown';
-
-/** Owner-reported operational signals (MVP subset). */
-export interface OperationalSignals {
-  temporaryClosed?: boolean;
-  hasDelivery?: boolean;
-  acceptsWhatsappOrders?: boolean;
-  /** Owner manually marks as open/closed overriding schedule. null = no override. */
-  openNowManualOverride?: boolean | null;
-  [key: string]: boolean | null | undefined;
-}
-
-/** Computed signals derived by Cloud Functions. */
-export interface DerivedSignals {
-  /** null when confidence is too low to determine */
-  isOpenNow: boolean | null;
-  isOpenNowSource: IsOpenNowSource;
-  isOpenNowConfidence: IsOpenNowConfidence;
-  [key: string]: boolean | null | string | undefined;
-}
+export type ManualOverrideMode = 'none' | 'force_closed' | 'informational';
 
 /**
  * Collection: merchant_operational_signals/{merchantId}
- * Stores real-time operational state for a merchant.
- * One document per merchant (merchantId = docId).
+ * Documento privado de estado operativo con override manual OWNER y
+ * campos automáticos derivados de horarios/guardias.
  */
 export interface MerchantOperationalSignalsDocument {
-  // Required
   merchantId: string;
-  signals: OperationalSignals;
-  /** Computed by Cloud Functions — do not write from client */
-  derivedSignals: DerivedSignals;
-  sourceType: MerchantSourceType;
+  ownerUserId: string;
+  signalType: MerchantOperationalSignalType;
+  isActive: boolean;
+  message?: string | null;
+  forceClosed: boolean;
   updatedAt: Timestamp;
+  updatedByUid: string;
+  createdAt?: Timestamp;
+  schemaVersion: number;
 
-  // Optional
-  updatedBy?: string | null;
+  // Campos derivados backend (no escribir desde cliente).
+  isOpenNow?: boolean;
+  todayScheduleLabel?: string;
+  hasPharmacyDutyToday?: boolean;
+  hasScheduleConfigured?: boolean;
+  closesAt?: string | null;
+  opensNextAt?: string | null;
 }
+

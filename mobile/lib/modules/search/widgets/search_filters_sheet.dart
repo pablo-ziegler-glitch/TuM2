@@ -48,7 +48,7 @@ class _SearchFiltersSheetState extends ConsumerState<SearchFiltersSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Filtros', style: AppTextStyles.headingSm),
+              const Text('Filtros', style: AppTextStyles.headingSm),
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
                 key: ValueKey('category-${_filters.categoryId ?? 'all'}'),

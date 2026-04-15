@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/owner_merchant_summary.dart';
+import '../models/operational_signals.dart';
+import 'owner_operational_signals_repository.dart';
 
 /// Repositorio privado del módulo OWNER.
 ///
@@ -8,16 +10,47 @@ import '../models/owner_merchant_summary.dart';
 /// por `ownerUserId`. Nunca usa `merchant_public`.
 class OwnerRepository {
   OwnerRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+      : _firestore = firestore ?? FirebaseFirestore.instance,
+        _operationalSignalsRepository = OwnerOperationalSignalsRepository(
+          dataSource: FirestoreOwnerOperationalSignalsDataSource(
+            firestore: firestore ?? FirebaseFirestore.instance,
+          ),
+        );
 
   final FirebaseFirestore _firestore;
+  final OwnerOperationalSignalsRepository _operationalSignalsRepository;
 
   Future<OwnerMerchantResolution> resolveOwnerMerchant(
-      String ownerUserId) async {
+    String ownerUserId, {
+    String? preferredMerchantId,
+  }) async {
+    final normalizedPreferredId = preferredMerchantId?.trim();
+    if (normalizedPreferredId != null && normalizedPreferredId.isNotEmpty) {
+      final preferredDoc = await _firestore
+          .collection('merchants')
+          .doc(normalizedPreferredId)
+          .get();
+      if (preferredDoc.exists) {
+        final preferredData = preferredDoc.data() ?? const <String, dynamic>{};
+        final preferredOwnerUserId =
+            (preferredData['ownerUserId'] as String?)?.trim();
+        if (preferredOwnerUserId == ownerUserId) {
+          final merchant = OwnerMerchantSummary.fromFirestore(
+            preferredDoc.id,
+            preferredData,
+          );
+          return OwnerMerchantResolution(
+            primaryMerchant: merchant,
+            allMerchants: [merchant],
+          );
+        }
+      }
+    }
+
     final snapshot = await _firestore
         .collection('merchants')
         .where('ownerUserId', isEqualTo: ownerUserId)
-        .limit(10)
+        .limit(3)
         .get();
 
     final merchants = snapshot.docs
@@ -41,6 +74,12 @@ class OwnerRepository {
       primaryMerchant: merchants.first,
       allMerchants: merchants,
     );
+  }
+
+  Future<OwnerOperationalSignal?> fetchOperationalSignal({
+    required String merchantId,
+  }) {
+    return _operationalSignalsRepository.fetchSignal(merchantId: merchantId);
   }
 
   int _sortByPriority(OwnerMerchantSummary a, OwnerMerchantSummary b) {

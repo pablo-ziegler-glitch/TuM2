@@ -113,6 +113,7 @@ Opcional para emuladores locales:
 | [QUERY-ARCHITECTURE.md](docs/QUERY-ARCHITECTURE.md) | Patrones de queries Firestore por pantalla |
 | [TuM2-0014-MICROCOPY.md](docs/TuM2-0014-MICROCOPY.md) | Guía de tono y microcopy para el MVP Fase 3 |
 | [PROD-LAUNCH-CRITICAL.md](docs/ops/PROD-LAUNCH-CRITICAL.md) | Runbook crítico para lanzamiento a producción |
+| [ci-cd.md](docs/devops/ci-cd.md) | Operación de workflows GitHub Actions, deploy por ambiente, seguridad OIDC y aprobaciones manuales |
 | [TuM2-0123-limites-capacidad-catalogo.md](docs/storyscards/TuM2-0123-limites-capacidad-catalogo.md) | Historia TuM2-0123: enforcement de capacidad de catálogo (CF + OWNER + Admin Web) |
 | [tu_m_2_0124_mitigacion_operativa_de_guardias_de_farmacia.md](docs/storyscards/tu_m_2_0124_mitigacion_operativa_de_guardias_de_farmacia.md) | Historia TuM2-0124: mitigación de guardias y reasignación operativa |
 | [schema/README.md](schema/README.md) | Modelo de datos, colecciones, índices |

@@ -48,10 +48,27 @@ export const assignOwnerRole = onCall<void, Promise<AssignOwnerRoleResponse>>(
       );
     }
 
+    const currentClaims = userRecord.customClaims ?? {};
+    const claimMerchantId =
+      typeof currentClaims["merchantId"] === "string" &&
+      currentClaims["merchantId"].trim().length > 0
+        ? currentClaims["merchantId"].trim()
+        : null;
+    const claimMerchantIds = Array.isArray(currentClaims["merchantIds"])
+      ? currentClaims["merchantIds"]
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0)
+      : [];
+    const normalizedMerchantIds = claimMerchantId == null
+      ? [...new Set(claimMerchantIds)]
+      : [...new Set([claimMerchantId, ...claimMerchantIds])];
+
     // Preservar claims existentes y elevar el rol
     const updatedClaims = {
-      ...(userRecord.customClaims ?? {}),
+      ...currentClaims,
       role: "owner",
+      merchantIds: normalizedMerchantIds,
     };
 
     await Promise.all([

@@ -145,12 +145,18 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: Row(
                 children: [
-                  const Icon(Icons.arrow_back,
-                      size: 16, color: AppColors.neutral500),
+                  const Icon(
+                    Icons.arrow_back,
+                    size: 16,
+                    color: AppColors.neutral500,
+                  ),
                   const SizedBox(width: 6),
-                  Text('Import Management',
-                      style: AppTextStyles.bodySm
-                          .copyWith(color: AppColors.neutral500)),
+                  Text(
+                    'Import Management',
+                    style: AppTextStyles.bodySm.copyWith(
+                      color: AppColors.neutral500,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -167,9 +173,13 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
                 color: AppColors.primary500.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text(_importType!.label,
-                  style: AppTextStyles.labelSm
-                      .copyWith(color: AppColors.primary500, fontSize: 12)),
+              child: Text(
+                _importType!.label,
+                style: AppTextStyles.labelSm.copyWith(
+                  color: AppColors.primary500,
+                  fontSize: 12,
+                ),
+              ),
             ),
         ],
       ),
@@ -327,8 +337,10 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.neutral700,
                 side: const BorderSide(color: AppColors.neutral300),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 textStyle: AppTextStyles.labelSm,
               ),
               child: const Text('Back'),
@@ -368,7 +380,8 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('No se pudieron leer los bytes del archivo.')),
+          content: Text('No se pudieron leer los bytes del archivo.'),
+        ),
       );
       return;
     }
@@ -491,9 +504,9 @@ class _ImportWizardScreenState extends State<ImportWizardScreen> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

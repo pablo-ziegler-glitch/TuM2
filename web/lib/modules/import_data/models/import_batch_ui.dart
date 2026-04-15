@@ -9,14 +9,10 @@ enum ImportBatchStatus {
   partial,
   archived,
   rolledBack,
-  hidden
+  hidden,
 }
 
-enum ImportType {
-  officialDataset,
-  masterCatalog,
-  genericInternal,
-}
+enum ImportType { officialDataset, masterCatalog, genericInternal }
 
 extension ImportTypeLabel on ImportType {
   String get label {
@@ -412,10 +408,14 @@ class ImportOverviewKpis {
         batches.where((b) => b.status == ImportBatchStatus.completed).length;
     final failedBatches =
         batches.where((b) => b.status == ImportBatchStatus.failed).length;
-    final rowsProcessed =
-        batches.fold<int>(0, (sum, b) => sum + b.processedCount);
-    final pendingConflicts =
-        batches.fold<int>(0, (sum, b) => sum + b.pendingReviewCount);
+    final rowsProcessed = batches.fold<int>(
+      0,
+      (sum, b) => sum + b.processedCount,
+    );
+    final pendingConflicts = batches.fold<int>(
+      0,
+      (sum, b) => sum + b.pendingReviewCount,
+    );
     final activeTemplates = batches
         .map((batch) => batch.templateName)
         .whereType<String>()

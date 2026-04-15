@@ -55,7 +55,7 @@ class ValidationBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: fgColor.withOpacity(0.3)),
+        border: Border.all(color: fgColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,7 +74,8 @@ class ValidationBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(body, style: AppTextStyles.bodyXs.copyWith(color: fgColor)),
+                Text(body,
+                    style: AppTextStyles.bodyXs.copyWith(color: fgColor)),
               ],
             ),
           ),

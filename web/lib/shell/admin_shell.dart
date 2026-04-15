@@ -38,23 +38,35 @@ class AdminShell extends StatelessWidget {
 class _AdminSidebar extends StatelessWidget {
   static const _navItems = [
     _NavItem(
-        icon: Icons.grid_view_outlined, label: 'Dashboard', path: '/dashboard'),
+      icon: Icons.grid_view_outlined,
+      label: 'Dashboard',
+      path: '/dashboard',
+    ),
     _NavItem(
-        icon: Icons.storefront_outlined,
-        label: 'Catalog Limits',
-        path: '/businesses'),
+      icon: Icons.storefront_outlined,
+      label: 'Catalog Limits',
+      path: '/businesses',
+    ),
     _NavItem(
-        icon: Icons.storage_outlined,
-        label: 'Import Management',
-        path: '/imports'),
+      icon: Icons.storage_outlined,
+      label: 'Import Management',
+      path: '/imports',
+    ),
     _NavItem(
-        icon: Icons.description_outlined,
-        label: 'Templates',
-        path: '/templates'),
+      icon: Icons.description_outlined,
+      label: 'Templates',
+      path: '/templates',
+    ),
     _NavItem(
-        icon: Icons.bar_chart_outlined, label: 'Analytics', path: '/analytics'),
+      icon: Icons.bar_chart_outlined,
+      label: 'Analytics',
+      path: '/analytics',
+    ),
     _NavItem(
-        icon: Icons.settings_outlined, label: 'Settings', path: '/settings'),
+      icon: Icons.settings_outlined,
+      label: 'Settings',
+      path: '/settings',
+    ),
   ];
 
   @override
@@ -82,14 +94,18 @@ class _AdminSidebar extends StatelessWidget {
                         color: AppColors.primary500,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Icon(Icons.location_on,
-                          color: Colors.white, size: 16),
+                      child: const Icon(
+                        Icons.location_on,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Text(
                       'TuM2 Admin',
-                      style: AppTextStyles.headingSm
-                          .copyWith(color: AppColors.surface),
+                      style: AppTextStyles.headingSm.copyWith(
+                        color: AppColors.surface,
+                      ),
                     ),
                   ],
                 ),
@@ -130,11 +146,14 @@ class _AdminSidebar extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
-                    child: Text('AU',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
+                    child: Text(
+                      'AU',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -142,13 +161,17 @@ class _AdminSidebar extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Admin User',
-                          style: AppTextStyles.labelSm
-                              .copyWith(color: AppColors.surface)),
+                      Text(
+                        'Admin User',
+                        style: AppTextStyles.labelSm.copyWith(
+                          color: AppColors.surface,
+                        ),
+                      ),
                       Text(
                         'System Overseer',
-                        style: AppTextStyles.bodyXs
-                            .copyWith(color: AppColors.neutral600),
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral600,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -243,8 +266,9 @@ class _TopBar extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'Search imports, logs or entities...',
-                    style: AppTextStyles.bodyXs
-                        .copyWith(color: AppColors.neutral400),
+                    style: AppTextStyles.bodyXs.copyWith(
+                      color: AppColors.neutral400,
+                    ),
                   ),
                 ],
               ),
@@ -283,9 +307,10 @@ class _TopBar extends StatelessWidget {
             constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           ),
           const SizedBox(width: 8),
-          Text('TuM2 Portal',
-              style:
-                  AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600)),
+          Text(
+            'TuM2 Portal',
+            style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600),
+          ),
           const SizedBox(width: 8),
           Container(
             width: 28,
@@ -295,11 +320,14 @@ class _TopBar extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: const Center(
-              child: Text('AU',
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white)),
+              child: Text(
+                'AU',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ],

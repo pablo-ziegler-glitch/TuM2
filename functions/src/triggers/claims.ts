@@ -1,5 +1,6 @@
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 import { MerchantClaimDoc } from "../lib/types";
 
 const db = () => getFirestore();
@@ -8,7 +9,7 @@ const db = () => getFirestore();
  * onClaimApprovedPromoteMerchant
  *
  * Triggered when a merchant_claims/{claimId} doc is updated.
- * If the status transitions to "approved":
+ * If claimStatus transitions to "approved":
  * - Assigns ownerUserId to the merchant
  * - Upgrades verificationStatus to "claimed"
  * - merchant_public will be updated via the merchants trigger cascade
@@ -20,7 +21,7 @@ export const onClaimApprovedPromoteMerchant = onDocumentUpdated(
     const after = event.data?.after.data() as MerchantClaimDoc;
 
     // Only act on status change to "approved"
-    if (before.status === "approved" || after.status !== "approved") return;
+    if (before.claimStatus === "approved" || after.claimStatus !== "approved") return;
 
     const { merchantId, userId } = after;
     if (!merchantId || !userId) {
@@ -39,8 +40,32 @@ export const onClaimApprovedPromoteMerchant = onDocumentUpdated(
         { merge: true }
       );
 
+    const auth = getAuth();
+    const userRecord = await auth.getUser(userId);
+    const currentClaims = userRecord.customClaims ?? {};
+    const claimMerchantId =
+      typeof currentClaims["merchantId"] === "string" &&
+      currentClaims["merchantId"].trim().length > 0
+        ? currentClaims["merchantId"].trim()
+        : null;
+    const claimMerchantIds = Array.isArray(currentClaims["merchantIds"])
+      ? currentClaims["merchantIds"]
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0)
+      : [];
+    const mergedMerchantIds = [...new Set([merchantId, ...claimMerchantIds])];
+
+    await auth.setCustomUserClaims(userId, {
+      ...currentClaims,
+      role: "owner",
+      merchantId: claimMerchantId ?? merchantId,
+      merchantIds: mergedMerchantIds,
+      onboardingComplete: true,
+    });
+
     console.log(
-      `[onClaimApprovedPromoteMerchant] Merchant ${merchantId} promoted to claimed, owner=${userId}`
+      `[onClaimApprovedPromoteMerchant] Merchant ${merchantId} promoted to claimed, owner=${userId}, claimsSynced=true`
     );
   }
 );

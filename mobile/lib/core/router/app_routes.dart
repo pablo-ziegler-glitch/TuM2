@@ -26,6 +26,13 @@ abstract class AppRoutes {
   static const profile = '/profile';
   static const profileSettings = '/profile/settings';
   static const profileProposals = '/profile/propuestas';
+  static const claimIntro = '/claim';
+  static const claimSelect = '/claim/select';
+  static const claimApplicant = '/claim/applicant';
+  static const claimEvidence = '/claim/evidence';
+  static const claimConsent = '/claim/consent';
+  static const claimSuccess = '/claim/success';
+  static const claimStatus = '/claim/status';
 
   // ── OwnerStack (modal full-screen) ──────────────────────────────────────────
   static const ownerRoot = '/owner';
@@ -41,6 +48,8 @@ abstract class AppRoutes {
   static const ownerSignals = '/owner/signals';
   static const ownerPharmacyDuties = '/owner/pharmacy-duties';
   static const ownerDuties = '/owner/duties';
+  static const ownerPharmacyDutyNew = '/owner/pharmacy-duties/new';
+  static const ownerPharmacyDutyEdit = '/owner/pharmacy-duties/:dutyId/edit';
   static const ownerPharmacyDutyUpcoming = '/owner/pharmacy-duty/upcoming';
   static const ownerPharmacyDutyIncidentReport =
       '/owner/pharmacy-duty/:dutyId/report-incident';
@@ -85,6 +94,14 @@ abstract class AppRoutes {
 
   static String ownerPharmacyDutyIncidentReportPath(String dutyId) =>
       '/owner/pharmacy-duty/$dutyId/report-incident';
+
+  static String ownerPharmacyDutyEditPath(String dutyId) =>
+      '/owner/pharmacy-duties/$dutyId/edit';
+
+  static String ownerPharmacyDutyNewPath({String? date}) {
+    if (date == null || date.isEmpty) return ownerPharmacyDutyNew;
+    return '$ownerPharmacyDutyNew?date=$date';
+  }
 
   static String ownerPharmacyDutySelectCandidatesPath(String dutyId) =>
       '/owner/pharmacy-duty/$dutyId/select-candidates';

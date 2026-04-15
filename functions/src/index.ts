@@ -43,6 +43,7 @@ export { onboardingOwnerSubmit } from "./callables/onboardingOwnerSubmit";
 export { checkMerchantDuplicates } from "./callables/checkMerchantDuplicates";
 export {
   upsertPharmacyDuty,
+  upsertPharmacyDutiesBatch,
   changePharmacyDutyStatus,
   confirmPharmacyDuty,
   reportPharmacyDutyIncident,
@@ -61,6 +62,13 @@ export {
   createMerchantProduct,
   deactivateMerchantProduct,
 } from "./callables/catalogLimits";
+export {
+  upsertMerchantClaimDraft,
+  submitMerchantClaim,
+  cancelMerchantClaim,
+  getMyMerchantClaimStatus,
+  searchClaimableMerchants,
+} from "./callables/merchantClaims";
 
 // ─── Onboarding Scheduled Jobs ─────────────────────────────────────────────
 

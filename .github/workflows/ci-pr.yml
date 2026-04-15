@@ -1,0 +1,183 @@
+name: CI PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ci-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    name: Detect Changed Areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mobile: ${{ steps.filter.outputs.mobile }}
+      web_admin: ${{ steps.filter.outputs.web_admin }}
+      functions: ${{ steps.filter.outputs.functions }}
+      firebase_config: ${{ steps.filter.outputs.firebase_config }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed areas
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            mobile:
+              - "mobile/**"
+            web_admin:
+              - "web/**"
+            functions:
+              - "functions/**"
+              - "schema/**"
+            firebase_config:
+              - "firebase.json"
+              - ".firebaserc"
+              - "firestore.rules"
+              - "firestore.indexes.json"
+              - "storage.rules"
+
+      - name: Report detected scope
+        run: |
+          set -euo pipefail
+          echo "mobile=${{ steps.filter.outputs.mobile }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "web_admin=${{ steps.filter.outputs.web_admin }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "functions=${{ steps.filter.outputs.functions }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "firebase_config=${{ steps.filter.outputs.firebase_config }}" >> "$GITHUB_STEP_SUMMARY"
+
+  validate-mobile:
+    name: Validate Flutter Mobile
+    needs: detect-changes
+    if: needs.detect-changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Format check
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test --dart-define=ENV=staging
+
+  validate-web-admin:
+    name: Validate Flutter Web Admin
+    needs: detect-changes
+    if: needs.detect-changes.outputs.web_admin == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Format check
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+  validate-functions:
+    name: Validate Cloud Functions
+    needs: detect-changes
+    if: needs.detect-changes.outputs.functions == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Rules Test
+        run: npm run test:rules
+
+  validate-config:
+    name: Validate Firebase Config Files
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate JSON syntax
+        run: |
+          set -euo pipefail
+          jq empty firestore.indexes.json
+          jq empty firebase.json
+          jq empty .firebaserc
+
+      - name: Validate canonical Firebase projects
+        run: |
+          set -euo pipefail
+          if jq -e '.projects[] | select(. == "tum2-dev")' .firebaserc >/dev/null; then
+            echo "::error::Proyecto huérfano detectado: tum2-dev. Usar solo tum2-dev-6283d/tum2-staging-45c83/tum2-prod-bc9b4."
+            exit 1
+          fi

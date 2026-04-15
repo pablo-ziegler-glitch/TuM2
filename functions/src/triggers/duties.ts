@@ -1,5 +1,6 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { logFinOpsEvent } from "../lib/finops";
 import { todayDateString } from "../lib/schedules";
 import {
   DutyConfidenceLevel,
@@ -99,6 +100,8 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
         const relevantTodayDuties = todayDutiesSnap.docs
           .map((doc) => doc.data() as PharmacyDutyDoc)
           .filter((doc) => normalizeDutyStatus(doc.status) !== "cancelled");
+        const totalNonCancelledDuties = relevantTodayDuties.length;
+        const wasTruncated = false;
         const hasDutyToday = relevantTodayDuties.length > 0;
         const bestDuty = relevantTodayDuties
           .slice()
@@ -162,6 +165,20 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
         console.log(
           `[onPharmacyDutyWriteSyncMerchant] ${affectedMerchantId} hasPharmacyDutyToday=${hasDutyToday}`
         );
+        logFinOpsEvent({
+          event: "trigger_duties_sync",
+          module: "triggers.duties",
+          payload: {
+            merchantId: affectedMerchantId,
+            date: today,
+            dutiesRead: todayDutiesSnap.size,
+            totalNonCancelledDuties,
+            wasTruncated,
+            signalWrite: signalNeedsUpdate,
+            publicWrite: publicNeedsUpdate,
+            hasDutyToday,
+          },
+        });
       })
     );
   }

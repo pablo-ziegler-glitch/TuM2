@@ -4,9 +4,9 @@ import 'package:cloud_functions/cloud_functions.dart';
 
 /// Estado del check de duplicados.
 enum DuplicateState {
-  none,   // Sin duplicados
-  soft,   // EX-13: warning naranja, flujo no bloqueado
-  hard,   // EX-14: interstitial bloqueante
+  none, // Sin duplicados
+  soft, // EX-13: warning naranja, flujo no bloqueado
+  hard, // EX-14: interstitial bloqueante
 }
 
 /// Datos de un comercio candidato a duplicado.

@@ -45,11 +45,16 @@ class OnboardingDraft {
 
   int get displayStep {
     switch (currentStep) {
-      case 'step_1': return 1;
-      case 'step_2': return 2;
-      case 'step_3': return 3;
-      case 'confirmation': return 4;
-      default: return 1;
+      case 'step_1':
+        return 1;
+      case 'step_2':
+        return 2;
+      case 'step_3':
+        return 3;
+      case 'confirmation':
+        return 4;
+      default:
+        return 1;
     }
   }
 
@@ -61,7 +66,7 @@ class OnboardingDraft {
 
   String get expiresInLabel {
     if (ttlRemainingHours <= 0) return 'vencido';
-    return '~${ttlRemainingHours} hs';
+    return '~$ttlRemainingHours hs';
   }
 }
 
@@ -94,8 +99,8 @@ class Step2Data {
 
 /// Horario de un día de la semana para el onboarding step 3.
 class DaySchedule {
-  final String day;        // 'Lun', 'Mar', ... (label display)
-  final String dayKey;     // 'monday', 'tuesday', ... (Firestore key)
+  final String day; // 'Lun', 'Mar', ... (label display)
+  final String dayKey; // 'monday', 'tuesday', ... (Firestore key)
   bool enabled;
   TimeOfDay openTime;
   TimeOfDay closeTime;
@@ -122,7 +127,9 @@ class DaySchedule {
 
   /// Convierte a mapa para Firestore (schedule field en merchant_schedules).
   Map<String, dynamic> toFirestoreMap() {
-    if (!enabled) return {'closed': true, 'open': openLabel, 'close': closeLabel};
+    if (!enabled) {
+      return {'closed': true, 'open': openLabel, 'close': closeLabel};
+    }
     return {'open': openLabel, 'close': closeLabel};
   }
 }

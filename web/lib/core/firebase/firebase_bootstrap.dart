@@ -6,16 +6,21 @@ import 'package:flutter/foundation.dart';
 class FirebaseBootstrap {
   static const _apiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const _appId = String.fromEnvironment('FIREBASE_APP_ID');
-  static const _messagingSenderId =
-      String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+  static const _messagingSenderId = String.fromEnvironment(
+    'FIREBASE_MESSAGING_SENDER_ID',
+  );
   static const _projectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
   static const _authDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN');
-  static const _storageBucket =
-      String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
-  static const _measurementId =
-      String.fromEnvironment('FIREBASE_MEASUREMENT_ID');
-  static const _useEmulators =
-      String.fromEnvironment('USE_FIREBASE_EMULATORS', defaultValue: 'false');
+  static const _storageBucket = String.fromEnvironment(
+    'FIREBASE_STORAGE_BUCKET',
+  );
+  static const _measurementId = String.fromEnvironment(
+    'FIREBASE_MEASUREMENT_ID',
+  );
+  static const _useEmulators = String.fromEnvironment(
+    'USE_FIREBASE_EMULATORS',
+    defaultValue: 'false',
+  );
 
   static Future<void> initialize() async {
     if (!kIsWeb) {

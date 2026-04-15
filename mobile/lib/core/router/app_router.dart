@@ -21,6 +21,7 @@ import '../../modules/search/screens/search_map_screen.dart';
 import '../../modules/search/screens/pharmacy_results_screen.dart';
 import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
+import '../../modules/merchant_claim/screens/merchant_claim_flow_screens.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
 import '../../modules/owner/screens/owner_operational_signals_screen.dart';
 import '../../modules/owner/screens/owner_schedule_screen.dart';
@@ -256,6 +257,36 @@ List<RouteBase> _buildRoutes() {
           ],
         ),
       ],
+    ),
+
+    // ── OwnerStack (modal full-screen) ────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.claimIntro,
+      builder: (_, __) => const ClaimIntroScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimSelect,
+      builder: (_, __) => const ClaimSelectMerchantScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimApplicant,
+      builder: (_, __) => const ClaimApplicantDataScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimEvidence,
+      builder: (_, __) => const ClaimEvidenceScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimConsent,
+      builder: (_, __) => const ClaimConsentScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimSuccess,
+      builder: (_, __) => const ClaimSuccessScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimStatus,
+      builder: (_, __) => const ClaimStatusScreen(),
     ),
 
     // ── OwnerStack (modal full-screen) ────────────────────────────────────────

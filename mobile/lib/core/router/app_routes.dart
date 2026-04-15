@@ -26,6 +26,13 @@ abstract class AppRoutes {
   static const profile = '/profile';
   static const profileSettings = '/profile/settings';
   static const profileProposals = '/profile/propuestas';
+  static const claimIntro = '/claim';
+  static const claimSelect = '/claim/select';
+  static const claimApplicant = '/claim/applicant';
+  static const claimEvidence = '/claim/evidence';
+  static const claimConsent = '/claim/consent';
+  static const claimSuccess = '/claim/success';
+  static const claimStatus = '/claim/status';
 
   // ── OwnerStack (modal full-screen) ──────────────────────────────────────────
   static const ownerRoot = '/owner';

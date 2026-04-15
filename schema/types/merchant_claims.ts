@@ -1,64 +1,81 @@
 import type { Timestamp } from 'firebase/firestore';
 
 /**
- * Estados del ciclo de vida de un reclamo de ownership.
- * 'disputed' y 'cancelled' están preparados para V1, no implementados en MVP.
+ * Estados canónicos del ciclo de vida de un claim de titularidad.
+ * Mantener sincronizado con callables/triggers y UX de CLAIM-07.
  */
 export type MerchantClaimStatus =
-  | 'pending'
+  | 'draft'
+  | 'submitted'
+  | 'auto_validating'
+  | 'under_review'
+  | 'needs_more_info'
   | 'approved'
   | 'rejected'
-  | 'disputed'
+  | 'duplicate_claim'
+  | 'conflict_detected'
   | 'cancelled';
 
-export type ClaimEvidenceType =
-  | 'social_profile'
-  | 'photo_storefront'
-  | 'phone_verification'
-  | 'document'
-  | 'other';
+export type MerchantClaimDeclaredRole =
+  | 'owner'
+  | 'co_owner'
+  | 'authorized_representative';
 
-export interface ClaimEvidence {
-  /** URL a foto del comercio (frente, cartel, etc.) */
-  photoUrl?: string;
-  /** Descripción del rol del reclamante */
-  ownerDescription?: string;
-  /** Teléfono provisto como prueba */
-  verificationPhone?: string;
-  [key: string]: string | undefined;
-}
+export type MerchantClaimEvidenceKind = 'storefront_photo' | 'ownership_document';
+
+export interface MerchantClaimEvidenceFile {
+  id: string;
+  kind: MerchantClaimEvidenceKind;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: Timestamp;
+  /**
+   * Nombre original del archivo. Es metadato de UX/admin, no se usa para auth.
+   */
+  originalFileName?: string | null;
+ }
 
 /**
  * Collection: merchant_claims/{claimId}
- * Solicitud de un usuario para reclamar la propiedad de un comercio.
- *
- * Solo el rol owner está activo en MVP.
- * Staff y disputas complejas quedan para V1.
- *
- * claimantUsername y claimantDisplayName se almacenan como snapshot
- * para mostrar en ficha pública sin necesitar join a users.
+ * Solicitud de un usuario autenticado para reclamar titularidad de un comercio.
+ * Se modela como workflow con validación automática + revisión manual posterior.
  */
 export interface MerchantClaimDocument {
   // Obligatorios
   id: string;
   merchantId: string;
   userId: string;
-  status: MerchantClaimStatus;
-  submittedAt: Timestamp;
+  categoryId: string;
+  zoneId: string;
+  claimStatus: MerchantClaimStatus;
+  authenticatedEmail: string;
+  declaredRole: MerchantClaimDeclaredRole;
+  hasAcceptedDataProcessingConsent: boolean;
+  hasAcceptedLegitimacyDeclaration: boolean;
+  storefrontPhotoUploaded: boolean;
+  ownershipDocumentUploaded: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 
   // Opcionales
-  claimantUsername?: string | null;
+  submittedAt?: Timestamp | null;
+  cancelledAt?: Timestamp | null;
+  cancelledReason?: string | null;
+  phone?: string | null;
   claimantDisplayName?: string | null;
-  evidenceType?: ClaimEvidenceType | null;
-  evidenceUrl?: string | null;
-  evidence?: ClaimEvidence;
-  notes?: string | null;
+  evidenceFiles?: MerchantClaimEvidenceFile[];
+  claimantNote?: string | null;
+  autoValidationVersion?: number | null;
+  autoValidationResult?: 'pass' | 'needs_review' | 'blocked' | null;
+  autoValidationReasonCode?: string | null;
+  duplicateOfClaimId?: string | null;
+  conflictType?: 'merchant_already_owned' | 'active_claim_exists' | 'suspicious_payload' | null;
+  riskFlags?: string[];
   reviewedAt?: Timestamp | null;
-  /** UID del admin que revisó el reclamo */
-  reviewedBy?: string | null;
-  reviewDecision?: 'approved' | 'rejected' | null;
+  reviewedByUid?: string | null;
+  reviewDecision?: MerchantClaimStatus | null;
   reviewNotes?: string | null;
   resolvedAt?: Timestamp | null;
+  lastStatusAt?: Timestamp | null;
 }

@@ -9,7 +9,7 @@ const db = () => getFirestore();
  * onClaimApprovedPromoteMerchant
  *
  * Triggered when a merchant_claims/{claimId} doc is updated.
- * If the status transitions to "approved":
+ * If claimStatus transitions to "approved":
  * - Assigns ownerUserId to the merchant
  * - Upgrades verificationStatus to "claimed"
  * - merchant_public will be updated via the merchants trigger cascade
@@ -21,7 +21,7 @@ export const onClaimApprovedPromoteMerchant = onDocumentUpdated(
     const after = event.data?.after.data() as MerchantClaimDoc;
 
     // Only act on status change to "approved"
-    if (before.status === "approved" || after.status !== "approved") return;
+    if (before.claimStatus === "approved" || after.claimStatus !== "approved") return;
 
     const { merchantId, userId } = after;
     if (!merchantId || !userId) {

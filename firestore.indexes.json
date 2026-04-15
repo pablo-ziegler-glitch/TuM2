@@ -217,7 +217,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "merchantId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        { "fieldPath": "claimStatus", "order": "ASCENDING" }
       ]
     },
     {
@@ -225,7 +225,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "status", "order": "ASCENDING" }
+        { "fieldPath": "claimStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "merchant_claims",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
     },
     {

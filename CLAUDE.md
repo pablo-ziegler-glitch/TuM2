@@ -448,6 +448,11 @@ Reglas canónicas transversales del dominio claim:
 - Si un dato requiere revisión humana, debe existir cifrado reversible con control de acceso.
 - Privacidad/Términos/consentimientos deben cubrir explícitamente el flujo de claims.
 
+Sincronización documental aplicada (storycards, 2026-04-15):
+- Arquitectura y acceso: 0004, 0053, 0054, 0064, 0131.
+- Claim core: 0127, 0128, 0129, 0130, 0132, 0133.
+- Legal claims: 0100, 0101, 0102, 0103, 0104.
+
 ---
 
 ## Reglas operativas
@@ -480,3 +485,6 @@ Reglas canónicas transversales del dominio claim:
 - [0123] UI OWNER/ADMIN integrada con capacidad (`used/limit/source`), eventos analytics de warning/bloqueo y controles de costo (`limit` en búsquedas admin + cache TTL de config).
 - [0124] Mitigación de guardias cerrada (PR #59, 2026-04-09): confirmación de guardia, reporte de incidente, selección de candidatas por zona/distancia y ronda de reasignación con primera aceptación ganadora.
 - [0124] Nuevas colecciones operativas (`pharmacy_duty_incidents`, `pharmacy_duty_reassignment_rounds`, `pharmacy_duty_reassignment_requests`) y jobs incrementales para recordatorios/expiraciones con límites de scan por ciclo.
+- [0126] Flujo claim en progreso (2026-04-14): implementado flujo mobile CLAIM-01..07 con Firebase real (draft, evidencia, consentimiento, submit, estado), sin listeners permanentes y con refresh por acción.
+- [0126] Backend inicial implementado: callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `cancelMerchantClaim`, `getMyMerchantClaimStatus`, `searchClaimableMerchants`; reglas Firestore/Storage endurecidas e índices `merchant_claims` actualizados a `claimStatus`.
+- [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.

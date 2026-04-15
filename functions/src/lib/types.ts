@@ -232,8 +232,30 @@ export interface MerchantClaimDoc {
   claimId: string;
   merchantId: string;
   userId: string;
-  status: "pending" | "approved" | "rejected";
+  claimStatus:
+    | "draft"
+    | "submitted"
+    | "auto_validating"
+    | "under_review"
+    | "needs_more_info"
+    | "approved"
+    | "rejected"
+    | "duplicate_claim"
+    | "conflict_detected"
+    | "cancelled";
+  authenticatedEmail: string;
+  declaredRole: "owner" | "co_owner" | "authorized_representative";
+  categoryId: string;
+  zoneId: string;
+  storefrontPhotoUploaded: boolean;
+  ownershipDocumentUploaded: boolean;
+  hasAcceptedDataProcessingConsent: boolean;
+  hasAcceptedLegitimacyDeclaration: boolean;
+  submittedAt?: FirebaseFirestore.Timestamp | null;
+  duplicateOfClaimId?: string | null;
+  conflictType?: string | null;
   createdAt?: FirebaseFirestore.Timestamp;
+  updatedAt?: FirebaseFirestore.Timestamp;
   reviewedAt?: FirebaseFirestore.Timestamp;
 }
 

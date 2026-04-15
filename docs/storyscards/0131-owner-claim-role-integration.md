@@ -1,31 +1,399 @@
 # TuM2-0131 — Integración de claim con roles OWNER / owner_pending / aprobación
 
-Estado: TODO  
-Prioridad: P0 (MVP crítica)
+Estado propuesto: TODO  
+Prioridad: P0 (MVP crítica)  
+Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
+Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0130
 
-## Objetivo
-Conectar el dominio de claim con el sistema de roles sin romper el modelo de seguridad.
+## 1. Objetivo
+Definir la integración entre dominio de claim y sistema de roles para cerrar de forma explícita:
+- cuándo el usuario es solo `CUSTOMER`,
+- cuándo entra en `owner_pending`,
+- cuándo pasa a `OWNER`,
+- qué permisos y UX aplican en cada estado.
 
-## Alcance IN
-- Definir cuándo un usuario pasa a `owner_pending`.
-- Definir condiciones para transición a `OWNER` al aprobar claim.
-- Definir manejo de claims rechazados.
-- Definir visibilidad del estado del claim para usuario.
-- Integrar con módulo OWNER actual/futuro.
-- Manejar casos con comercio ya vinculado a otro owner.
+Regla central: reclamar no equivale a administrar.
 
-## Regla clave
-- Enviar claim no convierte automáticamente en OWNER.
-- Durante revisión puede existir `owner_pending`.
-- La transición de rol final es backend-only (Admin SDK/flujo autorizado).
+## 2. Contexto
+TuM2 ya define:
+- `CUSTOMER` como base,
+- `OWNER` como rol compuesto,
+- `owner_pending` como estado intermedio,
+- cambios de claims/roles solo vía backend autorizado (Admin SDK),
+- refresh de token obligatorio en splash y post-login.
 
-## Dependencias
-- TuM2-0004 arquitectura de roles.
-- TuM2-0054 auth.
-- TuM2-0064 módulo OWNER.
-- TuM2-0128 resolución administrativa de claims.
+Con claims, ese estado intermedio debe quedar canónico para evitar permisos prematuros y UX ambigua.
 
-## Guardrails de costo Firestore
-- Resolver estado de acceso OWNER con documento resumido de pertenencia/estado, evitando múltiples lecturas en cascada.
-- Sin listeners cruzados sobre claims + roles + merchants en splash.
-- Cache TTL para estado de rol y claim en shell.
+## 3. Problema que resuelve
+- Escalación temprana de privilegios.
+- Ambigüedad entre “en revisión” y “aprobado”.
+- Inconsistencia entre Auth, Shell, Owner y estado de claim.
+- Confusión claimStatus vs roleStatus.
+- Riesgo de bypass por lógica cliente.
+- Operación admin frágil al aprobar/rechazar.
+
+## 4. Objetivo de negocio
+Maximizar:
+- seguridad de permisos,
+- claridad del ciclo de vida,
+- consistencia claim-auth-navegación,
+- trazabilidad de transición a OWNER,
+- bajo riesgo de escalación indebida.
+
+## 5. Alcance IN
+- Ciclo de vida de rol asociado al claim.
+- Reglas de entrada/salida de `owner_pending`.
+- Reglas de promoción a `OWNER`.
+- Traducción claim status ↔ role status.
+- Comportamiento esperado en Splash, post-login, Shell y módulo OWNER.
+- Manejo de rechazo/conflicto/cancelación/duplicado.
+- Guardrails de seguridad para grants.
+
+## 6. Alcance OUT
+- UX detallada de claim (0126).
+- Motor de validación automática (0127).
+- Operatoria completa Admin (0128).
+- Matriz documental (0129).
+- Verificación teléfono fase 2 (0132).
+- Política detallada de disputas complejas (0133).
+- Implementación técnica de custom claims (código).
+
+## 7. Supuestos
+- Usuario inicia como `CUSTOMER`.
+- Enviar claim no concede `OWNER`.
+- `owner_pending` existe como señal intermedia.
+- No hay switch de sesión CUSTOMER/OWNER.
+- Claims de rol se escriben solo backend.
+- Token refresh canónico en splash/post-login.
+
+## 8. Dependencias
+Funcionales:
+- TuM2-0004, 0054, 0053, 0064, 0126, 0127, 0128, 0130, 0133.
+
+Políticas:
+- términos/consentimiento de claim,
+- privacidad,
+- trazabilidad de aprobación/rechazo.
+
+## 9. Principios rectores
+- Claim enviado no equivale a OWNER.
+- Backend es única autoridad de grants.
+- `owner_pending` no es OWNER parcial operativo.
+- CUSTOMER base se conserva hasta aprobación real.
+- Transición a OWNER debe ser única, explícita y auditable.
+- Cierre negativo limpia pending residual.
+- Navegación basada en token real, no estado local stale.
+
+## 10. Arquitectura de estados de negocio
+Estado A: `CUSTOMER`  
+Estado B: `CUSTOMER + owner_pending`  
+Estado C: `OWNER`
+
+Modelo recomendado MVP: mantener CUSTOMER base, sumar pending intermedio, promover a OWNER solo al aprobar.
+
+## 11. Definición canónica de estados
+### CUSTOMER
+Puede:
+- usar experiencia customer,
+- iniciar claim,
+- consultar estado claim propio.
+
+No puede:
+- usar módulos owner protegidos,
+- operar recursos de ownership.
+
+### CUSTOMER + owner_pending
+Significa claim activo en circuito válido de revisión.
+
+Puede:
+- ver estado de claim,
+- responder `needs_more_info`,
+- ver UX contextual de revisión.
+
+No puede:
+- operar panel OWNER pleno,
+- editar recursos reservados a OWNER efectivo.
+
+### OWNER
+Significa aprobación consolidada por backend + token actualizado.
+
+Puede:
+- acceder módulo OWNER,
+- gestionar recursos permitidos por negocio.
+
+No puede:
+- exceder scope de ownership,
+- actuar como admin.
+
+## 12. Regla clave claimStatus vs roleStatus
+Son dominios relacionados, no equivalentes.
+
+Ejemplos:
+- `submitted` no implica OWNER.
+- `under_review` puede implicar `owner_pending=true`.
+- `needs_more_info` puede mantener pending activo.
+- `rejected` debe limpiar pending si no hay claim vigente.
+- `approved` habilita transición a OWNER.
+- `conflict_detected` nunca habilita acceso owner.
+
+## 13. Entrada a owner_pending
+Recomendación MVP: activar pending cuando claim:
+- está enviado,
+- sigue vivo en circuito,
+- no fue descartado terminalmente.
+
+Estados típicos de ingreso:
+- `submitted`,
+- `under_review`,
+- `needs_more_info` (si sigue abierto).
+
+No activa pending:
+- borrador no enviado,
+- cancelado,
+- rechazo definitivo,
+- duplicado terminal sin otro claim vivo.
+
+## 14. Salida de owner_pending
+Sale pending cuando:
+- aprobación efectiva (pasa a OWNER),
+- rechazo definitivo sin otro claim vivo (vuelve CUSTOMER),
+- cancelación (vuelve CUSTOMER),
+- cierre por duplicado terminal sin caso activo,
+- conflicto resuelto negativamente sin aprobación.
+
+Regla: nunca dejar `owner_pending=true` residual tras cierre negativo.
+
+## 15. Transición a OWNER
+Solo cuando:
+- existe decisión de aprobación válida,
+- backend autorizó cambio,
+- token refleja nuevo estado.
+
+No alcanza:
+- estado local optimista,
+- acción admin no consolidada,
+- refresh de pantalla sin refresh de token.
+
+## 16. Escenarios recomendados
+- Sin claim: `CUSTOMER`, pending false, sin acceso owner.
+- Claim enviado válido: `CUSTOMER`, pending true, sin acceso owner.
+- `needs_more_info`: `CUSTOMER`, pending true.
+- `conflict_detected`: `CUSTOMER`, pending true o estado especial, sin acceso owner.
+- Rechazado definitivo: `CUSTOMER`, pending false.
+- Aprobado consolidado: `OWNER`, pending false.
+
+## 17. UX por estado
+### CUSTOMER
+CTAs para iniciar claim y seguir experiencia normal.
+
+### owner_pending
+Mostrar:
+- “tu solicitud está en revisión”,
+- estado + próximos pasos,
+- CTA para completar info.
+
+No mostrar:
+- panel OWNER operativo completo.
+
+### OWNER
+Acceso directo a dashboard y acciones owner reales.
+
+## 18. Relación con Auth (0054)
+Obligatorio:
+- refresh token post-login,
+- refresh token splash,
+- leer estado real de token/claims tras refresh.
+
+No permitir:
+- grants owner por cache stale,
+- asumir pending/owner sin validar token.
+
+## 19. Relación con Shell (0053)
+Tres experiencias:
+- shell customer,
+- shell customer con contexto pending,
+- shell owner.
+
+Recomendación: pending como overlay contextual de customer, no shell paralela compleja.
+
+## 20. Relación con OWNER module (0064)
+- OWNER aprobado entra a OWNER-01.
+- `owner_pending` no entra a operativa owner plena.
+- Variante OWNER-pending se valida como estado real de negocio.
+
+## 21. Relación con Admin review (0128)
+Decisión admin debe traducirse así:
+- approve: claim aprobado + promoción OWNER + fin pending.
+- more_info: claim vivo + pending activo.
+- reject: cierre negativo + pending off si no hay otro claim.
+- conflict: sin acceso owner; pending puede seguir mientras caso siga vivo.
+
+## 22. Relación con conflictos/duplicados (0133)
+- Duplicado terminal: no OWNER ni pending residual sin caso vivo.
+- Conflicto real: puede mantener pending, nunca elevar privilegios.
+- Owner existente: tratamiento restrictivo, sin acceso por “buena fe”.
+
+## 23. Frontend (funcional)
+Estados UI obligatorios:
+- customer normal,
+- owner pending,
+- owner aprobado,
+- claim rechazado,
+- `needs_more_info`,
+- conflictivo,
+- duplicado terminal.
+
+Comportamientos:
+- banners contextuales,
+- rutas protegidas correctas,
+- explicación clara de por qué no hay acceso owner aún.
+
+## 24. Backend (funcional)
+Autoridad única para:
+- activar/desactivar pending,
+- promover a OWNER,
+- cerrar carril pending negativo,
+- sincronizar estado real consumido por cliente.
+
+Guardrails:
+- no promote-by-client,
+- no caminos paralelos a OWNER,
+- consistencia rol vs ownership real,
+- no escritura cliente de proyecciones públicas.
+
+## 25. Reglas de seguridad obligatorias
+1. Enviar claim nunca concede permisos owner.
+2. `owner_pending` no equivale a OWNER.
+3. Fuente de verdad = backend + token actualizado.
+4. No bypass a rutas owner por URL manual.
+5. Transición a OWNER única y auditable.
+6. Cierre negativo limpia estados pending obsoletos.
+7. Conflicto/duplicado nunca elevan privilegios.
+
+## 26. Guardrails de costo
+- Resolver acceso owner priorizando señal canónica resumida/token.
+- Evitar polling continuo de claim para navegación.
+- Evitar refresh redundante de token.
+- Sin listeners cruzados claims+roles+merchants en splash.
+- Cargar detalle claim solo cuando usuario entra a seguimiento.
+
+## 27. Datos impactados
+Entidades:
+- `users`,
+- `merchant_claims`,
+- `merchants`,
+- auth custom claims,
+- estados UI de shell/owner.
+
+Datos clave:
+- rol efectivo,
+- `owner_pending`,
+- `merchantId` vinculado (si aplica),
+- `claimStatus` relevante,
+- timestamps de transición,
+- actor admin de aprobación/rechazo.
+
+## 28. Reglas de negocio detalladas
+- Todos inician en CUSTOMER.
+- Claim activo elegible puede activar pending.
+- OWNER solo por aprobación backend autorizada.
+- OWNER incluye CUSTOMER, sin switch de sesión.
+- Rechazo definitivo sin claims vigentes apaga pending.
+- `needs_more_info` puede mantener pending.
+- Conflicto puede mantener pending sin acceso owner.
+- App debe refrescar token para reflejar cambios reales.
+- OWNER module distingue pending de aprobado sin ambigüedad.
+
+## 29. UX / microcopy
+Pending:
+- “Tu solicitud está en revisión”
+- “Todavía no tenés acceso completo a la gestión del comercio”
+- “Te avisaremos si necesitamos más información”
+
+Aprobado:
+- “Tu comercio ya está listo para ser gestionado”
+
+Evitar:
+- mensajes triunfalistas ambiguos,
+- copy técnico de permisos/token.
+
+## 30. Analytics y KPI
+Eventos:
+- `owner_claim_pending_state_entered`
+- `owner_claim_pending_state_viewed`
+- `owner_claim_pending_more_info_viewed`
+- `owner_claim_approved_role_granted`
+- `owner_claim_rejected_pending_cleared`
+- `owner_module_access_blocked_pending`
+- `owner_module_access_granted`
+
+KPIs:
+- tiempo promedio en pending,
+- % claims que pasan a OWNER,
+- % pending que terminan rechazados,
+- intentos bloqueados de acceso owner desde pending,
+- tiempo entre aprobación y primer acceso owner.
+
+North Star local:
+% de usuarios que pasan de claim a OWNER sin confusión ni permisos indebidos.
+
+## 31. Edge cases
+- Claim enviado y relogin antes de consolidar pending.
+- Claim aprobado/rechazado con sesión abierta.
+- Pending intentando rutas owner profundas por URL.
+- Duplicado terminal que no debe dejar pending.
+- Conflicto activo con pending sin operativa owner.
+- Claim cancelado que debe limpiar estado.
+- Token desactualizado mostrando estado viejo.
+- Doble decisión admin casi simultánea.
+- Futuro multi-claim/multi-merchant.
+
+## 32. QA plan
+- QA funcional: entrada/salida pending, promoción OWNER, rechazo/limpieza, more-info, conflicto.
+- QA auth: refresh splash/post-login, sincronización de claims, no stale peligrosa.
+- QA seguridad: no acceso owner desde pending, no grants cliente, no bypass URL.
+- QA integración: 0004, 0054, 0053, 0064, 0128.
+- QA UX: comprensión pending, aprobación, rechazo y próximos pasos.
+
+## 33. Definition of Done
+- Ciclo CUSTOMER → owner_pending → OWNER definido.
+- Entrada/salida pending cerradas.
+- Claim enviado ≠ OWNER formalizado.
+- Traducción claim status ↔ role status cerrada.
+- Auth/Shell/OWNER alineados.
+- Rechazo/conflicto/more-info cubiertos.
+- Reglas de seguridad de grants/acceso explícitas.
+- Edge cases principales cubiertos.
+- Lista para implementación sin contradicciones.
+
+## 34. Plan de rollout
+Fase 1: cierre definición con 0126/0127/0128/0130/0004/0054/0064.  
+Fase 2: implementación pending canónico + rutas protegidas + transición a OWNER + limpieza negativa.  
+Fase 3: medición de tiempo pending, fricción y bloqueos indebidos.  
+Fase 4: evolución a multi-claim, multi-merchant y permisos owner finos.
+
+## 35. Documentos a sincronizar
+Crear/mantener:
+- `docs/storyscards/0131-owner-claim-role-integration.md`
+- `docs/storyscards/0126-merchant-claim-flow.md`
+- `docs/storyscards/0127-merchant-claim-auto-validation.md`
+- `docs/storyscards/0128-admin-merchant-claims-review.md`
+- `docs/storyscards/0130-merchant-claim-sensitive-data-protection.md`
+- `docs/storyscards/0133-merchant-claim-conflicts-and-duplicates.md`
+
+Actualizar por impacto:
+- `docs/storyscards/0004-role-segment-architecture.md`
+- `docs/storyscards/0054-auth-complete.md`
+- `docs/storyscards/0053-mobile-shell.md`
+- `docs/storyscards/0064-owner-module-business.md`
+- `docs/storyscards/0081-claim-impact-merchant-profile-review.md`
+- legales (si cambia comunicación de owner_pending).
+
+## 36. Cierre ejecutivo
+TuM2-0131 define el puente seguro entre reclamar, quedar pendiente y convertirse en OWNER:
+- todos parten como CUSTOMER,
+- claim activo puede activar owner_pending,
+- pending no concede acceso owner pleno,
+- OWNER solo por aprobación backend autorizada,
+- cierres negativos limpian pending,
+- Auth + Shell + OWNER reflejan estado real (token + backend), no supuestos locales.

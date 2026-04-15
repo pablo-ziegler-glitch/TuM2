@@ -26,6 +26,7 @@ Consolidar OWNER-01 como home operativo, incorporando convivencia segura entre `
 - `owner_pending` tiene acceso parcial y contextual, no operativo pleno.
 - La transición a `OWNER` depende de aprobación backend/autorizada.
 - Si existe conflicto o duplicado, priorizar vista de estado de claim sobre acciones operativas.
+- El módulo OWNER debe confiar en la resolución de acceso entregada por Auth (token refrescado), no en inferencias locales de claim.
 
 ## Dependencias
 - TuM2-0004 roles/segmentos.

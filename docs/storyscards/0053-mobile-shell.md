@@ -13,6 +13,7 @@ Incorporar entry points y navegación contextual para usuarios en `owner_pending
 - Placeholders/CTAs para completar evidencia o esperar revisión.
 
 ## Reglas de navegación
+- La Shell consume `resolvedAccessState` desde Auth (`authenticated_customer|authenticated_pending|authenticated_owner`) y no infiere permisos por estado local stale.
 - Si usuario está `owner_pending`, la shell debe priorizar pantalla de estado de claim antes del panel OWNER completo.
 - Si claim está `needs_more_info`, mostrar CTA directo para completar documentación.
 - Si claim está `approved`, habilitar transición hacia experiencia OWNER.
@@ -26,5 +27,6 @@ Incorporar entry points y navegación contextual para usuarios en `owner_pending
 
 ## Guardrails de costo Firestore
 - Resolver estado claim/rol con una lectura inicial y cache TTL en shell.
+- Basar la decisión inicial en token refrescado canónicamente por Auth (Splash/post-login), evitando reconsultas redundantes.
 - Evitar listeners continuos para navegación; usar refresh por foco o acción.
 - No consultar listados amplios de claims para usuario final; solo claim activo o últimos N con `limit`.

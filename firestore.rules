@@ -606,15 +606,16 @@ service cloud.firestore {
     }
 
     // ─── merchant_claims/{claimId} ───────────────────────────────────────────
-    // Authenticated users create claims. Users read their own claims.
-    // Admins read and update all.
+    // Claims sensibles: escritura de cliente denegada.
+    // Flujo de alta/submit/cancel se realiza por callable backend (Admin SDK).
+    // Usuario autenticado solo puede leer sus propios claims.
+    // Admin puede leer/escribir para revisión manual.
 
     match /merchant_claims/{claimId} {
-      allow create: if isAuthenticated()
-        && request.resource.data.userId == request.auth.uid;
       allow read: if isAuthenticated()
         && resource.data.userId == request.auth.uid;
-      allow read, update: if isAdmin();
+      allow read, write: if isAdmin();
+      allow create, update, delete: if false;
     }
 
     // ─── reports/{reportId} ──────────────────────────────────────────────────

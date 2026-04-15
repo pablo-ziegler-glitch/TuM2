@@ -62,6 +62,13 @@ export {
   createMerchantProduct,
   deactivateMerchantProduct,
 } from "./callables/catalogLimits";
+export {
+  upsertMerchantClaimDraft,
+  submitMerchantClaim,
+  cancelMerchantClaim,
+  getMyMerchantClaimStatus,
+  searchClaimableMerchants,
+} from "./callables/merchantClaims";
 
 // ─── Onboarding Scheduled Jobs ─────────────────────────────────────────────
 

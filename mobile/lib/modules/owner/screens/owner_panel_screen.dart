@@ -8,6 +8,8 @@ import '../../../core/auth/auth_state.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../merchant_claim/application/merchant_claim_flow_controller.dart';
+import '../../merchant_claim/models/merchant_claim_models.dart';
 import '../analytics/owner_dashboard_analytics.dart';
 import '../application/owner_dashboard_logic.dart';
 import '../models/owner_merchant_summary.dart';
@@ -295,48 +297,164 @@ class _OwnerPendingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: AppColors.warningBg,
-                borderRadius: BorderRadius.circular(18),
+    return const _OwnerPendingStateContent();
+  }
+}
+
+class _OwnerPendingStateContent extends ConsumerStatefulWidget {
+  const _OwnerPendingStateContent();
+
+  @override
+  ConsumerState<_OwnerPendingStateContent> createState() =>
+      _OwnerPendingStateContentState();
+}
+
+class _OwnerPendingStateContentState
+    extends ConsumerState<_OwnerPendingStateContent> {
+  @override
+  void initState() {
+    super.initState();
+    scheduleMicrotask(() {
+      ref.read(merchantClaimFlowControllerProvider.notifier).loadStatus();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(merchantClaimFlowControllerProvider);
+    final claimStatus = state.statusSummary?.claimStatus;
+    final isNeedsInfo = claimStatus == MerchantClaimStatus.needsMoreInfo;
+    final isConflict = claimStatus == MerchantClaimStatus.conflictDetected ||
+        claimStatus == MerchantClaimStatus.duplicateClaim;
+    final badgeText = isNeedsInfo
+        ? 'FALTA INFORMACIÓN'
+        : isConflict
+            ? 'CONFLICTO'
+            : 'EN REVISIÓN';
+    final technicalStatus = claimStatus?.apiValue;
+    final headline = isNeedsInfo
+        ? 'Tu reclamo necesita más información'
+        : isConflict
+            ? 'Tu reclamo requiere revisión manual'
+            : 'Tu validación de dueño está pendiente';
+    final description = isNeedsInfo
+        ? 'Subí la evidencia solicitada para continuar con la revisión.'
+        : isConflict
+            ? 'Detectamos un conflicto o duplicado. El equipo de revisión va a contactarte.'
+            : 'Cuando finalice la revisión vas a poder operar tu comercio desde este panel.';
+
+    final Color cardColor = isNeedsInfo
+        ? AppColors.warningBg
+        : isConflict
+            ? AppColors.errorBg
+            : AppColors.merchantSurfaceLow;
+    final Color iconColor = isNeedsInfo
+        ? AppColors.tertiary700
+        : isConflict
+            ? AppColors.errorFg
+            : AppColors.primary600;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                badgeText,
+                style: AppTextStyles.labelSm.copyWith(
+                  letterSpacing: 0.7,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              child: const Icon(
-                Icons.hourglass_top_rounded,
-                color: AppColors.tertiary700,
+              const SizedBox(height: 6),
+              Text(
+                headline,
+                style: AppTextStyles.headingSm,
               ),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Tu validación de dueño está pendiente',
-              style: AppTextStyles.headingSm,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Cuando finalice la revisión vas a poder operar tu comercio desde este panel.',
-              style: AppTextStyles.bodySm,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 14),
-            FilledButton(
-              onPressed: () => context.go(AppRoutes.profile),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary500,
-                foregroundColor: Colors.white,
+              const SizedBox(height: 8),
+              Text(
+                description,
+                style: AppTextStyles.bodySm,
               ),
-              child: const Text('Ir a Perfil'),
-            ),
-          ],
+              if (technicalStatus != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Estado: $technicalStatus',
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.neutral700,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.merchantSurfaceLowest,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.verified_user_outlined, color: AppColors.primary600),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Todavía no tenés acceso completo al panel de tu comercio.',
+                  style: AppTextStyles.bodySm,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (state.isBusy) ...[
+          const SizedBox(height: 10),
+          const LinearProgressIndicator(),
+        ],
+        if (state.errorMessage != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            state.errorMessage!,
+            style: AppTextStyles.bodySm.copyWith(color: AppColors.errorFg),
+          ),
+        ],
+        const SizedBox(height: 14),
+        FilledButton(
+          onPressed: () => context.push(AppRoutes.claimStatus),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary500,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(52),
+          ),
+          child: const Text('Ver estado del reclamo'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: () => context.go(AppRoutes.profile),
+          child: const Text('Ir a Perfil'),
+        ),
+        const SizedBox(height: 8),
+        if (isNeedsInfo || isConflict)
+          OutlinedButton.icon(
+            onPressed: () => context.push(AppRoutes.claimIntro),
+            icon: Icon(
+              isNeedsInfo ? Icons.upload_file_outlined : Icons.support_agent,
+              color: iconColor,
+            ),
+            label: Text(
+              isNeedsInfo ? 'Completar información' : 'Contactar soporte',
+            ),
+          ),
+      ],
     );
   }
 }

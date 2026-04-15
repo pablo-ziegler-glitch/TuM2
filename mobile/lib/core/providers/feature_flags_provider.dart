@@ -151,3 +151,22 @@ final catalogProductCreateViaCfEnabledProvider =
     return true;
   }
 });
+
+final merchantClaimFlowEnabledProvider = FutureProvider<bool>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  try {
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(seconds: 8),
+        minimumFetchInterval: const Duration(minutes: 30),
+      ),
+    );
+    await remoteConfig.setDefaults(const {
+      'merchant_claim_flow_enabled': true,
+    });
+    await remoteConfig.fetchAndActivate();
+    return remoteConfig.getBool('merchant_claim_flow_enabled');
+  } catch (_) {
+    return true;
+  }
+});

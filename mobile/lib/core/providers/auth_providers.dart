@@ -513,7 +513,8 @@ final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
   final ownerPendingInClaims = claims.containsKey('owner_pending');
   if (role == null || merchantId == null || !ownerPendingInClaims) {
     try {
-      final userDoc = await FirebaseFirestore.instance.doc('users/${user.uid}').get();
+      final userDoc =
+          await FirebaseFirestore.instance.doc('users/${user.uid}').get();
       if (userDoc.exists) {
         final data = userDoc.data() ?? const <String, dynamic>{};
         role ??= (data['role'] as String?)?.toLowerCase();

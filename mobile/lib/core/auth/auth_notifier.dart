@@ -87,11 +87,12 @@ class AuthNotifier extends ChangeNotifier {
 
   /// Lee role y merchantId del documento users/$uid en una sola lectura.
   Future<({String? role, String? merchantId, bool? ownerPending})>
-      _fetchUserDataFromFirestore(
-      String uid) async {
+      _fetchUserDataFromFirestore(String uid) async {
     try {
       final doc = await FirebaseFirestore.instance.doc('users/$uid').get();
-      if (!doc.exists) return (role: null, merchantId: null, ownerPending: null);
+      if (!doc.exists) {
+        return (role: null, merchantId: null, ownerPending: null);
+      }
       final data = doc.data();
       final ownerPendingRaw = data?['ownerPending'];
       final ownerPending = ownerPendingRaw is bool

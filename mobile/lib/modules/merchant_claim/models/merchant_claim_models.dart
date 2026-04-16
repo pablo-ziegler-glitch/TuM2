@@ -3,14 +3,12 @@ import 'dart:typed_data';
 enum MerchantClaimStatus {
   draft,
   submitted,
-  autoValidating,
   underReview,
   needsMoreInfo,
   approved,
   rejected,
   duplicateClaim,
   conflictDetected,
-  cancelled,
 }
 
 enum MerchantClaimDeclaredRole {
@@ -102,6 +100,8 @@ class MerchantClaimStatusSummary {
     required this.needsMoreInfo,
     required this.conflictDetected,
     required this.duplicateDetected,
+    this.duplicateOfClaimId,
+    this.conflictType,
     this.merchantName,
   });
 
@@ -114,6 +114,8 @@ class MerchantClaimStatusSummary {
   final bool needsMoreInfo;
   final bool conflictDetected;
   final bool duplicateDetected;
+  final String? duplicateOfClaimId;
+  final String? conflictType;
 }
 
 class MerchantClaimDraftInput {
@@ -147,8 +149,6 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
         return MerchantClaimStatus.draft;
       case 'submitted':
         return MerchantClaimStatus.submitted;
-      case 'auto_validating':
-        return MerchantClaimStatus.autoValidating;
       case 'under_review':
         return MerchantClaimStatus.underReview;
       case 'needs_more_info':
@@ -161,8 +161,6 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
         return MerchantClaimStatus.duplicateClaim;
       case 'conflict_detected':
         return MerchantClaimStatus.conflictDetected;
-      case 'cancelled':
-        return MerchantClaimStatus.cancelled;
       default:
         return MerchantClaimStatus.draft;
     }
@@ -174,8 +172,6 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
         return 'draft';
       case MerchantClaimStatus.submitted:
         return 'submitted';
-      case MerchantClaimStatus.autoValidating:
-        return 'auto_validating';
       case MerchantClaimStatus.underReview:
         return 'under_review';
       case MerchantClaimStatus.needsMoreInfo:
@@ -188,8 +184,6 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
         return 'duplicate_claim';
       case MerchantClaimStatus.conflictDetected:
         return 'conflict_detected';
-      case MerchantClaimStatus.cancelled:
-        return 'cancelled';
     }
   }
 }

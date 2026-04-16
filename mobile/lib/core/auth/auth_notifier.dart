@@ -43,14 +43,19 @@ class AuthNotifier extends ChangeNotifier {
       String? merchantId = tokenResult.claims?['merchantId'] as String?;
       bool? onboardingComplete =
           tokenResult.claims?['onboardingComplete'] as bool?;
-      final ownerPending =
+      final ownerPendingClaimAvailable =
+          tokenResult.claims?.containsKey('owner_pending') == true;
+      var ownerPending =
           _parseOwnerPending(tokenResult.claims?['owner_pending']);
 
-      // Fallback a Firestore si los claims siguen sin estar presentes
-      if (role == null) {
+      // Fallback a Firestore si los claims vienen parciales.
+      if (role == null || merchantId == null || !ownerPendingClaimAvailable) {
         final data = await _fetchUserDataFromFirestore(user.uid);
-        role = data.role?.toLowerCase();
-        merchantId = data.merchantId;
+        role ??= data.role?.toLowerCase();
+        merchantId ??= data.merchantId;
+        if (!ownerPendingClaimAvailable && data.ownerPending != null) {
+          ownerPending = data.ownerPending!;
+        }
       }
 
       // Descartar resultado si llegó un evento de auth más reciente durante los awaits
@@ -81,18 +86,27 @@ class AuthNotifier extends ChangeNotifier {
   }
 
   /// Lee role y merchantId del documento users/$uid en una sola lectura.
-  Future<({String? role, String? merchantId})> _fetchUserDataFromFirestore(
-      String uid) async {
+  Future<({String? role, String? merchantId, bool? ownerPending})>
+      _fetchUserDataFromFirestore(String uid) async {
     try {
       final doc = await FirebaseFirestore.instance.doc('users/$uid').get();
-      if (!doc.exists) return (role: null, merchantId: null);
+      if (!doc.exists) {
+        return (role: null, merchantId: null, ownerPending: null);
+      }
       final data = doc.data();
+      final ownerPendingRaw = data?['ownerPending'];
+      final ownerPending = ownerPendingRaw is bool
+          ? ownerPendingRaw
+          : ownerPendingRaw is String
+              ? ownerPendingRaw.toLowerCase() == 'true'
+              : null;
       return (
         role: data?['role'] as String?,
         merchantId: data?['merchantId'] as String?,
+        ownerPending: ownerPending,
       );
     } catch (_) {
-      return (role: null, merchantId: null);
+      return (role: null, merchantId: null, ownerPending: null);
     }
   }
 

@@ -235,14 +235,30 @@ export interface MerchantClaimDoc {
   claimStatus:
     | "draft"
     | "submitted"
-    | "auto_validating"
     | "under_review"
     | "needs_more_info"
     | "approved"
     | "rejected"
     | "duplicate_claim"
-    | "conflict_detected"
-    | "cancelled";
+    | "conflict_detected";
+  userVisibleStatus?:
+    | "draft"
+    | "submitted"
+    | "under_review"
+    | "needs_more_info"
+    | "approved"
+    | "rejected"
+    | "duplicate_claim"
+    | "conflict_detected";
+  internalWorkflowStatus?:
+    | "draft_editing"
+    | "auto_validation_running"
+    | "auto_validation_passed"
+    | "auto_validation_blocked_conflict"
+    | "auto_validation_blocked_duplicate"
+    | "auto_validation_needs_more_info"
+    | "manual_resolution_completed";
+  workflowManagedBy?: string;
   authenticatedEmail: string;
   declaredRole: "owner" | "co_owner" | "authorized_representative";
   categoryId: string;
@@ -254,6 +270,9 @@ export interface MerchantClaimDoc {
   submittedAt?: FirebaseFirestore.Timestamp | null;
   duplicateOfClaimId?: string | null;
   conflictType?: string | null;
+  phoneMasked?: string | null;
+  claimantDisplayNameMasked?: string | null;
+  claimantNoteMasked?: string | null;
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
   reviewedAt?: FirebaseFirestore.Timestamp;

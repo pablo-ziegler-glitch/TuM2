@@ -46,15 +46,7 @@ service cloud.firestore {
     }
 
     function merchantOwnedByAuthenticatedUser(merchantId) {
-      let merchantPath = /databases/$(database)/documents/merchants/$(merchantId);
-      return isAuthenticated()
-        && (
-          merchantBelongsToUser(merchantId)
-          || (
-            exists(merchantPath)
-            && get(merchantPath).data.ownerUserId == request.auth.uid
-          )
-        );
+      return isAuthenticated() && merchantBelongsToUser(merchantId);
     }
 
     function isDutyPublicReadableStatus(status) {
@@ -606,15 +598,20 @@ service cloud.firestore {
     }
 
     // ─── merchant_claims/{claimId} ───────────────────────────────────────────
-    // Claims sensibles: escritura de cliente denegada.
-    // Flujo de alta/submit/cancel se realiza por callable backend (Admin SDK).
-    // Usuario autenticado solo puede leer sus propios claims.
-    // Admin puede leer/escribir para revisión manual.
+    // Claims sensibles: acceso cliente directo denegado.
+    // Flujo completo por callables backend (Admin SDK) con payload mínimo.
 
     match /merchant_claims/{claimId} {
-      allow read: if isAuthenticated()
-        && resource.data.userId == request.auth.uid;
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // ─── merchant_claim_private/{claimId} ────────────────────────────────────
+    // Vault de sensibles/fingerprints: backend/admin only.
+    // Nunca exponer a cliente.
+
+    match /merchant_claim_private/{claimId} {
+      allow read, write: if false;
       allow create, update, delete: if false;
     }
 

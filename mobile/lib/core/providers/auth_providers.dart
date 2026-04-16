@@ -496,27 +496,55 @@ class AuthClaimsSnapshot {
   final bool onboardingComplete;
 }
 
-/// Claims de autenticación leídos desde el ID token con force refresh.
+/// Claims de autenticación leídos desde el ID token.
+/// Evita force refresh para no duplicar costo de red; el refresh forzado
+/// se centraliza en AuthNotifier al cambiar la sesión.
 final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
 
-  final result = await user.getIdTokenResult(true);
-  final role = (result.claims?['role'] as String?)?.toLowerCase();
-  final ownerPendingRaw = result.claims?['owner_pending'];
-  final ownerPending = ownerPendingRaw == true ||
+  final result = await user.getIdTokenResult();
+  final claims = result.claims ?? const <String, dynamic>{};
+  String? role = (claims['role'] as String?)?.toLowerCase();
+  String? merchantId = claims['merchantId'] as String?;
+  final ownerPendingRaw = claims['owner_pending'];
+  var ownerPending = ownerPendingRaw == true ||
       (ownerPendingRaw is String && ownerPendingRaw.toLowerCase() == 'true');
+  var onboardingComplete = claims['onboardingComplete'] == true;
+
+  final ownerPendingInClaims = claims.containsKey('owner_pending');
+  if (role == null || merchantId == null || !ownerPendingInClaims) {
+    try {
+      final userDoc =
+          await FirebaseFirestore.instance.doc('users/${user.uid}').get();
+      if (userDoc.exists) {
+        final data = userDoc.data() ?? const <String, dynamic>{};
+        role ??= (data['role'] as String?)?.toLowerCase();
+        merchantId ??= data['merchantId'] as String?;
+        if (!ownerPendingInClaims) {
+          final ownerPendingDocRaw = data['ownerPending'];
+          ownerPending = ownerPendingDocRaw == true ||
+              (ownerPendingDocRaw is String &&
+                  ownerPendingDocRaw.toLowerCase() == 'true');
+        }
+        if (!onboardingComplete) {
+          onboardingComplete = data['onboardingComplete'] == true;
+        }
+      }
+    } catch (_) {
+      // fallback silencioso a claims
+    }
+  }
 
   return AuthClaimsSnapshot(
     role: role,
     ownerPending: ownerPending,
-    merchantId: result.claims?['merchantId'] as String?,
-    onboardingComplete: result.claims?['onboardingComplete'] == true,
+    merchantId: merchantId,
+    onboardingComplete: onboardingComplete,
   );
 });
 
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
-/// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
 final isOwnerProvider = FutureProvider<bool>((ref) async {
   final claims = await ref.watch(authClaimsProvider.future);
   if (claims == null) return false;
@@ -524,7 +552,6 @@ final isOwnerProvider = FutureProvider<bool>((ref) async {
 });
 
 /// true si el usuario autenticado tiene el claim role='admin' o 'super_admin'.
-/// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
 final isAdminProvider = FutureProvider<bool>((ref) async {
   final claims = await ref.watch(authClaimsProvider.future);
   if (claims == null) return false;

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { before, beforeEach } from "node:test";
 import { randomUUID } from "node:crypto";
 import { getApps, initializeApp } from "firebase-admin/app";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 
 const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST;
 
@@ -12,18 +12,31 @@ let upsertDraftRun:
 let submitClaimRun:
   | ((request: Record<string, unknown>) => Promise<unknown>)
   | undefined;
+let resolveClaimRun:
+  | ((request: Record<string, unknown>) => Promise<unknown>)
+  | undefined;
+let revealSensitiveRun:
+  | ((request: Record<string, unknown>) => Promise<unknown>)
+  | undefined;
+let listReviewQueueRun:
+  | ((request: Record<string, unknown>) => Promise<unknown>)
+  | undefined;
+let listMyClaimsRun:
+  | ((request: Record<string, unknown>) => Promise<unknown>)
+  | undefined;
 
 function buildRequest(params: {
   uid: string;
   email: string;
   data: Record<string, unknown>;
+  role?: "customer" | "admin" | "super_admin";
 }): Record<string, unknown> {
   return {
     data: params.data,
     auth: {
       uid: params.uid,
       token: {
-        role: "customer",
+        role: params.role ?? "customer",
         email: params.email,
       },
     },
@@ -70,16 +83,45 @@ if (!emulatorHost) {
         run: (request: Record<string, unknown>) => Promise<unknown>;
       }
     ).run;
+    resolveClaimRun = (
+      callables.resolveMerchantClaim as unknown as {
+        run: (request: Record<string, unknown>) => Promise<unknown>;
+      }
+    ).run;
+    revealSensitiveRun = (
+      callables.revealMerchantClaimSensitiveData as unknown as {
+        run: (request: Record<string, unknown>) => Promise<unknown>;
+      }
+    ).run;
+    listReviewQueueRun = (
+      callables.listMerchantClaimsForReview as unknown as {
+        run: (request: Record<string, unknown>) => Promise<unknown>;
+      }
+    ).run;
+    listMyClaimsRun = (
+      callables.listMyMerchantClaims as unknown as {
+        run: (request: Record<string, unknown>) => Promise<unknown>;
+      }
+    ).run;
   });
 
   beforeEach(async () => {
-    await Promise.all([deleteCollection("merchant_claims"), deleteCollection("merchants")]);
+    await Promise.all([
+      deleteCollection("merchant_claims"),
+      deleteCollection("merchant_claim_private"),
+      deleteCollection("merchants"),
+      deleteCollection("users"),
+      deleteCollection("merchant_claim_sensitive_reveals"),
+    ]);
   });
 
-  test("upsert draft crea claim y submit pasa a auto_validating", async () => {
+  test("draft+submit usa estados canónicos y activa owner_pending", async () => {
     assert.ok(upsertDraftRun && submitClaimRun);
     const firestore = getFirestore();
     const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-1234567890";
+    const uid = "user-1";
+
     await firestore.collection("merchants").doc(merchantId).set({
       name: "Farmacia Central",
       categoryId: "pharmacy",
@@ -95,14 +137,14 @@ if (!emulatorHost) {
       {
         id: "storefront_1",
         kind: "storefront_photo",
-        storagePath: `merchant-claims/user-1/claim-1234567890/storefront_photo/front.jpg`,
+        storagePath: `merchant-claims/${uid}/${claimId}/storefront_photo/front.jpg`,
         contentType: "image/jpeg",
         sizeBytes: 1024,
       },
       {
         id: "document_1",
         kind: "ownership_document",
-        storagePath: `merchant-claims/user-1/claim-1234567890/ownership_document/doc.jpg`,
+        storagePath: `merchant-claims/${uid}/${claimId}/ownership_document/doc.jpg`,
         contentType: "image/jpeg",
         sizeBytes: 2048,
       },
@@ -110,32 +152,57 @@ if (!emulatorHost) {
 
     const draftResponse = (await upsertDraftRun!(
       buildRequest({
-        uid: "user-1",
+        uid,
         email: "owner@example.com",
         data: {
-          claimId: "claim-1234567890",
+          claimId,
           merchantId,
           declaredRole: "owner",
+          phone: "+54 9 11 1234 5678",
+          claimantDisplayName: "Juan Perez",
+          claimantNote: "Solicitud inicial",
           hasAcceptedDataProcessingConsent: true,
           hasAcceptedLegitimacyDeclaration: true,
           evidenceFiles: evidence,
         },
       })
     )) as Record<string, unknown>;
-
     assert.equal(draftResponse.claimStatus, "draft");
+
+    const draftSnap = await firestore.collection("merchant_claims").doc(claimId).get();
+    const draftData = draftSnap.data() ?? {};
+    assert.equal(draftData.claimStatus, "draft");
+    assert.equal(draftData.userVisibleStatus, "draft");
+    assert.equal(draftData.internalWorkflowStatus, "draft_editing");
+    assert.equal(draftData.authenticatedEmail, "owner@example.com");
+    assert.equal(typeof draftData.phoneMasked, "string");
+    assert.equal(draftData.sensitiveVault, undefined);
+    assert.equal(draftData.phone, undefined);
+
+    const privateSnap = await firestore
+      .collection("merchant_claim_private")
+      .doc(claimId)
+      .get();
+    const privateData = privateSnap.data() ?? {};
+    assert.equal(typeof privateData.sensitiveVault, "object");
 
     const submitResponse = (await submitClaimRun!(
       buildRequest({
-        uid: "user-1",
+        uid,
         email: "owner@example.com",
-        data: {
-          claimId: "claim-1234567890",
-        },
+        data: { claimId },
       })
     )) as Record<string, unknown>;
+    assert.equal(submitResponse.claimStatus, "under_review");
 
-    assert.equal(submitResponse.claimStatus, "auto_validating");
+    const submittedSnap = await firestore.collection("merchant_claims").doc(claimId).get();
+    const submittedData = submittedSnap.data() ?? {};
+    assert.equal(submittedData.userVisibleStatus, "under_review");
+    assert.equal(submittedData.internalWorkflowStatus, "auto_validation_passed");
+
+    const userDoc = await firestore.doc(`users/${uid}`).get();
+    assert.equal(userDoc.get("ownerPending"), true);
+    assert.equal(userDoc.get("role"), "customer");
   });
 
   test("submit de claim sin evidencia mínima falla", async () => {
@@ -174,9 +241,7 @@ if (!emulatorHost) {
           buildRequest({
             uid: "user-1",
             email: "owner@example.com",
-            data: {
-              claimId: "claim-abcdefghij",
-            },
+            data: { claimId: "claim-abcdefghij" },
           })
         ),
       (error: unknown) => {
@@ -187,14 +252,78 @@ if (!emulatorHost) {
     );
   });
 
-  test("upsert draft bloquea duplicado activo por userId+merchantId", async () => {
-    assert.ok(upsertDraftRun);
+  test("submit conflictivo marca conflict_detected y mantiene owner_pending", async () => {
+    assert.ok(upsertDraftRun && submitClaimRun);
     const firestore = getFirestore();
     const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-conflict1";
+    const uid = "user-2";
     await firestore.collection("merchants").doc(merchantId).set({
       name: "Veterinaria Norte",
       categoryId: "veterinary",
       zoneId: "zone-2",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "claimed",
+      ownerUserId: "existing-owner",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "owner2@example.com",
+        data: {
+          claimId,
+          merchantId,
+          declaredRole: "owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [
+            {
+              id: "storefront_1",
+              kind: "storefront_photo",
+              storagePath: `merchant-claims/${uid}/${claimId}/storefront_photo/front.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1111,
+            },
+            {
+              id: "document_1",
+              kind: "ownership_document",
+              storagePath: `merchant-claims/${uid}/${claimId}/ownership_document/doc.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 2222,
+            },
+          ],
+        },
+      })
+    );
+
+    const submitResponse = (await submitClaimRun!(
+      buildRequest({
+        uid,
+        email: "owner2@example.com",
+        data: { claimId },
+      })
+    )) as Record<string, unknown>;
+    assert.equal(submitResponse.claimStatus, "conflict_detected");
+
+    const userDoc = await firestore.doc(`users/${uid}`).get();
+    assert.equal(userDoc.get("ownerPending"), true);
+    assert.equal(userDoc.get("role"), "customer");
+  });
+
+  test("resolve approved promueve a owner y limpia owner_pending", async () => {
+    assert.ok(upsertDraftRun && submitClaimRun && resolveClaimRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-approve1";
+    const uid = "user-3";
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Panaderia Sol",
+      categoryId: "bakery",
+      zoneId: "zone-3",
       status: "active",
       visibilityStatus: "visible",
       ownershipStatus: "unclaimed",
@@ -204,39 +333,345 @@ if (!emulatorHost) {
 
     await upsertDraftRun!(
       buildRequest({
-        uid: "user-1",
-        email: "owner@example.com",
+        uid,
+        email: "owner3@example.com",
         data: {
-          claimId: "claim-dup-11111",
+          claimId,
           merchantId,
           declaredRole: "owner",
-          hasAcceptedDataProcessingConsent: false,
-          hasAcceptedLegitimacyDeclaration: false,
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [
+            {
+              id: "storefront_1",
+              kind: "storefront_photo",
+              storagePath: `merchant-claims/${uid}/${claimId}/storefront_photo/front.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1111,
+            },
+            {
+              id: "document_1",
+              kind: "ownership_document",
+              storagePath: `merchant-claims/${uid}/${claimId}/ownership_document/doc.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 2222,
+            },
+          ],
+        },
+      })
+    );
+    await submitClaimRun!(
+      buildRequest({
+        uid,
+        email: "owner3@example.com",
+        data: { claimId },
+      })
+    );
+
+    const resolveResponse = (await resolveClaimRun!(
+      buildRequest({
+        uid: "admin-1",
+        email: "admin@example.com",
+        role: "admin",
+        data: {
+          claimId,
+          userVisibleStatus: "approved",
+          reviewReasonCode: "manual_ok",
+        },
+      })
+    )) as Record<string, unknown>;
+    assert.equal(resolveResponse.claimStatus, "approved");
+
+    const userDoc = await firestore.doc(`users/${uid}`).get();
+    assert.equal(userDoc.get("ownerPending"), false);
+    assert.equal(userDoc.get("role"), "owner");
+
+    const merchantDoc = await firestore.doc(`merchants/${merchantId}`).get();
+    assert.equal(merchantDoc.get("ownerUserId"), uid);
+    assert.equal(merchantDoc.get("ownershipStatus"), "claimed");
+  });
+
+  test("reveal sensible devuelve datos y registra auditoría append-only", async () => {
+    assert.ok(upsertDraftRun && revealSensitiveRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-reveal12";
+    const uid = "user-4";
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Heladeria Sur",
+      categoryId: "icecream",
+      zoneId: "zone-4",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "owner4@example.com",
+        data: {
+          claimId,
+          merchantId,
+          declaredRole: "owner",
+          phone: "+54 9 11 5678 1234",
+          claimantDisplayName: "Maria Gomez",
+          claimantNote: "Documento firmado",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
           evidenceFiles: [],
         },
       })
     );
 
+    const revealResponse = (await revealSensitiveRun!(
+      buildRequest({
+        uid: "admin-2",
+        email: "admin@example.com",
+        role: "admin",
+        data: {
+          claimId,
+          reasonCode: "manual_review",
+          fields: ["phone", "claimantDisplayName"],
+        },
+      })
+    )) as Record<string, unknown>;
+
+    assert.equal(revealResponse.claimId, claimId);
+    const revealed = (revealResponse.revealed ?? {}) as Record<string, unknown>;
+    assert.equal(typeof revealed.phone, "string");
+    assert.equal(typeof revealed.claimantDisplayName, "string");
+    assert.equal(revealed.claimantNote, undefined);
+
+    const auditSnap = await firestore
+      .collection("merchant_claim_sensitive_reveals")
+      .where("claimId", "==", claimId)
+      .limit(1)
+      .get();
+    assert.equal(auditSnap.empty, false);
+    const audit = auditSnap.docs[0].data();
+    assert.equal(audit.reasonCode, "manual_review");
+  });
+
+  test("cola admin de claims filtra por zone/status y pagina por cursor", async () => {
+    assert.ok(listReviewQueueRun);
+    const firestore = getFirestore();
+    const zoneId = "zone-review-1";
+
+    const baseMillis = 1_710_000_000_000;
+    const claims = [
+      {
+        claimId: "claim-review-001",
+        zoneId,
+        status: "under_review",
+        createdAt: Timestamp.fromMillis(baseMillis + 3000),
+      },
+      {
+        claimId: "claim-review-002",
+        zoneId,
+        status: "needs_more_info",
+        createdAt: Timestamp.fromMillis(baseMillis + 2000),
+      },
+      {
+        claimId: "claim-review-003",
+        zoneId,
+        status: "conflict_detected",
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      },
+      {
+        claimId: "claim-review-other-zone",
+        zoneId: "zone-review-2",
+        status: "under_review",
+        createdAt: Timestamp.fromMillis(baseMillis + 4000),
+      },
+      {
+        claimId: "claim-review-closed",
+        zoneId,
+        status: "approved",
+        createdAt: Timestamp.fromMillis(baseMillis + 5000),
+      },
+    ];
+
+    await Promise.all(
+      claims.map((item, index) =>
+        firestore.collection("merchant_claims").doc(item.claimId).set({
+          claimId: item.claimId,
+          merchantId: `merchant-review-${index}`,
+          userId: `user-review-${index}`,
+          zoneId: item.zoneId,
+          categoryId: "pharmacy",
+          declaredRole: "owner",
+          claimStatus: item.status,
+          userVisibleStatus: item.status,
+          merchantName: `Merchant ${index}`,
+          createdAt: item.createdAt,
+          updatedAt: item.createdAt,
+          submittedAt: item.createdAt,
+        })
+      )
+    );
+
+    const firstPage = (await listReviewQueueRun!(
+      buildRequest({
+        uid: "admin-review",
+        email: "admin-review@example.com",
+        role: "admin",
+        data: {
+          zoneId,
+          limit: 2,
+          statuses: ["under_review", "needs_more_info", "conflict_detected"],
+        },
+      })
+    )) as {
+      claims: Array<{ claimId: string }>;
+      nextCursor: { createdAtMillis: number; claimId: string } | null;
+    };
+
+    assert.equal(firstPage.claims.length, 2);
+    assert.deepEqual(
+      firstPage.claims.map((item) => item.claimId),
+      ["claim-review-001", "claim-review-002"]
+    );
+    assert.ok(firstPage.nextCursor);
+
+    const secondPage = (await listReviewQueueRun!(
+      buildRequest({
+        uid: "admin-review",
+        email: "admin-review@example.com",
+        role: "admin",
+        data: {
+          zoneId,
+          limit: 2,
+          statuses: ["under_review", "needs_more_info", "conflict_detected"],
+          cursorCreatedAtMillis: firstPage.nextCursor!.createdAtMillis,
+          cursorClaimId: firstPage.nextCursor!.claimId,
+        },
+      })
+    )) as {
+      claims: Array<{ claimId: string }>;
+      nextCursor: { createdAtMillis: number; claimId: string } | null;
+    };
+
+    assert.equal(secondPage.claims.length, 1);
+    assert.deepEqual(secondPage.claims.map((item) => item.claimId), [
+      "claim-review-003",
+    ]);
+    assert.equal(secondPage.nextCursor, null);
+  });
+
+  test("historial de mis claims pagina por updatedAt desc sin listeners", async () => {
+    assert.ok(listMyClaimsRun);
+    const firestore = getFirestore();
+    const uid = "user-history-1";
+    const baseMillis = 1_710_100_000_000;
+
+    await Promise.all([
+      firestore.collection("merchant_claims").doc("claim-history-001").set({
+        claimId: "claim-history-001",
+        merchantId: "merchant-h-1",
+        userId: uid,
+        zoneId: "zone-h",
+        categoryId: "pharmacy",
+        claimStatus: "under_review",
+        userVisibleStatus: "under_review",
+        updatedAt: Timestamp.fromMillis(baseMillis + 3000),
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      }),
+      firestore.collection("merchant_claims").doc("claim-history-002").set({
+        claimId: "claim-history-002",
+        merchantId: "merchant-h-2",
+        userId: uid,
+        zoneId: "zone-h",
+        categoryId: "pharmacy",
+        claimStatus: "needs_more_info",
+        userVisibleStatus: "needs_more_info",
+        updatedAt: Timestamp.fromMillis(baseMillis + 2000),
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      }),
+      firestore.collection("merchant_claims").doc("claim-history-003").set({
+        claimId: "claim-history-003",
+        merchantId: "merchant-h-3",
+        userId: uid,
+        zoneId: "zone-h",
+        categoryId: "pharmacy",
+        claimStatus: "approved",
+        userVisibleStatus: "approved",
+        updatedAt: Timestamp.fromMillis(baseMillis + 1000),
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      }),
+      firestore.collection("merchant_claims").doc("claim-history-other-user").set({
+        claimId: "claim-history-other-user",
+        merchantId: "merchant-h-x",
+        userId: "another-user",
+        zoneId: "zone-h",
+        categoryId: "pharmacy",
+        claimStatus: "under_review",
+        userVisibleStatus: "under_review",
+        updatedAt: Timestamp.fromMillis(baseMillis + 5000),
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      }),
+    ]);
+
+    const firstPage = (await listMyClaimsRun!(
+      buildRequest({
+        uid,
+        email: "history@example.com",
+        data: { limit: 2 },
+      })
+    )) as {
+      claims: Array<{ claimId: string }>;
+      nextCursor: { updatedAtMillis: number; claimId: string } | null;
+    };
+
+    assert.equal(firstPage.claims.length, 2);
+    assert.deepEqual(
+      firstPage.claims.map((item) => item.claimId),
+      ["claim-history-001", "claim-history-002"]
+    );
+    assert.ok(firstPage.nextCursor);
+
+    const secondPage = (await listMyClaimsRun!(
+      buildRequest({
+        uid,
+        email: "history@example.com",
+        data: {
+          limit: 2,
+          cursorUpdatedAtMillis: firstPage.nextCursor!.updatedAtMillis,
+          cursorClaimId: firstPage.nextCursor!.claimId,
+        },
+      })
+    )) as {
+      claims: Array<{ claimId: string }>;
+      nextCursor: { updatedAtMillis: number; claimId: string } | null;
+    };
+
+    assert.equal(secondPage.claims.length, 1);
+    assert.deepEqual(secondPage.claims.map((item) => item.claimId), [
+      "claim-history-003",
+    ]);
+    assert.equal(secondPage.nextCursor, null);
+  });
+
+  test("cola admin de claims rechaza usuarios no admin", async () => {
+    assert.ok(listReviewQueueRun);
     await assert.rejects(
       async () =>
-        upsertDraftRun!(
+        listReviewQueueRun!(
           buildRequest({
-            uid: "user-1",
-            email: "owner@example.com",
+            uid: "user-no-admin",
+            email: "user@example.com",
+            role: "customer",
             data: {
-              claimId: "claim-dup-22222",
-              merchantId,
-              declaredRole: "owner",
-              hasAcceptedDataProcessingConsent: false,
-              hasAcceptedLegitimacyDeclaration: false,
-              evidenceFiles: [],
+              zoneId: "zone-review-1",
+              limit: 5,
             },
           })
         ),
       (error: unknown) => {
-        const err = error as { code?: string; details?: Record<string, unknown> };
-        assert.equal(err.code, "already-exists");
-        assert.equal(err.details?.code, "active_claim_exists");
+        const err = error as { code?: string };
+        assert.equal(err.code, "permission-denied");
         return true;
       }
     );

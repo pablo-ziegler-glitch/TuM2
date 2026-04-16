@@ -2,50 +2,12 @@ import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore } from "firebase-admin/firestore";
 import { computeMerchantPublicProjection } from "../lib/projection";
 import { MerchantDoc, OperationalSignals } from "../lib/types";
-import { syncMerchantPublicProjection } from "../lib/publicProjectionSync";
+import {
+  areComparablePublicStatesEqual,
+  syncMerchantPublicProjection,
+} from "../lib/publicProjectionSync";
 
 const db = () => getFirestore();
-
-const RELEVANT_PROJECTION_FIELDS: Array<keyof MerchantDoc> = [
-  "merchantId",
-  "name",
-  "category",
-  "zone",
-  "zoneId",
-  "address",
-  "isPharmacy",
-  "verificationStatus",
-  "visibilityStatus",
-  "completenessScore",
-  "lastActivityAt",
-];
-
-function toComparableValue(value: unknown): unknown {
-  if (
-    value &&
-    typeof value === "object" &&
-    "toMillis" in (value as Record<string, unknown>) &&
-    typeof (value as { toMillis?: unknown }).toMillis === "function"
-  ) {
-    return (value as { toMillis: () => number }).toMillis();
-  }
-  return value;
-}
-
-function hasProjectionRelevantChanges(before: MerchantDoc, after: MerchantDoc): boolean {
-  return RELEVANT_PROJECTION_FIELDS.some((field) => {
-    const beforeValue = toComparableValue(before[field]);
-    const afterValue = toComparableValue(after[field]);
-    return JSON.stringify(beforeValue) !== JSON.stringify(afterValue);
-  });
-}
-
-function projectionSignature(value: unknown): string {
-  return JSON.stringify(
-    value,
-    (_key, currentValue) => toComparableValue(currentValue)
-  );
-}
 
 /**
  * onMerchantWriteSyncPublic
@@ -73,9 +35,6 @@ export const onMerchantWriteSyncPublic = onDocumentWritten(
     let beforeMerchant: MerchantDoc | undefined;
     if (beforeSnap?.exists) {
       beforeMerchant = beforeSnap.data() as MerchantDoc;
-      if (!hasProjectionRelevantChanges(beforeMerchant, merchant)) {
-        return;
-      }
     }
 
     // Fetch current signals (best-effort)
@@ -93,7 +52,9 @@ export const onMerchantWriteSyncPublic = onDocumentWritten(
         beforeMerchant,
         signals ?? undefined
       );
-      if (projectionSignature(beforeProjection) === projectionSignature(projection)) {
+      // TODO(finops): Re-evaluar este pre-skip híbrido con métricas reales de costo.
+      // Mantener mientras reduzca invocaciones al sync canónico sin perder consistencia.
+      if (areComparablePublicStatesEqual(beforeProjection, projection)) {
         return;
       }
     }

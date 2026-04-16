@@ -180,6 +180,7 @@ Disputa:
 - bloquear promoción,
 - revisar con prudencia reforzada,
 - registrar motivo y resolución clara.
+- cuando haya mala fe o abuso reincidente, permitir restricción de nuevas capacidades de claims/reportes manteniendo acceso general no sensible del usuario final.
 
 ## 19. Outcomes de conflicto/disputa
 - legitimidad clara de una parte,
@@ -267,6 +268,7 @@ Datos:
 - No revelar datos de otra parte al usuario.
 - Cierre negativo limpia pending obsoleto.
 - UI no debe incentivar nuevos claims si ya hay claim vivo/conflictivo.
+- Conflicto legítimo y abuso del flujo deben diferenciarse, con posibilidad de restricción funcional progresiva de claims/reportes ante uso malicioso.
 
 ## 27. Analytics y KPI
 Eventos:

@@ -208,6 +208,7 @@ Sin bypass cliente.
 3. conflicto/more-info no abren módulos operativos.
 4. dashboard pleno exclusivo de OWNER aprobado.
 5. UX no debe inducir permisos inexistentes.
+6. cuentas `CUSTOMER` con restricción activa por fraude/abuso no deben ver el carril OWNER como disponible ni como expectativa próxima sin revisión manual explícita.
 
 ## 27. UX / microcopy
 OWNER:

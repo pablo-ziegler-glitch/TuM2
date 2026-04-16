@@ -120,6 +120,7 @@ Puede mejorar contexto UX, pero no habilita recursos protegidos.
 - `CUSTOMER`: uso base + iniciar/seguir claim.
 - `owner_pending`: seguimiento/acciones de claim (p.ej. more-info), sin operación owner plena.
 - `OWNER`: acceso a módulo OWNER y recursos habilitados por política vigente.
+- `CUSTOMER` con restricción de seguridad activa: acceso general de usuario final, pero sin iniciar nuevos claims, sin enviar reportes y sin facultades sensibles hasta revisión manual autorizada.
 
 ## 18. Impacto en navegación
 La navegación debe contemplar tres superficies:
@@ -154,6 +155,7 @@ Con conflicto/disputa:
 4. Navegación manual no puede bypassear guards owner.
 5. Promoción a OWNER única, explícita y auditable.
 6. Conflictos nunca resuelven permisos automáticamente.
+7. Restricciones por fraude/abuso se modelan como capacidad funcional restringida sobre cuentas `CUSTOMER`, no como rol nuevo.
 
 ## 22. Guardrails de costo
 - Resolver estado de acceso desde señal resumida/token, evitando fan-out.

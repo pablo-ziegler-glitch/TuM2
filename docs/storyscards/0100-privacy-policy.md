@@ -148,11 +148,17 @@ Debe dejar claro que información de claim:
 - no se comparte con otros reclamantes/comercios de forma abierta,
 - no se vende como dato personal.
 
-## 21. Prevención de fraude y abuso
-Incluir que TuM2 puede usar datos y señales derivadas para:
-- detectar duplicados/inconsistencias,
-- prevenir abuso,
-- proteger integridad del proceso de ownership.
+## 21. Prevención de fraude, abuso y protección de la integridad de la plataforma
+TuM2 podrá utilizar la información proporcionada por las personas usuarias, la documentación y evidencia cargada en el marco de reclamos de titularidad de comercios, reportes y otras funciones sensibles de la plataforma, así como ciertos datos derivados, metadatos, registros de actividad y señales técnicas razonablemente necesarias, con las siguientes finalidades:
+- validar la legitimidad y consistencia de reclamos y reportes;
+- detectar, prevenir e investigar fraudes, abusos, inconsistencias, duplicaciones, intentos de apropiación indebida de comercios, documentación presuntamente falsa o engañosa, y otros usos contrarios a la integridad de la plataforma;
+- proteger a otras personas usuarias, comercios, al sistema de revisión y a la operatoria general de TuM2;
+- aplicar medidas internas de seguridad, moderación, limitación o restricción de funcionalidades cuando existan motivos razonables para ello;
+- conservar, cuando corresponda, trazas, registros y evidencia mínima necesaria durante un plazo razonable para fines de auditoría, seguridad, prevención de fraude, resolución de conflictos y cumplimiento de obligaciones legales o regulatorias aplicables.
+
+La información tratada con estas finalidades no será utilizada como contenido público del comercio por el solo hecho de haber sido aportada en un reclamo o reporte. El acceso interno a datos personales o evidencia sensible vinculados a estos procesos se encuentra sujeto a criterios de necesidad operativa, acceso restringido, medidas de protección razonables y, cuando corresponda, mecanismos de auditoría interna.
+
+En caso de detectarse indicios razonables de fraude, abuso o uso indebido de reclamos, reportes u otras funciones sensibles, TuM2 podrá utilizar la información disponible para revisar el caso y adoptar medidas de protección de la plataforma, de conformidad con los Términos y Condiciones y demás políticas aplicables.
 
 ## 22. UX y referencias en flujo
 La app debe mostrar referencia clara a política en momentos sensibles del claim:

@@ -159,14 +159,29 @@ Términos deben aclarar que TuM2:
 
 Sin eximir diligencia razonable de la plataforma.
 
-## 22. Conductas prohibidas ligadas al claim
-Incluir explícitamente:
-- reclamo sin legitimidad,
-- documentación falsa/manipulada,
-- apropiación indebida,
-- hostigamiento/interferencia,
-- reclamos abusivos repetidos,
-- intento de eludir validaciones.
+## 22. Uso indebido de reclamos, reportes y funciones sensibles
+La persona usuaria se obliga a utilizar los flujos de reclamo de titularidad de comercios, reportes y demás funciones sensibles de TuM2 de buena fe, con información veraz, actualizada y legítimamente vinculada a su situación real, y se abstendrá de realizar conductas fraudulentas, abusivas, engañosas o contrarias a la integridad de la plataforma.
+
+Se considerará, entre otros supuestos, uso indebido de dichos flujos:
+- reclamar comercios sin contar con legitimidad o vínculo suficiente;
+- presentar documentación o evidencia falsa, alterada, engañosa o inconsistente;
+- utilizar reclamos o reportes para hostigar, bloquear, perjudicar o interferir indebidamente con otros usuarios, comercios o procesos internos de la plataforma;
+- realizar reclamos o reportes reiterados, abusivos o manifiestamente improcedentes;
+- intentar obtener, por vías indebidas, acceso a facultades reservadas a titulares de comercios, personal autorizado o funciones restringidas del sistema;
+- eludir, manipular o interferir con los mecanismos de validación, revisión, seguridad o moderación de TuM2.
+
+En caso de que TuM2 detecte, de forma razonable, indicios de fraude, abuso o uso indebido de reclamos, reportes u otras funciones sensibles, podrá, sin perjuicio de otras medidas razonables que resulten aplicables:
+- rechazar o cerrar el reclamo o reporte involucrado;
+- solicitar información o documentación adicional;
+- suspender temporal o definitivamente la posibilidad de iniciar nuevos reclamos o reportes;
+- restringir total o parcialmente el acceso de la persona usuaria a funcionalidades sensibles de la plataforma;
+- limitar el uso de la cuenta al modo de usuario final, con acceso únicamente a funcionalidades generales o no sensibles;
+- mantener, conservar y revisar la información, evidencia, registros y trazas razonablemente necesarias para seguridad, auditoría, resolución de conflictos, prevención de fraude y cumplimiento legal;
+- derivar el caso a revisión manual, especial o reforzada.
+
+La sola presentación de un reclamo o reporte no genera derecho alguno a la aprobación, publicación, priorización ni habilitación automática de funcionalidades especiales o del rol OWNER. Toda decisión vinculada con estos procesos podrá quedar sujeta a validaciones automáticas, revisión manual, verificación adicional, tratamiento de conflictos o medidas de moderación y seguridad.
+
+Las medidas previstas en esta sección podrán adoptarse de manera proporcional a la gravedad, reiteración, riesgo o impacto de la conducta detectada, con el fin de proteger la integridad de TuM2, a otras personas usuarias, a los comercios involucrados y al correcto funcionamiento de la plataforma.
 
 ## 23. Relación con privacidad y consentimiento
 Términos deben remitir a:

@@ -189,6 +189,10 @@ Uso: disputa o incompatibilidad real que requiere carril especial.
 ### Escalar
 Uso: caso excede atribución del revisor o requiere intervención superior.
 
+### Aplicar restricción funcional de seguridad
+Uso: evidencia razonable de fraude, abuso, hostigamiento o uso indebido del flujo de claims/reportes.
+Requiere: trazabilidad de motivo, alcance temporal/permanente, bloqueo de capacidades sensibles (claims/reportes) y criterio explícito de eventual rehabilitación por revisión autorizada.
+
 ## 17. Reglas de decisión de negocio
 - Aprobar solo con evidencia/contexto suficientes.
 - Rechazar cuando no sea recuperable con seguridad razonable.
@@ -196,6 +200,7 @@ Uso: caso excede atribución del revisor o requiere intervención superior.
 - `conflict_detected` ante disputa de titularidad o colisión fuerte.
 - Toda acción requiere motivo trazable.
 - Evitar aprobación por “destrabar cola” y rechazo por “falta de tiempo”.
+- Ante abuso/fraude razonablemente acreditado, habilitar restricción de capacidades sensibles sin expulsar necesariamente el acceso general de usuario final.
 
 ## 18. Seguridad, masking y reveal
 Principio: mínima exposición.

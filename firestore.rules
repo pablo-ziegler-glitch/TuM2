@@ -46,15 +46,7 @@ service cloud.firestore {
     }
 
     function merchantOwnedByAuthenticatedUser(merchantId) {
-      let merchantPath = /databases/$(database)/documents/merchants/$(merchantId);
-      return isAuthenticated()
-        && (
-          merchantBelongsToUser(merchantId)
-          || (
-            exists(merchantPath)
-            && get(merchantPath).data.ownerUserId == request.auth.uid
-          )
-        );
+      return isAuthenticated() && merchantBelongsToUser(merchantId);
     }
 
     function isDutyPublicReadableStatus(status) {

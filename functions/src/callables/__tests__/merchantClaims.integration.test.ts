@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { before, beforeEach } from "node:test";
 import { randomUUID } from "node:crypto";
 import { getApps, initializeApp } from "firebase-admin/app";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 
 const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST;
 
@@ -16,6 +16,12 @@ let resolveClaimRun:
   | ((request: Record<string, unknown>) => Promise<unknown>)
   | undefined;
 let revealSensitiveRun:
+  | ((request: Record<string, unknown>) => Promise<unknown>)
+  | undefined;
+let listReviewQueueRun:
+  | ((request: Record<string, unknown>) => Promise<unknown>)
+  | undefined;
+let listMyClaimsRun:
   | ((request: Record<string, unknown>) => Promise<unknown>)
   | undefined;
 
@@ -84,6 +90,16 @@ if (!emulatorHost) {
     ).run;
     revealSensitiveRun = (
       callables.revealMerchantClaimSensitiveData as unknown as {
+        run: (request: Record<string, unknown>) => Promise<unknown>;
+      }
+    ).run;
+    listReviewQueueRun = (
+      callables.listMerchantClaimsForReview as unknown as {
+        run: (request: Record<string, unknown>) => Promise<unknown>;
+      }
+    ).run;
+    listMyClaimsRun = (
+      callables.listMyMerchantClaims as unknown as {
         run: (request: Record<string, unknown>) => Promise<unknown>;
       }
     ).run;
@@ -437,5 +453,227 @@ if (!emulatorHost) {
     assert.equal(auditSnap.empty, false);
     const audit = auditSnap.docs[0].data();
     assert.equal(audit.reasonCode, "manual_review");
+  });
+
+  test("cola admin de claims filtra por zone/status y pagina por cursor", async () => {
+    assert.ok(listReviewQueueRun);
+    const firestore = getFirestore();
+    const zoneId = "zone-review-1";
+
+    const baseMillis = 1_710_000_000_000;
+    const claims = [
+      {
+        claimId: "claim-review-001",
+        zoneId,
+        status: "under_review",
+        createdAt: Timestamp.fromMillis(baseMillis + 3000),
+      },
+      {
+        claimId: "claim-review-002",
+        zoneId,
+        status: "needs_more_info",
+        createdAt: Timestamp.fromMillis(baseMillis + 2000),
+      },
+      {
+        claimId: "claim-review-003",
+        zoneId,
+        status: "conflict_detected",
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      },
+      {
+        claimId: "claim-review-other-zone",
+        zoneId: "zone-review-2",
+        status: "under_review",
+        createdAt: Timestamp.fromMillis(baseMillis + 4000),
+      },
+      {
+        claimId: "claim-review-closed",
+        zoneId,
+        status: "approved",
+        createdAt: Timestamp.fromMillis(baseMillis + 5000),
+      },
+    ];
+
+    await Promise.all(
+      claims.map((item, index) =>
+        firestore.collection("merchant_claims").doc(item.claimId).set({
+          claimId: item.claimId,
+          merchantId: `merchant-review-${index}`,
+          userId: `user-review-${index}`,
+          zoneId: item.zoneId,
+          categoryId: "pharmacy",
+          declaredRole: "owner",
+          claimStatus: item.status,
+          userVisibleStatus: item.status,
+          merchantName: `Merchant ${index}`,
+          createdAt: item.createdAt,
+          updatedAt: item.createdAt,
+          submittedAt: item.createdAt,
+        })
+      )
+    );
+
+    const firstPage = (await listReviewQueueRun!(
+      buildRequest({
+        uid: "admin-review",
+        email: "admin-review@example.com",
+        role: "admin",
+        data: {
+          zoneId,
+          limit: 2,
+          statuses: ["under_review", "needs_more_info", "conflict_detected"],
+        },
+      })
+    )) as {
+      claims: Array<{ claimId: string }>;
+      nextCursor: { createdAtMillis: number; claimId: string } | null;
+    };
+
+    assert.equal(firstPage.claims.length, 2);
+    assert.deepEqual(
+      firstPage.claims.map((item) => item.claimId),
+      ["claim-review-001", "claim-review-002"]
+    );
+    assert.ok(firstPage.nextCursor);
+
+    const secondPage = (await listReviewQueueRun!(
+      buildRequest({
+        uid: "admin-review",
+        email: "admin-review@example.com",
+        role: "admin",
+        data: {
+          zoneId,
+          limit: 2,
+          statuses: ["under_review", "needs_more_info", "conflict_detected"],
+          cursorCreatedAtMillis: firstPage.nextCursor!.createdAtMillis,
+          cursorClaimId: firstPage.nextCursor!.claimId,
+        },
+      })
+    )) as {
+      claims: Array<{ claimId: string }>;
+      nextCursor: { createdAtMillis: number; claimId: string } | null;
+    };
+
+    assert.equal(secondPage.claims.length, 1);
+    assert.deepEqual(secondPage.claims.map((item) => item.claimId), [
+      "claim-review-003",
+    ]);
+    assert.equal(secondPage.nextCursor, null);
+  });
+
+  test("historial de mis claims pagina por updatedAt desc sin listeners", async () => {
+    assert.ok(listMyClaimsRun);
+    const firestore = getFirestore();
+    const uid = "user-history-1";
+    const baseMillis = 1_710_100_000_000;
+
+    await Promise.all([
+      firestore.collection("merchant_claims").doc("claim-history-001").set({
+        claimId: "claim-history-001",
+        merchantId: "merchant-h-1",
+        userId: uid,
+        zoneId: "zone-h",
+        categoryId: "pharmacy",
+        claimStatus: "under_review",
+        userVisibleStatus: "under_review",
+        updatedAt: Timestamp.fromMillis(baseMillis + 3000),
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      }),
+      firestore.collection("merchant_claims").doc("claim-history-002").set({
+        claimId: "claim-history-002",
+        merchantId: "merchant-h-2",
+        userId: uid,
+        zoneId: "zone-h",
+        categoryId: "pharmacy",
+        claimStatus: "needs_more_info",
+        userVisibleStatus: "needs_more_info",
+        updatedAt: Timestamp.fromMillis(baseMillis + 2000),
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      }),
+      firestore.collection("merchant_claims").doc("claim-history-003").set({
+        claimId: "claim-history-003",
+        merchantId: "merchant-h-3",
+        userId: uid,
+        zoneId: "zone-h",
+        categoryId: "pharmacy",
+        claimStatus: "approved",
+        userVisibleStatus: "approved",
+        updatedAt: Timestamp.fromMillis(baseMillis + 1000),
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      }),
+      firestore.collection("merchant_claims").doc("claim-history-other-user").set({
+        claimId: "claim-history-other-user",
+        merchantId: "merchant-h-x",
+        userId: "another-user",
+        zoneId: "zone-h",
+        categoryId: "pharmacy",
+        claimStatus: "under_review",
+        userVisibleStatus: "under_review",
+        updatedAt: Timestamp.fromMillis(baseMillis + 5000),
+        createdAt: Timestamp.fromMillis(baseMillis + 1000),
+      }),
+    ]);
+
+    const firstPage = (await listMyClaimsRun!(
+      buildRequest({
+        uid,
+        email: "history@example.com",
+        data: { limit: 2 },
+      })
+    )) as {
+      claims: Array<{ claimId: string }>;
+      nextCursor: { updatedAtMillis: number; claimId: string } | null;
+    };
+
+    assert.equal(firstPage.claims.length, 2);
+    assert.deepEqual(
+      firstPage.claims.map((item) => item.claimId),
+      ["claim-history-001", "claim-history-002"]
+    );
+    assert.ok(firstPage.nextCursor);
+
+    const secondPage = (await listMyClaimsRun!(
+      buildRequest({
+        uid,
+        email: "history@example.com",
+        data: {
+          limit: 2,
+          cursorUpdatedAtMillis: firstPage.nextCursor!.updatedAtMillis,
+          cursorClaimId: firstPage.nextCursor!.claimId,
+        },
+      })
+    )) as {
+      claims: Array<{ claimId: string }>;
+      nextCursor: { updatedAtMillis: number; claimId: string } | null;
+    };
+
+    assert.equal(secondPage.claims.length, 1);
+    assert.deepEqual(secondPage.claims.map((item) => item.claimId), [
+      "claim-history-003",
+    ]);
+    assert.equal(secondPage.nextCursor, null);
+  });
+
+  test("cola admin de claims rechaza usuarios no admin", async () => {
+    assert.ok(listReviewQueueRun);
+    await assert.rejects(
+      async () =>
+        listReviewQueueRun!(
+          buildRequest({
+            uid: "user-no-admin",
+            email: "user@example.com",
+            role: "customer",
+            data: {
+              zoneId: "zone-review-1",
+              limit: 5,
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string };
+        assert.equal(err.code, "permission-denied");
+        return true;
+      }
+    );
   });
 }

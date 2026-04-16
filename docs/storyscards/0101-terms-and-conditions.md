@@ -98,13 +98,12 @@ Debe prohibirse expresamente:
 
 TuM2 puede aplicar medidas proporcionales: rechazo, suspensión, restricción de acciones futuras.
 
-## 14. No aprobación automática
-Regla contractual crítica:
-- enviar claim no implica aprobación,
-- enviar claim no implica rol OWNER,
-- enviar claim no implica control del comercio.
+## 14. Reclamo de titularidad y ausencia de aprobación automática
+El envío de un reclamo de titularidad de un comercio no implica, por sí solo, aprobación de la solicitud, validación automática de la evidencia, reconocimiento de legitimidad, asignación del rol OWNER ni habilitación inmediata de funciones de gestión sobre un comercio.
 
-Acceso owner solo tras validación y transición autorizada.
+TuM2 podrá aplicar validaciones automáticas, revisiones manuales, pedidos de información adicional, tratamientos especiales por conflicto o duplicado, y demás controles razonables antes de adoptar una decisión sobre el reclamo.
+
+La existencia de un estado intermedio de revisión, validación o proceso pendiente no otorga al usuario facultades plenas de administración del comercio ni equivale a una aprobación parcial del reclamo.
 
 ## 15. Validación automática y revisión manual
 Términos deben contemplar controles de:
@@ -122,15 +121,12 @@ Debe reconocerse estado intermedio de revisión (aunque wording público no use 
 - puede ver estado contextual,
 - no obtiene por eso acceso operativo pleno.
 
-## 17. Duplicados, conflictos y disputas
-Debe quedar base para que TuM2 pueda:
-- frenar avance,
-- pedir más información,
-- mantener revisión,
-- rechazar/suspender,
-- aplicar medidas razonables de moderación.
+## 17. Conflictos, duplicados y disputas de titularidad
+TuM2 podrá tratar de manera diferenciada los reclamos duplicados, incompatibles o conflictivos, así como los casos en los que existan uno o más reclamantes sobre un mismo comercio, o cuando el comercio ya se encontrara asociado a otro titular, administrador o proceso previo dentro de la plataforma.
 
-Conflicto bloquea cualquier expectativa de asignación automática.
+En tales supuestos, TuM2 podrá detener el avance normal del reclamo, derivarlo a revisión especial, pedir mayor evidencia, mantenerlo en análisis, cerrarlo, rechazarlo o adoptar cualquier otra medida razonable para proteger la integridad del proceso y evitar asignaciones indebidas de titularidad o acceso.
+
+La existencia de conflicto, duplicado o disputa bloquea cualquier expectativa de acceso automático a funciones OWNER y faculta a TuM2 a resolver el caso con criterio prudente, razonable y trazable.
 
 ## 18. Facultad de pedir más información
 Debe quedar explícita la facultad de requerir información adicional cuando lo enviado no sea suficiente para decidir razonablemente.
@@ -159,14 +155,30 @@ Términos deben aclarar que TuM2:
 
 Sin eximir diligencia razonable de la plataforma.
 
-## 22. Conductas prohibidas ligadas al claim
-Incluir explícitamente:
-- reclamo sin legitimidad,
-- documentación falsa/manipulada,
-- apropiación indebida,
-- hostigamiento/interferencia,
-- reclamos abusivos repetidos,
-- intento de eludir validaciones.
+## 22. Uso indebido, fraude y medidas sobre claims, reportes y funciones sensibles
+El usuario se obliga a utilizar los flujos de reclamo de titularidad, reportes y demás funciones sensibles de TuM2 de buena fe, con información veraz, suficiente, actualizada y legítimamente obtenida, absteniéndose de realizar conductas abusivas, fraudulentas, engañosas, hostiles o destinadas a interferir con la operatoria de la plataforma, con otros usuarios o con comercios vinculados a ella.
+
+Se considerará, entre otros supuestos, uso indebido de la plataforma:
+- iniciar reclamos sin legitimidad suficiente o sobre comercios ajenos;
+- aportar documentación falsa, alterada, engañosa o manifiestamente inconsistente;
+- utilizar el sistema de reclamos o reportes para hostigar, bloquear, perjudicar o presionar a terceros;
+- generar reclamos o reportes seriales, repetitivos o abusivos sin fundamento razonable;
+- intentar apropiarse indebidamente de la gestión de un comercio;
+- manipular datos, estados, evidencias o interacciones para alterar el funcionamiento previsto del sistema;
+- utilizar funcionalidades sensibles con un fin distinto del previsto por TuM2.
+
+Si TuM2 detectara, de forma razonable, indicios de fraude, abuso, engaño, utilización indebida o riesgo para la integridad de la plataforma, podrá adoptar, entre otras, las siguientes medidas, de forma temporal o permanente, según la gravedad, reiteración o contexto del caso:
+- rechazar, cancelar o cerrar reclamos o reportes;
+- suspender la revisión de una solicitud;
+- requerir información o documentación adicional;
+- limitar, bloquear o inhabilitar la posibilidad de iniciar nuevos reclamos;
+- limitar, bloquear o inhabilitar la posibilidad de emitir reportes;
+- restringir el acceso del usuario a funcionalidades sensibles;
+- mantener al usuario exclusivamente en modalidad de uso final o de consulta básica de la plataforma;
+- impedir el acceso a flujos vinculados al rol OWNER;
+- aplicar cualquier otra medida razonable, proporcional y necesaria para proteger el sistema, a otros usuarios, a los comercios involucrados y a la operatoria general de TuM2.
+
+La adopción de estas medidas no generará, por sí sola, derecho a indemnización, restitución ni reconocimiento automático de reclamos por parte del usuario afectado, sin perjuicio de los canales internos o legales que pudieran corresponder.
 
 ## 23. Relación con privacidad y consentimiento
 Términos deben remitir a:
@@ -193,28 +205,22 @@ Debe reflejar que:
 - plataforma aplica controles razonables,
 - conflicto puede implicar bloqueo/revisión reforzada.
 
-## 27. Microcopy habilitado
-Compatibles:
-- “Enviar esta solicitud no te da acceso inmediato a la gestión del comercio”.
-- “TuM2 puede pedirte más información antes de resolver el reclamo”.
-- “La aprobación depende de la validación de la información aportada”.
+## 27. Espacios comerciales, posicionamiento y media listing
+TuM2 podrá ofrecer a comercios, aliados, anunciantes o terceros espacios de promoción, posicionamiento destacado, media listing, visibilidad diferencial, campañas promocionales, recomendaciones destacadas u otras herramientas comerciales dentro de la plataforma.
 
-Evitar copy que sugiera activación inmediata automática.
+La existencia de estos espacios o acuerdos podrá implicar que ciertos comercios tengan una presentación, ubicación, visibilidad o tratamiento diferenciado en resultados, recomendaciones, pantallas, módulos o experiencias dentro de TuM2.
 
-## 28. Datos/elementos impactados
-Marco contractual sobre:
-- información declarada,
-- evidencia/documentación,
-- estado claim,
-- decisiones de revisión,
-- conflictos/duplicados,
-- habilitación/restricción de acceso owner.
+Ello no implica la venta de datos personales de usuarios finales ni altera, por sí solo, las reglas de privacidad aplicables, sin perjuicio de que TuM2 pueda utilizar información agregada, analítica, contextual, territorial o no identificatoria para mejorar la relevancia, segmentación, operación comercial y funcionamiento general de estos espacios.
 
-## 29. Riesgos si no se actualiza
-- interpretaciones de “claim = derecho adquirido”,
-- menor respaldo para rechazar casos inválidos,
-- debilidad ante conflictos/disputas,
-- contradicción entre UX y contrato.
+## 28. Comunicaciones promocionales y operativas
+El usuario acepta que TuM2 podrá enviar comunicaciones operativas, informativas y promocionales vinculadas al funcionamiento de la plataforma, a los comercios, a campañas, a novedades, a recomendaciones, a espacios comerciales o a servicios relacionados.
+
+Las comunicaciones operativas o críticas para la prestación del servicio, la seguridad, la gestión de la cuenta, el estado de reclamos, cambios relevantes del producto o cuestiones esenciales de funcionamiento podrán mantenerse activas en la medida necesaria para la correcta prestación de TuM2.
+
+Las comunicaciones promocionales o de marketing podrán ser desactivadas por el usuario mediante los mecanismos que TuM2 ponga razonablemente a disposición, sin que ello afecte la recepción de comunicaciones operativas esenciales.
+
+## 29. No venta de datos personales
+TuM2 no vende datos personales de usuarios finales. Sin perjuicio de ello, la plataforma podrá utilizar datos agregados, estadísticos, anonimizados o no identificatorios, así como habilitar espacios comerciales, promociones, recomendaciones o herramientas de vinculación entre actores del ecosistema, siempre conforme a la Política de Privacidad, a los presentes Términos y a la normativa aplicable.
 
 ## 30. Edge cases (cobertura conceptual)
 - usuario cree que ya es owner por enviar claim,
@@ -249,8 +255,9 @@ Marco contractual sobre:
 ## 34. Plan de rollout
 1. Actualizar 0101 interna.
 2. Revisar consistencia con 0100/0102/0103/0104.
-3. Alinear wording del claim UX.
-4. Validar texto publicable final contra implementación real antes de producción.
+3. Alinear copy de UX para claims y reportes con estas cláusulas.
+4. Verificar coherencia de la lógica funcional con medidas de moderación/suspensión documentadas.
+5. Validar texto publicable final contra implementación real antes de producción.
 
 ## 35. Sincronización documental obligatoria
 - `docs/storyscards/0101-terms-and-conditions.md`

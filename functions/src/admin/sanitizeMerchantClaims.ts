@@ -102,7 +102,7 @@ export const adminSanitizeMerchantClaimsSensitive = onCall<
     }
 
     let sanitized = 0;
-    let batch = db().batch();
+    const batch = db().batch();
     let writes = 0;
 
     for (const doc of snapshot.docs) {

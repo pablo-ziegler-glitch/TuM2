@@ -842,7 +842,6 @@ class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
       ),
     );
   }
-
 }
 
 class _ClaimScaffold extends StatelessWidget {
@@ -1454,7 +1453,8 @@ String _claimReference(MerchantClaimStatusSummary summary) {
   switch ((categoryId ?? '').trim()) {
     case 'pharmacy':
       return (
-        storefrontHint: 'Mostrá la farmacia y su cartel visible desde la calle.',
+        storefrontHint:
+            'Mostrá la farmacia y su cartel visible desde la calle.',
         documentHint:
             'Podés subir habilitación, constancia fiscal o factura del local.',
       );

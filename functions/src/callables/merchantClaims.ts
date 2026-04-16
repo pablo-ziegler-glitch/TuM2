@@ -1,22 +1,37 @@
+import { getAuth } from "firebase-admin/auth";
 import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import {
+  SensitiveVault,
+  buildSensitiveVault,
+  revealSensitiveFields,
+} from "../lib/claimSensitive";
 
 const db = () => getFirestore();
 
-type ClaimStatus =
+type UserVisibleStatus =
   | "draft"
   | "submitted"
-  | "auto_validating"
   | "under_review"
   | "needs_more_info"
   | "approved"
   | "rejected"
   | "duplicate_claim"
-  | "conflict_detected"
-  | "cancelled";
+  | "conflict_detected";
 
+type InternalWorkflowStatus =
+  | "draft_editing"
+  | "auto_validation_running"
+  | "auto_validation_passed"
+  | "auto_validation_blocked_conflict"
+  | "auto_validation_blocked_duplicate"
+  | "auto_validation_needs_more_info"
+  | "manual_resolution_completed";
+
+type ClaimStatus = UserVisibleStatus;
 type DeclaredRole = "owner" | "co_owner" | "authorized_representative";
 type EvidenceKind = "storefront_photo" | "ownership_document";
+type SensitiveFieldKey = "phone" | "claimantDisplayName" | "claimantNote";
 
 interface ClaimEvidenceInput {
   id?: unknown;
@@ -67,15 +82,41 @@ interface SubmitMerchantClaimResponse {
   nextAction: "wait_review" | "resolve_conflict" | "provide_more_info";
 }
 
-interface CancelMerchantClaimRequest {
+interface EvaluateMerchantClaimRequest {
   claimId?: unknown;
-  reason?: unknown;
 }
 
-interface CancelMerchantClaimResponse {
+interface EvaluateMerchantClaimResponse {
   claimId: string;
-  claimStatus: "cancelled";
-  cancelledAtMillis: number | null;
+  claimStatus: ClaimStatus;
+  reasonCode: string | null;
+  duplicateOfClaimId: string | null;
+  updatedAtMillis: number | null;
+}
+
+interface ResolveMerchantClaimRequest {
+  claimId?: unknown;
+  userVisibleStatus?: unknown;
+  reviewReasonCode?: unknown;
+  reviewNotes?: unknown;
+}
+
+interface ResolveMerchantClaimResponse {
+  claimId: string;
+  claimStatus: ClaimStatus;
+  reviewedAtMillis: number | null;
+}
+
+interface RevealSensitiveClaimDataRequest {
+  claimId?: unknown;
+  reasonCode?: unknown;
+  fields?: unknown;
+}
+
+interface RevealSensitiveClaimDataResponse {
+  claimId: string;
+  expiresAtMillis: number;
+  revealed: Partial<Record<SensitiveFieldKey, string>>;
 }
 
 interface GetMyMerchantClaimStatusRequest {
@@ -121,21 +162,42 @@ type CallableAuth = {
   token: Record<string, unknown>;
 };
 
-const DRAFT_MUTABLE_STATUSES: ReadonlySet<ClaimStatus> = new Set([
+const USER_VISIBLE_STATUSES: ReadonlySet<UserVisibleStatus> = new Set([
+  "draft",
+  "submitted",
+  "under_review",
+  "needs_more_info",
+  "approved",
+  "rejected",
+  "duplicate_claim",
+  "conflict_detected",
+]);
+
+const DRAFT_MUTABLE_STATUSES: ReadonlySet<UserVisibleStatus> = new Set([
   "draft",
   "needs_more_info",
 ]);
 
-const ACTIVE_STATUSES: ReadonlyArray<ClaimStatus> = [
+const ACTIVE_STATUSES: ReadonlyArray<UserVisibleStatus> = [
   "draft",
   "submitted",
-  "auto_validating",
   "under_review",
   "needs_more_info",
+  "conflict_detected",
+  "duplicate_claim",
 ];
 
-const CLAIM_STATUS_CONFLICT: ClaimStatus = "conflict_detected";
-const CLAIM_STATUS_DUPLICATE: ClaimStatus = "duplicate_claim";
+const OWNER_PENDING_STATUSES: ReadonlySet<UserVisibleStatus> = new Set([
+  "submitted",
+  "under_review",
+  "needs_more_info",
+  "conflict_detected",
+  "duplicate_claim",
+]);
+
+const CLOSED_NEGATIVE_STATUSES: ReadonlySet<UserVisibleStatus> = new Set([
+  "rejected",
+]);
 
 const MAX_NOTE_LENGTH = 800;
 const MAX_PHONE_LENGTH = 32;
@@ -143,6 +205,7 @@ const MAX_EVIDENCE_FILES = 6;
 const MAX_EVIDENCE_FILE_BYTES = 8 * 1024 * 1024;
 const STORAGE_PATH_PREFIX = "merchant-claims/";
 const MAX_CLAIMABLE_SEARCH_LIMIT = 20;
+const CLAIM_WORKFLOW_MANAGER = "callable_v2";
 
 function assertAuthenticated(
   auth: CallableAuth | null | undefined
@@ -193,7 +256,11 @@ function normalizeClaimId(value: unknown): string {
 }
 
 function normalizeDeclaredRole(value: unknown): DeclaredRole {
-  if (value === "owner" || value === "co_owner" || value === "authorized_representative") {
+  if (
+    value === "owner" ||
+    value === "co_owner" ||
+    value === "authorized_representative"
+  ) {
     return value;
   }
   throw new HttpsError("invalid-argument", "declaredRole inválido.");
@@ -225,7 +292,10 @@ function normalizeEvidenceId(value: unknown): string {
 }
 
 function normalizeEvidenceContentType(value: unknown): string {
-  const contentType = normalizeRequiredString(value, "evidence.contentType").toLowerCase();
+  const contentType = normalizeRequiredString(
+    value,
+    "evidence.contentType"
+  ).toLowerCase();
   const allowed = new Set([
     "image/jpeg",
     "image/jpg",
@@ -287,7 +357,7 @@ function normalizeEvidenceFiles(
   for (const item of raw) {
     const evidence = (item ?? {}) as ClaimEvidenceInput;
     const id = normalizeEvidenceId(evidence.id);
-    const normalized: ClaimEvidenceStored = {
+    byId.set(id, {
       id,
       kind: normalizeEvidenceKind(evidence.kind),
       storagePath: normalizeEvidenceStoragePath(
@@ -303,8 +373,7 @@ function normalizeEvidenceFiles(
         "evidence.originalFileName",
         180
       ),
-    };
-    byId.set(id, normalized);
+    });
   }
 
   return [...byId.values()];
@@ -366,23 +435,59 @@ function normalizeSearchQuery(value: unknown): string {
     .trim();
 }
 
-function toClaimStatus(raw: unknown): ClaimStatus {
+function toUserVisibleStatus(raw: unknown): UserVisibleStatus {
   if (typeof raw !== "string") return "draft";
-  const normalized = raw.trim() as ClaimStatus;
-  const allowed: ReadonlySet<string> = new Set([
-    "draft",
-    "submitted",
-    "auto_validating",
-    "under_review",
-    "needs_more_info",
-    "approved",
-    "rejected",
-    "duplicate_claim",
-    "conflict_detected",
-    "cancelled",
+  const normalized = raw.trim() as UserVisibleStatus;
+  return USER_VISIBLE_STATUSES.has(normalized) ? normalized : "draft";
+}
+
+function parseRole(token: Record<string, unknown>): string {
+  const role = token.role;
+  return typeof role === "string" ? role.trim().toLowerCase() : "";
+}
+
+function assertAdmin(auth: CallableAuth): void {
+  const role = parseRole(auth.token);
+  if (role !== "admin" && role !== "super_admin") {
+    throw new HttpsError(
+      "permission-denied",
+      "Solo administradores pueden ejecutar esta operación."
+    );
+  }
+}
+
+function normalizeResolveStatus(value: unknown): UserVisibleStatus {
+  const normalized = normalizeRequiredString(value, "userVisibleStatus").toLowerCase();
+  if (
+    normalized === "approved" ||
+    normalized === "rejected" ||
+    normalized === "needs_more_info" ||
+    normalized === "conflict_detected" ||
+    normalized === "duplicate_claim"
+  ) {
+    return normalized;
+  }
+  throw new HttpsError(
+    "invalid-argument",
+    "userVisibleStatus inválido para resolución manual."
+  );
+}
+
+function normalizeRevealFields(value: unknown): SensitiveFieldKey[] {
+  const allowed = new Set<SensitiveFieldKey>([
+    "phone",
+    "claimantDisplayName",
+    "claimantNote",
   ]);
-  if (allowed.has(normalized)) return normalized;
-  return "draft";
+  if (value == null) return ["phone", "claimantDisplayName", "claimantNote"];
+  if (!Array.isArray(value)) {
+    throw new HttpsError("invalid-argument", "fields debe ser un array.");
+  }
+  const parsed = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item): item is SensitiveFieldKey => allowed.has(item as SensitiveFieldKey));
+  return parsed.length > 0 ? [...new Set(parsed)] : ["phone", "claimantDisplayName"];
 }
 
 function resolveMerchantName(data: Record<string, unknown>): string | null {
@@ -393,14 +498,269 @@ function resolveMerchantName(data: Record<string, unknown>): string | null {
   return null;
 }
 
-function isTerminalStatus(status: ClaimStatus): boolean {
-  return (
-    status === "approved" ||
-    status === "rejected" ||
-    status === "duplicate_claim" ||
-    status === "conflict_detected" ||
-    status === "cancelled"
-  );
+function evidenceSignature(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  const signatures = value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return "";
+      const file = entry as Record<string, unknown>;
+      const id = typeof file.id === "string" ? file.id : "";
+      const kind = typeof file.kind === "string" ? file.kind : "";
+      const storagePath =
+        typeof file.storagePath === "string" ? file.storagePath : "";
+      const contentType =
+        typeof file.contentType === "string" ? file.contentType : "";
+      const sizeBytes =
+        typeof file.sizeBytes === "number" ? Math.trunc(file.sizeBytes) : -1;
+      return `${id}|${kind}|${storagePath}|${contentType}|${sizeBytes}`;
+    })
+    .filter((entry) => entry.length > 0)
+    .sort();
+  return signatures.join(";");
+}
+
+function hasDraftChanges(params: {
+  existing: Record<string, unknown>;
+  next: {
+    declaredRole: DeclaredRole;
+    hasAcceptedDataProcessingConsent: boolean;
+    hasAcceptedLegitimacyDeclaration: boolean;
+    storefrontPhotoUploaded: boolean;
+    ownershipDocumentUploaded: boolean;
+    evidenceFiles: ClaimEvidenceStored[];
+    phoneMasked: string | null;
+    claimantDisplayNameMasked: string | null;
+    claimantNoteMasked: string | null;
+  };
+}): boolean {
+  const existing = params.existing;
+  if (existing.declaredRole !== params.next.declaredRole) return true;
+  if (
+    existing.hasAcceptedDataProcessingConsent !==
+    params.next.hasAcceptedDataProcessingConsent
+  ) {
+    return true;
+  }
+  if (
+    existing.hasAcceptedLegitimacyDeclaration !==
+    params.next.hasAcceptedLegitimacyDeclaration
+  ) {
+    return true;
+  }
+  if (
+    existing.storefrontPhotoUploaded !== params.next.storefrontPhotoUploaded ||
+    existing.ownershipDocumentUploaded !== params.next.ownershipDocumentUploaded
+  ) {
+    return true;
+  }
+  if (evidenceSignature(existing.evidenceFiles) !== evidenceSignature(params.next.evidenceFiles)) {
+    return true;
+  }
+  if (existing.phoneMasked !== params.next.phoneMasked) return true;
+  if (
+    existing.claimantDisplayNameMasked !== params.next.claimantDisplayNameMasked
+  ) {
+    return true;
+  }
+  if (existing.claimantNoteMasked !== params.next.claimantNoteMasked) {
+    return true;
+  }
+  return false;
+}
+
+function hasSensitivePrivateChanges(
+  currentVault: unknown,
+  nextVault: SensitiveVault
+): boolean {
+  if (currentVault == null || typeof currentVault !== "object") {
+    return true;
+  }
+  return JSON.stringify(currentVault) !== JSON.stringify(nextVault);
+}
+
+async function hasOtherPendingClaims(
+  userId: string,
+  excludeClaimId: string
+): Promise<boolean> {
+  const snap = await db()
+    .collection("merchant_claims")
+    .where("userId", "==", userId)
+    .where("claimStatus", "in", [...OWNER_PENDING_STATUSES])
+    .limit(5)
+    .get();
+  return snap.docs.some((doc) => doc.id !== excludeClaimId);
+}
+
+async function syncOwnerPendingAccess(params: {
+  userId: string;
+  claimId: string;
+  claimStatus: UserVisibleStatus;
+  merchantId: string;
+}): Promise<void> {
+  const auth = getAuth();
+  let currentClaims: Record<string, unknown> = {};
+  let isOwner = false;
+
+  try {
+    const userRecord = await auth.getUser(params.userId);
+    currentClaims = (userRecord.customClaims ?? {}) as Record<string, unknown>;
+    isOwner = currentClaims["role"] === "owner";
+  } catch (error) {
+    console.warn(
+      JSON.stringify({
+        source: "merchant_claims",
+        action: "owner_pending_get_user_failed",
+        userId: params.userId,
+        claimId: params.claimId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    );
+  }
+
+  let ownerPending = OWNER_PENDING_STATUSES.has(params.claimStatus);
+  if (!ownerPending && !isOwner && CLOSED_NEGATIVE_STATUSES.has(params.claimStatus)) {
+    ownerPending = await hasOtherPendingClaims(params.userId, params.claimId);
+  }
+
+  const nextClaims: Record<string, unknown> = { ...currentClaims };
+  nextClaims["owner_pending"] = ownerPending;
+
+  if (params.claimStatus === "approved") {
+    const claimMerchantId =
+      typeof currentClaims["merchantId"] === "string" &&
+      currentClaims["merchantId"].trim().length > 0
+        ? currentClaims["merchantId"].trim()
+        : null;
+    const claimMerchantIds = Array.isArray(currentClaims["merchantIds"])
+      ? currentClaims["merchantIds"]
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0)
+      : [];
+    nextClaims["role"] = "owner";
+    nextClaims["merchantId"] = claimMerchantId ?? params.merchantId;
+    nextClaims["merchantIds"] = [...new Set([params.merchantId, ...claimMerchantIds])];
+    nextClaims["onboardingComplete"] = true;
+    nextClaims["owner_pending"] = false;
+  } else if (!isOwner) {
+    nextClaims["role"] = "customer";
+    nextClaims["onboardingComplete"] = false;
+  }
+
+  if (JSON.stringify(currentClaims) !== JSON.stringify(nextClaims)) {
+    try {
+      await auth.setCustomUserClaims(params.userId, nextClaims);
+    } catch (error) {
+      console.warn(
+        JSON.stringify({
+          source: "merchant_claims",
+          action: "owner_pending_set_claims_failed",
+          userId: params.userId,
+          claimId: params.claimId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      );
+    }
+  }
+
+  const userRef = db().doc(`users/${params.userId}`);
+  const nextUserRole =
+    params.claimStatus === "approved" ? "owner" : isOwner ? "owner" : "customer";
+  const nextUserMerchantId =
+    params.claimStatus === "approved" ? (nextClaims["merchantId"] as string) : null;
+  const nextUserOwnerPending = nextClaims["owner_pending"] === true;
+  const nextUserOnboarding = nextClaims["onboardingComplete"] === true;
+
+  const userSnap = await userRef.get();
+  const userData = userSnap.data() ?? {};
+  const currentUserRole = typeof userData.role === "string" ? userData.role : null;
+  const currentUserMerchantId =
+    typeof userData.merchantId === "string" ? userData.merchantId : null;
+  const currentUserOwnerPending = userData.ownerPending === true;
+  const currentUserOnboarding = userData.onboardingComplete === true;
+
+  const changed =
+    currentUserRole !== nextUserRole ||
+    currentUserMerchantId !== nextUserMerchantId ||
+    currentUserOwnerPending !== nextUserOwnerPending ||
+    currentUserOnboarding !== nextUserOnboarding;
+
+  if (changed) {
+    await userRef.set(
+      {
+        role: nextUserRole,
+        merchantId: nextUserMerchantId,
+        ownerPending: nextUserOwnerPending,
+        onboardingComplete: nextUserOnboarding,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+}
+
+async function evaluateClaimOutcome(params: {
+  claimId: string;
+  userId: string;
+  merchantId: string;
+  merchantOwnerUid: string;
+  ownershipStatus: string;
+  requiredEvidence: { storefront: boolean; ownershipDocument: boolean };
+}): Promise<{
+  userVisibleStatus: UserVisibleStatus;
+  internalWorkflowStatus: InternalWorkflowStatus;
+  reasonCode: string | null;
+  conflictType: string | null;
+  duplicateOfClaimId: string | null;
+}> {
+  if (!params.requiredEvidence.storefront || !params.requiredEvidence.ownershipDocument) {
+    return {
+      userVisibleStatus: "needs_more_info",
+      internalWorkflowStatus: "auto_validation_needs_more_info",
+      reasonCode: "missing_minimum_evidence",
+      conflictType: null,
+      duplicateOfClaimId: null,
+    };
+  }
+
+  if (
+    (params.merchantOwnerUid && params.merchantOwnerUid !== params.userId) ||
+    params.ownershipStatus === "claimed"
+  ) {
+    return {
+      userVisibleStatus: "conflict_detected",
+      internalWorkflowStatus: "auto_validation_blocked_conflict",
+      reasonCode: "merchant_already_owned",
+      conflictType: "merchant_already_owned",
+      duplicateOfClaimId: null,
+    };
+  }
+
+  const duplicateSnap = await db()
+    .collection("merchant_claims")
+    .where("userId", "==", params.userId)
+    .where("merchantId", "==", params.merchantId)
+    .where("claimStatus", "in", ACTIVE_STATUSES)
+    .limit(3)
+    .get();
+  const duplicate = duplicateSnap.docs.find((doc) => doc.id !== params.claimId);
+  if (duplicate) {
+    return {
+      userVisibleStatus: "duplicate_claim",
+      internalWorkflowStatus: "auto_validation_blocked_duplicate",
+      reasonCode: "duplicate_claim",
+      conflictType: null,
+      duplicateOfClaimId: duplicate.id,
+    };
+  }
+
+  return {
+    userVisibleStatus: "under_review",
+    internalWorkflowStatus: "auto_validation_passed",
+    reasonCode: null,
+    conflictType: null,
+    duplicateOfClaimId: null,
+  };
 }
 
 export const upsertMerchantClaimDraft = onCall<
@@ -443,28 +803,71 @@ export const upsertMerchantClaimDraft = onCall<
   const zoneId = normalizeRequiredString(merchantData.zoneId, "merchant.zoneId");
 
   const claimId =
-    request.data.claimId == null ? db().collection("merchant_claims").doc().id : normalizeClaimId(request.data.claimId);
+    request.data.claimId == null
+      ? db().collection("merchant_claims").doc().id
+      : normalizeClaimId(request.data.claimId);
   const evidenceFiles = normalizeEvidenceFiles(request.data.evidenceFiles, {
     uid,
     claimId,
   });
   const requiredEvidence = claimHasRequiredEvidence(evidenceFiles);
+  const sensitive = buildSensitiveVault({
+    userId: uid,
+    merchantId,
+    phone,
+    claimantDisplayName,
+    claimantNote,
+  });
 
   const claimsCollection = db().collection("merchant_claims");
   const claimRef = claimsCollection.doc(claimId);
+  const privateRef = db().collection("merchant_claim_private").doc(claimId);
   const existingClaimSnap = await claimRef.get();
+  const existingPrivateSnap = await privateRef.get();
+  let shouldUpsertPrivate = !existingPrivateSnap.exists;
 
   if (existingClaimSnap.exists) {
     const existingData = existingClaimSnap.data() ?? {};
     if (existingData.userId !== uid) {
       throw new HttpsError("permission-denied", "No podés modificar este claim.");
     }
-    const currentStatus = toClaimStatus(existingData.claimStatus);
+    const currentStatus = toUserVisibleStatus(
+      existingData.userVisibleStatus ?? existingData.claimStatus
+    );
     if (!DRAFT_MUTABLE_STATUSES.has(currentStatus)) {
       throw new HttpsError(
         "failed-precondition",
         "Este claim ya no se puede editar desde el flujo de borrador."
       );
+    }
+    const changed = hasDraftChanges({
+      existing: existingData as Record<string, unknown>,
+      next: {
+        declaredRole,
+        hasAcceptedDataProcessingConsent,
+        hasAcceptedLegitimacyDeclaration,
+        storefrontPhotoUploaded: requiredEvidence.storefront,
+        ownershipDocumentUploaded: requiredEvidence.ownershipDocument,
+        evidenceFiles,
+        phoneMasked: sensitive.masked.phoneMasked ?? null,
+        claimantDisplayNameMasked: sensitive.masked.claimantDisplayNameMasked ?? null,
+        claimantNoteMasked: sensitive.masked.claimantNoteMasked ?? null,
+      },
+    });
+    const sensitiveChanged = hasSensitivePrivateChanges(
+      existingPrivateSnap.data()?.sensitiveVault,
+      sensitive.vault
+    );
+    shouldUpsertPrivate = sensitiveChanged || !existingPrivateSnap.exists;
+    if (!changed && !sensitiveChanged) {
+      return {
+        claimId,
+        claimStatus: toUserVisibleStatus(
+          existingData.userVisibleStatus ?? existingData.claimStatus
+        ),
+        merchantId,
+        updatedAtMillis: readTimestampMillis(existingData.updatedAt),
+      };
     }
   } else {
     const activeSnap = await claimsCollection
@@ -475,15 +878,11 @@ export const upsertMerchantClaimDraft = onCall<
       .get();
     if (!activeSnap.empty) {
       const active = activeSnap.docs[0];
-      throw new HttpsError(
-        "already-exists",
-        "Ya existe un claim activo para este comercio.",
-        {
-          code: "active_claim_exists",
-          claimId: active.id,
-          claimStatus: active.data().claimStatus ?? "draft",
-        }
-      );
+      throw new HttpsError("already-exists", "Ya existe un claim activo para este comercio.", {
+        code: "active_claim_exists",
+        claimId: active.id,
+        claimStatus: active.data().claimStatus ?? "draft",
+      });
     }
   }
 
@@ -495,11 +894,17 @@ export const upsertMerchantClaimDraft = onCall<
     categoryId,
     zoneId,
     claimStatus: "draft",
+    userVisibleStatus: "draft",
+    internalWorkflowStatus: "draft_editing",
+    workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
     authenticatedEmail: authEmail,
     declaredRole,
-    phone,
-    claimantDisplayName,
-    claimantNote,
+    phone: FieldValue.delete(),
+    claimantDisplayName: FieldValue.delete(),
+    claimantNote: FieldValue.delete(),
+    sensitiveVault: FieldValue.delete(),
+    fingerprintPrimary: FieldValue.delete(),
+    ...sensitive.masked,
     evidenceFiles,
     storefrontPhotoUploaded: requiredEvidence.storefront,
     ownershipDocumentUploaded: requiredEvidence.ownershipDocument,
@@ -508,31 +913,30 @@ export const upsertMerchantClaimDraft = onCall<
     updatedAt: now,
     lastStatusAt: now,
   };
-
   if (!existingClaimSnap.exists) {
     nextPayload.createdAt = now;
   }
 
   await claimRef.set(nextPayload, { merge: true });
+  if (shouldUpsertPrivate) {
+    await privateRef.set(
+      {
+        claimId,
+        userId: uid,
+        merchantId,
+        sensitiveVault: sensitive.vault,
+        fingerprintPrimary: sensitive.vault.fingerprintPrimary ?? null,
+        updatedAt: now,
+        ...(existingPrivateSnap.exists ? {} : { createdAt: now }),
+      },
+      { merge: true }
+    );
+  }
   const saved = await claimRef.get();
   const savedData = saved.data() ?? {};
-
-  console.log(
-    JSON.stringify({
-      source: "merchant_claims",
-      action: existingClaimSnap.exists ? "upsert_draft" : "create_draft",
-      claimId,
-      merchantId,
-      uid,
-      claimStatus: savedData.claimStatus ?? "draft",
-      storefrontPhotoUploaded: requiredEvidence.storefront,
-      ownershipDocumentUploaded: requiredEvidence.ownershipDocument,
-    })
-  );
-
   return {
     claimId,
-    claimStatus: toClaimStatus(savedData.claimStatus),
+    claimStatus: toUserVisibleStatus(savedData.userVisibleStatus ?? savedData.claimStatus),
     merchantId,
     updatedAtMillis: readTimestampMillis(savedData.updatedAt),
   };
@@ -557,7 +961,9 @@ export const submitMerchantClaim = onCall<
     throw new HttpsError("permission-denied", "No podés enviar un claim ajeno.");
   }
 
-  const currentStatus = toClaimStatus(claimData.claimStatus);
+  const currentStatus = toUserVisibleStatus(
+    claimData.userVisibleStatus ?? claimData.claimStatus
+  );
   if (!(currentStatus === "draft" || currentStatus === "needs_more_info")) {
     throw new HttpsError(
       "failed-precondition",
@@ -565,7 +971,9 @@ export const submitMerchantClaim = onCall<
     );
   }
 
-  const evidenceFilesRaw = Array.isArray(claimData.evidenceFiles) ? claimData.evidenceFiles : [];
+  const evidenceFilesRaw = Array.isArray(claimData.evidenceFiles)
+    ? claimData.evidenceFiles
+    : [];
   const evidenceFiles = normalizeEvidenceFiles(evidenceFilesRaw, { uid, claimId });
   const requiredEvidence = claimHasRequiredEvidence(evidenceFiles);
   if (!requiredEvidence.storefront || !requiredEvidence.ownershipDocument) {
@@ -574,7 +982,6 @@ export const submitMerchantClaim = onCall<
       "Necesitás subir foto de fachada y prueba documental mínima para enviar el claim."
     );
   }
-
   if (claimData.hasAcceptedDataProcessingConsent !== true) {
     throw new HttpsError(
       "failed-precondition",
@@ -595,7 +1002,6 @@ export const submitMerchantClaim = onCall<
     throw new HttpsError("failed-precondition", "El comercio ya no está disponible.");
   }
   const merchantData = merchantSnap.data() ?? {};
-
   const merchantOwnerUid =
     typeof merchantData.ownerUserId === "string" ? merchantData.ownerUserId.trim() : "";
   const ownershipStatus =
@@ -603,83 +1009,174 @@ export const submitMerchantClaim = onCall<
       ? merchantData.ownershipStatus.trim().toLowerCase()
       : "";
 
-  let nextStatus: ClaimStatus = "auto_validating";
-  let nextAction: SubmitMerchantClaimResponse["nextAction"] = "wait_review";
-  let conflictType: string | null = null;
-  let duplicateOfClaimId: string | null = null;
+  const decision = await evaluateClaimOutcome({
+    claimId,
+    userId: uid,
+    merchantId,
+    merchantOwnerUid,
+    ownershipStatus,
+    requiredEvidence,
+  });
 
-  if ((merchantOwnerUid && merchantOwnerUid !== uid) || ownershipStatus === "claimed") {
-    nextStatus = CLAIM_STATUS_CONFLICT;
-    nextAction = "resolve_conflict";
-    conflictType = "merchant_already_owned";
-  } else {
-    const duplicateSnap = await db()
-      .collection("merchant_claims")
-      .where("userId", "==", uid)
-      .where("merchantId", "==", merchantId)
-      .where("claimStatus", "in", ACTIVE_STATUSES)
-      .limit(2)
-      .get();
-    const duplicate = duplicateSnap.docs.find((doc) => doc.id !== claimId);
-    if (duplicate) {
-      nextStatus = CLAIM_STATUS_DUPLICATE;
-      nextAction = "resolve_conflict";
-      duplicateOfClaimId = duplicate.id;
-    }
-  }
+  const nextAction: SubmitMerchantClaimResponse["nextAction"] =
+    decision.userVisibleStatus === "conflict_detected" ||
+    decision.userVisibleStatus === "duplicate_claim"
+      ? "resolve_conflict"
+      : decision.userVisibleStatus === "needs_more_info"
+      ? "provide_more_info"
+      : "wait_review";
 
   const now = FieldValue.serverTimestamp();
   await claimRef.set(
     {
       authenticatedEmail: authEmail,
-      evidenceFiles,
-      storefrontPhotoUploaded: requiredEvidence.storefront,
-      ownershipDocumentUploaded: requiredEvidence.ownershipDocument,
-      claimStatus: nextStatus,
+      claimStatus: decision.userVisibleStatus,
+      userVisibleStatus: decision.userVisibleStatus,
+      internalWorkflowStatus: decision.internalWorkflowStatus,
+      workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
+      sensitiveVault: FieldValue.delete(),
+      fingerprintPrimary: FieldValue.delete(),
       submittedAt: now,
       updatedAt: now,
       lastStatusAt: now,
-      autoValidationVersion: 1,
-      autoValidationResult: nextStatus === "auto_validating" ? null : "blocked",
-      autoValidationReasonCode: conflictType ?? (duplicateOfClaimId ? "duplicate_claim" : null),
-      conflictType,
-      duplicateOfClaimId,
+      autoValidationVersion: 2,
+      autoValidationResult:
+        decision.userVisibleStatus === "under_review" ? "passed" : "blocked",
+      autoValidationReasonCode: decision.reasonCode,
+      conflictType: decision.conflictType,
+      duplicateOfClaimId: decision.duplicateOfClaimId,
     },
     { merge: true }
   );
 
-  const updatedSnap = await claimRef.get();
-  const updatedData = updatedSnap.data() ?? {};
+  await syncOwnerPendingAccess({
+    userId: uid,
+    claimId,
+    claimStatus: decision.userVisibleStatus,
+    merchantId,
+  });
 
-  console.log(
-    JSON.stringify({
-      source: "merchant_claims",
-      action: "submit_claim",
-      claimId,
-      merchantId,
-      uid,
-      nextStatus,
-      conflictType,
-      duplicateOfClaimId,
-    })
-  );
-
+  const updated = (await claimRef.get()).data() ?? {};
   return {
     claimId,
-    claimStatus: toClaimStatus(updatedData.claimStatus),
-    submittedAtMillis: readTimestampMillis(updatedData.submittedAt),
+    claimStatus: toUserVisibleStatus(updated.userVisibleStatus ?? updated.claimStatus),
+    submittedAtMillis: readTimestampMillis(updated.submittedAt),
     nextAction,
   };
 });
 
-export const cancelMerchantClaim = onCall<
-  CancelMerchantClaimRequest,
-  Promise<CancelMerchantClaimResponse>
+export const evaluateMerchantClaim = onCall<
+  EvaluateMerchantClaimRequest,
+  Promise<EvaluateMerchantClaimResponse>
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
-  const uid = auth.uid;
+  assertAdmin(auth);
+
   const claimId = normalizeClaimId(request.data.claimId);
-  const reason = normalizeOptionalString(request.data.reason, "reason", 300);
+  const claimRef = db().collection("merchant_claims").doc(claimId);
+  const claimSnap = await claimRef.get();
+  if (!claimSnap.exists) {
+    throw new HttpsError("not-found", "No encontramos el claim.");
+  }
+  const claimData = claimSnap.data() ?? {};
+  const userId = normalizeRequiredString(claimData.userId, "claim.userId");
+  const merchantId = normalizeRequiredString(claimData.merchantId, "claim.merchantId");
+  const evidenceFiles = normalizeEvidenceFiles(claimData.evidenceFiles ?? [], {
+    uid: userId,
+    claimId,
+  });
+  const requiredEvidence = claimHasRequiredEvidence(evidenceFiles);
+
+  const merchantSnap = await db().collection("merchants").doc(merchantId).get();
+  if (!merchantSnap.exists) {
+    throw new HttpsError("failed-precondition", "El comercio no está disponible.");
+  }
+  const merchantData = merchantSnap.data() ?? {};
+  const merchantOwnerUid =
+    typeof merchantData.ownerUserId === "string" ? merchantData.ownerUserId.trim() : "";
+  const ownershipStatus =
+    typeof merchantData.ownershipStatus === "string"
+      ? merchantData.ownershipStatus.trim().toLowerCase()
+      : "";
+
+  const decision = await evaluateClaimOutcome({
+    claimId,
+    userId,
+    merchantId,
+    merchantOwnerUid,
+    ownershipStatus,
+    requiredEvidence,
+  });
+
+  const currentStatus = toUserVisibleStatus(
+    claimData.userVisibleStatus ?? claimData.claimStatus
+  );
+  const currentInternal =
+    typeof claimData.internalWorkflowStatus === "string"
+      ? claimData.internalWorkflowStatus
+      : null;
+  if (
+    currentStatus !== decision.userVisibleStatus ||
+    currentInternal !== decision.internalWorkflowStatus
+  ) {
+    await claimRef.set(
+      {
+        claimStatus: decision.userVisibleStatus,
+        userVisibleStatus: decision.userVisibleStatus,
+        internalWorkflowStatus: decision.internalWorkflowStatus,
+        workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
+        sensitiveVault: FieldValue.delete(),
+        fingerprintPrimary: FieldValue.delete(),
+        autoValidationVersion: 2,
+        autoValidationResult:
+          decision.userVisibleStatus === "under_review" ? "passed" : "blocked",
+        autoValidationReasonCode: decision.reasonCode,
+        conflictType: decision.conflictType,
+        duplicateOfClaimId: decision.duplicateOfClaimId,
+        updatedAt: FieldValue.serverTimestamp(),
+        lastStatusAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  await syncOwnerPendingAccess({
+    userId,
+    claimId,
+    claimStatus: decision.userVisibleStatus,
+    merchantId,
+  });
+
+  const updated = (await claimRef.get()).data() ?? {};
+  return {
+    claimId,
+    claimStatus: toUserVisibleStatus(updated.userVisibleStatus ?? updated.claimStatus),
+    reasonCode: decision.reasonCode,
+    duplicateOfClaimId: decision.duplicateOfClaimId,
+    updatedAtMillis: readTimestampMillis(updated.updatedAt),
+  };
+});
+
+export const resolveMerchantClaim = onCall<
+  ResolveMerchantClaimRequest,
+  Promise<ResolveMerchantClaimResponse>
+>({ enforceAppCheck: true }, async (request) => {
+  const auth = assertAuthenticated(request.auth as CallableAuth);
+  assertAdmin(auth);
+  const reviewerUid = auth.uid;
+
+  const claimId = normalizeClaimId(request.data.claimId);
+  const targetStatus = normalizeResolveStatus(request.data.userVisibleStatus);
+  const reviewReasonCode = normalizeOptionalString(
+    request.data.reviewReasonCode,
+    "reviewReasonCode",
+    120
+  );
+  const reviewNotes = normalizeOptionalString(
+    request.data.reviewNotes,
+    "reviewNotes",
+    600
+  );
 
   const claimRef = db().collection("merchant_claims").doc(claimId);
   const claimSnap = await claimRef.get();
@@ -687,45 +1184,124 @@ export const cancelMerchantClaim = onCall<
     throw new HttpsError("not-found", "No encontramos el claim.");
   }
   const claimData = claimSnap.data() ?? {};
-  if (claimData.userId !== uid) {
-    throw new HttpsError("permission-denied", "No podés cancelar un claim ajeno.");
-  }
-  const status = toClaimStatus(claimData.claimStatus);
-  if (isTerminalStatus(status)) {
-    throw new HttpsError(
-      "failed-precondition",
-      "El claim ya está cerrado y no puede cancelarse."
+  const userId = normalizeRequiredString(claimData.userId, "claim.userId");
+  const merchantId = normalizeRequiredString(claimData.merchantId, "claim.merchantId");
+  const currentStatus = toUserVisibleStatus(
+    claimData.userVisibleStatus ?? claimData.claimStatus
+  );
+
+  if (currentStatus !== targetStatus) {
+    await claimRef.set(
+      {
+        claimStatus: targetStatus,
+        userVisibleStatus: targetStatus,
+        internalWorkflowStatus: "manual_resolution_completed",
+        workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
+        sensitiveVault: FieldValue.delete(),
+        fingerprintPrimary: FieldValue.delete(),
+        reviewReasonCode: reviewReasonCode ?? null,
+        reviewNotes: reviewNotes ?? null,
+        reviewedByUid: reviewerUid,
+        reviewedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        lastStatusAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } else if (reviewReasonCode != null || reviewNotes != null) {
+    await claimRef.set(
+      {
+        reviewReasonCode: reviewReasonCode ?? null,
+        reviewNotes: reviewNotes ?? null,
+        reviewedByUid: reviewerUid,
+        workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
+        reviewedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
     );
   }
 
-  const now = FieldValue.serverTimestamp();
-  await claimRef.set(
-    {
-      claimStatus: "cancelled",
-      cancelledAt: now,
-      cancelledReason: reason,
-      updatedAt: now,
-      lastStatusAt: now,
-    },
-    { merge: true }
-  );
-  const updatedSnap = await claimRef.get();
-  const updatedData = updatedSnap.data() ?? {};
+  if (targetStatus === "approved") {
+    await db().doc(`merchants/${merchantId}`).set(
+      {
+        ownerUserId: userId,
+        ownershipStatus: "claimed",
+        verificationStatus: "claimed",
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
 
-  console.log(
-    JSON.stringify({
-      source: "merchant_claims",
-      action: "cancel_claim",
+  await syncOwnerPendingAccess({
+    userId,
+    claimId,
+    claimStatus: targetStatus,
+    merchantId,
+  });
+
+  const updated = (await claimRef.get()).data() ?? {};
+  return {
+    claimId,
+    claimStatus: toUserVisibleStatus(updated.userVisibleStatus ?? updated.claimStatus),
+    reviewedAtMillis: readTimestampMillis(updated.reviewedAt),
+  };
+});
+
+export const revealMerchantClaimSensitiveData = onCall<
+  RevealSensitiveClaimDataRequest,
+  Promise<RevealSensitiveClaimDataResponse>
+>({ enforceAppCheck: true }, async (request) => {
+  const auth = assertAuthenticated(request.auth as CallableAuth);
+  assertAdmin(auth);
+
+  const claimId = normalizeClaimId(request.data.claimId);
+  const reasonCode = normalizeRequiredString(request.data.reasonCode, "reasonCode");
+  const fields = normalizeRevealFields(request.data.fields);
+  const claimSnap = await db().collection("merchant_claims").doc(claimId).get();
+  if (!claimSnap.exists) {
+    throw new HttpsError("not-found", "No encontramos el claim.");
+  }
+  const privateSnap = await db().collection("merchant_claim_private").doc(claimId).get();
+  if (!privateSnap.exists) {
+    throw new HttpsError(
+      "failed-precondition",
+      "El claim no tiene datos sensibles disponibles para reveal."
+    );
+  }
+  const privateData = privateSnap.data() ?? {};
+  const vaultRaw = privateData.sensitiveVault;
+  if (typeof vaultRaw !== "object" || vaultRaw == null) {
+    throw new HttpsError(
+      "failed-precondition",
+      "El claim no tiene datos sensibles disponibles para reveal."
+    );
+  }
+
+  const vault = vaultRaw as SensitiveVault;
+  const revealed = revealSensitiveFields({
+    vault,
+    requestedFields: fields,
+  });
+  const expiresAtMillis = Date.now() + 5 * 60 * 1000;
+
+  await db()
+    .collection("merchant_claim_sensitive_reveals")
+    .add({
       claimId,
-      uid,
-      reason: reason ?? null,
-    })
-  );
+      actorUid: auth.uid,
+      reasonCode,
+      revealedFields: Object.keys(revealed),
+      keyVersion: vault.keyVersion ?? "unknown",
+      expiresAtMillis,
+      createdAt: FieldValue.serverTimestamp(),
+    });
 
   return {
     claimId,
-    claimStatus: "cancelled",
-    cancelledAtMillis: readTimestampMillis(updatedData.cancelledAt),
+    expiresAtMillis,
+    revealed,
   };
 });
 
@@ -775,7 +1351,9 @@ export const getMyMerchantClaimStatus = onCall<
     ? resolveMerchantName(merchantSnap.data() ?? {})
     : null;
 
-  const status = toClaimStatus(claimData.claimStatus);
+  const status = toUserVisibleStatus(
+    claimData.userVisibleStatus ?? claimData.claimStatus
+  );
   return {
     claim: {
       claimId: claimSnap.id,
@@ -800,7 +1378,6 @@ export const searchClaimableMerchants = onCall<
   const query = normalizeSearchQuery(request.data.query);
   const limit = normalizeSearchLimit(request.data.limit);
 
-  // Scan acotado por zoneId + status + visibility para minimizar costo.
   const snapshot = await db()
     .collection("merchants")
     .where("zoneId", "==", zoneId)
@@ -834,7 +1411,9 @@ export const searchClaimableMerchants = onCall<
       const categoryId =
         typeof data.categoryId === "string" ? data.categoryId.trim() : "";
       const ownershipStatus =
-        typeof data.ownershipStatus === "string" ? data.ownershipStatus.trim() : "unclaimed";
+        typeof data.ownershipStatus === "string"
+          ? data.ownershipStatus.trim()
+          : "unclaimed";
       const ownerUserId =
         typeof data.ownerUserId === "string" ? data.ownerUserId.trim() : "";
 

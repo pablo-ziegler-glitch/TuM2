@@ -167,8 +167,41 @@ Duplicar un snapshot mínimo del comercio dentro de `pharmacy_duties`:
 |-----------|--------|
 | `merchants` | `visibilityStatus == review_pending` |
 | `reports` | `status == open` |
-| `merchant_claims` | `status == pending` |
+| `merchant_claims` | `zoneId == ?` + `claimStatus in [submitted, under_review, needs_more_info, conflict_detected, duplicate_claim]` |
 | `external_places` | por `importStatus` |
+
+### Cola de claims (sin realtime global)
+
+- Fuente: callable `listMerchantClaimsForReview` (backend-only), no listener Firestore.
+- Scope obligatorio:
+  - `zoneId` requerido.
+  - `claimStatus` acotado a estados de revisión.
+  - `limit` estricto (máx 50).
+- Paginación real:
+  - `orderBy(createdAt desc, __name__ desc)`
+  - cursor compuesto: `cursorCreatedAtMillis + cursorClaimId`.
+
+### Historial de claims del usuario (sin realtime global)
+
+- Fuente: callable `listMyMerchantClaims`, no listener Firestore.
+- Scope obligatorio:
+  - `userId` derivado de auth backend.
+  - `limit` estricto (máx 30).
+- Paginación real:
+  - `orderBy(updatedAt desc, __name__ desc)`
+  - cursor compuesto: `cursorUpdatedAtMillis + cursorClaimId`.
+
+### Política de cache/TTL recomendada (claims)
+
+- Cola admin:
+  - cache local en memoria 30s por combinación `zoneId + statuses + page`.
+  - invalidación explícita en acciones de resolución (`resolveMerchantClaim`).
+- Historial usuario:
+  - cache local 60s por usuario.
+  - refresh manual por pull-to-refresh o al volver de submit/resolve.
+- Restricción:
+  - evitar `snapshots()` de colecciones completas de claims.
+  - usar sólo consultas pull paginadas con cursor.
 
 ---
 

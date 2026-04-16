@@ -69,6 +69,8 @@ export {
   resolveMerchantClaim,
   revealMerchantClaimSensitiveData,
   getMyMerchantClaimStatus,
+  listMerchantClaimsForReview,
+  listMyMerchantClaims,
   searchClaimableMerchants,
 } from "./callables/merchantClaims";
 

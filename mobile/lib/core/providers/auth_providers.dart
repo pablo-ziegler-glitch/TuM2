@@ -496,12 +496,14 @@ class AuthClaimsSnapshot {
   final bool onboardingComplete;
 }
 
-/// Claims de autenticación leídos desde el ID token con force refresh.
+/// Claims de autenticación leídos desde el ID token.
+/// Evita force refresh para no duplicar costo de red; el refresh forzado
+/// se centraliza en AuthNotifier al cambiar la sesión.
 final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
 
-  final result = await user.getIdTokenResult(true);
+  final result = await user.getIdTokenResult();
   final claims = result.claims ?? const <String, dynamic>{};
   String? role = (claims['role'] as String?)?.toLowerCase();
   String? merchantId = claims['merchantId'] as String?;
@@ -542,7 +544,6 @@ final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
 });
 
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
-/// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
 final isOwnerProvider = FutureProvider<bool>((ref) async {
   final claims = await ref.watch(authClaimsProvider.future);
   if (claims == null) return false;
@@ -550,7 +551,6 @@ final isOwnerProvider = FutureProvider<bool>((ref) async {
 });
 
 /// true si el usuario autenticado tiene el claim role='admin' o 'super_admin'.
-/// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
 final isAdminProvider = FutureProvider<bool>((ref) async {
   final claims = await ref.watch(authClaimsProvider.future);
   if (claims == null) return false;

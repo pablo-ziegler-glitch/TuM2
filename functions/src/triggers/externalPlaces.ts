@@ -5,7 +5,8 @@ import { normalizeExternalCategory } from "../lib/normalizeCategory";
 import { dedupeMerchantCandidate, ExistingMerchant } from "../lib/dedupe";
 
 const db = () => getFirestore();
-const MAX_DEDUPE_ZONE_SCAN = 250;
+const MAX_DEDUPE_ZONE_SCAN = 120;
+const DEDUPE_STATUSES: ReadonlyArray<string> = ["active", "draft"];
 
 /**
  * onExternalPlaceCreateNormalize
@@ -34,6 +35,7 @@ export const onExternalPlaceCreateNormalize = onDocumentCreated(
     const existingSnap = await db()
       .collection("merchants")
       .where("zoneId", "==", place.zoneId)
+      .where("status", "in", DEDUPE_STATUSES)
       .limit(MAX_DEDUPE_ZONE_SCAN)
       .get();
 

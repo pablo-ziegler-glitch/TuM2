@@ -1,5 +1,5 @@
 import { getAuth } from "firebase-admin/auth";
-import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
+import { FieldPath, FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import {
   SensitiveVault,
@@ -157,6 +157,63 @@ interface SearchClaimableMerchantsResponse {
   }>;
 }
 
+interface ListMerchantClaimsForReviewRequest {
+  zoneId?: unknown;
+  statuses?: unknown;
+  limit?: unknown;
+  cursorCreatedAtMillis?: unknown;
+  cursorClaimId?: unknown;
+}
+
+interface ReviewQueueItem {
+  claimId: string;
+  merchantId: string;
+  userId: string;
+  zoneId: string;
+  categoryId: string | null;
+  claimStatus: ClaimStatus;
+  declaredRole: DeclaredRole;
+  merchantName: string | null;
+  submittedAtMillis: number | null;
+  createdAtMillis: number | null;
+  updatedAtMillis: number | null;
+}
+
+interface ListMerchantClaimsForReviewResponse {
+  claims: ReviewQueueItem[];
+  nextCursor: {
+    createdAtMillis: number;
+    claimId: string;
+  } | null;
+}
+
+interface ListMyMerchantClaimsRequest {
+  limit?: unknown;
+  cursorUpdatedAtMillis?: unknown;
+  cursorClaimId?: unknown;
+}
+
+interface MyClaimHistoryItem {
+  claimId: string;
+  merchantId: string;
+  claimStatus: ClaimStatus;
+  userVisibleStatus: ClaimStatus;
+  zoneId: string | null;
+  categoryId: string | null;
+  merchantName: string | null;
+  submittedAtMillis: number | null;
+  createdAtMillis: number | null;
+  updatedAtMillis: number | null;
+}
+
+interface ListMyMerchantClaimsResponse {
+  claims: MyClaimHistoryItem[];
+  nextCursor: {
+    updatedAtMillis: number;
+    claimId: string;
+  } | null;
+}
+
 type CallableAuth = {
   uid: string;
   token: Record<string, unknown>;
@@ -205,7 +262,16 @@ const MAX_EVIDENCE_FILES = 6;
 const MAX_EVIDENCE_FILE_BYTES = 8 * 1024 * 1024;
 const STORAGE_PATH_PREFIX = "merchant-claims/";
 const MAX_CLAIMABLE_SEARCH_LIMIT = 20;
+const MAX_REVIEW_QUEUE_LIMIT = 50;
+const MAX_MY_CLAIMS_LIMIT = 30;
 const CLAIM_WORKFLOW_MANAGER = "callable_v2";
+const DEFAULT_REVIEW_QUEUE_STATUSES: ReadonlyArray<UserVisibleStatus> = [
+  "submitted",
+  "under_review",
+  "needs_more_info",
+  "conflict_detected",
+  "duplicate_claim",
+];
 
 function assertAuthenticated(
   auth: CallableAuth | null | undefined
@@ -264,6 +330,17 @@ function normalizeDeclaredRole(value: unknown): DeclaredRole {
     return value;
   }
   throw new HttpsError("invalid-argument", "declaredRole inválido.");
+}
+
+function readDeclaredRole(value: unknown): DeclaredRole {
+  if (
+    value === "owner" ||
+    value === "co_owner" ||
+    value === "authorized_representative"
+  ) {
+    return value;
+  }
+  return "authorized_representative";
 }
 
 function normalizePhone(value: unknown): string | null {
@@ -433,6 +510,65 @@ function normalizeSearchQuery(value: unknown): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function normalizeReviewQueueLimit(value: unknown): number {
+  if (value == null) return 20;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new HttpsError("invalid-argument", "limit inválido.");
+  }
+  return Math.max(1, Math.min(MAX_REVIEW_QUEUE_LIMIT, Math.trunc(value)));
+}
+
+function normalizeMyClaimsLimit(value: unknown): number {
+  if (value == null) return 12;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new HttpsError("invalid-argument", "limit inválido.");
+  }
+  return Math.max(1, Math.min(MAX_MY_CLAIMS_LIMIT, Math.trunc(value)));
+}
+
+function normalizeCursorMillis(value: unknown, field: string): number | null {
+  if (value == null) return null;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new HttpsError("invalid-argument", `${field} inválido.`);
+  }
+  const truncated = Math.trunc(value);
+  if (truncated <= 0) {
+    throw new HttpsError("invalid-argument", `${field} inválido.`);
+  }
+  return truncated;
+}
+
+function normalizeCursorClaimId(value: unknown): string | null {
+  if (value == null) return null;
+  return normalizeClaimId(value);
+}
+
+function normalizeReviewQueueStatuses(value: unknown): UserVisibleStatus[] {
+  if (value == null) return [...DEFAULT_REVIEW_QUEUE_STATUSES];
+  if (!Array.isArray(value)) {
+    throw new HttpsError("invalid-argument", "statuses debe ser un array.");
+  }
+  const allowed = new Set<UserVisibleStatus>(DEFAULT_REVIEW_QUEUE_STATUSES);
+  const parsed = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim() as UserVisibleStatus)
+    .filter((item): item is UserVisibleStatus => allowed.has(item));
+  const unique = [...new Set(parsed)];
+  if (unique.length === 0) {
+    throw new HttpsError(
+      "invalid-argument",
+      "statuses debe incluir al menos un estado de revisión válido."
+    );
+  }
+  if (unique.length > 10) {
+    throw new HttpsError(
+      "invalid-argument",
+      "statuses excede el máximo permitido."
+    );
+  }
+  return unique;
 }
 
 function toUserVisibleStatus(raw: unknown): UserVisibleStatus {
@@ -1366,6 +1502,152 @@ export const getMyMerchantClaimStatus = onCall<
       conflictDetected: status === "conflict_detected",
       duplicateDetected: status === "duplicate_claim",
     },
+  };
+});
+
+export const listMerchantClaimsForReview = onCall<
+  ListMerchantClaimsForReviewRequest,
+  Promise<ListMerchantClaimsForReviewResponse>
+>({ enforceAppCheck: true }, async (request) => {
+  const auth = assertAuthenticated(request.auth as CallableAuth);
+  assertAdmin(auth);
+
+  const zoneId = normalizeRequiredString(request.data.zoneId, "zoneId");
+  const statuses = normalizeReviewQueueStatuses(request.data.statuses);
+  const limit = normalizeReviewQueueLimit(request.data.limit);
+  const cursorCreatedAtMillis = normalizeCursorMillis(
+    request.data.cursorCreatedAtMillis,
+    "cursorCreatedAtMillis"
+  );
+  const cursorClaimId = normalizeCursorClaimId(request.data.cursorClaimId);
+
+  if ((cursorCreatedAtMillis == null) !== (cursorClaimId == null)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "cursorCreatedAtMillis y cursorClaimId deben enviarse juntos."
+    );
+  }
+
+  let query = db()
+    .collection("merchant_claims")
+    .where("zoneId", "==", zoneId)
+    .where("claimStatus", "in", statuses)
+    .orderBy("createdAt", "desc")
+    .orderBy(FieldPath.documentId(), "desc")
+    .limit(limit);
+
+  if (cursorCreatedAtMillis != null && cursorClaimId != null) {
+    query = query.startAfter(
+      Timestamp.fromMillis(cursorCreatedAtMillis),
+      cursorClaimId
+    );
+  }
+
+  const snapshot = await query.get();
+  const claims = snapshot.docs.map((doc) => {
+    const data = doc.data() ?? {};
+    return {
+      claimId: doc.id,
+      merchantId: normalizeRequiredString(data.merchantId, "claim.merchantId"),
+      userId: normalizeRequiredString(data.userId, "claim.userId"),
+      zoneId: normalizeRequiredString(data.zoneId, "claim.zoneId"),
+      categoryId: typeof data.categoryId === "string" ? data.categoryId : null,
+      claimStatus: toUserVisibleStatus(data.userVisibleStatus ?? data.claimStatus),
+      declaredRole: readDeclaredRole(data.declaredRole),
+      merchantName:
+        typeof data.merchantName === "string" && data.merchantName.trim().length > 0
+          ? data.merchantName.trim()
+          : null,
+      submittedAtMillis: readTimestampMillis(data.submittedAt),
+      createdAtMillis: readTimestampMillis(data.createdAt),
+      updatedAtMillis: readTimestampMillis(data.updatedAt),
+    } satisfies ReviewQueueItem;
+  });
+
+  const last = snapshot.docs[snapshot.docs.length - 1];
+  const lastCreatedAtMillis = last ? readTimestampMillis(last.data()?.createdAt) : null;
+  const nextCursor =
+    claims.length === limit && last && lastCreatedAtMillis != null
+      ? {
+          createdAtMillis: lastCreatedAtMillis,
+          claimId: last.id,
+        }
+      : null;
+
+  return {
+    claims,
+    nextCursor,
+  };
+});
+
+export const listMyMerchantClaims = onCall<
+  ListMyMerchantClaimsRequest,
+  Promise<ListMyMerchantClaimsResponse>
+>({ enforceAppCheck: true }, async (request) => {
+  const auth = assertAuthenticated(request.auth as CallableAuth);
+  const uid = auth.uid;
+  const limit = normalizeMyClaimsLimit(request.data.limit);
+  const cursorUpdatedAtMillis = normalizeCursorMillis(
+    request.data.cursorUpdatedAtMillis,
+    "cursorUpdatedAtMillis"
+  );
+  const cursorClaimId = normalizeCursorClaimId(request.data.cursorClaimId);
+
+  if ((cursorUpdatedAtMillis == null) !== (cursorClaimId == null)) {
+    throw new HttpsError(
+      "invalid-argument",
+      "cursorUpdatedAtMillis y cursorClaimId deben enviarse juntos."
+    );
+  }
+
+  let query = db()
+    .collection("merchant_claims")
+    .where("userId", "==", uid)
+    .orderBy("updatedAt", "desc")
+    .orderBy(FieldPath.documentId(), "desc")
+    .limit(limit);
+
+  if (cursorUpdatedAtMillis != null && cursorClaimId != null) {
+    query = query.startAfter(
+      Timestamp.fromMillis(cursorUpdatedAtMillis),
+      cursorClaimId
+    );
+  }
+
+  const snapshot = await query.get();
+  const claims = snapshot.docs.map((doc) => {
+    const data = doc.data() ?? {};
+    const status = toUserVisibleStatus(data.userVisibleStatus ?? data.claimStatus);
+    return {
+      claimId: doc.id,
+      merchantId: normalizeRequiredString(data.merchantId, "claim.merchantId"),
+      claimStatus: status,
+      userVisibleStatus: status,
+      zoneId: typeof data.zoneId === "string" ? data.zoneId : null,
+      categoryId: typeof data.categoryId === "string" ? data.categoryId : null,
+      merchantName:
+        typeof data.merchantName === "string" && data.merchantName.trim().length > 0
+          ? data.merchantName.trim()
+          : null,
+      submittedAtMillis: readTimestampMillis(data.submittedAt),
+      createdAtMillis: readTimestampMillis(data.createdAt),
+      updatedAtMillis: readTimestampMillis(data.updatedAt),
+    } satisfies MyClaimHistoryItem;
+  });
+
+  const last = snapshot.docs[snapshot.docs.length - 1];
+  const lastUpdatedAtMillis = last ? readTimestampMillis(last.data()?.updatedAt) : null;
+  const nextCursor =
+    claims.length === limit && last && lastUpdatedAtMillis != null
+      ? {
+          updatedAtMillis: lastUpdatedAtMillis,
+          claimId: last.id,
+        }
+      : null;
+
+  return {
+    claims,
+    nextCursor,
   };
 });
 

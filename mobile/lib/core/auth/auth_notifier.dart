@@ -90,8 +90,9 @@ class AuthNotifier extends ChangeNotifier {
       _fetchUserDataFromFirestore(String uid) async {
     try {
       final doc = await FirebaseFirestore.instance.doc('users/$uid').get();
-      if (!doc.exists)
+      if (!doc.exists) {
         return (role: null, merchantId: null, ownerPending: null);
+      }
       final data = doc.data();
       final ownerPendingRaw = data?['ownerPending'];
       final ownerPending = ownerPendingRaw is bool

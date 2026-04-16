@@ -266,9 +266,6 @@ class _ClaimApplicantDataScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(merchantClaimFlowControllerProvider);
-    final categoryCopy = _evidenceCopyForCategory(
-      state.selectedMerchant?.categoryId,
-    );
     final controller = ref.read(merchantClaimFlowControllerProvider.notifier);
     final email = ref.watch(currentUserProvider)?.email ?? 'Sin email';
 
@@ -399,6 +396,9 @@ class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(merchantClaimFlowControllerProvider);
+    final categoryCopy = _evidenceCopyForCategory(
+      state.selectedMerchant?.categoryId,
+    );
 
     return _ClaimScaffold(
       title: 'Subí evidencia',

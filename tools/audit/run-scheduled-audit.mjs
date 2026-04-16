@@ -62,6 +62,19 @@ async function commitExists(sha) {
   }
 }
 
+async function findEarliestReachableCommit(targetSha, maxCommits = 200) {
+  const output = await runGit(
+    ['rev-list', '--reverse', '--max-count', String(maxCommits), targetSha],
+    { allowFailure: true },
+  );
+  if (!output) return '';
+  const commits = output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return commits[0] ?? '';
+}
+
 function safeJsonParse(text) {
   try {
     return JSON.parse(text);
@@ -324,7 +337,19 @@ async function main() {
   let baseSha = previousState?.lastAuditedSha ?? '';
   const hasValidBase = (await commitExists(baseSha)) && !forceFullAudit;
   if (!hasValidBase) {
-    baseSha = await runGit(['rev-parse', `${targetSha}~1`], { allowFailure: true });
+    const earliestReachable = await findEarliestReachableCommit(targetSha, 200);
+    if (earliestReachable) {
+      const earliestParent = await runGit(['rev-parse', `${earliestReachable}^`], {
+        allowFailure: true,
+      });
+      // Preferir el parent para incluir también el commit más viejo disponible.
+      baseSha = earliestParent || earliestReachable;
+      log('audit.base_fallback_window', {
+        reason: forceFullAudit ? 'forced_full' : 'missing_or_invalid_state_sha',
+        earliestReachable,
+        fallbackBase: baseSha,
+      });
+    }
   }
   if (!baseSha) {
     baseSha = targetSha;
@@ -465,6 +490,8 @@ async function main() {
   await fs.writeFile(artifactPath, markdown, 'utf8');
 
   let issueResult = null;
+  let issuePublicationFailed = false;
+  const issueRequiredByPolicy = shouldCreateIssue(finalReport);
   if (ghClient && shouldCreateIssue(finalReport)) {
     try {
       issueResult = await createOrUpdateAuditIssue(ghClient, {
@@ -475,11 +502,17 @@ async function main() {
         branch,
       });
     } catch (error) {
+      issuePublicationFailed = true;
       log('audit.issue_error', { error: String(error.message ?? error) });
     }
+  } else if (issueRequiredByPolicy) {
+    issuePublicationFailed = true;
+    log('audit.issue_error', {
+      error: 'Issue requerida por política, pero no hay cliente GitHub disponible.',
+    });
   }
 
-  if (ghClient && stateIssue && !geminiFailed) {
+  if (ghClient && stateIssue && !geminiFailed && !issuePublicationFailed) {
     await updateStateIssue(ghClient, {
       issueNumber: stateIssue.issueNumber,
       branch,
@@ -502,6 +535,7 @@ async function main() {
     `Archivos cambiados: ${context.changedFiles.length}`,
     `Hallazgos: ${finalReport.findings.length} (Críticos: ${finalReport.findings.filter((f) => f.riskLevel === 'CRITICO').length}, Altos: ${finalReport.findings.filter((f) => f.riskLevel === 'ALTO').length})`,
     issueResult ? `Issue: ${issueResult.action} #${issueResult.issueNumber}` : 'Issue: no requerido por política',
+    issuePublicationFailed ? 'Issue: ERROR de publicación (state no actualizado)' : 'Issue publish: OK',
     geminiFailed ? `Gemini: fallo no bloqueante (${geminiFailureReason})` : 'Gemini: OK',
   ]);
 

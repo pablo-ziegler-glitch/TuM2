@@ -502,16 +502,42 @@ final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
   if (user == null) return null;
 
   final result = await user.getIdTokenResult(true);
-  final role = (result.claims?['role'] as String?)?.toLowerCase();
-  final ownerPendingRaw = result.claims?['owner_pending'];
-  final ownerPending = ownerPendingRaw == true ||
+  final claims = result.claims ?? const <String, dynamic>{};
+  String? role = (claims['role'] as String?)?.toLowerCase();
+  String? merchantId = claims['merchantId'] as String?;
+  final ownerPendingRaw = claims['owner_pending'];
+  var ownerPending = ownerPendingRaw == true ||
       (ownerPendingRaw is String && ownerPendingRaw.toLowerCase() == 'true');
+  var onboardingComplete = claims['onboardingComplete'] == true;
+
+  final ownerPendingInClaims = claims.containsKey('owner_pending');
+  if (role == null || merchantId == null || !ownerPendingInClaims) {
+    try {
+      final userDoc = await FirebaseFirestore.instance.doc('users/${user.uid}').get();
+      if (userDoc.exists) {
+        final data = userDoc.data() ?? const <String, dynamic>{};
+        role ??= (data['role'] as String?)?.toLowerCase();
+        merchantId ??= data['merchantId'] as String?;
+        if (!ownerPendingInClaims) {
+          final ownerPendingDocRaw = data['ownerPending'];
+          ownerPending = ownerPendingDocRaw == true ||
+              (ownerPendingDocRaw is String &&
+                  ownerPendingDocRaw.toLowerCase() == 'true');
+        }
+        if (!onboardingComplete) {
+          onboardingComplete = data['onboardingComplete'] == true;
+        }
+      }
+    } catch (_) {
+      // fallback silencioso a claims
+    }
+  }
 
   return AuthClaimsSnapshot(
     role: role,
     ownerPending: ownerPending,
-    merchantId: result.claims?['merchantId'] as String?,
-    onboardingComplete: result.claims?['onboardingComplete'] == true,
+    merchantId: merchantId,
+    onboardingComplete: onboardingComplete,
   );
 });
 

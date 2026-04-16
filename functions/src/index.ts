@@ -65,7 +65,9 @@ export {
 export {
   upsertMerchantClaimDraft,
   submitMerchantClaim,
-  cancelMerchantClaim,
+  evaluateMerchantClaim,
+  resolveMerchantClaim,
+  revealMerchantClaimSensitiveData,
   getMyMerchantClaimStatus,
   searchClaimableMerchants,
 } from "./callables/merchantClaims";
@@ -83,3 +85,4 @@ export {
 export { runZoneBootstrapBatch } from "./jobs/bootstrap";
 export { adminRebuildMerchantPublic } from "./admin/rebuildPublic";
 export { backfillSearchKeywords } from "./admin/backfillKeywords";
+export { adminSanitizeMerchantClaimsSensitive } from "./admin/sanitizeMerchantClaims";

@@ -149,6 +149,8 @@ class MerchantClaimRepository {
         needsMoreInfo: status == MerchantClaimStatus.needsMoreInfo,
         conflictDetected: status == MerchantClaimStatus.conflictDetected,
         duplicateDetected: status == MerchantClaimStatus.duplicateClaim,
+        duplicateOfClaimId: null,
+        conflictType: null,
       );
     } on FirebaseFunctionsException catch (error) {
       throw _mapFunctionsError(error);
@@ -158,29 +160,6 @@ class MerchantClaimRepository {
         message: 'El envío tardó más de lo esperado.',
         cause: error,
       );
-    }
-  }
-
-  Future<MerchantClaimStatusSummary> cancelClaim({
-    required String claimId,
-    String? reason,
-  }) async {
-    try {
-      final callable = _functions.httpsCallable('cancelMerchantClaim');
-      await callable.call(<String, dynamic>{
-        'claimId': claimId,
-        'reason': reason,
-      }).timeout(_timeout);
-      final summary = await getMyStatus(claimId: claimId);
-      if (summary == null) {
-        throw const MerchantClaimRepositoryException(
-          code: 'claim-cancel-missing-status',
-          message: 'No pudimos confirmar el estado luego de cancelar.',
-        );
-      }
-      return summary;
-    } on FirebaseFunctionsException catch (error) {
-      throw _mapFunctionsError(error);
     }
   }
 
@@ -210,6 +189,8 @@ class MerchantClaimRepository {
         needsMoreInfo: claim['needsMoreInfo'] == true,
         conflictDetected: claim['conflictDetected'] == true,
         duplicateDetected: claim['duplicateDetected'] == true,
+        duplicateOfClaimId: (claim['duplicateOfClaimId'] as String?)?.trim(),
+        conflictType: (claim['conflictType'] as String?)?.trim(),
       );
     } on FirebaseFunctionsException catch (error) {
       throw _mapFunctionsError(error);

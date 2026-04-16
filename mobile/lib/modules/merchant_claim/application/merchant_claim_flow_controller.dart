@@ -333,27 +333,6 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
     }
   }
 
-  Future<void> cancelClaim({String? reason}) async {
-    final currentClaimId = state.claimId ?? state.statusSummary?.claimId;
-    if (currentClaimId == null || currentClaimId.isEmpty) return;
-    state = state.copyWith(isBusy: true, clearError: true);
-    try {
-      final summary = await _repository.cancelClaim(
-        claimId: currentClaimId,
-        reason: reason,
-      );
-      state = state.copyWith(
-        isBusy: false,
-        statusSummary: summary,
-      );
-    } on MerchantClaimRepositoryException catch (error) {
-      state = state.copyWith(
-        isBusy: false,
-        errorMessage: error.message,
-      );
-    }
-  }
-
   Future<String> _ensureDraft() async {
     final claimId = state.claimId;
     final result =

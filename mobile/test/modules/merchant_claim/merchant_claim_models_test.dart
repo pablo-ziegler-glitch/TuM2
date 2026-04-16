@@ -16,8 +16,8 @@ void main() {
 
     test('mapea enum -> estado api', () {
       expect(
-        MerchantClaimStatus.autoValidating.apiValue,
-        'auto_validating',
+        MerchantClaimStatus.underReview.apiValue,
+        'under_review',
       );
       expect(
         MerchantClaimStatus.duplicateClaim.apiValue,

@@ -266,6 +266,9 @@ class _ClaimApplicantDataScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(merchantClaimFlowControllerProvider);
+    final categoryCopy = _evidenceCopyForCategory(
+      state.selectedMerchant?.categoryId,
+    );
     final controller = ref.read(merchantClaimFlowControllerProvider.notifier);
     final email = ref.watch(currentUserProvider)?.email ?? 'Sin email';
 
@@ -433,7 +436,7 @@ class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
           const SizedBox(height: 10),
           _EvidenceUploadTile(
             title: 'Foto de fachada (obligatoria)',
-            subtitle: 'Mostrá frente/cartel del comercio.',
+            subtitle: categoryCopy.storefrontHint,
             hasFile: state.evidenceFiles.any(
               (file) => file.kind == MerchantClaimEvidenceKind.storefrontPhoto,
             ),
@@ -446,7 +449,7 @@ class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
           const SizedBox(height: 10),
           _EvidenceUploadTile(
             title: 'Prueba documental (obligatoria)',
-            subtitle: 'Por ejemplo habilitación, factura o constancia.',
+            subtitle: categoryCopy.documentHint,
             hasFile: state.evidenceFiles.any(
               (file) =>
                   file.kind == MerchantClaimEvidenceKind.ownershipDocument,
@@ -807,20 +810,15 @@ class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
               title: 'Próximo paso',
               subtitle: _nextStepDescription(summary.claimStatus),
             ),
-            const SizedBox(height: 14),
-            if (_canCancel(summary.claimStatus))
-              OutlinedButton(
-                onPressed: () async {
-                  await ref
-                      .read(merchantClaimFlowControllerProvider.notifier)
-                      .cancelClaim(reason: 'cancelled_by_user');
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Reclamo cancelado.')),
-                  );
-                },
-                child: const Text('Cancelar reclamo'),
+            if (summary.duplicateOfClaimId?.isNotEmpty == true ||
+                summary.conflictType?.isNotEmpty == true) ...[
+              const SizedBox(height: 10),
+              _InfoCard(
+                icon: Icons.info_outline,
+                title: 'Referencia del caso',
+                subtitle: _claimReference(summary),
               ),
+            ],
           ],
           const SizedBox(height: 10),
           FilledButton(
@@ -845,13 +843,6 @@ class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
     );
   }
 
-  bool _canCancel(MerchantClaimStatus status) {
-    return status == MerchantClaimStatus.draft ||
-        status == MerchantClaimStatus.submitted ||
-        status == MerchantClaimStatus.autoValidating ||
-        status == MerchantClaimStatus.underReview ||
-        status == MerchantClaimStatus.needsMoreInfo;
-  }
 }
 
 class _ClaimScaffold extends StatelessWidget {
@@ -1218,7 +1209,6 @@ class _ClaimStatusTimeline extends StatelessWidget {
       case MerchantClaimStatus.draft:
         return 0;
       case MerchantClaimStatus.submitted:
-      case MerchantClaimStatus.autoValidating:
       case MerchantClaimStatus.underReview:
       case MerchantClaimStatus.needsMoreInfo:
       case MerchantClaimStatus.duplicateClaim:
@@ -1226,7 +1216,6 @@ class _ClaimStatusTimeline extends StatelessWidget {
         return 1;
       case MerchantClaimStatus.approved:
       case MerchantClaimStatus.rejected:
-      case MerchantClaimStatus.cancelled:
         return 2;
     }
   }
@@ -1360,8 +1349,6 @@ String _statusLabel(MerchantClaimStatus status) {
       return 'Borrador';
     case MerchantClaimStatus.submitted:
       return 'Enviado';
-    case MerchantClaimStatus.autoValidating:
-      return 'Validación automática';
     case MerchantClaimStatus.underReview:
       return 'En revisión';
     case MerchantClaimStatus.needsMoreInfo:
@@ -1374,8 +1361,6 @@ String _statusLabel(MerchantClaimStatus status) {
       return 'Duplicado';
     case MerchantClaimStatus.conflictDetected:
       return 'Conflicto detectado';
-    case MerchantClaimStatus.cancelled:
-      return 'Cancelado';
   }
 }
 
@@ -1389,11 +1374,8 @@ Color _statusBadgeBg(MerchantClaimStatus status) {
     case MerchantClaimStatus.needsMoreInfo:
     case MerchantClaimStatus.duplicateClaim:
       return AppColors.warningBg;
-    case MerchantClaimStatus.cancelled:
-      return AppColors.neutral100;
     case MerchantClaimStatus.draft:
     case MerchantClaimStatus.submitted:
-    case MerchantClaimStatus.autoValidating:
     case MerchantClaimStatus.underReview:
       return AppColors.infoBg;
   }
@@ -1409,11 +1391,8 @@ Color _statusBadgeFg(MerchantClaimStatus status) {
     case MerchantClaimStatus.needsMoreInfo:
     case MerchantClaimStatus.duplicateClaim:
       return AppColors.tertiary700;
-    case MerchantClaimStatus.cancelled:
-      return AppColors.neutral700;
     case MerchantClaimStatus.draft:
     case MerchantClaimStatus.submitted:
-    case MerchantClaimStatus.autoValidating:
     case MerchantClaimStatus.underReview:
       return AppColors.primary700;
   }
@@ -1425,8 +1404,6 @@ String _statusDescription(MerchantClaimStatus status) {
       return 'Tu reclamo está guardado como borrador.';
     case MerchantClaimStatus.submitted:
       return 'Recibimos tu reclamo y lo estamos procesando.';
-    case MerchantClaimStatus.autoValidating:
-      return 'Estamos ejecutando validaciones automáticas iniciales.';
     case MerchantClaimStatus.underReview:
       return 'Tu caso está en revisión manual.';
     case MerchantClaimStatus.needsMoreInfo:
@@ -1439,8 +1416,6 @@ String _statusDescription(MerchantClaimStatus status) {
       return 'Detectamos un reclamo duplicado para este comercio.';
     case MerchantClaimStatus.conflictDetected:
       return 'Detectamos un conflicto que requiere revisión manual.';
-    case MerchantClaimStatus.cancelled:
-      return 'Cancelaste este reclamo.';
   }
 }
 
@@ -1449,7 +1424,6 @@ String _nextStepDescription(MerchantClaimStatus status) {
     case MerchantClaimStatus.draft:
       return 'Completá evidencia y enviá el reclamo.';
     case MerchantClaimStatus.submitted:
-    case MerchantClaimStatus.autoValidating:
     case MerchantClaimStatus.underReview:
       return 'Esperá la revisión. Te avisaremos si hace falta más información.';
     case MerchantClaimStatus.needsMoreInfo:
@@ -1461,8 +1435,46 @@ String _nextStepDescription(MerchantClaimStatus status) {
     case MerchantClaimStatus.duplicateClaim:
     case MerchantClaimStatus.conflictDetected:
       return 'El caso seguirá revisión manual para resolución.';
-    case MerchantClaimStatus.cancelled:
-      return 'Si querés, podés iniciar un nuevo reclamo.';
+  }
+}
+
+String _claimReference(MerchantClaimStatusSummary summary) {
+  if (summary.duplicateOfClaimId?.isNotEmpty == true) {
+    return 'Encontramos un reclamo relacionado (${summary.duplicateOfClaimId}).';
+  }
+  if (summary.conflictType?.isNotEmpty == true) {
+    return 'Detectamos un conflicto (${summary.conflictType}) y lo vamos a revisar manualmente.';
+  }
+  return 'Tu caso quedó registrado para revisión.';
+}
+
+({String storefrontHint, String documentHint}) _evidenceCopyForCategory(
+  String? categoryId,
+) {
+  switch ((categoryId ?? '').trim()) {
+    case 'pharmacy':
+      return (
+        storefrontHint: 'Mostrá la farmacia y su cartel visible desde la calle.',
+        documentHint:
+            'Podés subir habilitación, constancia fiscal o factura del local.',
+      );
+    case 'kiosk':
+      return (
+        storefrontHint: 'Mostrá el frente del kiosco con su identificación.',
+        documentHint:
+            'Podés subir habilitación municipal, contrato o factura vinculada.',
+      );
+    case 'gomeria':
+      return (
+        storefrontHint: 'Mostrá el frente de la gomería y su acceso principal.',
+        documentHint:
+            'Subí una constancia comercial o factura asociada al local.',
+      );
+    default:
+      return (
+        storefrontHint: 'Mostrá frente/cartel del comercio.',
+        documentHint: 'Por ejemplo habilitación, factura o constancia.',
+      );
   }
 }
 

@@ -70,8 +70,9 @@ async function rebuildSingle(merchantId: string): Promise<number> {
 async function rebuildAll(): Promise<number> {
   let rebuilt = 0;
   let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null;
+  let hasMore = true;
 
-  while (true) {
+  while (hasMore) {
     let query = db()
       .collection("merchants")
       .where("visibilityStatus", "in", ["visible", "review_pending"])
@@ -82,7 +83,10 @@ async function rebuildAll(): Promise<number> {
     }
 
     const merchantsSnap = await query.get();
-    if (merchantsSnap.empty) break;
+    if (merchantsSnap.empty) {
+      hasMore = false;
+      continue;
+    }
 
     const merchantIds = merchantsSnap.docs.map((doc) => doc.id);
     const signalsByMerchantId = new Map<string, OperationalSignals>();
@@ -128,6 +132,7 @@ async function rebuildAll(): Promise<number> {
     }
 
     lastDoc = merchantsSnap.docs[merchantsSnap.docs.length - 1] ?? null;
+    hasMore = merchantsSnap.size === PAGE_SIZE && lastDoc != null;
   }
 
   console.log(`[adminRebuildMerchantPublic] Rebuilt ${rebuilt} merchants.`);

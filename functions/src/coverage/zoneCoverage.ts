@@ -131,7 +131,8 @@ async function refreshZoneCoverage(zoneId: string): Promise<void> {
   };
 
   let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null;
-  do {
+  let hasMore = true;
+  while (hasMore) {
     let query = db()
       .collection("merchant_public")
       .where("zoneId", "==", zoneId)
@@ -142,7 +143,10 @@ async function refreshZoneCoverage(zoneId: string): Promise<void> {
     }
 
     const byZoneIdSnap = await query.get();
-    if (byZoneIdSnap.empty) break;
+    if (byZoneIdSnap.empty) {
+      hasMore = false;
+      continue;
+    }
 
     for (const doc of byZoneIdSnap.docs) {
       const merchant = doc.data() as MerchantPublicDoc;
@@ -156,8 +160,8 @@ async function refreshZoneCoverage(zoneId: string): Promise<void> {
     }
 
     lastDoc = byZoneIdSnap.docs[byZoneIdSnap.docs.length - 1] ?? null;
-    if (byZoneIdSnap.size < MERCHANTS_PER_ZONE_PAGE) break;
-  } while (true);
+    hasMore = byZoneIdSnap.size === MERCHANTS_PER_ZONE_PAGE && lastDoc != null;
+  }
 
   if (
     metrics.merchantCount === 0 &&

@@ -269,6 +269,7 @@ Guardrails:
 5. Transición a OWNER única y auditable.
 6. Cierre negativo limpia estados pending obsoletos.
 7. Conflicto/duplicado nunca elevan privilegios.
+8. Cuentas con restricción activa por fraude/abuso en claims/reportes no pueden ingresar, permanecer ni reingresar al carril owner sin revisión manual autorizada.
 
 ## 26. Guardrails de costo
 - Resolver acceso owner priorizando señal canónica resumida/token.
@@ -303,6 +304,7 @@ Datos clave:
 - Conflicto puede mantener pending sin acceso owner.
 - App debe refrescar token para reflejar cambios reales.
 - OWNER module distingue pending de aprobado sin ambigüedad.
+- Restricciones de seguridad sobre claims/reportes se modelan como limitación de capacidades sensibles manteniendo rol base `CUSTOMER`.
 
 ## 29. UX / microcopy
 Pending:

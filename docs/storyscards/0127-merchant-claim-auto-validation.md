@@ -151,6 +151,7 @@ Alternativa recomendada MVP: reglas explícitas (no scoring complejo).
 - Categoría sensible.
 - Inconsistencia fuerte de inputs.
 - Señales de abuso o patrón anómalo.
+- Reincidencia en claims/reportes improcedentes o uso malicioso de funciones sensibles.
 
 ## 12. Estados impactados (MVP)
 Estados posibles post-validación:
@@ -171,6 +172,7 @@ Permitidas:
 - marcar conflicto,
 - derivar a revisión manual,
 - etiquetar riesgo/prioridad.
+- bloquear avance del claim y marcar la cuenta para posible restricción futura de claims/reportes cuando haya indicios razonables de fraude o abuso.
 
 No permitidas en MVP:
 - otorgar OWNER automáticamente,

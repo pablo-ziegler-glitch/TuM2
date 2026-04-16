@@ -143,6 +143,7 @@ Reglas:
 - owner aprobado sí,
 - claim tracking disponible para claim vivo relevante,
 - conflicto/more-info debe llevar a carril correcto, no error genérico.
+- cuentas con restricción de seguridad activa deben ocultar/bloquear entry points de claims, reportes y demás funciones sensibles.
 
 La shell debe evitar ofrecer accesos que luego rebotan por permisos.
 
@@ -241,6 +242,7 @@ Shell no persiste verdad paralela sobre pending/owner.
 - Pending no equivale visual/funcionalmente a OWNER.
 - Conflictos no degradan guards.
 - Navegación minimiza exposición a pantallas no permitidas.
+- La shell no debe sugerir disponibilidad de funciones sensibles cuando la cuenta esté restringida por moderación/fraude.
 
 ## 29. Datos impactados
 - `resolvedAccessState`

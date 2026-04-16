@@ -75,15 +75,23 @@ Agregar sección específica “Claims de titularidad y datos asociados” con s
 - conservación general,
 - derechos del usuario.
 
-## 11. Tipos de datos a contemplar
-- Datos de cuenta: email autenticado, identificadores de usuario.
-- Contacto: teléfono opcional.
-- Declarativos del claim: rol declarado, observaciones, vínculo alegado.
-- Comercio reclamado: nombre, categoría, ubicación/referencias.
-- Evidencia visual: fotos del comercio/puesto.
-- Evidencia documental: pruebas de vínculo.
-- Operativos derivados: estado claim, flags de conflicto/duplicado, trazabilidad.
-- Seguridad/control: fingerprints/hashes derivados y auditoría de acceso cuando corresponda.
+## 11. Tipos de información que tratamos
+A los fines de esta Política de Privacidad, TuM2 podrá tratar distintas categorías de información, que no reciben el mismo tratamiento ni tienen la misma visibilidad dentro de la plataforma:
+
+a) Datos personales de usuarios finales.  
+Incluyen, entre otros, los datos asociados a la cuenta del usuario, como nombre, correo electrónico, teléfono cuando corresponda, identificadores de la cuenta, preferencias, interacciones dentro de la plataforma, comunicaciones enviadas o recibidas y demás información vinculada al uso personal de TuM2.
+
+b) Datos públicos del perfil comercial.  
+Incluyen la información del comercio destinada a ser visible dentro de la plataforma, como nombre comercial, rubro, zona, dirección o referencia territorial, horarios, señales operativas, catálogo público, medios de contacto públicos, imágenes públicas del comercio y demás información que, por su naturaleza y finalidad, forme parte de la experiencia abierta de descubrimiento y consulta dentro de TuM2.
+
+c) Datos privados del claim o reclamo de titularidad.  
+Incluyen la información y documentación aportada por un usuario para acreditar su vínculo con un comercio, como datos identificatorios, rol declarado, documentación de respaldo, imágenes del frente del local, observaciones, estados del reclamo, resultados de validaciones, revisiones internas, conflictos, duplicados y demás información asociada al proceso de evaluación del reclamo. Esta información no es pública y se encuentra sujeta a medidas de acceso restringido y resguardo reforzado.
+
+d) Datos agregados, estadísticos o anonimizados.  
+Incluyen información tratada de modo tal que no identifique razonablemente a una persona humana determinada, o que se utilice de forma agrupada con fines estadísticos, analíticos, operativos, comerciales, de mejora de producto, personalización general, optimización de experiencia, ranking, segmentación, medición de rendimiento y desarrollo de nuevas funcionalidades o modelos comerciales.
+
+e) Espacios comerciales, posicionamiento y media listing.  
+TuM2 podrá ofrecer espacios de visibilidad, promoción, posicionamiento diferencial, recomendaciones destacadas, presencia preferente u otros formatos comerciales dentro de la plataforma. En esos casos, ciertos comercios podrán recibir una ubicación, tratamiento visual o exposición diferenciada en función de acuerdos comerciales, campañas, promociones internas, herramientas de marketing o funcionalidades pagas, sin que ello implique, por sí mismo, la venta de datos personales de usuarios finales.
 
 ## 12. Finalidades de uso
 - Procesar reclamo de titularidad.
@@ -115,11 +123,12 @@ Debe contemplar que TuM2 puede:
 
 Evitar frases inexactas como “todo anonimizado” o “nadie interno puede ver nada”.
 
-## 16. Acceso interno
-Debe dejar claro que datos de claim:
-- no son públicos,
-- no son de acceso abierto interno,
-- se acceden solo por personal/procesos autorizados cuando sea necesario.
+## 16. Separación entre información pública del comercio e información privada del claim
+TuM2 diferencia expresamente entre la información pública de un comercio y la información privada aportada en un reclamo de titularidad.
+
+La información pública del comercio es aquella destinada a ser mostrada dentro de la plataforma para la experiencia de consulta, descubrimiento y contacto de vecinos y usuarios. En cambio, la información privada del claim incluye documentación, evidencia, datos sensibles o información de soporte aportada para validar la relación entre una persona y un comercio determinado, y no forma parte del contenido público del perfil comercial por el solo hecho de haber sido cargada.
+
+La documentación y evidencia privada del claim no será publicada automáticamente como contenido visible del comercio ni quedará disponible para otros usuarios, otros reclamantes o terceros no autorizados, salvo obligación legal o supuesto excepcional debidamente fundado.
 
 ## 17. Minimización de datos
 Principio explícito: recolectar lo mínimo necesario para validar titularidad, proteger sistema y operar el proceso.
@@ -140,25 +149,28 @@ Conectar con 0103:
 
 Evitar prometer supresión absoluta inmediata en todos los casos.
 
-## 20. Información compartida con terceros
-Debe contemplar uso de proveedores necesarios (infraestructura/auth/storage/procesamiento) bajo finalidad del servicio.
+## 20. No venta de datos personales y uso de datos agregados o anonimizados
+TuM2 no vende datos personales de usuarios finales en los términos de esta Política.
 
-Debe dejar claro que información de claim:
-- no se publica,
-- no se comparte con otros reclamantes/comercios de forma abierta,
-- no se vende como dato personal.
+Lo anterior no impide que TuM2 pueda utilizar información agregada, estadística, desidentificada o anonimizada para fines de análisis, mejora de producto, desarrollo comercial, inteligencia de negocio, optimización operativa, personalización general, medición de campañas, construcción de métricas, elaboración de reportes o diseño de nuevas funcionalidades o modelos de negocio, siempre que dicho tratamiento no implique identificar razonablemente a una persona humana determinada.
 
-## 21. Prevención de fraude y abuso
-Incluir que TuM2 puede usar datos y señales derivadas para:
-- detectar duplicados/inconsistencias,
-- prevenir abuso,
-- proteger integridad del proceso de ownership.
+Asimismo, TuM2 podrá facilitar espacios, herramientas o vínculos comerciales entre comercios, proveedores, anunciantes, aliados u otros terceros en el marco de funcionalidades comerciales de la plataforma, siempre que ello se realice conforme a la presente Política, a los Términos y Condiciones aplicables y a la normativa vigente.
 
-## 22. UX y referencias en flujo
-La app debe mostrar referencia clara a política en momentos sensibles del claim:
-- consentimiento,
-- carga de evidencia,
-- confirmación previa al envío.
+## 21. Prevención de fraude, uso indebido y protección de la integridad de la plataforma
+TuM2 podrá utilizar la información asociada a la cuenta del usuario, a sus reclamos de titularidad, reportes, interacciones dentro de la plataforma, documentación aportada, metadatos relacionados y señales técnicas o derivadas de seguridad para prevenir fraude, detectar conductas abusivas o engañosas, limitar usos indebidos, resolver conflictos, proteger la integridad del sistema y resguardar a otros usuarios, comercios y terceros vinculados a la operación de la plataforma.
+
+A tales efectos, TuM2 podrá aplicar validaciones automáticas, revisiones manuales restringidas, controles internos de consistencia, detección de duplicados, identificación de patrones de abuso, auditorías internas de acceso, medidas de moderación y otras acciones razonables y proporcionales al riesgo detectado.
+
+Cuando existan indicios razonables de fraude, uso abusivo o utilización indebida de los flujos de reclamo, reportes u otras funciones sensibles, TuM2 podrá tratar y conservar la información estrictamente necesaria para investigar, documentar, prevenir reiteraciones, sostener decisiones internas, resguardar evidencia del proceso y proteger el funcionamiento general de la plataforma.
+
+## 22. Comunicaciones, recomendaciones y espacios promocionales
+TuM2 podrá enviar comunicaciones operativas, informativas, promocionales o comerciales por correo electrónico, notificaciones push u otros canales habilitados por la plataforma, conforme a la configuración del usuario y a la normativa aplicable.
+
+Las comunicaciones operativas o críticas para el funcionamiento del servicio, la seguridad de la cuenta, la gestión del reclamo, el estado del comercio, cambios relevantes del producto o cuestiones vinculadas al uso esencial de TuM2 podrán mantenerse activas en la medida necesaria para la correcta prestación del servicio.
+
+Las comunicaciones promocionales o de marketing podrán incluir novedades, recomendaciones, promociones, sugerencias comerciales, campañas de visibilidad, posicionamiento o contenidos patrocinados, y el usuario podrá solicitar la baja u optar por no recibir este tipo de comunicaciones, sin que ello afecte las comunicaciones operativas esenciales.
+
+TuM2 también podrá mostrar recomendaciones, destacados, promociones o posicionamientos diferenciados dentro de la plataforma sobre la base de criterios comerciales, analíticos, contextuales, territoriales, agregados o anonimizados, siempre respetando esta Política de Privacidad y la normativa aplicable.
 
 ## 23. Operación interna y backend
 La política debe estar alineada con operación real:
@@ -225,8 +237,9 @@ Conceptualmente: email, teléfono opcional, nombre/apellido, rol declarado, come
 ## 32. Plan de rollout
 1. Actualizar 0100 en documentación interna.
 2. Revisar consistencia integral con 0101/0102/0103/0104.
-3. Ajustar referencias del flujo de claim.
-4. Publicar texto final alineado a implementación antes de producción.
+3. Alinear copy y referencias de los flujos de claims y reportes.
+4. Verificar coherencia de la lógica funcional con las reglas documentadas (sanción, limitación y moderación).
+5. Publicar texto final alineado a implementación antes de producción.
 
 ## 33. Sincronización documental obligatoria
 - `docs/storyscards/0100-privacy-policy.md`

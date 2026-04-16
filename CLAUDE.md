@@ -11,6 +11,13 @@
 - En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
 - Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
 
+## Fuente de verdad de estado (obligatoria)
+
+- El único documento fuente de verdad para estado de tarjetas es **este `CLAUDE.md`**.
+- OpenSpec queda **discontinuado** en este repositorio para planificación/estado.
+- No usar artefactos de `openspec/` para decidir progreso ni para reportes ejecutivos.
+- Si hay diferencias entre `openspec/` y `CLAUDE.md`, **prevalece `CLAUDE.md`**.
+
 ---
 
 ## Convención de nombres de conversación y PR
@@ -282,15 +289,15 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - Costo: scans programados incrementales (`limit` fijo) para recordatorios/expiraciones, sin listeners globales.
 
 ### ÉPICA 18: Reclamo de titularidad de comercio
-- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP`
-- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP`
-- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP`
-- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP`
+- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP` `IN_PROGRESS`
+- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP` `IN_PROGRESS`
+- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP` `IN_PROGRESS`
+- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `IN_PROGRESS`
 - [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP`
-- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP`
-- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP`
+- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `IN_PROGRESS`
+- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `IN_PROGRESS`
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
-- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP`
+- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `IN_PROGRESS`
 
 ---
 
@@ -486,5 +493,5 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0124] Mitigación de guardias cerrada (PR #59, 2026-04-09): confirmación de guardia, reporte de incidente, selección de candidatas por zona/distancia y ronda de reasignación con primera aceptación ganadora.
 - [0124] Nuevas colecciones operativas (`pharmacy_duty_incidents`, `pharmacy_duty_reassignment_rounds`, `pharmacy_duty_reassignment_requests`) y jobs incrementales para recordatorios/expiraciones con límites de scan por ciclo.
 - [0126] Flujo claim en progreso (2026-04-14): implementado flujo mobile CLAIM-01..07 con Firebase real (draft, evidencia, consentimiento, submit, estado), sin listeners permanentes y con refresh por acción.
-- [0126] Backend inicial implementado: callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `cancelMerchantClaim`, `getMyMerchantClaimStatus`, `searchClaimableMerchants`; reglas Firestore/Storage endurecidas e índices `merchant_claims` actualizados a `claimStatus`.
+- [0126] Backend inicial implementado: callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `evaluateMerchantClaim`, `resolveMerchantClaim`, `revealMerchantClaimSensitiveData`, `getMyMerchantClaimStatus`, `listMerchantClaimsForReview`, `listMyMerchantClaims`, `searchClaimableMerchants`; reglas Firestore/Storage endurecidas e índices `merchant_claims` actualizados a `claimStatus`.
 - [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.

@@ -1,14 +1,22 @@
 # TuM2-0130 — Seguridad y protección de datos sensibles en claims
 
-Estado propuesto: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0129
 
-## Sync 0127 implementado (2026-04-16)
-- Auto-validación usa `merchant_claim_private.fingerprintPrimary` solo para señal interna de reuse (`risk_signal_contact_reuse`).
-- No se exponen fingerprints/hashes al claimant.
-- Logging técnico de auto-validación se mantiene sin PII (sin email/teléfono/documentos).
+## Estado real de implementación (corte 2026-04-16)
+### Hecho
+- Implementado vault sensible con cifrado reversible AES-GCM + fingerprints derivados (`functions/src/lib/claimSensitive.ts`).
+- Separación de datos aplicada: sensibles en `merchant_claim_private`, documento principal con campos enmascarados.
+- Reveal admin implementado con caducidad temporal y auditoría append-only (`revealMerchantClaimSensitiveData` + `merchant_claim_sensitive_reveals`).
+- Reglas de seguridad activas: cliente no puede leer/escribir `merchant_claims` ni `merchant_claim_private` directamente (`firestore.rules`).
+
+### Falta para cerrar
+- Gestión de claves pendiente de endurecimiento (rotación formal/KMS y procedimiento operativo de key rollover).
+- Política de retención y borrado automatizado pendiente (alineada con TuM2-0104).
+- Permisos finos de reveal por tipo de revisor y obligatoriedad de justificación robusta por caso.
+- Endurecer controles de exportación/descarga operativa de adjuntos sensibles en superficies admin futuras.
 
 ## 1. Objetivo
 Definir el modelo integral de protección, almacenamiento, exposición controlada y auditoría de datos sensibles del dominio `merchant_claims`.

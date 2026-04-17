@@ -1,6 +1,6 @@
 # TuM2-0101 — Términos y Condiciones
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: TODO  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la épica de claims sobre declaraciones del usuario, legitimidad del reclamo, revisión administrativa, conflictos y acceso al rol OWNER.
 

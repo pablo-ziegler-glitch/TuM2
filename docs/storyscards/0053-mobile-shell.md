@@ -1,6 +1,6 @@
 # TuM2-0053 — Shell mobile
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: DONE  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad de comercio sobre entry points, navegación contextual, guards, visibilidad de módulos y experiencia `owner_pending`.
 

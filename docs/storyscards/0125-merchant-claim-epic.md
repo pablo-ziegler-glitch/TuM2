@@ -1,7 +1,20 @@
 # TuM2-0125 — Épica: Reclamo de titularidad de comercio
 
-Estado: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)
+
+## Estado real de implementación (corte 2026-04-16)
+### Hecho
+- Backend MVP de claims en producción inicial: drafts, submit, evaluación automática, resolución manual, reveal sensible y listados paginados (`functions/src/callables/merchantClaims.ts`).
+- Integración de rol intermedio `owner_pending` y promoción a OWNER aprobada en backend (`functions/src/callables/merchantClaims.ts`, `functions/src/triggers/claims.ts`).
+- Mobile claim flow operativo (CLAIM-01..07) y estado de reclamo consumiendo callables reales (`mobile/lib/modules/merchant_claim/...`).
+- Seguridad base activa: `merchant_claims` bloqueado a escritura/lectura cliente directa y storage privado de evidencia (`firestore.rules`, `storage.rules`).
+
+### Falta para cerrar
+- Cerrar tarjetas hijas aún abiertas/no iniciadas: TuM2-0129, TuM2-0132 y legales TuM2-0100..0104.
+- Implementar UI Admin Web de revisión completa (cola, detalle, acciones y reveal) consumiendo callables ya disponibles.
+- Completar trazabilidad de KPIs operativos en tableros (conversión, tiempos de decisión, falsos duplicados/conflictos).
+- Ejecutar validación E2E final multi-módulo con foco en costo Firestore (filtros, `limit`, paginación real, cero listeners globales).
 
 ## Objetivo
 Formalizar el dominio completo de reclamo de titularidad para que un usuario autenticado pueda reclamar un comercio existente o identificable, aportar evidencia, pasar validación automática y, si aplica, revisión manual en Admin.

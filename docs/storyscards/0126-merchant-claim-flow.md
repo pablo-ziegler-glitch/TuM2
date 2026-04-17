@@ -362,15 +362,17 @@ Actualizar por impacto cruzado:
 ## Cierre ejecutivo
 TuM2-0126 formaliza el ingreso legítimo de dueños al ecosistema operativo de TuM2 y conecta identidad, evidencia, validación, revisión, seguridad y transición de rol con criterios de costo y trazabilidad.
 
-## Estado técnico actual (2026-04-14)
-- Implementación productiva inicial completada en backend + mobile:
-  - Callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `cancelMerchantClaim`, `getMyMerchantClaimStatus`, `searchClaimableMerchants`.
-  - Flujo mobile CLAIM-01..07 conectado a Firebase real (sin mocks), con upload de evidencia a Storage y estado de claim por callable.
-  - Endurecimiento de `firestore.rules` para bloquear escrituras cliente directas en `merchant_claims`.
-  - Reglas Storage para evidencia privada en `merchant-claims/{uid}/{claimId}/...`.
-  - Índices `merchant_claims` actualizados a `claimStatus` + lectura `userId + updatedAt DESC`.
-- Pruebas:
-  - `flutter analyze` PASS.
-  - tests mobile nuevos PASS.
-  - `npm test` (functions) PASS.
-  - `test:rules` bloqueado por requisito de Java 21+ en entorno local.
+## Estado real de implementación (corte 2026-04-16)
+### Hecho
+- Implementación productiva inicial completada en backend + mobile con callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `cancelMerchantClaim`, `getMyMerchantClaimStatus`, `searchClaimableMerchants`.
+- Flujo mobile CLAIM-01..07 conectado a Firebase real (sin mocks), con upload de evidencia a Storage y estado de claim por callable.
+- Endurecimiento de `firestore.rules` para bloquear escrituras cliente directas en `merchant_claims`.
+- Reglas Storage activas para evidencia privada en `merchant-claims/{uid}/{claimId}/...`.
+- Índices de `merchant_claims` actualizados para lectura por estado y por usuario.
+- Pruebas ejecutadas con resultado PASS: `flutter analyze`, tests mobile nuevos y `npm test` (functions).
+
+### Falta para cerrar
+- Completar consumo funcional de historial paginado (`listMyMerchantClaims`) en UI final de usuario.
+- Ejecutar y dejar verde `test:rules` con entorno Java 21+ en CI/local.
+- Cerrar integración operativa completa con revisión admin (TuM2-0128) para circuito punta a punta sin pasos manuales.
+- Terminar ajustes legales/copy vinculados a consentimientos y retención (TuM2-0100..0104).

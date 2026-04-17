@@ -5,17 +5,19 @@ Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0129
 
-## Estado real de implementación (corte 2026-04-16)
+## Estado real de implementación (corte 2026-04-17)
 ### Hecho
 - Implementado vault sensible con cifrado reversible AES-GCM + fingerprints derivados (`functions/src/lib/claimSensitive.ts`).
 - Separación de datos aplicada: sensibles en `merchant_claim_private`, documento principal con campos enmascarados.
 - Reveal admin implementado con caducidad temporal y auditoría append-only (`revealMerchantClaimSensitiveData` + `merchant_claim_sensitive_reveals`).
 - Reglas de seguridad activas: cliente no puede leer/escribir `merchant_claims` ni `merchant_claim_private` directamente (`firestore.rules`).
+- Admin Web 0128 consume detalle seguro por callable (`getMerchantClaimReviewDetail`) en vez de lectura directa cliente; el payload devuelve email enmascarado, campos mínimos y capabilities.
+- Reveal admin ahora valida token de concurrencia (`expectedUpdatedAtMillis`) y deja resumen no sensible en `merchant_claims` (`lastSensitiveRevealAt`, actor/fields/reason`) para timeline sin fan-out de lecturas.
 
 ### Falta para cerrar
 - Gestión de claves pendiente de endurecimiento (rotación formal/KMS y procedimiento operativo de key rollover).
 - Política de retención y borrado automatizado pendiente (alineada con TuM2-0104).
-- Permisos finos de reveal por tipo de revisor y obligatoriedad de justificación robusta por caso.
+- Completar despliegue operativo de permisos finos de reveal por tipo de revisor con custom claims reales fuera del fallback `admin`/`super_admin`.
 - Endurecer controles de exportación/descarga operativa de adjuntos sensibles en superficies admin futuras.
 
 ## 1. Objetivo

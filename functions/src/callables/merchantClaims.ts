@@ -82,6 +82,7 @@ interface SubmitMerchantClaimResponse {
 
 interface EvaluateMerchantClaimRequest {
   claimId?: unknown;
+  expectedUpdatedAtMillis?: unknown;
 }
 
 interface EvaluateMerchantClaimResponse {
@@ -97,6 +98,7 @@ interface ResolveMerchantClaimRequest {
   userVisibleStatus?: unknown;
   reviewReasonCode?: unknown;
   reviewNotes?: unknown;
+  expectedUpdatedAtMillis?: unknown;
 }
 
 interface ResolveMerchantClaimResponse {
@@ -109,12 +111,97 @@ interface RevealSensitiveClaimDataRequest {
   claimId?: unknown;
   reasonCode?: unknown;
   fields?: unknown;
+  expectedUpdatedAtMillis?: unknown;
 }
 
 interface RevealSensitiveClaimDataResponse {
   claimId: string;
   expiresAtMillis: number;
   revealed: Partial<Record<SensitiveFieldKey, string>>;
+}
+
+interface GetMerchantClaimReviewDetailRequest {
+  claimId?: unknown;
+}
+
+interface ClaimReviewCapabilitySet {
+  canViewQueue: boolean;
+  canViewDetail: boolean;
+  canEvaluateClaim: boolean;
+  canResolveStandard: boolean;
+  canResolveCritical: boolean;
+  canRevealSensitive: boolean;
+}
+
+interface ClaimReviewTimelineEvent {
+  code: string;
+  label: string;
+  atMillis: number;
+  actorMasked: string | null;
+  detail: string | null;
+}
+
+interface GetMerchantClaimReviewDetailResponse {
+  claim: {
+    claimId: string;
+    merchantId: string;
+    merchantName: string | null;
+    merchantAddress: string | null;
+    merchantStatus: string | null;
+    merchantOwnershipStatus: string | null;
+    existingOwnerMasked: string | null;
+    userIdMasked: string;
+    zoneId: string | null;
+    categoryId: string | null;
+    claimStatus: ClaimStatus;
+    userVisibleStatus: ClaimStatus;
+    internalWorkflowStatus: string | null;
+    declaredRole: DeclaredRole;
+    authenticatedEmailMasked: string | null;
+    phoneMasked: string | null;
+    claimantDisplayNameMasked: string | null;
+    claimantNoteMasked: string | null;
+    reviewReasonCode: string | null;
+    reviewNotes: string | null;
+    reviewedByUidMasked: string | null;
+    conflictType: string | null;
+    duplicateOfClaimId: string | null;
+    autoValidationReasonCode: string | null;
+    autoValidationReasons: string[];
+    hasConflict: boolean;
+    hasDuplicate: boolean;
+    requiresManualReview: boolean;
+    missingEvidenceTypes: string[];
+    riskFlags: string[];
+    riskPriority: string | null;
+    reviewQueuePriority: number | null;
+    storefrontPhotoUploaded: boolean;
+    ownershipDocumentUploaded: boolean;
+    hasAcceptedDataProcessingConsent: boolean;
+    hasAcceptedLegitimacyDeclaration: boolean;
+    evidenceFiles: Array<{
+      id: string;
+      kind: EvidenceKind;
+      contentType: string;
+      sizeBytes: number;
+      uploadedAtMillis: number | null;
+      originalFileName: string | null;
+    }>;
+    createdAtMillis: number | null;
+    submittedAtMillis: number | null;
+    updatedAtMillis: number | null;
+    reviewedAtMillis: number | null;
+    lastStatusAtMillis: number | null;
+    autoValidationCompletedAtMillis: number | null;
+  };
+  capabilities: ClaimReviewCapabilitySet;
+  allowedStatuses: UserVisibleStatus[];
+  canTakeAction: boolean;
+  canRevealSensitive: boolean;
+  decisionToken: {
+    updatedAtMillis: number | null;
+  };
+  timeline: ClaimReviewTimelineEvent[];
 }
 
 interface GetMyMerchantClaimStatusRequest {
@@ -621,6 +708,262 @@ function assertAdmin(auth: CallableAuth): void {
   }
 }
 
+function normalizeExpectedUpdatedAtMillis(value: unknown): number | null {
+  return normalizeCursorMillis(value, "expectedUpdatedAtMillis");
+}
+
+function maskEmail(value: string | null): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed.includes("@")) return "***";
+  const [localPart, domain] = trimmed.split("@");
+  if (!localPart || !domain) return "***";
+  if (localPart.length <= 2) return `**@${domain}`;
+  return `${localPart[0]}***${localPart[localPart.length - 1]}@${domain}`;
+}
+
+function maskIdentifier(value: string | null): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.length <= 4) return "****";
+  return `****${trimmed.slice(-4)}`;
+}
+
+function maskActor(value: string | null): string | null {
+  if (value == null) return null;
+  if (value.includes("@")) return maskEmail(value);
+  return maskIdentifier(value);
+}
+
+function readStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function hasExplicitClaimReviewCapabilities(token: Record<string, unknown>): boolean {
+  if (typeof token["claimsReviewLevel"] === "string") return true;
+  if (typeof token["claims_review_level"] === "string") return true;
+  if (token["claimsReviewer"] === true || token["claimsSeniorReviewer"] === true) {
+    return true;
+  }
+  const capabilities = readStringArray(token["capabilities"]).map((item) =>
+    item.trim().toLowerCase()
+  );
+  return capabilities.some((item) => item.startsWith("claims."));
+}
+
+function readClaimReviewCapabilities(auth: CallableAuth): ClaimReviewCapabilitySet {
+  const role = parseRole(auth.token);
+  if (role !== "admin" && role !== "super_admin") {
+    return {
+      canViewQueue: false,
+      canViewDetail: false,
+      canEvaluateClaim: false,
+      canResolveStandard: false,
+      canResolveCritical: false,
+      canRevealSensitive: false,
+    };
+  }
+
+  if (role === "super_admin" || !hasExplicitClaimReviewCapabilities(auth.token)) {
+    return {
+      canViewQueue: true,
+      canViewDetail: true,
+      canEvaluateClaim: true,
+      canResolveStandard: true,
+      canResolveCritical: true,
+      canRevealSensitive: true,
+    };
+  }
+
+  const capabilities = new Set(
+    readStringArray(auth.token["capabilities"]).map((item) =>
+      item.trim().toLowerCase()
+    )
+  );
+  const rawLevel =
+    typeof auth.token["claimsReviewLevel"] === "string"
+      ? auth.token["claimsReviewLevel"]
+      : typeof auth.token["claims_review_level"] === "string"
+      ? auth.token["claims_review_level"]
+      : auth.token["claimsSeniorReviewer"] === true
+      ? "senior"
+      : auth.token["claimsReviewer"] === true
+      ? "reviewer"
+      : "";
+  const level = rawLevel.trim().toLowerCase();
+  const senior =
+    level === "senior" ||
+    level === "senior_reviewer" ||
+    capabilities.has("claims.resolve_critical") ||
+    capabilities.has("claims.reveal_sensitive");
+  const reviewer =
+    senior ||
+    level === "reviewer" ||
+    capabilities.has("claims.review") ||
+    capabilities.has("claims.resolve_standard");
+
+  return {
+    canViewQueue: reviewer,
+    canViewDetail: reviewer,
+    canEvaluateClaim: reviewer,
+    canResolveStandard: reviewer,
+    canResolveCritical: senior,
+    canRevealSensitive: senior,
+  };
+}
+
+function assertCanViewClaimQueue(capabilities: ClaimReviewCapabilitySet): void {
+  if (!capabilities.canViewQueue) {
+    throw new HttpsError(
+      "permission-denied",
+      "Tu sesión no tiene permisos para revisar la cola de claims."
+    );
+  }
+}
+
+function assertCanViewClaimDetail(capabilities: ClaimReviewCapabilitySet): void {
+  if (!capabilities.canViewDetail) {
+    throw new HttpsError(
+      "permission-denied",
+      "Tu sesión no tiene permisos para abrir el detalle del claim."
+    );
+  }
+}
+
+function isCriticalResolutionStatus(status: UserVisibleStatus): boolean {
+  return (
+    status === "approved" ||
+    status === "conflict_detected" ||
+    status === "duplicate_claim"
+  );
+}
+
+function allowedResolutionStatuses(capabilities: ClaimReviewCapabilitySet): UserVisibleStatus[] {
+  const allowed: UserVisibleStatus[] = [];
+  if (capabilities.canResolveStandard) {
+    allowed.push("rejected", "needs_more_info");
+  }
+  if (capabilities.canResolveCritical) {
+    allowed.push("approved", "conflict_detected", "duplicate_claim");
+  }
+  return allowed;
+}
+
+function assertCanResolveStatus(
+  capabilities: ClaimReviewCapabilitySet,
+  targetStatus: UserVisibleStatus
+): void {
+  const allowed = allowedResolutionStatuses(capabilities);
+  if (allowed.includes(targetStatus)) return;
+  throw new HttpsError(
+    "permission-denied",
+    isCriticalResolutionStatus(targetStatus)
+      ? "Tu sesión no tiene permisos para resolver claims críticos."
+      : "Tu sesión no tiene permisos para resolver claims."
+  );
+}
+
+function assertClaimFreshness(params: {
+  expectedUpdatedAtMillis: number | null;
+  currentUpdatedAtMillis: number | null;
+  currentStatus: UserVisibleStatus;
+}): void {
+  if (params.expectedUpdatedAtMillis == null) return;
+  if (params.currentUpdatedAtMillis === params.expectedUpdatedAtMillis) return;
+  throw new HttpsError("failed-precondition", "El claim cambió mientras lo revisabas.", {
+    code: "stale_claim",
+    currentUpdatedAtMillis: params.currentUpdatedAtMillis,
+    currentStatus: params.currentStatus,
+  });
+}
+
+function buildClaimReviewTimeline(data: Record<string, unknown>): ClaimReviewTimelineEvent[] {
+  const events: ClaimReviewTimelineEvent[] = [];
+  const createdAtMillis = readTimestampMillis(data.createdAt);
+  const submittedAtMillis = readTimestampMillis(data.submittedAt);
+  const autoValidationCompletedAtMillis = readTimestampMillis(
+    data.autoValidationCompletedAt
+  );
+  const reviewedAtMillis = readTimestampMillis(data.reviewedAt);
+  const lastStatusAtMillis = readTimestampMillis(data.lastStatusAt);
+  const lastSensitiveRevealAtMillis = readTimestampMillis(data.lastSensitiveRevealAt);
+  const currentStatus = toUserVisibleStatus(data.userVisibleStatus ?? data.claimStatus);
+
+  if (createdAtMillis != null) {
+    events.push({
+      code: "created",
+      label: "Claim creado",
+      atMillis: createdAtMillis,
+      actorMasked: maskActor(typeof data.userId === "string" ? data.userId : null),
+      detail: null,
+    });
+  }
+  if (submittedAtMillis != null) {
+    events.push({
+      code: "submitted",
+      label: "Claim enviado",
+      atMillis: submittedAtMillis,
+      actorMasked: maskActor(typeof data.userId === "string" ? data.userId : null),
+      detail: null,
+    });
+  }
+  if (autoValidationCompletedAtMillis != null) {
+    const reasons = readStringArray(data.autoValidationReasons);
+    events.push({
+      code: "auto_validation_completed",
+      label: "Validación automática ejecutada",
+      atMillis: autoValidationCompletedAtMillis,
+      actorMasked: "sistema",
+      detail: reasons.length === 0 ? null : reasons.join(", "),
+    });
+  }
+  if (lastSensitiveRevealAtMillis != null) {
+    const fields = readStringArray(data.lastSensitiveRevealFields);
+    events.push({
+      code: "sensitive_reveal",
+      label: "Reveal sensible auditado",
+      atMillis: lastSensitiveRevealAtMillis,
+      actorMasked: maskActor(
+        typeof data.lastSensitiveRevealByUid === "string"
+          ? data.lastSensitiveRevealByUid
+          : null
+      ),
+      detail: fields.length === 0 ? null : fields.join(", "),
+    });
+  }
+  if (reviewedAtMillis != null) {
+    events.push({
+      code: "manual_review",
+      label: "Revisión manual",
+      atMillis: reviewedAtMillis,
+      actorMasked: maskActor(
+        typeof data.reviewedByUid === "string" ? data.reviewedByUid : null
+      ),
+      detail:
+        typeof data.reviewReasonCode === "string" && data.reviewReasonCode.trim().length > 0
+          ? data.reviewReasonCode.trim()
+          : null,
+    });
+  }
+  if (lastStatusAtMillis != null) {
+    events.push({
+      code: "status_change",
+      label: `Estado actualizado a ${currentStatus}`,
+      atMillis: lastStatusAtMillis,
+      actorMasked: maskActor(
+        typeof data.reviewedByUid === "string" ? data.reviewedByUid : null
+      ),
+      detail: null,
+    });
+  }
+
+  events.sort((left, right) => left.atMillis - right.atMillis);
+  return events;
+}
+
 function normalizeResolveStatus(value: unknown): UserVisibleStatus {
   const normalized = normalizeRequiredString(value, "userVisibleStatus").toLowerCase();
   if (
@@ -661,6 +1004,16 @@ function resolveMerchantName(data: Record<string, unknown>): string | null {
     return name.trim();
   }
   return null;
+}
+
+function resolveMerchantAddress(data: Record<string, unknown>): string | null {
+  return readTrimmedString(data, [
+    "address",
+    "addressLine",
+    "streetAddress",
+    "formattedAddress",
+    "direccion",
+  ]);
 }
 
 function readTrimmedString(
@@ -1092,13 +1445,32 @@ export const evaluateMerchantClaim = onCall<
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   assertAdmin(auth);
+  const capabilities = readClaimReviewCapabilities(auth);
+  assertCanViewClaimDetail(capabilities);
+  if (!capabilities.canEvaluateClaim) {
+    throw new HttpsError(
+      "permission-denied",
+      "Tu sesión no tiene permisos para reevaluar claims."
+    );
+  }
 
   const claimId = normalizeClaimId(request.data.claimId);
+  const expectedUpdatedAtMillis = normalizeExpectedUpdatedAtMillis(
+    request.data.expectedUpdatedAtMillis
+  );
   const claimRef = db().doc(`merchant_claims/${claimId}`);
   const claimSnap = await claimRef.get();
   if (!claimSnap.exists) {
     throw new HttpsError("not-found", "No encontramos el claim.");
   }
+  const claimData = claimSnap.data() ?? {};
+  assertClaimFreshness({
+    expectedUpdatedAtMillis,
+    currentUpdatedAtMillis: readTimestampMillis(claimData.updatedAt),
+    currentStatus: toUserVisibleStatus(
+      claimData.userVisibleStatus ?? claimData.claimStatus
+    ),
+  });
   await runMerchantClaimAutoValidation({
     claimId,
     origin: "admin_rerun",
@@ -1130,10 +1502,13 @@ export const resolveMerchantClaim = onCall<
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   assertAdmin(auth);
+  const capabilities = readClaimReviewCapabilities(auth);
+  assertCanViewClaimDetail(capabilities);
   const reviewerUid = auth.uid;
 
   const claimId = normalizeClaimId(request.data.claimId);
   const targetStatus = normalizeResolveStatus(request.data.userVisibleStatus);
+  assertCanResolveStatus(capabilities, targetStatus);
   const reviewReasonCode = normalizeOptionalString(
     request.data.reviewReasonCode,
     "reviewReasonCode",
@@ -1144,50 +1519,67 @@ export const resolveMerchantClaim = onCall<
     "reviewNotes",
     600
   );
-
-  const claimRef = db().collection("merchant_claims").doc(claimId);
-  const claimSnap = await claimRef.get();
-  if (!claimSnap.exists) {
-    throw new HttpsError("not-found", "No encontramos el claim.");
-  }
-  const claimData = claimSnap.data() ?? {};
-  const userId = normalizeRequiredString(claimData.userId, "claim.userId");
-  const merchantId = normalizeRequiredString(claimData.merchantId, "claim.merchantId");
-  const currentStatus = toUserVisibleStatus(
-    claimData.userVisibleStatus ?? claimData.claimStatus
+  const expectedUpdatedAtMillis = normalizeExpectedUpdatedAtMillis(
+    request.data.expectedUpdatedAtMillis
   );
 
-  if (currentStatus !== targetStatus) {
-    await claimRef.set(
-      {
-        claimStatus: targetStatus,
-        userVisibleStatus: targetStatus,
-        internalWorkflowStatus: "manual_resolution_completed",
-        workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
-        sensitiveVault: FieldValue.delete(),
-        fingerprintPrimary: FieldValue.delete(),
-        reviewReasonCode: reviewReasonCode ?? null,
-        reviewNotes: reviewNotes ?? null,
-        reviewedByUid: reviewerUid,
-        reviewedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-        lastStatusAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
+  const claimRef = db().collection("merchant_claims").doc(claimId);
+  let userId = "";
+  let merchantId = "";
+  await db().runTransaction(async (tx) => {
+    const claimSnap = await tx.get(claimRef);
+    if (!claimSnap.exists) {
+      throw new HttpsError("not-found", "No encontramos el claim.");
+    }
+    const claimData = claimSnap.data() ?? {};
+    userId = normalizeRequiredString(claimData.userId, "claim.userId");
+    merchantId = normalizeRequiredString(claimData.merchantId, "claim.merchantId");
+    const currentStatus = toUserVisibleStatus(
+      claimData.userVisibleStatus ?? claimData.claimStatus
     );
-  } else if (reviewReasonCode != null || reviewNotes != null) {
-    await claimRef.set(
-      {
-        reviewReasonCode: reviewReasonCode ?? null,
-        reviewNotes: reviewNotes ?? null,
-        reviewedByUid: reviewerUid,
-        workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
-        reviewedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  }
+    assertClaimFreshness({
+      expectedUpdatedAtMillis,
+      currentUpdatedAtMillis: readTimestampMillis(claimData.updatedAt),
+      currentStatus,
+    });
+
+    if (currentStatus !== targetStatus) {
+      tx.set(
+        claimRef,
+        {
+          claimStatus: targetStatus,
+          userVisibleStatus: targetStatus,
+          internalWorkflowStatus: "manual_resolution_completed",
+          workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
+          sensitiveVault: FieldValue.delete(),
+          fingerprintPrimary: FieldValue.delete(),
+          reviewReasonCode: reviewReasonCode ?? null,
+          reviewNotes: reviewNotes ?? null,
+          reviewedByUid: reviewerUid,
+          reviewedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          lastStatusAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      return;
+    }
+
+    if (reviewReasonCode != null || reviewNotes != null) {
+      tx.set(
+        claimRef,
+        {
+          reviewReasonCode: reviewReasonCode ?? null,
+          reviewNotes: reviewNotes ?? null,
+          reviewedByUid: reviewerUid,
+          workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
+          reviewedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+  });
 
   if (targetStatus === "approved") {
     await db().doc(`merchants/${merchantId}`).set(
@@ -1222,14 +1614,34 @@ export const revealMerchantClaimSensitiveData = onCall<
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   assertAdmin(auth);
+  const capabilities = readClaimReviewCapabilities(auth);
+  assertCanViewClaimDetail(capabilities);
+  if (!capabilities.canRevealSensitive) {
+    throw new HttpsError(
+      "permission-denied",
+      "Tu sesión no tiene permisos para revelar datos sensibles."
+    );
+  }
 
   const claimId = normalizeClaimId(request.data.claimId);
   const reasonCode = normalizeRequiredString(request.data.reasonCode, "reasonCode");
   const fields = normalizeRevealFields(request.data.fields);
-  const claimSnap = await db().collection("merchant_claims").doc(claimId).get();
+  const expectedUpdatedAtMillis = normalizeExpectedUpdatedAtMillis(
+    request.data.expectedUpdatedAtMillis
+  );
+  const claimRef = db().collection("merchant_claims").doc(claimId);
+  const claimSnap = await claimRef.get();
   if (!claimSnap.exists) {
     throw new HttpsError("not-found", "No encontramos el claim.");
   }
+  const claimData = claimSnap.data() ?? {};
+  assertClaimFreshness({
+    expectedUpdatedAtMillis,
+    currentUpdatedAtMillis: readTimestampMillis(claimData.updatedAt),
+    currentStatus: toUserVisibleStatus(
+      claimData.userVisibleStatus ?? claimData.claimStatus
+    ),
+  });
   const privateSnap = await db().collection("merchant_claim_private").doc(claimId).get();
   if (!privateSnap.exists) {
     throw new HttpsError(
@@ -1264,11 +1676,165 @@ export const revealMerchantClaimSensitiveData = onCall<
       expiresAtMillis,
       createdAt: FieldValue.serverTimestamp(),
     });
+  await claimRef.set(
+    {
+      lastSensitiveRevealAt: FieldValue.serverTimestamp(),
+      lastSensitiveRevealByUid: auth.uid,
+      lastSensitiveRevealFields: Object.keys(revealed),
+      lastSensitiveRevealReasonCode: reasonCode,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
 
   return {
     claimId,
     expiresAtMillis,
     revealed,
+  };
+});
+
+export const getMerchantClaimReviewDetail = onCall<
+  GetMerchantClaimReviewDetailRequest,
+  Promise<GetMerchantClaimReviewDetailResponse>
+>({ enforceAppCheck: true }, async (request) => {
+  const auth = assertAuthenticated(request.auth as CallableAuth);
+  assertAdmin(auth);
+  const capabilities = readClaimReviewCapabilities(auth);
+  assertCanViewClaimDetail(capabilities);
+
+  const claimId = normalizeClaimId(request.data.claimId);
+  const claimSnap = await db().collection("merchant_claims").doc(claimId).get();
+  if (!claimSnap.exists) {
+    throw new HttpsError("not-found", "No encontramos el claim.");
+  }
+
+  const claimData = claimSnap.data() ?? {};
+  const merchantId = normalizeRequiredString(claimData.merchantId, "claim.merchantId");
+  const merchantSnap = await db().collection("merchants").doc(merchantId).get();
+  const merchantData = merchantSnap.data() ?? {};
+  const evidenceFiles = Array.isArray(claimData.evidenceFiles)
+    ? claimData.evidenceFiles
+        .filter((entry): entry is Record<string, unknown> => !!entry && typeof entry === "object")
+        .map((file) => ({
+          id: normalizeRequiredString(file.id, "evidence.id"),
+          kind: normalizeEvidenceKind(file.kind),
+          contentType: normalizeEvidenceContentType(file.contentType),
+          sizeBytes: normalizeEvidenceSizeBytes(file.sizeBytes),
+          uploadedAtMillis: readTimestampMillis(file.uploadedAt),
+          originalFileName:
+            typeof file.originalFileName === "string" ? file.originalFileName.trim() : null,
+        }))
+    : [];
+  const claimStatus = toUserVisibleStatus(
+    claimData.userVisibleStatus ?? claimData.claimStatus
+  );
+  const allowedStatuses = allowedResolutionStatuses(capabilities);
+
+  return {
+    claim: {
+      claimId,
+      merchantId,
+      merchantName:
+        typeof claimData.merchantName === "string" && claimData.merchantName.trim().length > 0
+          ? claimData.merchantName.trim()
+          : resolveMerchantName(merchantData),
+      merchantAddress: resolveMerchantAddress(merchantData),
+      merchantStatus:
+        typeof merchantData.status === "string" ? merchantData.status.trim() : null,
+      merchantOwnershipStatus:
+        typeof merchantData.ownershipStatus === "string"
+          ? merchantData.ownershipStatus.trim()
+          : null,
+      existingOwnerMasked: maskIdentifier(
+        typeof merchantData.ownerUserId === "string" ? merchantData.ownerUserId : null
+      ),
+      userIdMasked: maskIdentifier(
+        normalizeRequiredString(claimData.userId, "claim.userId")
+      )!,
+      zoneId: typeof claimData.zoneId === "string" ? claimData.zoneId.trim() : null,
+      categoryId:
+        typeof claimData.categoryId === "string" ? claimData.categoryId.trim() : null,
+      claimStatus,
+      userVisibleStatus: claimStatus,
+      internalWorkflowStatus:
+        typeof claimData.internalWorkflowStatus === "string"
+          ? claimData.internalWorkflowStatus.trim()
+          : null,
+      declaredRole: readDeclaredRole(claimData.declaredRole),
+      authenticatedEmailMasked: maskEmail(
+        typeof claimData.authenticatedEmail === "string"
+          ? claimData.authenticatedEmail
+          : null
+      ),
+      phoneMasked:
+        typeof claimData.phoneMasked === "string" ? claimData.phoneMasked.trim() : null,
+      claimantDisplayNameMasked:
+        typeof claimData.claimantDisplayNameMasked === "string"
+          ? claimData.claimantDisplayNameMasked.trim()
+          : null,
+      claimantNoteMasked:
+        typeof claimData.claimantNoteMasked === "string"
+          ? claimData.claimantNoteMasked.trim()
+          : null,
+      reviewReasonCode:
+        typeof claimData.reviewReasonCode === "string"
+          ? claimData.reviewReasonCode.trim()
+          : null,
+      reviewNotes:
+        typeof claimData.reviewNotes === "string" ? claimData.reviewNotes.trim() : null,
+      reviewedByUidMasked: maskIdentifier(
+        typeof claimData.reviewedByUid === "string" ? claimData.reviewedByUid : null
+      ),
+      conflictType:
+        typeof claimData.conflictType === "string" ? claimData.conflictType.trim() : null,
+      duplicateOfClaimId:
+        typeof claimData.duplicateOfClaimId === "string"
+          ? claimData.duplicateOfClaimId.trim()
+          : null,
+      autoValidationReasonCode:
+        typeof claimData.autoValidationReasonCode === "string"
+          ? claimData.autoValidationReasonCode.trim()
+          : null,
+      autoValidationReasons: readStringArray(claimData.autoValidationReasons),
+      hasConflict: claimData.hasConflict === true,
+      hasDuplicate: claimData.hasDuplicate === true,
+      requiresManualReview: claimData.requiresManualReview === true,
+      missingEvidenceTypes: readStringArray(claimData.missingEvidenceTypes),
+      riskFlags: readStringArray(claimData.riskFlags),
+      riskPriority:
+        typeof claimData.riskPriority === "string" ? claimData.riskPriority.trim() : null,
+      reviewQueuePriority:
+        typeof claimData.reviewQueuePriority === "number"
+          ? Math.trunc(claimData.reviewQueuePriority)
+          : null,
+      storefrontPhotoUploaded: claimData.storefrontPhotoUploaded === true,
+      ownershipDocumentUploaded: claimData.ownershipDocumentUploaded === true,
+      hasAcceptedDataProcessingConsent:
+        claimData.hasAcceptedDataProcessingConsent === true,
+      hasAcceptedLegitimacyDeclaration:
+        claimData.hasAcceptedLegitimacyDeclaration === true,
+      evidenceFiles,
+      createdAtMillis: readTimestampMillis(claimData.createdAt),
+      submittedAtMillis: readTimestampMillis(claimData.submittedAt),
+      updatedAtMillis: readTimestampMillis(claimData.updatedAt),
+      reviewedAtMillis: readTimestampMillis(claimData.reviewedAt),
+      lastStatusAtMillis: readTimestampMillis(claimData.lastStatusAt),
+      autoValidationCompletedAtMillis: readTimestampMillis(
+        claimData.autoValidationCompletedAt
+      ),
+    },
+    capabilities,
+    allowedStatuses,
+    canTakeAction:
+      capabilities.canEvaluateClaim ||
+      capabilities.canResolveStandard ||
+      capabilities.canResolveCritical,
+    canRevealSensitive: capabilities.canRevealSensitive,
+    decisionToken: {
+      updatedAtMillis: readTimestampMillis(claimData.updatedAt),
+    },
+    timeline: buildClaimReviewTimeline(claimData),
   };
 });
 
@@ -1342,6 +1908,8 @@ export const listMerchantClaimsForReview = onCall<
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   assertAdmin(auth);
+  const capabilities = readClaimReviewCapabilities(auth);
+  assertCanViewClaimQueue(capabilities);
 
   const provinceName = normalizeGeoText(
     request.data.provinceName,

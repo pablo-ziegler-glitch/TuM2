@@ -71,6 +71,7 @@ export {
   evaluateMerchantClaim,
   resolveMerchantClaim,
   revealMerchantClaimSensitiveData,
+  getMerchantClaimReviewDetail,
   getMyMerchantClaimStatus,
   listMerchantClaimsForReview,
   listMyMerchantClaims,

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/auth/admin_session.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 
@@ -36,6 +37,13 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      await AdminSession.instance.refreshClaims();
+      if (!AdminSession.instance.isAdmin) {
+        await FirebaseAuth.instance.signOut();
+        setState(() {
+          _error = 'La cuenta autenticada no tiene permisos de administración.';
+        });
+      }
     } on FirebaseAuthException catch (error) {
       setState(() => _error = error.message ?? error.code);
     } catch (error) {

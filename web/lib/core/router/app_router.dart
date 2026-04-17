@@ -1,9 +1,7 @@
-import 'dart:async';
-
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 
+import '../auth/admin_session.dart';
 import '../../modules/auth/login_screen.dart';
 import '../../shell/admin_shell.dart';
 import '../../modules/import_data/screens/import_list_screen.dart';
@@ -27,13 +25,16 @@ import '../../modules/merchant_claims/screens/merchant_claims_review_screen.dart
 ///   /settings               — configuración (placeholder)
 final appRouter = GoRouter(
   initialLocation: '/imports',
-  refreshListenable: _AuthRefreshNotifier(),
+  refreshListenable: AdminSession.instance,
   redirect: (context, state) {
-    final isLoggedIn = FirebaseAuth.instance.currentUser != null;
+    final session = AdminSession.instance;
+    final isLoggedIn = session.isAuthenticated;
     final isLoginRoute = state.matchedLocation == '/login';
 
     if (!isLoggedIn && !isLoginRoute) return '/login';
-    if (isLoggedIn && isLoginRoute) return '/imports';
+    if (isLoggedIn && session.isLoading && !isLoginRoute) return null;
+    if (isLoggedIn && !session.isAdmin && !isLoginRoute) return '/login';
+    if (isLoggedIn && isLoginRoute && session.isAdmin) return '/imports';
     return null;
   },
   routes: [
@@ -78,7 +79,13 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/claims',
-          builder: (context, state) => const MerchantClaimsReviewScreen(),
+          builder: (context, state) => MerchantClaimsReviewScreen(),
+        ),
+        GoRoute(
+          path: '/claims/:claimId',
+          builder: (context, state) => MerchantClaimsReviewScreen(
+            initialClaimId: state.pathParameters['claimId'],
+          ),
         ),
         // Rutas legacy para compatibilidad con referencias anteriores
         GoRoute(path: '/datasets', redirect: (context, state) => '/imports'),
@@ -121,22 +128,6 @@ final appRouter = GoRouter(
     ),
   ],
 );
-
-class _AuthRefreshNotifier extends ChangeNotifier {
-  _AuthRefreshNotifier() {
-    _subscription = FirebaseAuth.instance.authStateChanges().listen((_) {
-      notifyListeners();
-    });
-  }
-
-  late final StreamSubscription<User?> _subscription;
-
-  @override
-  void dispose() {
-    _subscription.cancel();
-    super.dispose();
-  }
-}
 
 /// Pantalla de placeholder para secciones del admin aún no implementadas.
 class _PlaceholderScreen extends StatelessWidget {

@@ -5,18 +5,23 @@ Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126 — Flujo de claim del comercio, TuM2-0127 — Validación automática inicial de claims
 
-## Estado real de implementación (corte 2026-04-16)
+## Estado real de implementación (corte 2026-04-17)
 ### Hecho
 - Backend admin ya disponible para cola y decisión manual: `listMerchantClaimsForReview`, `evaluateMerchantClaim`, `resolveMerchantClaim`.
 - Cola admin implementada con scope obligatorio (`zoneId` + `claimStatus`) y paginación por cursor (`createdAt` + `claimId`) para control de costo.
 - Reveal sensible operativo y auditado en colección dedicada (`merchant_claim_sensitive_reveals`).
 - Tests de integración cubren cola admin, paginación, reveal y rechazo de usuarios no admin.
+- Admin Web implementado sobre callables backend: `/claims` + `/claims/:claimId`, listado paginado, filtros de scope, filtros locales sin lecturas extra, detalle con masking por defecto, timeline y panel de decisiones.
+- Lectura directa desde cliente eliminada del detalle admin: el panel consume `getMerchantClaimReviewDetail` con payload mínimo, capabilities y token de concurrencia (`updatedAtMillis`).
+- Control explícito de stale data cerrado: `evaluate`, `resolve` y `reveal` validan `expectedUpdatedAtMillis`; el backend rechaza replays stale y la UI fuerza refresh/reconciliación.
+- Capability gating backend listo para reviewer/senior reviewer con fallback compatible (`admin`/`super_admin` conservan acceso pleno mientras no existan claims finos cargados en token).
+- Reveal sensible endurecido: no prefetch, acción explícita, expiración visual en UI, auditoría append-only y resumen no sensible en el claim para timeline sin lecturas globales.
+- Suite web agregada: tests de lógica local (filtros/sort/stale/gating) y widget tests del flujo de lista/detalle/reveal.
 
 ### Falta para cerrar
-- Frontend Admin Web pendiente: listado, filtros, detalle, timeline y panel de decisión todavía no consumen estos callables.
-- Falta implementar control explícito de concurrencia en UI (stale data/decisión simultánea) con UX de conflicto.
-- Completar permisos granulares de reviewer/senior reviewer para reveal y resolución crítica.
-- Cerrar QA E2E de operación admin con masking/reveal temporal en contexto real.
+- Preview/descarga segura de adjuntos sensibles todavía no cerrada; el panel expone metadata lazy y evita fetch binario por defecto.
+- Falta QA E2E real con emuladores/web runner sobre reveal temporal, stale conflict multi-admin y permisos diferenciados con custom claims finos reales.
+- Falta activar claims finos (`claimsReviewLevel` / `capabilities`) en operación real y completar política de asignación administrativa.
 
 ## 1. Objetivo
 Definir el módulo de revisión manual de claims en Admin Web para que el equipo administrador pueda evaluar, decidir y auditar reclamos de titularidad no resolubles de forma automática con seguridad suficiente.

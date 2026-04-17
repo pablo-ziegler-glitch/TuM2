@@ -233,6 +233,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "merchantId", "order": "ASCENDING" },
+        { "fieldPath": "claimStatus", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "merchant_claims",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
     },

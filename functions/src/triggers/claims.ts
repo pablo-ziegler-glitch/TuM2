@@ -1,7 +1,12 @@
-import { onDocumentUpdated } from "firebase-functions/v2/firestore";
+import { onDocumentUpdated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { MerchantClaimDoc } from "../lib/types";
+import {
+  readClaimStatusFromSnapshotData,
+  runMerchantClaimAutoValidation,
+  shouldRunAutoValidationFromTransition,
+} from "../lib/merchantClaimAutoValidationService";
 
 const db = () => getFirestore();
 const OWNER_PENDING_STATUSES = new Set([
@@ -12,6 +17,26 @@ const OWNER_PENDING_STATUSES = new Set([
   "conflict_detected",
 ]);
 const ACTIVE_STATUSES = [...OWNER_PENDING_STATUSES, "draft"];
+
+export const onClaimSubmittedRunAutoValidation = onDocumentWritten(
+  "merchant_claims/{claimId}",
+  async (event) => {
+    const beforeData = event.data?.before.data() as Record<string, unknown> | undefined;
+    const afterData = event.data?.after.data() as Record<string, unknown> | undefined;
+    if (!afterData) return;
+
+    const beforeStatus = readClaimStatusFromSnapshotData(beforeData);
+    const afterStatus = readClaimStatusFromSnapshotData(afterData);
+    if (!shouldRunAutoValidationFromTransition({ beforeStatus, afterStatus })) {
+      return;
+    }
+
+    await runMerchantClaimAutoValidation({
+      claimId: event.params.claimId,
+      origin: "submitted_trigger",
+    });
+  }
+);
 
 async function syncOwnerPendingClaim(userId: string, expected: boolean): Promise<void> {
   try {

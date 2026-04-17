@@ -1,4 +1,3 @@
-import { getAuth } from "firebase-admin/auth";
 import { FieldPath, FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import {
@@ -6,6 +5,8 @@ import {
   buildSensitiveVault,
   revealSensitiveFields,
 } from "../lib/claimSensitive";
+import { runMerchantClaimAutoValidation } from "../lib/merchantClaimAutoValidationService";
+import { syncOwnerPendingAccess } from "../lib/merchantClaimOwnerPending";
 
 const db = () => getFirestore();
 
@@ -19,18 +20,15 @@ type UserVisibleStatus =
   | "duplicate_claim"
   | "conflict_detected";
 
-type InternalWorkflowStatus =
-  | "draft_editing"
-  | "auto_validation_running"
-  | "auto_validation_passed"
-  | "auto_validation_blocked_conflict"
-  | "auto_validation_blocked_duplicate"
-  | "auto_validation_needs_more_info"
-  | "manual_resolution_completed";
-
 type ClaimStatus = UserVisibleStatus;
 type DeclaredRole = "owner" | "co_owner" | "authorized_representative";
-type EvidenceKind = "storefront_photo" | "ownership_document";
+type EvidenceKind =
+  | "storefront_photo"
+  | "ownership_document"
+  | "regulatory_document"
+  | "reinforced_relationship_evidence"
+  | "operational_point_photo"
+  | "alternative_relationship_evidence";
 type SensitiveFieldKey = "phone" | "claimantDisplayName" | "claimantNote";
 
 interface ClaimEvidenceInput {
@@ -177,6 +175,12 @@ interface ReviewQueueItem {
   submittedAtMillis: number | null;
   createdAtMillis: number | null;
   updatedAtMillis: number | null;
+  hasConflict: boolean;
+  hasDuplicate: boolean;
+  requiresManualReview: boolean;
+  riskPriority: string | null;
+  reviewQueuePriority: number | null;
+  autoValidationReasons: string[];
 }
 
 interface ListMerchantClaimsForReviewResponse {
@@ -243,18 +247,6 @@ const ACTIVE_STATUSES: ReadonlyArray<UserVisibleStatus> = [
   "conflict_detected",
   "duplicate_claim",
 ];
-
-const OWNER_PENDING_STATUSES: ReadonlySet<UserVisibleStatus> = new Set([
-  "submitted",
-  "under_review",
-  "needs_more_info",
-  "conflict_detected",
-  "duplicate_claim",
-]);
-
-const CLOSED_NEGATIVE_STATUSES: ReadonlySet<UserVisibleStatus> = new Set([
-  "rejected",
-]);
 
 const MAX_NOTE_LENGTH = 800;
 const MAX_PHONE_LENGTH = 32;
@@ -354,7 +346,14 @@ function normalizePhone(value: unknown): string | null {
 }
 
 function normalizeEvidenceKind(value: unknown): EvidenceKind {
-  if (value === "storefront_photo" || value === "ownership_document") {
+  if (
+    value === "storefront_photo" ||
+    value === "ownership_document" ||
+    value === "regulatory_document" ||
+    value === "reinforced_relationship_evidence" ||
+    value === "operational_point_photo" ||
+    value === "alternative_relationship_evidence"
+  ) {
     return value;
   }
   throw new HttpsError("invalid-argument", "kind de evidencia inválido.");
@@ -713,191 +712,6 @@ function hasSensitivePrivateChanges(
   return JSON.stringify(currentVault) !== JSON.stringify(nextVault);
 }
 
-async function hasOtherPendingClaims(
-  userId: string,
-  excludeClaimId: string
-): Promise<boolean> {
-  const snap = await db()
-    .collection("merchant_claims")
-    .where("userId", "==", userId)
-    .where("claimStatus", "in", [...OWNER_PENDING_STATUSES])
-    .limit(5)
-    .get();
-  return snap.docs.some((doc) => doc.id !== excludeClaimId);
-}
-
-async function syncOwnerPendingAccess(params: {
-  userId: string;
-  claimId: string;
-  claimStatus: UserVisibleStatus;
-  merchantId: string;
-}): Promise<void> {
-  const auth = getAuth();
-  let currentClaims: Record<string, unknown> = {};
-  let isOwner = false;
-
-  try {
-    const userRecord = await auth.getUser(params.userId);
-    currentClaims = (userRecord.customClaims ?? {}) as Record<string, unknown>;
-    isOwner = currentClaims["role"] === "owner";
-  } catch (error) {
-    console.warn(
-      JSON.stringify({
-        source: "merchant_claims",
-        action: "owner_pending_get_user_failed",
-        userId: params.userId,
-        claimId: params.claimId,
-        error: error instanceof Error ? error.message : String(error),
-      })
-    );
-  }
-
-  let ownerPending = OWNER_PENDING_STATUSES.has(params.claimStatus);
-  if (!ownerPending && !isOwner && CLOSED_NEGATIVE_STATUSES.has(params.claimStatus)) {
-    ownerPending = await hasOtherPendingClaims(params.userId, params.claimId);
-  }
-
-  const nextClaims: Record<string, unknown> = { ...currentClaims };
-  nextClaims["owner_pending"] = ownerPending;
-
-  if (params.claimStatus === "approved") {
-    const claimMerchantId =
-      typeof currentClaims["merchantId"] === "string" &&
-      currentClaims["merchantId"].trim().length > 0
-        ? currentClaims["merchantId"].trim()
-        : null;
-    const claimMerchantIds = Array.isArray(currentClaims["merchantIds"])
-      ? currentClaims["merchantIds"]
-          .filter((value): value is string => typeof value === "string")
-          .map((value) => value.trim())
-          .filter((value) => value.length > 0)
-      : [];
-    nextClaims["role"] = "owner";
-    nextClaims["merchantId"] = claimMerchantId ?? params.merchantId;
-    nextClaims["merchantIds"] = [...new Set([params.merchantId, ...claimMerchantIds])];
-    nextClaims["onboardingComplete"] = true;
-    nextClaims["owner_pending"] = false;
-  } else if (!isOwner) {
-    nextClaims["role"] = "customer";
-    nextClaims["onboardingComplete"] = false;
-  }
-
-  if (JSON.stringify(currentClaims) !== JSON.stringify(nextClaims)) {
-    try {
-      await auth.setCustomUserClaims(params.userId, nextClaims);
-    } catch (error) {
-      console.warn(
-        JSON.stringify({
-          source: "merchant_claims",
-          action: "owner_pending_set_claims_failed",
-          userId: params.userId,
-          claimId: params.claimId,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      );
-    }
-  }
-
-  const userRef = db().doc(`users/${params.userId}`);
-  const nextUserRole =
-    params.claimStatus === "approved" ? "owner" : isOwner ? "owner" : "customer";
-  const nextUserMerchantId =
-    params.claimStatus === "approved" ? (nextClaims["merchantId"] as string) : null;
-  const nextUserOwnerPending = nextClaims["owner_pending"] === true;
-  const nextUserOnboarding = nextClaims["onboardingComplete"] === true;
-
-  const userSnap = await userRef.get();
-  const userData = userSnap.data() ?? {};
-  const currentUserRole = typeof userData.role === "string" ? userData.role : null;
-  const currentUserMerchantId =
-    typeof userData.merchantId === "string" ? userData.merchantId : null;
-  const currentUserOwnerPending = userData.ownerPending === true;
-  const currentUserOnboarding = userData.onboardingComplete === true;
-
-  const changed =
-    currentUserRole !== nextUserRole ||
-    currentUserMerchantId !== nextUserMerchantId ||
-    currentUserOwnerPending !== nextUserOwnerPending ||
-    currentUserOnboarding !== nextUserOnboarding;
-
-  if (changed) {
-    await userRef.set(
-      {
-        role: nextUserRole,
-        merchantId: nextUserMerchantId,
-        ownerPending: nextUserOwnerPending,
-        onboardingComplete: nextUserOnboarding,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  }
-}
-
-async function evaluateClaimOutcome(params: {
-  claimId: string;
-  userId: string;
-  merchantId: string;
-  merchantOwnerUid: string;
-  ownershipStatus: string;
-  requiredEvidence: { storefront: boolean; ownershipDocument: boolean };
-}): Promise<{
-  userVisibleStatus: UserVisibleStatus;
-  internalWorkflowStatus: InternalWorkflowStatus;
-  reasonCode: string | null;
-  conflictType: string | null;
-  duplicateOfClaimId: string | null;
-}> {
-  if (!params.requiredEvidence.storefront || !params.requiredEvidence.ownershipDocument) {
-    return {
-      userVisibleStatus: "needs_more_info",
-      internalWorkflowStatus: "auto_validation_needs_more_info",
-      reasonCode: "missing_minimum_evidence",
-      conflictType: null,
-      duplicateOfClaimId: null,
-    };
-  }
-
-  if (
-    (params.merchantOwnerUid && params.merchantOwnerUid !== params.userId) ||
-    params.ownershipStatus === "claimed"
-  ) {
-    return {
-      userVisibleStatus: "conflict_detected",
-      internalWorkflowStatus: "auto_validation_blocked_conflict",
-      reasonCode: "merchant_already_owned",
-      conflictType: "merchant_already_owned",
-      duplicateOfClaimId: null,
-    };
-  }
-
-  const duplicateSnap = await db()
-    .collection("merchant_claims")
-    .where("userId", "==", params.userId)
-    .where("merchantId", "==", params.merchantId)
-    .where("claimStatus", "in", ACTIVE_STATUSES)
-    .limit(3)
-    .get();
-  const duplicate = duplicateSnap.docs.find((doc) => doc.id !== params.claimId);
-  if (duplicate) {
-    return {
-      userVisibleStatus: "duplicate_claim",
-      internalWorkflowStatus: "auto_validation_blocked_duplicate",
-      reasonCode: "duplicate_claim",
-      conflictType: null,
-      duplicateOfClaimId: duplicate.id,
-    };
-  }
-
-  return {
-    userVisibleStatus: "under_review",
-    internalWorkflowStatus: "auto_validation_passed",
-    reasonCode: null,
-    conflictType: null,
-    duplicateOfClaimId: null,
-  };
-}
-
 export const upsertMerchantClaimDraft = onCall<
   UpsertMerchantClaimDraftRequest,
   Promise<UpsertMerchantClaimDraftResponse>
@@ -1106,80 +920,31 @@ export const submitMerchantClaim = onCall<
     );
   }
 
-  const evidenceFilesRaw = Array.isArray(claimData.evidenceFiles)
-    ? claimData.evidenceFiles
-    : [];
-  const evidenceFiles = normalizeEvidenceFiles(evidenceFilesRaw, { uid, claimId });
-  const requiredEvidence = claimHasRequiredEvidence(evidenceFiles);
-  if (!requiredEvidence.storefront || !requiredEvidence.ownershipDocument) {
-    throw new HttpsError(
-      "failed-precondition",
-      "Necesitás subir foto de fachada y prueba documental mínima para enviar el claim."
-    );
-  }
-  if (claimData.hasAcceptedDataProcessingConsent !== true) {
-    throw new HttpsError(
-      "failed-precondition",
-      "Necesitás aceptar el tratamiento de datos para continuar."
-    );
-  }
-  if (claimData.hasAcceptedLegitimacyDeclaration !== true) {
-    throw new HttpsError(
-      "failed-precondition",
-      "Necesitás aceptar la declaración de legitimidad para continuar."
-    );
-  }
-
   const merchantId = normalizeRequiredString(claimData.merchantId, "merchantId");
-  const merchantRef = db().collection("merchants").doc(merchantId);
-  const merchantSnap = await merchantRef.get();
-  if (!merchantSnap.exists) {
-    throw new HttpsError("failed-precondition", "El comercio ya no está disponible.");
-  }
-  const merchantData = merchantSnap.data() ?? {};
-  const merchantOwnerUid =
-    typeof merchantData.ownerUserId === "string" ? merchantData.ownerUserId.trim() : "";
-  const ownershipStatus =
-    typeof merchantData.ownershipStatus === "string"
-      ? merchantData.ownershipStatus.trim().toLowerCase()
-      : "";
-
-  const decision = await evaluateClaimOutcome({
-    claimId,
-    userId: uid,
-    merchantId,
-    merchantOwnerUid,
-    ownershipStatus,
-    requiredEvidence,
-  });
-
-  const nextAction: SubmitMerchantClaimResponse["nextAction"] =
-    decision.userVisibleStatus === "conflict_detected" ||
-    decision.userVisibleStatus === "duplicate_claim"
-      ? "resolve_conflict"
-      : decision.userVisibleStatus === "needs_more_info"
-      ? "provide_more_info"
-      : "wait_review";
-
   const now = FieldValue.serverTimestamp();
   await claimRef.set(
     {
       authenticatedEmail: authEmail,
-      claimStatus: decision.userVisibleStatus,
-      userVisibleStatus: decision.userVisibleStatus,
-      internalWorkflowStatus: decision.internalWorkflowStatus,
+      claimStatus: "submitted",
+      userVisibleStatus: "submitted",
+      internalWorkflowStatus: "auto_validation_running",
       workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
       sensitiveVault: FieldValue.delete(),
       fingerprintPrimary: FieldValue.delete(),
       submittedAt: now,
       updatedAt: now,
       lastStatusAt: now,
-      autoValidationVersion: 2,
-      autoValidationResult:
-        decision.userVisibleStatus === "under_review" ? "passed" : "blocked",
-      autoValidationReasonCode: decision.reasonCode,
-      conflictType: decision.conflictType,
-      duplicateOfClaimId: decision.duplicateOfClaimId,
+      autoValidationStatus: "running",
+      autoValidationResult: "running",
+      autoValidationReasonCode: null,
+      autoValidationReasons: [],
+      hasConflict: false,
+      hasDuplicate: false,
+      missingEvidence: false,
+      missingEvidenceTypes: [],
+      riskFlags: [],
+      riskPriority: "low",
+      reviewQueuePriority: 0,
     },
     { merge: true }
   );
@@ -1187,14 +952,27 @@ export const submitMerchantClaim = onCall<
   await syncOwnerPendingAccess({
     userId: uid,
     claimId,
-    claimStatus: decision.userVisibleStatus,
+    claimStatus: "submitted",
     merchantId,
   });
 
+  await runMerchantClaimAutoValidation({
+    claimId,
+    origin: "submit_callable",
+  });
+
   const updated = (await claimRef.get()).data() ?? {};
+  const status = toUserVisibleStatus(updated.userVisibleStatus ?? updated.claimStatus);
+  const nextAction: SubmitMerchantClaimResponse["nextAction"] =
+    status === "conflict_detected" || status === "duplicate_claim"
+      ? "resolve_conflict"
+      : status === "needs_more_info"
+      ? "provide_more_info"
+      : "wait_review";
+
   return {
     claimId,
-    claimStatus: toUserVisibleStatus(updated.userVisibleStatus ?? updated.claimStatus),
+    claimStatus: status,
     submittedAtMillis: readTimestampMillis(updated.submittedAt),
     nextAction,
   };
@@ -1208,86 +986,32 @@ export const evaluateMerchantClaim = onCall<
   assertAdmin(auth);
 
   const claimId = normalizeClaimId(request.data.claimId);
-  const claimRef = db().collection("merchant_claims").doc(claimId);
+  const claimRef = db().doc(`merchant_claims/${claimId}`);
   const claimSnap = await claimRef.get();
   if (!claimSnap.exists) {
     throw new HttpsError("not-found", "No encontramos el claim.");
   }
-  const claimData = claimSnap.data() ?? {};
-  const userId = normalizeRequiredString(claimData.userId, "claim.userId");
-  const merchantId = normalizeRequiredString(claimData.merchantId, "claim.merchantId");
-  const evidenceFiles = normalizeEvidenceFiles(claimData.evidenceFiles ?? [], {
-    uid: userId,
+  await runMerchantClaimAutoValidation({
     claimId,
-  });
-  const requiredEvidence = claimHasRequiredEvidence(evidenceFiles);
-
-  const merchantSnap = await db().collection("merchants").doc(merchantId).get();
-  if (!merchantSnap.exists) {
-    throw new HttpsError("failed-precondition", "El comercio no está disponible.");
-  }
-  const merchantData = merchantSnap.data() ?? {};
-  const merchantOwnerUid =
-    typeof merchantData.ownerUserId === "string" ? merchantData.ownerUserId.trim() : "";
-  const ownershipStatus =
-    typeof merchantData.ownershipStatus === "string"
-      ? merchantData.ownershipStatus.trim().toLowerCase()
-      : "";
-
-  const decision = await evaluateClaimOutcome({
-    claimId,
-    userId,
-    merchantId,
-    merchantOwnerUid,
-    ownershipStatus,
-    requiredEvidence,
-  });
-
-  const currentStatus = toUserVisibleStatus(
-    claimData.userVisibleStatus ?? claimData.claimStatus
-  );
-  const currentInternal =
-    typeof claimData.internalWorkflowStatus === "string"
-      ? claimData.internalWorkflowStatus
-      : null;
-  if (
-    currentStatus !== decision.userVisibleStatus ||
-    currentInternal !== decision.internalWorkflowStatus
-  ) {
-    await claimRef.set(
-      {
-        claimStatus: decision.userVisibleStatus,
-        userVisibleStatus: decision.userVisibleStatus,
-        internalWorkflowStatus: decision.internalWorkflowStatus,
-        workflowManagedBy: CLAIM_WORKFLOW_MANAGER,
-        sensitiveVault: FieldValue.delete(),
-        fingerprintPrimary: FieldValue.delete(),
-        autoValidationVersion: 2,
-        autoValidationResult:
-          decision.userVisibleStatus === "under_review" ? "passed" : "blocked",
-        autoValidationReasonCode: decision.reasonCode,
-        conflictType: decision.conflictType,
-        duplicateOfClaimId: decision.duplicateOfClaimId,
-        updatedAt: FieldValue.serverTimestamp(),
-        lastStatusAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-  }
-
-  await syncOwnerPendingAccess({
-    userId,
-    claimId,
-    claimStatus: decision.userVisibleStatus,
-    merchantId,
+    origin: "admin_rerun",
+    force: true,
   });
 
   const updated = (await claimRef.get()).data() ?? {};
+  const reasons = Array.isArray(updated.autoValidationReasons)
+    ? updated.autoValidationReasons
+    : [];
   return {
     claimId,
     claimStatus: toUserVisibleStatus(updated.userVisibleStatus ?? updated.claimStatus),
-    reasonCode: decision.reasonCode,
-    duplicateOfClaimId: decision.duplicateOfClaimId,
+    reasonCode:
+      typeof reasons[0] === "string"
+        ? reasons[0]
+        : typeof updated.autoValidationReasonCode === "string"
+        ? updated.autoValidationReasonCode
+        : null,
+    duplicateOfClaimId:
+      typeof updated.duplicateOfClaimId === "string" ? updated.duplicateOfClaimId : null,
     updatedAtMillis: readTimestampMillis(updated.updatedAt),
   };
 });
@@ -1560,6 +1284,19 @@ export const listMerchantClaimsForReview = onCall<
       submittedAtMillis: readTimestampMillis(data.submittedAt),
       createdAtMillis: readTimestampMillis(data.createdAt),
       updatedAtMillis: readTimestampMillis(data.updatedAt),
+      hasConflict: data.hasConflict === true,
+      hasDuplicate: data.hasDuplicate === true,
+      requiresManualReview: data.requiresManualReview === true,
+      riskPriority: typeof data.riskPriority === "string" ? data.riskPriority : null,
+      reviewQueuePriority:
+        typeof data.reviewQueuePriority === "number"
+          ? Math.trunc(data.reviewQueuePriority)
+          : null,
+      autoValidationReasons: Array.isArray(data.autoValidationReasons)
+        ? data.autoValidationReasons.filter(
+            (item): item is string => typeof item === "string"
+          )
+        : [],
     } satisfies ReviewQueueItem;
   });
 

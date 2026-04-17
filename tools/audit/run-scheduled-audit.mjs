@@ -83,17 +83,66 @@ function safeJsonParse(text) {
   }
 }
 
+function extractBalancedJsonObject(text) {
+  if (!text) return null;
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === '{') {
+      if (start === -1) start = i;
+      depth += 1;
+      continue;
+    }
+    if (ch === '}') {
+      if (depth > 0) depth -= 1;
+      if (depth === 0 && start !== -1) {
+        const candidate = text.slice(start, i + 1).trim();
+        const parsed = safeJsonParse(candidate);
+        if (parsed) return parsed;
+        start = -1;
+      }
+    }
+  }
+  return null;
+}
+
 function extractJson(text) {
   if (!text) return null;
   const direct = safeJsonParse(text);
   if (direct) return direct;
-  const fenced = text.match(/```json\s*([\s\S]*?)```/i)?.[1] ?? text;
-  const candidate = fenced.slice(fenced.indexOf('{'), fenced.lastIndexOf('}') + 1);
-  const repaired = candidate
-    .replace(/,\s*([}\]])/g, '$1')
-    .replace(/^\uFEFF/, '')
-    .trim();
-  return safeJsonParse(repaired);
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] ?? text;
+  const balanced = extractBalancedJsonObject(fenced);
+  if (balanced) return balanced;
+  const repaired = fenced.replace(/,\s*([}\]])/g, '$1').replace(/^\uFEFF/, '').trim();
+  return extractBalancedJsonObject(repaired);
+}
+
+function extractJsonFromGeminiResponse(response) {
+  const fromText = extractJson(response?.text ?? '');
+  if (fromText) return fromText;
+  const parts = response?.candidates?.flatMap((candidate) => candidate?.content?.parts ?? []) ?? [];
+  for (const part of parts) {
+    const parsed = extractJson(part?.text ?? '');
+    if (parsed) return parsed;
+  }
+  return null;
 }
 
 function withTimeout(promise, ms, label) {
@@ -194,7 +243,7 @@ async function callGeminiJson({ apiKey, model, prompt, retries = 3, timeoutMs = 
         timeoutMs,
         'gemini.generateContent',
       );
-      const parsed = extractJson(response.text ?? '');
+      const parsed = extractJsonFromGeminiResponse(response);
       if (!parsed) throw new Error('Gemini devolvió JSON inválido');
       return parsed;
     } catch (error) {

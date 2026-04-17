@@ -26,6 +26,8 @@ jobs:
       contents: read
       issues: write
     env:
+      # Adelanta la migración para que las JavaScript actions no ejecuten en Node 20.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       AUDIT_TARGET_BRANCH: ${{ vars.AUDIT_TARGET_BRANCH || 'develop' }}
       AUDIT_MODEL: ${{ vars.AUDIT_MODEL || 'gemini-2.5-flash' }}
       AUDIT_ARTIFACT_RETENTION_DAYS: ${{ vars.AUDIT_ARTIFACT_RETENTION_DAYS || '30' }}

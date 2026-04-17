@@ -298,7 +298,6 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `IN_PROGRESS`
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
 - [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `IN_PROGRESS`
-- [0134] **Modo Selección Argentina + tarjeta pineada de próximo partido** — P1 — `Producto, Branding, Mobile, Web, Admin, Backend, MVP+` `TODO`
 
 ---
 
@@ -496,7 +495,3 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0126] Flujo claim en progreso (2026-04-14): implementado flujo mobile CLAIM-01..07 con Firebase real (draft, evidencia, consentimiento, submit, estado), sin listeners permanentes y con refresh por acción.
 - [0126] Backend inicial implementado: callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `evaluateMerchantClaim`, `resolveMerchantClaim`, `revealMerchantClaimSensitiveData`, `getMyMerchantClaimStatus`, `listMerchantClaimsForReview`, `listMyMerchantClaims`, `searchClaimableMerchants`; reglas Firestore/Storage endurecidas e índices `merchant_claims` actualizados a `claimStatus`.
 - [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.
-
-- [Storycard] Se agrega `docs/storyscards/0134-modo-seleccion-argentina.md` con alcance, arquitectura costo-optimizada y definición de flags para ejecución estacional backend-only.
-- [Prompt Codex] Se versiona `docs/prompts/tum2-0134-codex-prompt.md` como prompt de arranque de implementación de la tarjeta TuM2-0134.
-

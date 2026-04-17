@@ -42,14 +42,14 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
 
   String get label {
     return switch (this) {
-      MerchantClaimStatus.draft => 'Draft',
-      MerchantClaimStatus.submitted => 'Submitted',
-      MerchantClaimStatus.underReview => 'Under review',
-      MerchantClaimStatus.needsMoreInfo => 'Needs more info',
-      MerchantClaimStatus.approved => 'Approved',
-      MerchantClaimStatus.rejected => 'Rejected',
-      MerchantClaimStatus.duplicateClaim => 'Duplicate',
-      MerchantClaimStatus.conflictDetected => 'Conflict',
+      MerchantClaimStatus.draft => 'Borrador',
+      MerchantClaimStatus.submitted => 'Enviado',
+      MerchantClaimStatus.underReview => 'En revision',
+      MerchantClaimStatus.needsMoreInfo => 'Requiere mas informacion',
+      MerchantClaimStatus.approved => 'Aprobado',
+      MerchantClaimStatus.rejected => 'Rechazado',
+      MerchantClaimStatus.duplicateClaim => 'Duplicado',
+      MerchantClaimStatus.conflictDetected => 'Conflicto',
     };
   }
 }
@@ -290,8 +290,8 @@ class MerchantClaimsAdminRepository {
   MerchantClaimsAdminRepository({
     FirebaseFunctions? functions,
     FirebaseFirestore? firestore,
-  })  : _functions = functions ?? FirebaseFunctions.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+  }) : _functions = functions ?? FirebaseFunctions.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFunctions _functions;
   final FirebaseFirestore _firestore;
@@ -362,8 +362,10 @@ class MerchantClaimsAdminRepository {
   }
 
   Future<MerchantClaimDetail> getClaimDetail({required String claimId}) async {
-    final snapshot =
-        await _firestore.collection('merchant_claims').doc(claimId).get();
+    final snapshot = await _firestore
+        .collection('merchant_claims')
+        .doc(claimId)
+        .get();
     if (!snapshot.exists) {
       throw StateError('No encontramos el claim seleccionado.');
     }

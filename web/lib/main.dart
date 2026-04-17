@@ -23,7 +23,7 @@ class TuM2AdminApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'TuM2 Admin',
+      title: 'TuM2 Administracion',
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
       theme: ThemeData(

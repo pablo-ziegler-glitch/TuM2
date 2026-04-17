@@ -39,37 +39,37 @@ class _AdminSidebar extends StatelessWidget {
   static const _navItems = [
     _NavItem(
       icon: Icons.grid_view_outlined,
-      label: 'Dashboard',
+      label: 'Panel',
       path: '/dashboard',
     ),
     _NavItem(
       icon: Icons.storefront_outlined,
-      label: 'Catalog Limits',
+      label: 'Limites de catalogo',
       path: '/businesses',
     ),
     _NavItem(
       icon: Icons.fact_check_outlined,
-      label: 'Claims Review',
+      label: 'Revision de reclamos',
       path: '/claims',
     ),
     _NavItem(
       icon: Icons.storage_outlined,
-      label: 'Import Management',
+      label: 'Importaciones',
       path: '/imports',
     ),
     _NavItem(
       icon: Icons.description_outlined,
-      label: 'Templates',
+      label: 'Plantillas',
       path: '/templates',
     ),
     _NavItem(
       icon: Icons.bar_chart_outlined,
-      label: 'Analytics',
+      label: 'Analitica',
       path: '/analytics',
     ),
     _NavItem(
       icon: Icons.settings_outlined,
-      label: 'Settings',
+      label: 'Configuracion',
       path: '/settings',
     ),
   ];
@@ -107,7 +107,7 @@ class _AdminSidebar extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'TuM2 Admin',
+                      'TuM2 Administracion',
                       style: AppTextStyles.headingSm.copyWith(
                         color: AppColors.surface,
                       ),
@@ -116,7 +116,7 @@ class _AdminSidebar extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'DATA MANAGEMENT',
+                  'GESTION DE DATOS',
                   style: AppTextStyles.bodyXs.copyWith(
                     color: AppColors.neutral600,
                     letterSpacing: 1.0,
@@ -130,7 +130,7 @@ class _AdminSidebar extends StatelessWidget {
           const SizedBox(height: 20),
           // Items de navegación
           ...(_navItems.map((item) {
-            // Import Management activo para todas las rutas /imports*
+            // Importaciones activo para todas las rutas /imports*
             final isActive = item.path == '/imports'
                 ? location.startsWith('/imports') ||
                     location.startsWith('/datasets')
@@ -167,13 +167,13 @@ class _AdminSidebar extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Admin User',
+                        'Usuario administrador',
                         style: AppTextStyles.labelSm.copyWith(
                           color: AppColors.surface,
                         ),
                       ),
                       Text(
-                        'System Overseer',
+                        'Responsable del sistema',
                         style: AppTextStyles.bodyXs.copyWith(
                           color: AppColors.neutral600,
                         ),
@@ -270,7 +270,7 @@ class _TopBar extends StatelessWidget {
                   Icon(Icons.search, size: 14, color: AppColors.neutral500),
                   const SizedBox(width: 8),
                   Text(
-                    'Search imports, logs or entities...',
+                    'Buscar importaciones, registros o entidades...',
                     style: AppTextStyles.bodyXs.copyWith(
                       color: AppColors.neutral400,
                     ),

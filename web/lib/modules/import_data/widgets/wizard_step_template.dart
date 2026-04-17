@@ -20,7 +20,7 @@ class WizardStepTemplate extends StatelessWidget {
   List<_TemplateItem> get _templates => switch (importType) {
         ImportType.officialDataset => [
             const _TemplateItem(
-              name: 'REPES Official v2.1',
+              name: 'REPES oficial v2.1',
               description: 'Ministerio de Salud · Farmacias',
               fields: 18,
               lastUpdated: '2026-02',
@@ -41,8 +41,8 @@ class WizardStepTemplate extends StatelessWidget {
               icon: Icons.location_city_outlined,
             ),
             const _TemplateItem(
-              name: 'Custom Schema',
-              description: 'Define your own column mapping',
+              name: 'Esquema personalizado',
+              description: 'Defini tu propio mapeo de columnas',
               fields: 0,
               lastUpdated: null,
               icon: Icons.tune_outlined,
@@ -51,22 +51,22 @@ class WizardStepTemplate extends StatelessWidget {
           ],
         ImportType.masterCatalog => [
             const _TemplateItem(
-              name: 'GS1 Standard v3.0',
+              name: 'GS1 estandar v3.0',
               description: 'GTIN · EAN13 · barcode + brand',
               fields: 24,
               lastUpdated: '2026-01',
               icon: Icons.qr_code_outlined,
             ),
             const _TemplateItem(
-              name: 'Internal Catalog v1.0',
+              name: 'Catalogo interno v1.0',
               description: 'Formato interno TuM2 productos',
               fields: 16,
               lastUpdated: '2025-12',
               icon: Icons.inventory_2_outlined,
             ),
             const _TemplateItem(
-              name: 'Custom Schema',
-              description: 'Define your own column mapping',
+              name: 'Esquema personalizado',
+              description: 'Defini tu propio mapeo de columnas',
               fields: 0,
               lastUpdated: null,
               icon: Icons.tune_outlined,
@@ -75,7 +75,7 @@ class WizardStepTemplate extends StatelessWidget {
           ],
         ImportType.genericInternal => [
             const _TemplateItem(
-              name: 'Generic Businesses v1.0',
+              name: 'Comercios genericos v1.0',
               description:
                   'Comercios genéricos — nombre + dirección + categoría',
               fields: 10,
@@ -83,8 +83,8 @@ class WizardStepTemplate extends StatelessWidget {
               icon: Icons.storefront_outlined,
             ),
             const _TemplateItem(
-              name: 'Custom Schema',
-              description: 'Define your own column mapping',
+              name: 'Esquema personalizado',
+              description: 'Defini tu propio mapeo de columnas',
               fields: 0,
               lastUpdated: null,
               icon: Icons.tune_outlined,
@@ -103,10 +103,11 @@ class WizardStepTemplate extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Select Template', style: AppTextStyles.headingSm),
+                Text('Selecciona una plantilla',
+                    style: AppTextStyles.headingSm),
                 const SizedBox(height: 4),
                 Text(
-                  'Choose a pre-configured schema for ${importType.label}',
+                  'Elegi un esquema preconfigurado para ${importType.label}',
                   style: AppTextStyles.bodySm.copyWith(
                     color: AppColors.neutral500,
                   ),
@@ -169,7 +170,7 @@ class WizardStepTemplate extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Templates define field mappings, validation rules and deduplication keys. You can review and adjust all mappings in the next step.',
+                  'Las plantillas definen mapeos de campos, reglas de validacion y claves de deduplicacion. Podes revisar y ajustar todo en el siguiente paso.',
                   style: AppTextStyles.bodyXs.copyWith(
                     color: AppColors.neutral500,
                   ),
@@ -271,7 +272,7 @@ class _TemplateCardState extends State<_TemplateCard> {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'custom',
+                                'personalizada',
                                 style: AppTextStyles.bodyXs.copyWith(
                                   color: AppColors.neutral600,
                                 ),
@@ -296,14 +297,14 @@ class _TemplateCardState extends State<_TemplateCard> {
                 children: [
                   if (widget.item.fields > 0)
                     Text(
-                      '${widget.item.fields} fields',
+                      '${widget.item.fields} campos',
                       style: AppTextStyles.bodyXs.copyWith(
                         color: AppColors.neutral400,
                       ),
                     ),
                   if (widget.item.lastUpdated != null)
                     Text(
-                      'Updated ${widget.item.lastUpdated}',
+                      'Actualizada ${widget.item.lastUpdated}',
                       style: AppTextStyles.bodyXs.copyWith(
                         color: AppColors.neutral400,
                       ),

@@ -114,8 +114,8 @@ class ImportDataRepository {
   };
 
   ImportDataRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
-      : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
@@ -153,7 +153,8 @@ class ImportDataRepository {
     final docs = await _fetchActiveZoneDocs();
     return docs.map((doc) {
       final data = doc.data();
-      final localityName = _readText(data, const [
+      final localityName =
+          _readText(data, const [
             'localityName',
             'cityName',
             'name',
@@ -164,7 +165,8 @@ class ImportDataRepository {
         zoneId: doc.id,
         name: _readText(data, const ['name', 'nombre']) ?? localityName,
         cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
-        departmentName: _readText(data, const [
+        departmentName:
+            _readText(data, const [
               'departmentName',
               'departamentoNombre',
               'department',
@@ -181,7 +183,7 @@ class ImportDataRepository {
   }
 
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
-      _fetchActiveZoneDocs() async {
+  _fetchActiveZoneDocs() async {
     final now = DateTime.now().toUtc();
     if (_zonesCache != null &&
         _zonesCacheExpiresAtUtc != null &&
@@ -263,8 +265,9 @@ class ImportDataRepository {
   }
 
   Future<void> publishBatch(ImportBatchUi batch) async {
-    final placeDocs =
-        await _externalPlaces.where('importBatchId', isEqualTo: batch.id).get();
+    final placeDocs = await _externalPlaces
+        .where('importBatchId', isEqualTo: batch.id)
+        .get();
     await _applyInChunks(placeDocs.docs, (writeBatch, doc) {
       writeBatch.update(doc.reference, {
         'visibilityStatus': 'visible',
@@ -290,8 +293,9 @@ class ImportDataRepository {
   }
 
   Future<void> revertBatch(ImportBatchUi batch) async {
-    final placeDocs =
-        await _externalPlaces.where('importBatchId', isEqualTo: batch.id).get();
+    final placeDocs = await _externalPlaces
+        .where('importBatchId', isEqualTo: batch.id)
+        .get();
 
     final merchantUpdates =
         <DocumentReference<Map<String, dynamic>>, Map<String, Object?>>{};
@@ -488,8 +492,9 @@ class ImportDataRepository {
         ]),
       }, SetOptions(merge: true));
 
-      final enabledMappings =
-          input.fieldMappings.where((m) => m.enabled).toList();
+      final enabledMappings = input.fieldMappings
+          .where((m) => m.enabled)
+          .toList();
       final placeRefs =
           <DocumentReference<Map<String, dynamic>>, Map<String, dynamic>>{};
       var duplicatedCount = 0;
@@ -514,7 +519,8 @@ class ImportDataRepository {
         final address = _mappedValue(row, enabledMappings, tum2FieldAddress);
         final dedupeKey = _dedupeKey(name, address, input.zoneId);
         if (input.deduplicationEnabled) {
-          final alreadyExists = existingDedupeKeys.contains(dedupeKey) ||
+          final alreadyExists =
+              existingDedupeKeys.contains(dedupeKey) ||
               stagedDedupeKeys.contains(dedupeKey);
           if (alreadyExists) {
             duplicatedCount++;
@@ -558,10 +564,8 @@ class ImportDataRepository {
       final status = createdCount == 0
           ? ImportBatchStatus.failed
           : (validation.errorRows > 0 || duplicatedCount > 0)
-              ? ImportBatchStatus.partial
-              : (isHidden
-                  ? ImportBatchStatus.hidden
-                  : ImportBatchStatus.completed);
+          ? ImportBatchStatus.partial
+          : (isHidden ? ImportBatchStatus.hidden : ImportBatchStatus.completed);
 
       await batchRef.set({
         'status': status.name,
@@ -618,8 +622,8 @@ class ImportDataRepository {
       _ when lower.endsWith('.csv') => _parseCsv(bytes),
       _ when lower.endsWith('.json') => _parseJson(bytes),
       _ => throw UnsupportedError(
-          'Formato no soportado. Usá CSV o JSON para importar.',
-        ),
+        'Formato no soportado. Usá CSV o JSON para importar.',
+      ),
     };
 
     if (rows.isEmpty) {
@@ -899,7 +903,8 @@ class ImportDataRepository {
     void Function(
       WriteBatch writeBatch,
       QueryDocumentSnapshot<Map<String, dynamic>> doc,
-    ) apply,
+    )
+    apply,
   ) async {
     const maxOps = 450;
     for (var i = 0; i < docs.length; i += maxOps) {
@@ -958,11 +963,13 @@ class ImportDataRepository {
     final existing = <String>{};
     final keys = requestedKeys.toList(growable: false);
     for (var i = 0; i < keys.length; i += _whereInLimit) {
-      final end =
-          (i + _whereInLimit > keys.length) ? keys.length : i + _whereInLimit;
+      final end = (i + _whereInLimit > keys.length)
+          ? keys.length
+          : i + _whereInLimit;
       final chunk = keys.sublist(i, end);
-      final snapshot =
-          await _externalPlaces.where('dedupeKey', whereIn: chunk).get();
+      final snapshot = await _externalPlaces
+          .where('dedupeKey', whereIn: chunk)
+          .get();
       for (final doc in snapshot.docs) {
         final dedupeKey = doc.data()['dedupeKey']?.toString();
         if (dedupeKey != null && dedupeKey.isNotEmpty) {
@@ -975,7 +982,7 @@ class ImportDataRepository {
   }
 
   Future<Map<String, QueryDocumentSnapshot<Map<String, dynamic>>>>
-      _fetchMerchantsByIds(Set<String> merchantIds) async {
+  _fetchMerchantsByIds(Set<String> merchantIds) async {
     if (merchantIds.isEmpty) {
       return const <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
     }
@@ -983,8 +990,9 @@ class ImportDataRepository {
     final result = <String, QueryDocumentSnapshot<Map<String, dynamic>>>{};
     final ids = merchantIds.toList(growable: false);
     for (var i = 0; i < ids.length; i += _whereInLimit) {
-      final end =
-          (i + _whereInLimit > ids.length) ? ids.length : i + _whereInLimit;
+      final end = (i + _whereInLimit > ids.length)
+          ? ids.length
+          : i + _whereInLimit;
       final chunk = ids.sublist(i, end);
       final snapshot = await _firestore
           .collection('merchants')

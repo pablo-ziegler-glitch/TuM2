@@ -71,8 +71,10 @@ class _ImportResultScreenState extends State<ImportResultScreen>
                     color: AppColors.neutral400,
                   ),
                   const SizedBox(height: 16),
-                  Text('Importacion no encontrada',
-                      style: AppTextStyles.headingSm),
+                  Text(
+                    'Importacion no encontrada',
+                    style: AppTextStyles.headingSm,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'ID de batch: ${widget.batchId}',
@@ -199,8 +201,9 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         if (batch.status == ImportBatchStatus.completed ||
             batch.status == ImportBatchStatus.hidden)
           OutlinedButton.icon(
-            onPressed:
-                _isReverting ? null : () => _showRevertDialog(context, batch),
+            onPressed: _isReverting
+                ? null
+                : () => _showRevertDialog(context, batch),
             icon: const Icon(Icons.undo, size: 15),
             label: Text(_isReverting ? 'Revirtiendo...' : 'Revertir'),
             style: OutlinedButton.styleFrom(
@@ -665,8 +668,9 @@ class _TimelineRow extends StatelessWidget {
                   child: Icon(
                     event.result ? Icons.check : Icons.close,
                     size: 13,
-                    color:
-                        event.result ? AppColors.successFg : AppColors.errorFg,
+                    color: event.result
+                        ? AppColors.successFg
+                        : AppColors.errorFg,
                   ),
                 ),
                 if (!isLast)
@@ -787,50 +791,50 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, bg, label) = switch (status) {
       ImportBatchStatus.completed => (
-          AppColors.successFg,
-          AppColors.successFg.withValues(alpha: 0.1),
-          'Completado',
-        ),
+        AppColors.successFg,
+        AppColors.successFg.withValues(alpha: 0.1),
+        'Completado',
+      ),
       ImportBatchStatus.running => (
-          AppColors.primary500,
-          AppColors.primary500.withValues(alpha: 0.1),
-          'En proceso',
-        ),
+        AppColors.primary500,
+        AppColors.primary500.withValues(alpha: 0.1),
+        'En proceso',
+      ),
       ImportBatchStatus.failed => (
-          AppColors.errorFg,
-          AppColors.errorFg.withValues(alpha: 0.1),
-          'Fallido',
-        ),
+        AppColors.errorFg,
+        AppColors.errorFg.withValues(alpha: 0.1),
+        'Fallido',
+      ),
       ImportBatchStatus.hidden => (
-          AppColors.neutral500,
-          AppColors.neutral200,
-          'En staging',
-        ),
+        AppColors.neutral500,
+        AppColors.neutral200,
+        'En staging',
+      ),
       ImportBatchStatus.rolledBack => (
-          AppColors.warningFg,
-          AppColors.warningFg.withValues(alpha: 0.1),
-          'Revertido',
-        ),
+        AppColors.warningFg,
+        AppColors.warningFg.withValues(alpha: 0.1),
+        'Revertido',
+      ),
       ImportBatchStatus.validated => (
-          AppColors.secondary500,
-          AppColors.secondary500.withValues(alpha: 0.1),
-          'Validado',
-        ),
+        AppColors.secondary500,
+        AppColors.secondary500.withValues(alpha: 0.1),
+        'Validado',
+      ),
       ImportBatchStatus.partial => (
-          AppColors.warningFg,
-          AppColors.warningFg.withValues(alpha: 0.1),
-          'Parcial',
-        ),
+        AppColors.warningFg,
+        AppColors.warningFg.withValues(alpha: 0.1),
+        'Parcial',
+      ),
       ImportBatchStatus.draft => (
-          AppColors.neutral500,
-          AppColors.neutral100,
-          'En cola',
-        ),
+        AppColors.neutral500,
+        AppColors.neutral100,
+        'En cola',
+      ),
       ImportBatchStatus.archived => (
-          AppColors.neutral400,
-          AppColors.neutral100,
-          'Archivado',
-        ),
+        AppColors.neutral400,
+        AppColors.neutral100,
+        'Archivado',
+      ),
     };
 
     return Container(
@@ -951,8 +955,9 @@ class _IssueTableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCritical = error.severity == ImportIssueSeverity.critical;
     final isError = error.severity == ImportIssueSeverity.error;
-    final color =
-        isCritical || isError ? AppColors.errorFg : AppColors.warningFg;
+    final color = isCritical || isError
+        ? AppColors.errorFg
+        : AppColors.warningFg;
 
     return Column(
       children: [

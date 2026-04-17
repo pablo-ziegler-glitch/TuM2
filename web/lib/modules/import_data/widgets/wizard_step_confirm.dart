@@ -120,8 +120,9 @@ class WizardStepConfirm extends StatelessWidget {
                             (m) => _SummaryRow(
                               label: m.csvColumn,
                               value: m.enabled ? m.tum2Field : 'Desactivado',
-                              valueColor:
-                                  m.enabled ? null : AppColors.neutral400,
+                              valueColor: m.enabled
+                                  ? null
+                                  : AppColors.neutral400,
                             ),
                           )
                           .toList(),

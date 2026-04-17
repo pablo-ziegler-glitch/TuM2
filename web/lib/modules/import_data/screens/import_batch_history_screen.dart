@@ -257,8 +257,9 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
-          onPressed:
-              _currentPage > 1 ? () => setState(() => _currentPage--) : null,
+          onPressed: _currentPage > 1
+              ? () => setState(() => _currentPage--)
+              : null,
           icon: const Icon(Icons.chevron_left, size: 18),
           style: IconButton.styleFrom(foregroundColor: AppColors.neutral600),
         ),
@@ -310,10 +311,12 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
     if (batches.isEmpty) {
       return const SizedBox.shrink();
     }
-    final completed =
-        batches.where((b) => b.status == ImportBatchStatus.completed).length;
-    final failed =
-        batches.where((b) => b.status == ImportBatchStatus.failed).length;
+    final completed = batches
+        .where((b) => b.status == ImportBatchStatus.completed)
+        .length;
+    final failed = batches
+        .where((b) => b.status == ImportBatchStatus.failed)
+        .length;
     final totalRows = batches.fold<int>(0, (sum, b) => sum + b.processedCount);
     final totalConflicts = batches.fold<int>(
       0,
@@ -421,16 +424,18 @@ class _FilterChip extends StatelessWidget {
               value ?? label,
               style: AppTextStyles.labelSm.copyWith(
                 fontSize: 12,
-                color:
-                    value != null ? AppColors.primary500 : AppColors.neutral600,
+                color: value != null
+                    ? AppColors.primary500
+                    : AppColors.neutral600,
               ),
             ),
             const SizedBox(width: 4),
             Icon(
               Icons.expand_more,
               size: 14,
-              color:
-                  value != null ? AppColors.primary500 : AppColors.neutral400,
+              color: value != null
+                  ? AppColors.primary500
+                  : AppColors.neutral400,
             ),
           ],
         ),
@@ -604,50 +609,50 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (color, bg, label) = switch (status) {
       ImportBatchStatus.completed => (
-          AppColors.successFg,
-          AppColors.successFg.withValues(alpha: 0.1),
-          'Completado',
-        ),
+        AppColors.successFg,
+        AppColors.successFg.withValues(alpha: 0.1),
+        'Completado',
+      ),
       ImportBatchStatus.running => (
-          AppColors.primary500,
-          AppColors.primary500.withValues(alpha: 0.1),
-          'En proceso',
-        ),
+        AppColors.primary500,
+        AppColors.primary500.withValues(alpha: 0.1),
+        'En proceso',
+      ),
       ImportBatchStatus.failed => (
-          AppColors.errorFg,
-          AppColors.errorFg.withValues(alpha: 0.1),
-          'Fallido',
-        ),
+        AppColors.errorFg,
+        AppColors.errorFg.withValues(alpha: 0.1),
+        'Fallido',
+      ),
       ImportBatchStatus.hidden => (
-          AppColors.neutral500,
-          AppColors.neutral200,
-          'En staging',
-        ),
+        AppColors.neutral500,
+        AppColors.neutral200,
+        'En staging',
+      ),
       ImportBatchStatus.rolledBack => (
-          AppColors.warningFg,
-          AppColors.warningFg.withValues(alpha: 0.1),
-          'Revertido',
-        ),
+        AppColors.warningFg,
+        AppColors.warningFg.withValues(alpha: 0.1),
+        'Revertido',
+      ),
       ImportBatchStatus.validated => (
-          AppColors.secondary500,
-          AppColors.secondary500.withValues(alpha: 0.1),
-          'Validado',
-        ),
+        AppColors.secondary500,
+        AppColors.secondary500.withValues(alpha: 0.1),
+        'Validado',
+      ),
       ImportBatchStatus.partial => (
-          AppColors.warningFg,
-          AppColors.warningFg.withValues(alpha: 0.1),
-          'Parcial',
-        ),
+        AppColors.warningFg,
+        AppColors.warningFg.withValues(alpha: 0.1),
+        'Parcial',
+      ),
       ImportBatchStatus.draft => (
-          AppColors.neutral500,
-          AppColors.neutral100,
-          'En cola',
-        ),
+        AppColors.neutral500,
+        AppColors.neutral100,
+        'En cola',
+      ),
       ImportBatchStatus.archived => (
-          AppColors.neutral400,
-          AppColors.neutral100,
-          'Archivado',
-        ),
+        AppColors.neutral400,
+        AppColors.neutral100,
+        'Archivado',
+      ),
     };
 
     return Container(

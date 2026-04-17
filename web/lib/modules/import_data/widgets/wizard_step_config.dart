@@ -247,8 +247,9 @@ class _MappingRow extends StatelessWidget {
             child: Icon(
               Icons.arrow_forward,
               size: 16,
-              color:
-                  mapping.enabled ? AppColors.neutral600 : AppColors.neutral300,
+              color: mapping.enabled
+                  ? AppColors.neutral600
+                  : AppColors.neutral300,
             ),
           ),
           // Campo TuM2
@@ -469,8 +470,8 @@ class _ConfidenceBar extends StatelessWidget {
     final color = confidence >= 0.9
         ? AppColors.successFg
         : confidence >= 0.7
-            ? AppColors.warningFg
-            : AppColors.errorFg;
+        ? AppColors.warningFg
+        : AppColors.errorFg;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,7 +562,9 @@ class _SourceInsightPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ...mappings.where((m) => m.sampleValue != null && m.enabled).map(
+          ...mappings
+              .where((m) => m.sampleValue != null && m.enabled)
+              .map(
                 (m) => Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Column(

@@ -39,10 +39,10 @@ class WizardStepConfirm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Confirm Import', style: AppTextStyles.headingSm),
+        Text('Confirmar importacion', style: AppTextStyles.headingSm),
         const SizedBox(height: 4),
         Text(
-          'Review the full configuration before starting the import process.',
+          'Revisa la configuracion completa antes de iniciar el proceso de importacion.',
           style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
         ),
         const SizedBox(height: 24),
@@ -56,55 +56,55 @@ class WizardStepConfirm extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _SectionCard(
-                    title: 'Import Configuration',
+                    title: 'Configuracion de importacion',
                     icon: Icons.settings_outlined,
                     children: [
                       _SummaryRow(
-                        label: 'Import Type',
+                        label: 'Tipo de importacion',
                         value: importType.label,
                       ),
                       _SummaryRow(
                         label: 'Template',
-                        value: templateName ?? 'Custom Schema',
+                        value: templateName ?? 'Esquema personalizado',
                       ),
                       _SummaryRow(
-                        label: 'Zone / Source',
+                        label: 'Zona / fuente',
                         value: zone.isEmpty ? '—' : zone,
                       ),
                       _SummaryRow(
-                        label: 'File',
-                        value: fileName ?? 'No file selected',
+                        label: 'Archivo',
+                        value: fileName ?? 'Sin archivo seleccionado',
                       ),
                       _SummaryRow(
-                        label: 'Deduplication',
-                        value: deduplicationEnabled ? 'Enabled' : 'Disabled',
+                        label: 'Deduplicacion',
+                        value: deduplicationEnabled ? 'Activa' : 'Desactivada',
                       ),
                       _SummaryRow(
-                        label: 'Visibility after import',
+                        label: 'Visibilidad despues de importar',
                         value: visibilityAfterImport == 'visible'
-                            ? 'Public'
-                            : 'Hidden (staging)',
+                            ? 'Publica'
+                            : 'Oculto (staging)',
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   _SectionCard(
-                    title: 'Validation Summary',
+                    title: 'Resumen de validacion',
                     icon: Icons.fact_check_outlined,
                     children: [
-                      _SummaryRow(label: 'Total rows', value: '$totalRows'),
+                      _SummaryRow(label: 'Filas totales', value: '$totalRows'),
                       _SummaryRow(
-                        label: 'Valid rows',
+                        label: 'Filas validas',
                         value: '$validRows',
                         valueColor: AppColors.successFg,
                       ),
                       _SummaryRow(
-                        label: 'Warning rows',
+                        label: 'Filas con advertencias',
                         value: '$warningRows',
                         valueColor: AppColors.warningFg,
                       ),
                       _SummaryRow(
-                        label: 'Error rows (skipped)',
+                        label: 'Filas con error (omitidas)',
                         value: '$errorRows',
                         valueColor: AppColors.errorFg,
                       ),
@@ -113,13 +113,13 @@ class WizardStepConfirm extends StatelessWidget {
                   if (fieldMappings.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     _SectionCard(
-                      title: 'Field Mappings',
+                      title: 'Mapeos de campos',
                       icon: Icons.compare_arrows_outlined,
                       children: fieldMappings
                           .map(
                             (m) => _SummaryRow(
                               label: m.csvColumn,
-                              value: m.enabled ? m.tum2Field : 'Disabled',
+                              value: m.enabled ? m.tum2Field : 'Desactivado',
                               valueColor:
                                   m.enabled ? null : AppColors.neutral400,
                             ),
@@ -178,7 +178,7 @@ class WizardStepConfirm extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                hasIssues ? 'Ready with warnings' : 'Ready to import',
+                hasIssues ? 'Lista con advertencias' : 'Lista para importar',
                 style: AppTextStyles.labelMd.copyWith(fontSize: 13),
               ),
             ],
@@ -186,8 +186,8 @@ class WizardStepConfirm extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             hasIssues
-                ? '$validRows rows will be imported. $errorRows rows will be skipped due to validation errors.'
-                : 'All $validRows rows passed validation and are ready for staging.',
+                ? '$validRows filas se importaran. $errorRows filas se omitiran por errores de validacion.'
+                : 'Las $validRows filas validas quedaron listas para pasar a staging.',
             style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600),
           ),
         ],
@@ -197,10 +197,10 @@ class WizardStepConfirm extends StatelessWidget {
 
   Widget _buildPipelineInfo() {
     const stages = [
-      ('Parse & Normalize', Icons.transform_outlined),
-      ('Deduplicate', Icons.merge_type_outlined),
-      ('Stage to Firestore', Icons.storage_outlined),
-      ('Audit Log Entry', Icons.history_outlined),
+      ('Parsear y normalizar', Icons.transform_outlined),
+      ('Deduplicar', Icons.merge_type_outlined),
+      ('Enviar a Firestore', Icons.storage_outlined),
+      ('Registrar auditoria', Icons.history_outlined),
     ];
 
     return Container(
@@ -214,7 +214,7 @@ class WizardStepConfirm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Pipeline Steps',
+            'Pasos del proceso',
             style: AppTextStyles.labelMd.copyWith(
               fontSize: 12,
               color: AppColors.neutral500,

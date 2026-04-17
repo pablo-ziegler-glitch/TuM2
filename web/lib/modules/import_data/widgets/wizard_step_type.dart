@@ -20,17 +20,18 @@ class WizardStepType extends StatelessWidget {
       type: ImportType.officialDataset,
       icon: Icons.source_outlined,
       examples:
-          'REPES pharmacies, public WiFi, municipal markets, neighborhood clubs',
+          'Farmacias REPES, WiFi publico, mercados municipales y clubes de barrio',
     ),
     _TypeItem(
       type: ImportType.masterCatalog,
       icon: Icons.inventory_2_outlined,
-      examples: 'Product barcodes, brand names, categories, GTINs',
+      examples: 'Codigos de barras, marcas, categorias y GTIN',
     ),
     _TypeItem(
       type: ImportType.genericInternal,
       icon: Icons.tune_outlined,
-      examples: 'Manual exports, partner data, one-off custom imports',
+      examples:
+          'Exportaciones manuales, datos de partners e importaciones puntuales',
     ),
   ];
 
@@ -39,10 +40,13 @@ class WizardStepType extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Select Import Type', style: AppTextStyles.headingSm),
+        Text(
+          'Selecciona el tipo de importacion',
+          style: AppTextStyles.headingSm,
+        ),
         const SizedBox(height: 4),
         Text(
-          'Choose the type of data you want to import. Each type uses a different schema, validation profile and deduplication strategy.',
+          'Elegi el tipo de datos que queres importar. Cada tipo usa un esquema, un perfil de validacion y una estrategia de deduplicacion distintos.',
           style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
         ),
         const SizedBox(height: 28),
@@ -99,11 +103,11 @@ class WizardStepType extends StatelessWidget {
 
   String _helpText(ImportType type) => switch (type) {
         ImportType.officialDataset =>
-          'Official Datasets use name + geohash deduplication. Records will be staged as hidden and require a Publish action before becoming public.',
+          'Los datasets oficiales usan deduplicacion por nombre + geohash. Los registros quedan en staging oculto y requieren publicacion manual antes de quedar visibles.',
         ImportType.masterCatalog =>
-          'Master Catalog uses barcode + name + brand deduplication. Conflicts are flagged for merge review before consolidation.',
+          'El catalogo maestro usa deduplicacion por codigo de barras + nombre + marca. Los conflictos se marcan para revision antes de consolidar.',
         ImportType.genericInternal =>
-          'Generic sources use configurable deduplication. You will define the key fields in the Mapping step.',
+          'Las fuentes genericas usan una deduplicacion configurable. Vas a definir los campos clave en el paso de mapeo.',
       };
 }
 
@@ -200,7 +204,7 @@ class _TypeCardState extends State<_TypeCard> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Examples:',
+                'Ejemplos:',
                 style: AppTextStyles.bodyXs.copyWith(
                   color: AppColors.neutral400,
                   fontWeight: FontWeight.w600,
@@ -230,7 +234,9 @@ class _TypeCardState extends State<_TypeCard> {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     textStyle: AppTextStyles.labelSm,
                   ),
-                  child: Text(widget.isSelected ? 'Selected' : 'Select'),
+                  child: Text(
+                    widget.isSelected ? 'Seleccionado' : 'Seleccionar',
+                  ),
                 ),
               ),
             ],

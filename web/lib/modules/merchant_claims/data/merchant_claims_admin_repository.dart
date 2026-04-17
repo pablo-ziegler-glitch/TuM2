@@ -42,14 +42,14 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
 
   String get label {
     return switch (this) {
-      MerchantClaimStatus.draft => 'Draft',
-      MerchantClaimStatus.submitted => 'Submitted',
-      MerchantClaimStatus.underReview => 'Under review',
-      MerchantClaimStatus.needsMoreInfo => 'Needs more info',
-      MerchantClaimStatus.approved => 'Approved',
-      MerchantClaimStatus.rejected => 'Rejected',
-      MerchantClaimStatus.duplicateClaim => 'Duplicate',
-      MerchantClaimStatus.conflictDetected => 'Conflict',
+      MerchantClaimStatus.draft => 'Borrador',
+      MerchantClaimStatus.submitted => 'Enviado',
+      MerchantClaimStatus.underReview => 'En revision',
+      MerchantClaimStatus.needsMoreInfo => 'Requiere mas informacion',
+      MerchantClaimStatus.approved => 'Aprobado',
+      MerchantClaimStatus.rejected => 'Rechazado',
+      MerchantClaimStatus.duplicateClaim => 'Duplicado',
+      MerchantClaimStatus.conflictDetected => 'Conflicto',
     };
   }
 }

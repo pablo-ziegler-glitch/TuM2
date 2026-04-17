@@ -44,7 +44,7 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/dashboard',
           builder: (context, state) => const _PlaceholderScreen(
-            label: 'Dashboard',
+            label: 'Panel',
             description: 'Panel principal de métricas',
             storyCardId: 'TuM2-0084',
           ),
@@ -96,7 +96,7 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/templates',
           builder: (context, state) => const _PlaceholderScreen(
-            label: 'Templates',
+            label: 'Plantillas',
             description: 'Plantillas de importación y mapeo de campos',
             storyCardId: 'TuM2-xxxx',
           ),
@@ -104,7 +104,7 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/analytics',
           builder: (context, state) => const _PlaceholderScreen(
-            label: 'Analytics',
+            label: 'Analitica',
             description: 'Analítica de importaciones y calidad de datos',
             storyCardId: 'TuM2-0084',
           ),
@@ -112,7 +112,7 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/settings',
           builder: (context, state) => const _PlaceholderScreen(
-            label: 'Settings',
+            label: 'Configuracion',
             description: 'Configuración del panel admin',
             storyCardId: 'TuM2-xxxx',
           ),

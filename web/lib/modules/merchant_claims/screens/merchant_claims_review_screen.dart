@@ -120,8 +120,9 @@ class _MerchantClaimsReviewScreenState
               zone.departmentName.trim() == targetDepartment,
         )
         .toList(growable: false);
-    values
-        .sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
+    values.sort(
+      (a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()),
+    );
     return values;
   }
 
@@ -385,10 +386,7 @@ class _MerchantClaimsReviewScreenState
     final claimId = _selectedClaimId;
     if (claimId == null || _runningAction) return;
     if (_revealFields.isEmpty) {
-      _showSnack(
-        'Seleccioná al menos un campo para revelar.',
-        isError: true,
-      );
+      _showSnack('Seleccioná al menos un campo para revelar.', isError: true);
       return;
     }
     final reason = _revealReasonController.text.trim();
@@ -574,10 +572,9 @@ class _MerchantClaimsReviewScreenState
           children: [
             Text(
               'CONSOLA DE AUDITORÍA',
-              style: _labelStyle(color: AppColors.primary600).copyWith(
-                letterSpacing: 1.1,
-                fontWeight: FontWeight.w700,
-              ),
+              style: _labelStyle(
+                color: AppColors.primary600,
+              ).copyWith(letterSpacing: 1.1, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 2),
             Text(
@@ -611,13 +608,17 @@ class _MerchantClaimsReviewScreenState
                 final query = raw.trim();
                 if (query.isEmpty) return;
                 final match = _claims
-                    .where((item) => item.claimId
-                        .toLowerCase()
-                        .contains(query.toLowerCase()))
+                    .where(
+                      (item) => item.claimId.toLowerCase().contains(
+                            query.toLowerCase(),
+                          ),
+                    )
                     .toList(growable: false);
                 if (match.isEmpty) {
-                  _showSnack('No encontramos ese reclamo en la cola actual.',
-                      isError: true);
+                  _showSnack(
+                    'No encontramos ese reclamo en la cola actual.',
+                    isError: true,
+                  );
                   return;
                 }
                 _loadDetail(match.first.claimId);
@@ -678,10 +679,7 @@ class _MerchantClaimsReviewScreenState
             children: [
               Text(
                 detail.claimId,
-                style: _headlineStyle(
-                  size: 23,
-                  letterSpacing: 0.2,
-                ),
+                style: _headlineStyle(size: 23, letterSpacing: 0.2),
               ),
               const SizedBox(width: 8),
               _StatusBadge(
@@ -725,20 +723,26 @@ class _MerchantClaimsReviewScreenState
 
   Widget _buildTriageMetrics() {
     final highRisk = _claims
-        .where((item) =>
-            item.hasConflict ||
-            item.hasDuplicate ||
-            item.riskPriority == 'high' ||
-            item.riskPriority == 'critical')
+        .where(
+          (item) =>
+              item.hasConflict ||
+              item.hasDuplicate ||
+              item.riskPriority == 'high' ||
+              item.riskPriority == 'critical',
+        )
         .length;
     final needInfo = _claims
-        .where((item) =>
-            item.claimStatus == MerchantClaimStatus.needsMoreInfo ||
-            item.autoValidationReasons.contains('missing_storefront_photo') ||
-            item.autoValidationReasons
-                .contains('missing_basic_relationship_document') ||
-            item.autoValidationReasons
-                .contains('missing_category_required_evidence'))
+        .where(
+          (item) =>
+              item.claimStatus == MerchantClaimStatus.needsMoreInfo ||
+              item.autoValidationReasons.contains('missing_storefront_photo') ||
+              item.autoValidationReasons.contains(
+                'missing_basic_relationship_document',
+              ) ||
+              item.autoValidationReasons.contains(
+                'missing_category_required_evidence',
+              ),
+        )
         .length;
     return Row(
       children: [
@@ -767,9 +771,9 @@ class _MerchantClaimsReviewScreenState
                       const SizedBox(height: 4),
                       Text(
                         '${_claims.length}',
-                        style: _headlineStyle(size: 28).copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                        style: _headlineStyle(
+                          size: 28,
+                        ).copyWith(fontWeight: FontWeight.w800),
                       ),
                     ],
                   ),
@@ -844,10 +848,7 @@ class _MerchantClaimsReviewScreenState
         const Icon(Icons.priority_high, color: Colors.white, size: 16),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(
-            text,
-            style: _bodyStyle(color: Colors.white),
-          ),
+          child: Text(text, style: _bodyStyle(color: Colors.white)),
         ),
       ],
     );
@@ -967,7 +968,9 @@ class _MerchantClaimsReviewScreenState
                   dropdownMenuEntries: const [10, 20, 30, 50]
                       .map(
                         (value) => DropdownMenuEntry<int>(
-                            value: value, label: '$value'),
+                          value: value,
+                          label: '$value',
+                        ),
                       )
                       .toList(growable: false),
                   onSelected: (value) {
@@ -1145,10 +1148,7 @@ class _MerchantClaimsReviewScreenState
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              SizedBox(
-                                width: 60,
-                                child: _riskFlag(item),
-                              ),
+                              SizedBox(width: 60, child: _riskFlag(item)),
                               const SizedBox(width: 10),
                               SizedBox(
                                 width: 140,
@@ -1220,25 +1220,13 @@ class _MerchantClaimsReviewScreenState
           ),
           Expanded(child: Text('Comercio', style: _labelStyle())),
           const SizedBox(width: 10),
-          SizedBox(
-            width: 170,
-            child: Text('Zona', style: _labelStyle()),
-          ),
+          SizedBox(width: 170, child: Text('Zona', style: _labelStyle())),
           const SizedBox(width: 10),
-          SizedBox(
-            width: 95,
-            child: Text('Estado', style: _labelStyle()),
-          ),
+          SizedBox(width: 95, child: Text('Estado', style: _labelStyle())),
           const SizedBox(width: 10),
-          SizedBox(
-            width: 70,
-            child: Text('Categoría', style: _labelStyle()),
-          ),
+          SizedBox(width: 70, child: Text('Categoría', style: _labelStyle())),
           const SizedBox(width: 10),
-          SizedBox(
-            width: 60,
-            child: Text('Riesgo', style: _labelStyle()),
-          ),
+          SizedBox(width: 60, child: Text('Riesgo', style: _labelStyle())),
           const SizedBox(width: 10),
           SizedBox(
             width: 140,
@@ -1254,10 +1242,7 @@ class _MerchantClaimsReviewScreenState
             ),
           ),
           const SizedBox(width: 10),
-          SizedBox(
-            width: 70,
-            child: Text('Acción', style: _labelStyle()),
-          ),
+          SizedBox(width: 70, child: Text('Acción', style: _labelStyle())),
         ],
       ),
     );
@@ -1271,15 +1256,24 @@ class _MerchantClaimsReviewScreenState
         item.claimStatus == MerchantClaimStatus.needsMoreInfo ||
         item.riskPriority == 'medium';
     if (high) {
-      return const Icon(Icons.warning_amber_rounded,
-          color: AppColors.errorFg, size: 16);
+      return const Icon(
+        Icons.warning_amber_rounded,
+        color: AppColors.errorFg,
+        size: 16,
+      );
     }
     if (medium) {
-      return const Icon(Icons.error_outline,
-          color: AppColors.warningFg, size: 16);
+      return const Icon(
+        Icons.error_outline,
+        color: AppColors.warningFg,
+        size: 16,
+      );
     }
-    return const Icon(Icons.check_circle_outline,
-        color: AppColors.secondary500, size: 16);
+    return const Icon(
+      Icons.check_circle_outline,
+      color: AppColors.secondary500,
+      size: 16,
+    );
   }
 
   String _maskIdentity(String raw) {
@@ -1367,8 +1361,10 @@ class _MerchantClaimsReviewScreenState
                     children: [
                       Text(
                         'Panel de investigación',
-                        style:
-                            _headlineStyle(size: 17, weight: FontWeight.w700),
+                        style: _headlineStyle(
+                          size: 17,
+                          weight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       _StatusBadge(
@@ -1392,15 +1388,19 @@ class _MerchantClaimsReviewScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _kv('ID de reclamo', detail.claimId),
-                        _kv('Comercio',
-                            detail.merchantName ?? detail.merchantId),
+                        _kv(
+                          'Comercio',
+                          detail.merchantName ?? detail.merchantId,
+                        ),
                         _kv('Solicitante', _maskIdentity(detail.userId)),
                         _kv('Zona/Ciudad', _zoneLabel(detail.zoneId ?? '-')),
                         _kv('Categoría', detail.categoryId ?? '-'),
                         _kv('Rol declarado', detail.declaredRole ?? '-'),
                         _kv('Estado (interno)', detail.claimStatus.apiValue),
-                        _kv('Flujo interno',
-                            detail.internalWorkflowStatus ?? '-'),
+                        _kv(
+                          'Flujo interno',
+                          detail.internalWorkflowStatus ?? '-',
+                        ),
                       ],
                     ),
                   ),
@@ -1418,8 +1418,10 @@ class _MerchantClaimsReviewScreenState
                           'Documento de titularidad',
                           detail.ownershipDocumentUploaded ? 'Sí' : 'No',
                         ),
-                        _kv('Archivos de evidencia',
-                            '${detail.evidenceFiles.length}'),
+                        _kv(
+                          'Archivos de evidencia',
+                          '${detail.evidenceFiles.length}',
+                        ),
                         _kv(
                           'Consentimiento de datos',
                           detail.hasAcceptedDataProcessingConsent ? 'Sí' : 'No',
@@ -1461,8 +1463,10 @@ class _MerchantClaimsReviewScreenState
                               ? '-'
                               : detail.autoValidationReasons.join(', '),
                         ),
-                        _kv('Tiene conflicto',
-                            detail.hasConflict ? 'Sí' : 'No'),
+                        _kv(
+                          'Tiene conflicto',
+                          detail.hasConflict ? 'Sí' : 'No',
+                        ),
                         _kv(
                           'Tiene duplicado',
                           detail.hasDuplicate ? 'Sí' : 'No',
@@ -1489,10 +1493,14 @@ class _MerchantClaimsReviewScreenState
                           detail.reviewQueuePriority?.toString() ?? '-',
                         ),
                         _kv('Tipo de conflicto', detail.conflictType ?? '-'),
-                        _kv('Duplicado de reclamo',
-                            detail.duplicateOfClaimId ?? '-'),
-                        _kv('Motivo de revisión',
-                            detail.reviewReasonCode ?? '-'),
+                        _kv(
+                          'Duplicado de reclamo',
+                          detail.duplicateOfClaimId ?? '-',
+                        ),
+                        _kv(
+                          'Motivo de revisión',
+                          detail.reviewReasonCode ?? '-',
+                        ),
                         _kv('Notas de revisión', detail.reviewNotes ?? '-'),
                         _kv('Revisado por', detail.reviewedByUid ?? '-'),
                       ],
@@ -1522,8 +1530,10 @@ class _MerchantClaimsReviewScreenState
               ),
             );
 
-            final verdictPanel =
-                _buildAuditorsVerdictPanel(detail, compact: compact);
+            final verdictPanel = _buildAuditorsVerdictPanel(
+              detail,
+              compact: compact,
+            );
             if (compact) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1587,8 +1597,10 @@ class _MerchantClaimsReviewScreenState
           ),
         ),
         const SizedBox(height: 14),
-        Text('Estado de resolución',
-            style: _labelStyle(weight: FontWeight.w600)),
+        Text(
+          'Estado de resolución',
+          style: _labelStyle(weight: FontWeight.w600),
+        ),
         const SizedBox(height: 6),
         DropdownMenu<MerchantClaimStatus>(
           initialSelection: _resolveTargetStatus,
@@ -1802,10 +1814,7 @@ class _MerchantClaimsReviewScreenState
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: _bodyStyle(color: AppColors.neutral900),
-            ),
+            child: Text(value, style: _bodyStyle(color: AppColors.neutral900)),
           ),
         ],
       ),

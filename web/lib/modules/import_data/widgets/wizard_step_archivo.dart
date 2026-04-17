@@ -48,26 +48,24 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
   String? _province;
 
   List<String> get _countries {
-    final countries =
-        widget.zoneOptions
-            .map((zone) => zone.countryName.trim())
-            .where((country) => country.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final countries = widget.zoneOptions
+        .map((zone) => zone.countryName.trim())
+        .where((country) => country.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     if (countries.isEmpty) return const ['Argentina'];
     return countries;
   }
 
   List<String> get _provinces {
-    final provinces =
-        widget.zoneOptions
-            .where((zone) => zone.countryName == _country)
-            .map((zone) => zone.provinceName.trim())
-            .where((province) => province.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final provinces = widget.zoneOptions
+        .where((zone) => zone.countryName == _country)
+        .map((zone) => zone.provinceName.trim())
+        .where((province) => province.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     return provinces;
   }
 
@@ -77,10 +75,12 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
       if (!sameCountry) return false;
       if (_province == null || _province!.isEmpty) return true;
       return zone.provinceName == _province;
-    }).toList()..sort(
-      (a, b) =>
-          a.localityName.toLowerCase().compareTo(b.localityName.toLowerCase()),
-    );
+    }).toList()
+      ..sort(
+        (a, b) => a.localityName
+            .toLowerCase()
+            .compareTo(b.localityName.toLowerCase()),
+      );
   }
 
   @override
@@ -118,13 +118,12 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
     );
     if (argentina.isNotEmpty) {
       _country = 'Argentina';
-      final provinces =
-          argentina
-              .map((zone) => zone.provinceName.trim())
-              .where((province) => province.isNotEmpty)
-              .toSet()
-              .toList()
-            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      final provinces = argentina
+          .map((zone) => zone.provinceName.trim())
+          .where((province) => province.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
       _province = provinces.isEmpty ? null : provinces.first;
       return;
     }
@@ -220,9 +219,8 @@ class _WizardStepArchivoState extends State<WizardStepArchivo> {
                               setState(() {
                                 _country = country;
                                 final provinces = _provinces;
-                                _province = provinces.isEmpty
-                                    ? null
-                                    : provinces.first;
+                                _province =
+                                    provinces.isEmpty ? null : provinces.first;
                               });
                               final localities = _localities;
                               widget.onZoneChanged(

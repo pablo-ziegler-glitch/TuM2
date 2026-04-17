@@ -290,8 +290,8 @@ class MerchantClaimsAdminRepository {
   MerchantClaimsAdminRepository({
     FirebaseFunctions? functions,
     FirebaseFirestore? firestore,
-  }) : _functions = functions ?? FirebaseFunctions.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance;
+  })  : _functions = functions ?? FirebaseFunctions.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFunctions _functions;
   final FirebaseFirestore _firestore;
@@ -362,10 +362,8 @@ class MerchantClaimsAdminRepository {
   }
 
   Future<MerchantClaimDetail> getClaimDetail({required String claimId}) async {
-    final snapshot = await _firestore
-        .collection('merchant_claims')
-        .doc(claimId)
-        .get();
+    final snapshot =
+        await _firestore.collection('merchant_claims').doc(claimId).get();
     if (!snapshot.exists) {
       throw StateError('No encontramos el claim seleccionado.');
     }

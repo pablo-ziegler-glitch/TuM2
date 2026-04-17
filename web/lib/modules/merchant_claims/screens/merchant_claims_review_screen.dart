@@ -229,8 +229,8 @@ class _MerchantClaimsReviewScreenState
     final selectedCityZoneId = _selectedCityZoneId?.trim();
     final selectedZoneId =
         selectedCityZoneId == null || selectedCityZoneId.isEmpty
-        ? null
-        : selectedCityZoneId;
+            ? null
+            : selectedCityZoneId;
 
     try {
       final page = await _claimsRepository.listForReview(
@@ -252,9 +252,8 @@ class _MerchantClaimsReviewScreenState
           (item) => item.claimId == nextSelectedId,
         );
         if (!exists) {
-          nextSelectedId = page.claims.isNotEmpty
-              ? page.claims.first.claimId
-              : null;
+          nextSelectedId =
+              page.claims.isNotEmpty ? page.claims.first.claimId : null;
         }
       }
 
@@ -611,8 +610,8 @@ class _MerchantClaimsReviewScreenState
                 final match = _claims
                     .where(
                       (item) => item.claimId.toLowerCase().contains(
-                        query.toLowerCase(),
-                      ),
+                            query.toLowerCase(),
+                          ),
                     )
                     .toList(growable: false);
                 if (match.isEmpty) {
@@ -813,11 +812,11 @@ class _MerchantClaimsReviewScreenState
                   'ACCIONES PRIORITARIAS',
                   style: _labelStyle(color: Colors.white.withValues(alpha: 0.9))
                       .copyWith(
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.1,
-                      ),
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 _priorityLine('$highRisk de alto riesgo pendientes'),
@@ -901,9 +900,8 @@ class _MerchantClaimsReviewScreenState
                     setState(() {
                       _selectedProvince = value;
                       final departments = _departmentOptions(value);
-                      _selectedDepartment = departments.isEmpty
-                          ? null
-                          : departments.first;
+                      _selectedDepartment =
+                          departments.isEmpty ? null : departments.first;
                       _selectedCityZoneId = null;
                     });
                   },
@@ -1194,9 +1192,8 @@ class _MerchantClaimsReviewScreenState
               child: Align(
                 alignment: Alignment.centerRight,
                 child: OutlinedButton.icon(
-                  onPressed: _loadingQueue
-                      ? null
-                      : () => _loadQueue(reset: false),
+                  onPressed:
+                      _loadingQueue ? null : () => _loadQueue(reset: false),
                   icon: const Icon(Icons.expand_more, size: 16),
                   label: const Text('Cargar más'),
                   style: OutlinedButton.styleFrom(
@@ -1252,12 +1249,10 @@ class _MerchantClaimsReviewScreenState
   }
 
   Widget _riskFlag(MerchantClaimReviewItem item) {
-    final high =
-        item.hasConflict ||
+    final high = item.hasConflict ||
         item.riskPriority == 'critical' ||
         item.riskPriority == 'high';
-    final medium =
-        item.hasDuplicate ||
+    final medium = item.hasDuplicate ||
         item.claimStatus == MerchantClaimStatus.needsMoreInfo ||
         item.riskPriority == 'medium';
     if (high) {

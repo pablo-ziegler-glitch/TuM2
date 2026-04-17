@@ -87,9 +87,8 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
         _config = config;
         _globalLimitController.text = config.defaultProductLimit.toString();
         final categoryLimit = config.categoryLimits[_selectedCategoryId];
-        _categoryLimitController.text = categoryLimit == null
-            ? ''
-            : categoryLimit.toString();
+        _categoryLimitController.text =
+            categoryLimit == null ? '' : categoryLimit.toString();
       });
     } catch (error) {
       if (!mounted) return;
@@ -208,8 +207,7 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
       final response = await _functions
           .httpsCallable('searchCatalogLimitMerchants')
           .call(<String, dynamic>{'query': query, 'limit': 20});
-      final data =
-          (response.data as Map?)?.cast<String, dynamic>() ??
+      final data = (response.data as Map?)?.cast<String, dynamic>() ??
           const <String, dynamic>{};
       final rows = ((data['merchants'] as List?) ?? const <dynamic>[])
           .whereType<Map>()
@@ -220,9 +218,8 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
       if (!mounted) return;
       setState(() {
         _searchRows = rows;
-        _searchMessage = rows.isEmpty
-            ? 'Sin coincidencias para "$query".'
-            : null;
+        _searchMessage =
+            rows.isEmpty ? 'Sin coincidencias para "$query".' : null;
       });
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
@@ -266,9 +263,9 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
                 await _functions
                     .httpsCallable('setMerchantCatalogLimitOverride')
                     .call(<String, dynamic>{
-                      'merchantId': row.merchantId,
-                      'productLimitOverride': limit,
-                    });
+                  'merchantId': row.merchantId,
+                  'productLimitOverride': limit,
+                });
                 if (!context.mounted) return;
                 Navigator.of(context).pop(true);
               } on FirebaseFunctionsException catch (error) {
@@ -399,8 +396,8 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
                               onPressed: saving
                                   ? null
                                   : () => setModalState(
-                                      () => controller.text = '$limit',
-                                    ),
+                                        () => controller.text = '$limit',
+                                      ),
                               child: Text('$limit'),
                             ),
                           )
@@ -512,9 +509,8 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
       (sum, row) => sum + row.effectiveLimit,
     );
     final percent = limit <= 0 ? 0 : ((used / limit) * 100).round();
-    final overThreshold = _searchRows
-        .where((row) => row.usageRatio >= 0.8)
-        .length;
+    final overThreshold =
+        _searchRows.where((row) => row.usageRatio >= 0.8).length;
     return _UsageSnapshot(
       totalUsed: used,
       totalLimit: limit,
@@ -583,8 +579,8 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
                     onPressed: _savingGlobal
                         ? null
                         : () => setState(
-                            () => _globalLimitController.text = '$limit',
-                          ),
+                              () => _globalLimitController.text = '$limit',
+                            ),
                   ),
                 )
                 .toList(growable: false),
@@ -752,9 +748,8 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
                         setState(() {
                           _selectedCategoryId = value;
                           final nextLimit = _config.categoryLimits[value];
-                          _categoryLimitController.text = nextLimit == null
-                              ? ''
-                              : '$nextLimit';
+                          _categoryLimitController.text =
+                              nextLimit == null ? '' : '$nextLimit';
                         });
                       },
               ),
@@ -780,8 +775,9 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
                         onPressed: _savingCategory
                             ? null
                             : () => setState(
-                                () => _categoryLimitController.text = '$limit',
-                              ),
+                                  () =>
+                                      _categoryLimitController.text = '$limit',
+                                ),
                       ),
                     )
                     .toList(growable: false),
@@ -820,65 +816,61 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
           title: 'Listado de categorías',
           subtitle: 'Edición rápida por rubro canónico del MVP.',
           child: Column(
-            children: _kCatalogCategories
-                .map((category) {
-                  final categoryLimit = _config.categoryLimits[category.id];
-                  final usingGlobal = categoryLimit == null;
-                  final displayLimit =
-                      categoryLimit ?? _config.defaultProductLimit;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
+            children: _kCatalogCategories.map((category) {
+              final categoryLimit = _config.categoryLimits[category.id];
+              final usingGlobal = categoryLimit == null;
+              final displayLimit = categoryLimit ?? _config.defaultProductLimit;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.neutral50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary50,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Icon(
+                          category.icon,
+                          size: 18,
+                          color: AppColors.primary700,
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.neutral50,
-                        borderRadius: BorderRadius.circular(10),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          category.label,
+                          style: AppTextStyles.labelMd.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary50,
-                              borderRadius: BorderRadius.circular(9),
-                            ),
-                            child: Icon(
-                              category.icon,
-                              size: 18,
-                              color: AppColors.primary700,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              category.label,
-                              style: AppTextStyles.labelMd.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          _LimitTag(
-                            text: usingGlobal
-                                ? 'Usa global $displayLimit'
-                                : 'Personalizado $displayLimit',
-                            custom: !usingGlobal,
-                          ),
-                          const SizedBox(width: 10),
-                          TextButton(
-                            onPressed: () =>
-                                _selectCategoryForEdition(category.id),
-                            child: const Text('Editar'),
-                          ),
-                        ],
+                      _LimitTag(
+                        text: usingGlobal
+                            ? 'Usa global $displayLimit'
+                            : 'Personalizado $displayLimit',
+                        custom: !usingGlobal,
                       ),
-                    ),
-                  );
-                })
-                .toList(growable: false),
+                      const SizedBox(width: 10),
+                      TextButton(
+                        onPressed: () => _selectCategoryForEdition(category.id),
+                        child: const Text('Editar'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(growable: false),
           ),
         ),
       ],
@@ -890,10 +882,10 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
     final columns = width >= 1440
         ? 4
         : width >= 1180
-        ? 3
-        : width >= 860
-        ? 2
-        : 1;
+            ? 3
+            : width >= 860
+                ? 2
+                : 1;
 
     return Column(
       children: [
@@ -910,10 +902,8 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   SizedBox(
-                    width: math
-                        .min(width - 220, 620)
-                        .clamp(260, 620)
-                        .toDouble(),
+                    width:
+                        math.min(width - 220, 620).clamp(260, 620).toDouble(),
                     child: TextField(
                       controller: _searchController,
                       decoration: const InputDecoration(
@@ -982,8 +972,8 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
                     final progressColor = row.isBlocked
                         ? AppColors.errorFg
                         : row.isWarning
-                        ? AppColors.tertiary500
-                        : AppColors.secondary500;
+                            ? AppColors.tertiary500
+                            : AppColors.secondary500;
                     return Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -1062,10 +1052,10 @@ class _CatalogLimitsScreenState extends State<CatalogLimitsScreen> {
                             row.isBlocked
                                 ? 'Límite alcanzado. Requiere ajuste o reducción de catálogo.'
                                 : row.isWarning
-                                ? 'Cerca del límite operativo.'
-                                : row.overrideLimit != null
-                                ? 'Con override individual activo.'
-                                : 'Hereda límite de categoría/global.',
+                                    ? 'Cerca del límite operativo.'
+                                    : row.overrideLimit != null
+                                        ? 'Con override individual activo.'
+                                        : 'Hereda límite de categoría/global.',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.bodyXs.copyWith(
@@ -1343,8 +1333,8 @@ class _CircularUsage extends StatelessWidget {
               safeValue >= 100
                   ? AppColors.errorFg
                   : safeValue >= 80
-                  ? AppColors.tertiary500
-                  : AppColors.primary500,
+                      ? AppColors.tertiary500
+                      : AppColors.primary500,
             ),
           ),
           Text(
@@ -1530,13 +1520,13 @@ class _StatusChip extends StatelessWidget {
     final Color bg = warning
         ? AppColors.tertiary50
         : neutral
-        ? AppColors.neutral100
-        : AppColors.secondary50;
+            ? AppColors.neutral100
+            : AppColors.secondary50;
     final Color fg = warning
         ? AppColors.tertiary700
         : neutral
-        ? AppColors.neutral700
-        : AppColors.secondary700;
+            ? AppColors.neutral700
+            : AppColors.secondary700;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),

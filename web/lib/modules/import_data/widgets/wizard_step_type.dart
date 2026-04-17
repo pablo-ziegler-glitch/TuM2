@@ -102,13 +102,13 @@ class WizardStepType extends StatelessWidget {
   }
 
   String _helpText(ImportType type) => switch (type) {
-    ImportType.officialDataset =>
-      'Los datasets oficiales usan deduplicacion por nombre + geohash. Los registros quedan en staging oculto y requieren publicacion manual antes de quedar visibles.',
-    ImportType.masterCatalog =>
-      'El catalogo maestro usa deduplicacion por codigo de barras + nombre + marca. Los conflictos se marcan para revision antes de consolidar.',
-    ImportType.genericInternal =>
-      'Las fuentes genericas usan una deduplicacion configurable. Vas a definir los campos clave en el paso de mapeo.',
-  };
+        ImportType.officialDataset =>
+          'Los datasets oficiales usan deduplicacion por nombre + geohash. Los registros quedan en staging oculto y requieren publicacion manual antes de quedar visibles.',
+        ImportType.masterCatalog =>
+          'El catalogo maestro usa deduplicacion por codigo de barras + nombre + marca. Los conflictos se marcan para revision antes de consolidar.',
+        ImportType.genericInternal =>
+          'Las fuentes genericas usan una deduplicacion configurable. Vas a definir los campos clave en el paso de mapeo.',
+      };
 }
 
 class _TypeCard extends StatefulWidget {
@@ -133,8 +133,8 @@ class _TypeCardState extends State<_TypeCard> {
     final borderColor = widget.isSelected
         ? AppColors.primary500
         : _hovered
-        ? AppColors.neutral300
-        : AppColors.neutral200;
+            ? AppColors.neutral300
+            : AppColors.neutral200;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),

@@ -61,11 +61,9 @@ class ImportTemplateService {
       );
     }
 
-    for (
-      var rowIndex = 0;
-      rowIndex < definition.sampleRows.length;
-      rowIndex++
-    ) {
+    for (var rowIndex = 0;
+        rowIndex < definition.sampleRows.length;
+        rowIndex++) {
       final rowData = definition.sampleRows[rowIndex];
       for (var col = 0; col < definition.headers.length; col++) {
         final header = definition.headers[col];

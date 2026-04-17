@@ -9,12 +9,13 @@
 
 ## NOW
 
-### Estado real de ejecución (auditoría 2026-04-16)
+### Estado real de ejecución (auditoría 2026-04-17)
 
 - Fuente canónica de estado: `CLAUDE.md` (regla obligatoria del repo).
-- Snapshot global backlog: **133** tarjetas = **48 DONE**, **8 IN_PROGRESS**, **77 TODO**.
-- Abiertas por prioridad: **P0=35**, **P1=28**, **P2=17**, **P3=5**.
+- Snapshot global backlog: **134** tarjetas = **48 DONE**, **8 IN_PROGRESS**, **78 TODO**.
+- Abiertas por prioridad: **P0=35**, **P1=29**, **P2=17**, **P3=5**.
 - Claims (P0) es el frente principal activo: 0125, 0126, 0127, 0128, 0130, 0131, 0133.
+- Nueva tarjeta documental cargada: 0134 (Modo Selección Argentina + tarjeta pineada), en estado TODO y clasificación MVP+.
 - Evidencia de implementación fuerte en Functions + Mobile para claims; **gap principal**: UI Admin Web de revisión (0128).
 - Drift documental de estados **resuelto** en storycards (alineación aplicada contra `CLAUDE.md` en este corte).
 - Auditoría completa y desglose Backend/Frontend/UX: [docs/ops/AUDITORIA-TARJETAS-2026-04-16.md](/home/pablo/IdeaProjects/TuM2/docs/ops/AUDITORIA-TARJETAS-2026-04-16.md)

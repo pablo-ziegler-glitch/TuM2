@@ -36,6 +36,7 @@ Auditoría incremental de TuM2 orientada a costo mínimo y trazabilidad.
 - `AUDIT_ARTIFACT_RETENTION_DAYS` (default: `30`)
 - `AUDIT_MAX_FILES` (default: `25`)
 - `AUDIT_MAX_INPUT_CHARS` (default: `220000`)
+- `AUDIT_MAX_FULL_FILES` (default: `180`, solo aplica con `AUDIT_FORCE_FULL=true`)
 
 ## Ejecución manual (workflow_dispatch)
 
@@ -51,6 +52,7 @@ Uso recomendado:
 - Si Gemini falla, el pipeline genera artifact con diagnóstico y **no** actualiza `lastAuditedSha`.
 - El estado solo se actualiza cuando la auditoría termina correctamente.
 - Dedupe de issues por fingerprint de hallazgo para evitar ruido.
+- En modo `force_full`, el contexto usa snapshot de archivos (sin diff incremental gigante) para estabilizar JSON y costo.
 
 ## Costo y seguridad
 

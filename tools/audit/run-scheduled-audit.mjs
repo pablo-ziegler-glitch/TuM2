@@ -83,12 +83,13 @@ function safeJsonParse(text) {
   }
 }
 
-function extractBalancedJsonObject(text) {
+function extractBalancedJsonValue(text) {
   if (!text) return null;
   let start = -1;
-  let depth = 0;
+  const stack = [];
   let inString = false;
   let escaped = false;
+
   for (let i = 0; i < text.length; i += 1) {
     const ch = text[i];
     if (inString) {
@@ -105,14 +106,22 @@ function extractBalancedJsonObject(text) {
       inString = true;
       continue;
     }
-    if (ch === '{') {
+    if (ch === '{' || ch === '[') {
       if (start === -1) start = i;
-      depth += 1;
+      stack.push(ch);
       continue;
     }
-    if (ch === '}') {
-      if (depth > 0) depth -= 1;
-      if (depth === 0 && start !== -1) {
+    if (ch === '}' || ch === ']') {
+      if (stack.length === 0) continue;
+      const open = stack[stack.length - 1];
+      const closes = (open === '{' && ch === '}') || (open === '[' && ch === ']');
+      if (!closes) {
+        stack.length = 0;
+        start = -1;
+        continue;
+      }
+      stack.pop();
+      if (stack.length === 0 && start !== -1) {
         const candidate = text.slice(start, i + 1).trim();
         const parsed = safeJsonParse(candidate);
         if (parsed) return parsed;
@@ -128,21 +137,49 @@ function extractJson(text) {
   const direct = safeJsonParse(text);
   if (direct) return direct;
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] ?? text;
-  const balanced = extractBalancedJsonObject(fenced);
+  const balanced = extractBalancedJsonValue(fenced);
   if (balanced) return balanced;
   const repaired = fenced.replace(/,\s*([}\]])/g, '$1').replace(/^\uFEFF/, '').trim();
-  return extractBalancedJsonObject(repaired);
+  return extractBalancedJsonValue(repaired);
+}
+
+function collectGeminiTextCandidates(response) {
+  const texts = [];
+  if (response?.text) texts.push(response.text);
+  const parts = response?.candidates?.flatMap((candidate) => candidate?.content?.parts ?? []) ?? [];
+  for (const part of parts) {
+    if (part?.text) texts.push(part.text);
+  }
+  return texts;
 }
 
 function extractJsonFromGeminiResponse(response) {
-  const fromText = extractJson(response?.text ?? '');
-  if (fromText) return fromText;
-  const parts = response?.candidates?.flatMap((candidate) => candidate?.content?.parts ?? []) ?? [];
-  for (const part of parts) {
-    const parsed = extractJson(part?.text ?? '');
+  for (const text of collectGeminiTextCandidates(response)) {
+    const parsed = extractJson(text);
     if (parsed) return parsed;
   }
   return null;
+}
+
+function compactText(text, maxChars = 220) {
+  return sanitizeText(String(text ?? '')).replace(/\s+/g, ' ').trim().slice(0, maxChars);
+}
+
+function describeGeminiResponse(response) {
+  const candidateCount = response?.candidates?.length ?? 0;
+  const finishReasons = [...new Set((response?.candidates ?? []).map((candidate) => candidate?.finishReason).filter(Boolean))];
+  const finishMessages = (response?.candidates ?? []).map((candidate) => compactText(candidate?.finishMessage)).filter(Boolean).slice(0, 2);
+  const texts = collectGeminiTextCandidates(response);
+  const longestText = texts.reduce((best, current) => (current.length > best.length ? current : best), '');
+  return {
+    candidateCount,
+    finishReasons,
+    finishMessages,
+    blockReason: response?.promptFeedback?.blockReason ?? null,
+    textCount: texts.length,
+    longestTextChars: longestText.length,
+    preview: compactText(longestText),
+  };
 }
 
 function withTimeout(promise, ms, label) {
@@ -158,6 +195,8 @@ function sleep(ms) {
 }
 
 function buildMasterPrompt(input) {
+  const changedFilesSample = input.changedFiles.slice(0, 120);
+  const relatedFilesSample = input.relatedFiles.slice(0, 80);
   return `
 Sos TuM2 Auditor, un Principal Architect obsesivo por detectar fallas antes de producción.
 Auditás cambios incrementales de código de TuM2 con foco en seguridad, costo Firebase, arquitectura, UX resiliente y deuda técnica.
@@ -183,8 +222,10 @@ Inputs:
 - branch: ${input.branch}
 - baseSha: ${input.baseSha}
 - targetSha: ${input.targetSha}
-- changedFiles: ${JSON.stringify(input.changedFiles)}
-- relatedFiles: ${JSON.stringify(input.relatedFiles)}
+- changedFilesCount: ${input.changedFiles.length}
+- changedFilesSample: ${JSON.stringify(changedFilesSample)}
+- relatedFilesCount: ${input.relatedFiles.length}
+- relatedFilesSample: ${JSON.stringify(relatedFilesSample)}
 - changedAreas: ${JSON.stringify(input.changedAreas)}
 - batchDomain: ${input.batchDomain}
 
@@ -201,6 +242,7 @@ Objetivo de auditoría:
 
 Formato obligatorio de hallazgos por item:
 riskLevel, component, title, problem, proposal, technicalRationale, costImpact, sideEffects, affectedFiles, approximateLines, confidence, requiresHumanReview.
+Límites de salida: máximo 12 findings priorizados, quickWins <= 8, productionChecklist <= 8.
 
 Conclusión final permitida: APTO | APTO_CON_OBSERVACIONES | NO_APTO.
 
@@ -220,7 +262,7 @@ targetSha=${targetSha}
 Reportes parciales:
 ${JSON.stringify(reports)}
 
-Salida: JSON estricto con el mismo schema.
+Salida: JSON estricto con el mismo schema. Máximo 15 findings deduplicados.
 `.trim();
 }
 
@@ -234,7 +276,7 @@ async function callGeminiJson({ apiKey, model, prompt, retries = 3, timeoutMs = 
           model,
           contents: prompt,
           config: {
-            temperature: 0.1,
+            temperature: 0,
             responseMimeType: 'application/json',
             responseJsonSchema: AUDIT_REPORT_JSON_SCHEMA,
             maxOutputTokens: 8192,
@@ -244,7 +286,10 @@ async function callGeminiJson({ apiKey, model, prompt, retries = 3, timeoutMs = 
         'gemini.generateContent',
       );
       const parsed = extractJsonFromGeminiResponse(response);
-      if (!parsed) throw new Error('Gemini devolvió JSON inválido');
+      if (!parsed) {
+        const details = describeGeminiResponse(response);
+        throw new Error(`Gemini devolvió JSON inválido: ${JSON.stringify(details)}`);
+      }
       return parsed;
     } catch (error) {
       lastError = error;
@@ -360,12 +405,13 @@ async function main() {
   const model = env('AUDIT_MODEL', 'gemini-2.5-flash');
   const maxFiles = Number(env('AUDIT_MAX_FILES', '25'));
   const maxInputChars = Number(env('AUDIT_MAX_INPUT_CHARS', '220000'));
+  const maxFullAuditFiles = Number(env('AUDIT_MAX_FULL_FILES', '180'));
   const forceFullAudit = toBool(env('AUDIT_FORCE_FULL'), false);
   const apiKey = env('GEMINI_API_KEY');
   const repository = env('GITHUB_REPOSITORY');
   const runUrl = `${env('GITHUB_SERVER_URL', 'https://github.com')}/${repository}/actions/runs/${env('GITHUB_RUN_ID', 'local')}`;
 
-  log('audit.start', { branch, model, maxFiles, maxInputChars, forceFullAudit });
+  log('audit.start', { branch, model, maxFiles, maxInputChars, maxFullAuditFiles, forceFullAudit });
 
   await runGit(['fetch', 'origin', branch, '--depth=200'], { allowFailure: true });
   const targetSha = await runGit(['rev-parse', `origin/${branch}`]);
@@ -420,6 +466,7 @@ async function main() {
     maxFiles,
     maxInputChars,
     forceFullAudit,
+    maxFullAuditFiles,
   });
 
   if (!context.hasChanges) {

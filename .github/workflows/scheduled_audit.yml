@@ -33,6 +33,7 @@ jobs:
       AUDIT_ARTIFACT_RETENTION_DAYS: ${{ vars.AUDIT_ARTIFACT_RETENTION_DAYS || '30' }}
       AUDIT_MAX_FILES: ${{ vars.AUDIT_MAX_FILES || '25' }}
       AUDIT_MAX_INPUT_CHARS: ${{ vars.AUDIT_MAX_INPUT_CHARS || '220000' }}
+      AUDIT_MAX_FULL_FILES: ${{ vars.AUDIT_MAX_FULL_FILES || '180' }}
       # Política: auditar repositorio completo en cada corrida programada.
       AUDIT_FORCE_FULL: "true"
 

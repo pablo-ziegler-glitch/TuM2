@@ -36,10 +36,10 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Field Mapping', style: AppTextStyles.headingMd),
+        Text('Mapeo de campos', style: AppTextStyles.headingMd),
         const SizedBox(height: 4),
         Text(
-          'Review and adjust how CSV columns map to TuM2 fields. AI confidence scores are shown for each mapping.',
+          'Revisa y ajusta como las columnas del CSV se asignan a los campos de TuM2. Cada mapeo muestra un nivel de confianza estimado.',
           style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
         ),
         const SizedBox(height: 20),
@@ -99,9 +99,9 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
           children: [
             Expanded(
               child: _SettingsCard(
-                title: 'Deduplication',
+                title: 'Deduplicacion',
                 description:
-                    'Prevent duplicate entries by comparing Name and Address before creating new records.',
+                    'Evita duplicados comparando nombre y direccion antes de crear nuevos registros.',
                 child: Row(
                   children: [
                     Switch(
@@ -111,7 +111,7 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      widget.deduplicationEnabled ? 'Enabled' : 'Disabled',
+                      widget.deduplicationEnabled ? 'Activa' : 'Desactivada',
                       style: AppTextStyles.labelSm,
                     ),
                   ],
@@ -121,16 +121,16 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
             const SizedBox(width: 16),
             Expanded(
               child: _SettingsCard(
-                title: 'Visibility after import',
+                title: 'Visibilidad despues de importar',
                 description:
-                    'Records imported as hidden require review before becoming public in the app.',
+                    'Los registros importados como ocultos requieren revision antes de quedar visibles en la app.',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _RadioOption(
-                      label: 'Hidden (staging)',
+                      label: 'Oculto (staging)',
                       description:
-                          'Records will be staged and not visible to users',
+                          'Los registros quedaran en staging y no seran visibles para usuarios',
                       value: 'hidden',
                       groupValue: widget.visibilityAfterImport,
                       onChanged: widget.onVisibilityChanged,
@@ -139,7 +139,7 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
                     _RadioOption(
                       label: 'Visible',
                       description:
-                          'Records will be publicly visible immediately',
+                          'Los registros quedaran visibles de forma publica de inmediato',
                       value: 'visible',
                       groupValue: widget.visibilityAfterImport,
                       onChanged: widget.onVisibilityChanged,
@@ -183,12 +183,12 @@ class _MappingTableHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: const Row(
         children: [
-          SizedBox(width: 48, child: Text('IMPORT', style: style)),
-          Expanded(child: Text('CSV COLUMN', style: style)),
+          SizedBox(width: 48, child: Text('IMPORTAR', style: style)),
+          Expanded(child: Text('COLUMNA CSV', style: style)),
           SizedBox(width: 32),
-          Expanded(child: Text('TUM2 FIELD', style: style)),
-          SizedBox(width: 80, child: Text('AI CONFIDENCE', style: style)),
-          SizedBox(width: 90, child: Text('STATUS', style: style)),
+          Expanded(child: Text('CAMPO TUM2', style: style)),
+          SizedBox(width: 80, child: Text('CONFIANZA IA', style: style)),
+          SizedBox(width: 90, child: Text('ESTADO', style: style)),
         ],
       ),
     );
@@ -336,7 +336,7 @@ class _MappingRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        'Required',
+                        'Obligatorio',
                         style: const TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -356,7 +356,7 @@ class _MappingRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        mapping.enabled ? 'Optional' : 'Ignored',
+                        mapping.enabled ? 'Opcional' : 'Ignorado',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
@@ -535,16 +535,16 @@ class _SourceInsightPanel extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                'Source Insight',
+                'Resumen de origen',
                 style: AppTextStyles.labelMd.copyWith(fontSize: 12),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          _InsightRow(label: 'Columns detected', value: '$_totalCount'),
-          _InsightRow(label: 'Mapped', value: '$_mappedCount / $_totalCount'),
+          _InsightRow(label: 'Columnas detectadas', value: '$_totalCount'),
+          _InsightRow(label: 'Mapeadas', value: '$_mappedCount / $_totalCount'),
           _InsightRow(
-            label: 'Avg AI confidence',
+            label: 'Promedio de confianza IA',
             value: '${(_avgConfidence * 100).toStringAsFixed(0)}%',
             valueColor: _avgConfidence >= 0.85
                 ? AppColors.successFg
@@ -554,7 +554,7 @@ class _SourceInsightPanel extends StatelessWidget {
           const Divider(height: 1, color: AppColors.neutral100),
           const SizedBox(height: 12),
           Text(
-            'Sample values',
+            'Valores de ejemplo',
             style: AppTextStyles.bodyXs.copyWith(
               color: AppColors.neutral400,
               fontWeight: FontWeight.w600,

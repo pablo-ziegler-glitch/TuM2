@@ -48,7 +48,8 @@ class _SelectReplacementCandidatesScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFFFAF9F7),
         elevation: 0,
-        title: const Text('Duty Reassignment', style: AppTextStyles.headingSm),
+        title:
+            const Text('Cobertura de guardia', style: AppTextStyles.headingSm),
         actions: [
           IconButton(
             onPressed: () {},

@@ -9,8 +9,8 @@ Fuente: `git log` + `CLAUDE.md` (backlog maestro)
 - Último commit considerado: **2026-04-15**
 - Commits totales: **204** (157 sin merges)
 - Avance MVP/Fundacional: **48 / 107 = 44.86%**
-- En progreso: **1**
-- Pendiente total MVP/Fundacional: **59 tarjetas**
+- En progreso: **8**
+- Pendiente total MVP/Fundacional: **59 tarjetas** (**51 TODO + 8 IN_PROGRESS**)
 - Pendiente por prioridad: **P0=29, P1=22, P2=8**
 
 ## Velocidad histórica real

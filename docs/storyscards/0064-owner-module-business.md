@@ -1,6 +1,6 @@
 # TuM2-0064 — Implementar módulo OWNER
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: IN_PROGRESS  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad sobre Dashboard OWNER, incorporación formal de `owner_pending` y separación entre revisión de claim y ownership aprobado.
 

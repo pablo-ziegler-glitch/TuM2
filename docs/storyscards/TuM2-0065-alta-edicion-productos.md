@@ -1,5 +1,7 @@
 # TuM2-0065 — Alta/edición de productos (implementación)
 
+Estado: TODO
+
 ## Alcance implementado
 - CRUD operativo OWNER sobre `merchant_products` con baja lógica (`status=inactive`).
 - Imagen principal única por producto en Storage con path canónico:

@@ -1,6 +1,6 @@
 # TuM2-0128 — Revisión manual de claims en Admin Web
 
-Estado propuesto: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126 — Flujo de claim del comercio, TuM2-0127 — Validación automática inicial de claims

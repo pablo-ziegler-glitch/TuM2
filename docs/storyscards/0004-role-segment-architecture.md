@@ -1,6 +1,6 @@
 # TuM2-0004 — Arquitectura de roles, segmentos y ciclo de vida de acceso
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: DONE  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad de comercio (`merchant_claims`) sobre roles, estados intermedios, navegación, seguridad y ciclo de vida de acceso.
 

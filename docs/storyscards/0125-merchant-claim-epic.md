@@ -1,6 +1,6 @@
 # TuM2-0125 — Épica: Reclamo de titularidad de comercio
 
-Estado: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)
 
 ## Objetivo

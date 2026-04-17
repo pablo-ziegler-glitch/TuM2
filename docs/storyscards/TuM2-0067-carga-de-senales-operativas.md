@@ -1,5 +1,7 @@
 # TuM2-0067 — Implementar carga de señales operativas
 
+Estado: DONE
+
 ## 1. Objetivo
 
 Permitir que el OWNER gestione señales operativas manuales de su comercio para reflejar el estado real del local en tiempo casi real, impactando correctamente en la experiencia pública del vecino y en la proyección derivada de `merchant_public`.

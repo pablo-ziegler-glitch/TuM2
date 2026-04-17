@@ -182,6 +182,11 @@ function describeGeminiResponse(response) {
   };
 }
 
+function isQuotaExhaustedError(error) {
+  const text = String(error?.message ?? error ?? '');
+  return /RESOURCE_EXHAUSTED|quota exceeded|GenerateRequestsPerDayPerProjectPerModel-FreeTier/i.test(text);
+}
+
 function withTimeout(promise, ms, label) {
   let timer;
   const timeout = new Promise((_, reject) => {
@@ -292,6 +297,9 @@ async function callGeminiJson({ apiKey, model, prompt, retries = 3, timeoutMs = 
       }
       return parsed;
     } catch (error) {
+      if (isQuotaExhaustedError(error)) {
+        throw error;
+      }
       lastError = error;
       if (attempt < retries) {
         await sleep(500 * 2 ** (attempt - 1));
@@ -407,11 +415,22 @@ async function main() {
   const maxInputChars = Number(env('AUDIT_MAX_INPUT_CHARS', '220000'));
   const maxFullAuditFiles = Number(env('AUDIT_MAX_FULL_FILES', '180'));
   const forceFullAudit = toBool(env('AUDIT_FORCE_FULL'), false);
+  const maxBatches = Number(env('AUDIT_MAX_BATCHES', forceFullAudit ? '4' : '0'));
+  const enableSynthesis = toBool(env('AUDIT_ENABLE_SYNTHESIS', forceFullAudit ? 'false' : 'true'), !forceFullAudit);
   const apiKey = env('GEMINI_API_KEY');
   const repository = env('GITHUB_REPOSITORY');
   const runUrl = `${env('GITHUB_SERVER_URL', 'https://github.com')}/${repository}/actions/runs/${env('GITHUB_RUN_ID', 'local')}`;
 
-  log('audit.start', { branch, model, maxFiles, maxInputChars, maxFullAuditFiles, forceFullAudit });
+  log('audit.start', {
+    branch,
+    model,
+    maxFiles,
+    maxInputChars,
+    maxFullAuditFiles,
+    maxBatches,
+    enableSynthesis,
+    forceFullAudit,
+  });
 
   await runGit(['fetch', 'origin', branch, '--depth=200'], { allowFailure: true });
   const targetSha = await runGit(['rev-parse', `origin/${branch}`]);
@@ -467,6 +486,7 @@ async function main() {
     maxInputChars,
     forceFullAudit,
     maxFullAuditFiles,
+    maxBatches,
   });
 
   if (!context.hasChanges) {
@@ -546,7 +566,7 @@ async function main() {
       productionChecklist: ['Ejecutar workflow_dispatch con force_full=false para revalidar.'],
       markdownReport: `## Error de auditoría\n\n${geminiFailureReason}`,
     };
-  } else if (perBatchReports.length > 1) {
+  } else if (perBatchReports.length > 1 && enableSynthesis) {
     try {
       const synthPrompt = buildSynthesisPrompt({
         branch,
@@ -563,6 +583,8 @@ async function main() {
     } catch {
       finalReport = mergeReportsLocal(perBatchReports);
     }
+  } else if (perBatchReports.length > 1) {
+    finalReport = mergeReportsLocal(perBatchReports);
   } else {
     finalReport = perBatchReports[0];
   }

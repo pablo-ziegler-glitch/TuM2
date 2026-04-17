@@ -175,6 +175,38 @@ async function expandDirectories(pathsOrFiles) {
   return [...files].filter((filePath) => !shouldExcludePath(filePath));
 }
 
+function selectFullAuditFiles(files, maxFullAuditFiles) {
+  const byDomain = new Map();
+  for (const filePath of files) {
+    const domain = classifyDomain(filePath);
+    if (!byDomain.has(domain)) byDomain.set(domain, []);
+    byDomain.get(domain).push(filePath);
+  }
+  for (const domainFiles of byDomain.values()) {
+    domainFiles.sort((a, b) => a.localeCompare(b));
+  }
+
+  const domainOrder = [...byDomain.keys()].sort((a, b) => {
+    const priorityA = DOMAIN_PRIORITY[a] ?? DOMAIN_PRIORITY.other;
+    const priorityB = DOMAIN_PRIORITY[b] ?? DOMAIN_PRIORITY.other;
+    return priorityA - priorityB;
+  });
+
+  const selected = [];
+  while (selected.length < maxFullAuditFiles && domainOrder.length > 0) {
+    for (const domain of domainOrder) {
+      if (selected.length >= maxFullAuditFiles) break;
+      const queue = byDomain.get(domain);
+      if (queue && queue.length > 0) selected.push(queue.shift());
+    }
+    for (let i = domainOrder.length - 1; i >= 0; i -= 1) {
+      const domain = domainOrder[i];
+      if ((byDomain.get(domain)?.length ?? 0) === 0) domainOrder.splice(i, 1);
+    }
+  }
+  return selected;
+}
+
 async function buildBatch({
   files,
   baseSha,
@@ -223,23 +255,22 @@ export async function buildAuditContext({
   maxInputChars = 220000,
   forceFullAudit = false,
   maxFullAuditFiles = 180,
+  maxBatches = 0,
 }) {
   const maxCharsPerFile = 12000;
-  const changedFiles = forceFullAudit
-    ? (
-        await runGit(['ls-tree', '-r', '--name-only', targetSha], { allowFailure: false })
-      )
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .filter((filePath) => !shouldExcludePath(filePath))
-        .sort((a, b) => {
-          const priorityA = DOMAIN_PRIORITY[classifyDomain(a)] ?? DOMAIN_PRIORITY.other;
-          const priorityB = DOMAIN_PRIORITY[classifyDomain(b)] ?? DOMAIN_PRIORITY.other;
-          return priorityA - priorityB || a.localeCompare(b);
-        })
-        .slice(0, maxFullAuditFiles)
-    : await getChangedFiles(baseSha, targetSha);
+  let changedFiles = [];
+  if (forceFullAudit) {
+    const repoFiles = (
+      await runGit(['ls-tree', '-r', '--name-only', targetSha], { allowFailure: false })
+    )
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((filePath) => !shouldExcludePath(filePath));
+    changedFiles = selectFullAuditFiles(repoFiles, maxFullAuditFiles);
+  } else {
+    changedFiles = await getChangedFiles(baseSha, targetSha);
+  }
 
   if (changedFiles.length === 0) {
     return {
@@ -295,12 +326,39 @@ export async function buildAuditContext({
     }
   }
 
+  let cappedBatches = batches;
+  if (maxBatches > 0 && batches.length > maxBatches) {
+    const byDomain = new Map();
+    for (const batch of batches) {
+      if (!byDomain.has(batch.domain)) byDomain.set(batch.domain, []);
+      byDomain.get(batch.domain).push(batch);
+    }
+    const domainOrder = [...byDomain.keys()].sort((a, b) => {
+      const priorityA = DOMAIN_PRIORITY[a] ?? DOMAIN_PRIORITY.other;
+      const priorityB = DOMAIN_PRIORITY[b] ?? DOMAIN_PRIORITY.other;
+      return priorityA - priorityB;
+    });
+    const selected = [];
+    while (selected.length < maxBatches && domainOrder.length > 0) {
+      for (const domain of domainOrder) {
+        if (selected.length >= maxBatches) break;
+        const queue = byDomain.get(domain);
+        if (queue && queue.length > 0) selected.push(queue.shift());
+      }
+      for (let i = domainOrder.length - 1; i >= 0; i -= 1) {
+        const domain = domainOrder[i];
+        if ((byDomain.get(domain)?.length ?? 0) === 0) domainOrder.splice(i, 1);
+      }
+    }
+    cappedBatches = selected;
+  }
+
   return {
     hasChanges: true,
     changedFiles,
     relatedFiles: mergedRelated,
     changedAreas,
     keywords,
-    batches,
+    batches: cappedBatches,
   };
 }

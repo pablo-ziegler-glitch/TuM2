@@ -73,7 +73,6 @@ class _MerchantClaimsReviewScreenState
   bool _loadingDetail = false;
   bool _runningAction = false;
   String? _queueError;
-  String? _detailError;
   String? _actionError;
   String? _selectedClaimId;
 
@@ -255,7 +254,6 @@ class _MerchantClaimsReviewScreenState
   }) async {
     setState(() {
       _loadingDetail = true;
-      _detailError = null;
       _actionError = null;
       _selectedClaimId = claimId;
     });
@@ -294,14 +292,15 @@ class _MerchantClaimsReviewScreenState
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
       setState(() {
-        _detailError =
-            error.message ?? 'No pudimos cargar el detalle del claim.';
+        _actionError = error.message ?? 'No pudimos cargar el detalle del claim.';
+        _detail = null;
         _loadingDetail = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _detailError = 'No pudimos cargar el detalle del claim.';
+        _actionError = 'No pudimos cargar el detalle del claim.';
+        _detail = null;
         _loadingDetail = false;
       });
     }
@@ -504,7 +503,6 @@ class _MerchantClaimsReviewScreenState
     setState(() {
       _selectedClaimId = null;
       _detail = null;
-      _detailError = null;
       _actionError = null;
       _detailStale = false;
       _revealedValues = const {};
@@ -1613,7 +1611,7 @@ class _DropdownField<T> extends StatelessWidget {
       width: width,
       child: DropdownButtonFormField<T>(
         isExpanded: true,
-        value: value,
+        initialValue: value,
         items: [
           if (allowEmpty)
             DropdownMenuItem<T>(

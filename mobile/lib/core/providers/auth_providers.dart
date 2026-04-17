@@ -506,7 +506,8 @@ final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
   final ownerPendingRaw = result.claims?['owner_pending'];
   final ownerPending = ownerPendingRaw == true ||
       (ownerPendingRaw is String && ownerPendingRaw.toLowerCase() == 'true');
-  final userDoc = await FirebaseFirestore.instance.doc('users/${user.uid}').get();
+  final userDoc =
+      await FirebaseFirestore.instance.doc('users/${user.uid}').get();
   final userData = userDoc.data();
   final firestoreRole = (userData?['role'] as String?)?.toLowerCase();
   final firestoreMerchantId = userData?['merchantId'] as String?;

@@ -299,6 +299,9 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
 - [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `IN_PROGRESS`
 
+### ÉPICA 19: Estacionalidad y campañas contextuales
+- [0134] **Modo Selección Argentina + tarjeta pineada de próximo partido** — P1 — `Producto, Branding, Mobile, Web, Admin, Backend, Analytics, MVP+`
+
 ---
 
 ## Orden real de ejecución recomendado
@@ -429,7 +432,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Claramente Post-MVP:** TuM2-0026, 0108, 0109, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117, 0118, 0119, 0120
 
-**MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
+**MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107, 0134 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
 
 ---
 
@@ -498,3 +501,4 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0127] Integración productiva: submit pasa por estado `submitted`, trigger fallback por transición real a `submitted`, hash `lastAutoValidationHash` para no-op writes, sync `owner_pending` backend-only y sin mutación de `merchant_public`.
 - [0127] Costos/seguridad: queries dedupe-conflict con `limit` bajo e índice compuesto `merchant_claims(userId, merchantId, claimStatus)`, logs estructurados sin PII, sin grants OWNER automáticos.
 - [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.
+- [0134] Alta documental inicial (2026-04-17): creadas `docs/storyscards/0134-modo-seleccion-argentina.md` y `docs/storyscards/0134-modo-seleccion-argentina.prompt.md`; estado canónico `TODO` (sin implementación).

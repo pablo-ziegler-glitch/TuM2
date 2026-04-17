@@ -292,7 +292,8 @@ class _MerchantClaimsReviewScreenState
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
       setState(() {
-        _actionError = error.message ?? 'No pudimos cargar el detalle del claim.';
+        _actionError =
+            error.message ?? 'No pudimos cargar el detalle del claim.';
         _detail = null;
         _loadingDetail = false;
       });

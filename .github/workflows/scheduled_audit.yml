@@ -7,7 +7,7 @@ on:
         description: "Forzar auditoría amplia (solo uso manual)"
         required: false
         type: boolean
-        default: false
+        default: true
   schedule:
     # GitHub usa UTC. America/Argentina/Buenos_Aires (UTC-3):
     # 06:00, 12:00, 16:00, 20:00 local => 09:00, 15:00, 19:00, 23:00 UTC

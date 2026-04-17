@@ -48,6 +48,11 @@ class _AdminSidebar extends StatelessWidget {
       path: '/businesses',
     ),
     _NavItem(
+      icon: Icons.fact_check_outlined,
+      label: 'Claims Review',
+      path: '/claims',
+    ),
+    _NavItem(
       icon: Icons.storage_outlined,
       label: 'Import Management',
       path: '/imports',
@@ -128,7 +133,7 @@ class _AdminSidebar extends StatelessWidget {
             // Import Management activo para todas las rutas /imports*
             final isActive = item.path == '/imports'
                 ? location.startsWith('/imports') ||
-                    location.startsWith('/datasets')
+                      location.startsWith('/datasets')
                 : location.startsWith(item.path);
             return _SidebarNavItem(item: item, isActive: isActive);
           })),

@@ -11,6 +11,7 @@ import '../../modules/import_data/screens/import_wizard_screen.dart';
 import '../../modules/import_data/screens/import_result_screen.dart';
 import '../../modules/import_data/screens/import_batch_history_screen.dart';
 import '../../modules/catalog_limits/screens/catalog_limits_screen.dart';
+import '../../modules/merchant_claims/screens/merchant_claims_review_screen.dart';
 
 /// Router principal del portal admin.
 /// Rutas disponibles:
@@ -20,6 +21,7 @@ import '../../modules/catalog_limits/screens/catalog_limits_screen.dart';
 ///   /imports/new            — wizard de nueva importación (6 pasos)
 ///   /imports/history        — historial de batches con filtros
 ///   /imports/:id            — detalle y auditoría de un batch específico
+///   /claims                 — cola manual de revisión de claims (admin)
 ///   /templates              — plantillas de importación (placeholder)
 ///   /analytics              — analítica (placeholder)
 ///   /settings               — configuración (placeholder)
@@ -73,6 +75,10 @@ final appRouter = GoRouter(
             final id = state.pathParameters['id']!;
             return ImportResultScreen(batchId: id);
           },
+        ),
+        GoRoute(
+          path: '/claims',
+          builder: (context, state) => const MerchantClaimsReviewScreen(),
         ),
         // Rutas legacy para compatibilidad con referencias anteriores
         GoRoute(path: '/datasets', redirect: (context, state) => '/imports'),

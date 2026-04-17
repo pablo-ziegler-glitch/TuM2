@@ -5,6 +5,19 @@ Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0130
 
+## Estado real de implementación (corte 2026-04-16)
+### Hecho
+- Sincronización de `owner_pending` activa en submit/evaluate/resolve de claims y trigger fallback legacy.
+- Promoción a OWNER implementada por backend autorizado: actualiza `merchants`, custom claims y `users/{uid}`.
+- Auth mobile consume `owner_pending` desde token con fallback controlado a Firestore y guards de ruta aplicados.
+- Dashboard OWNER ya diferencia `owner_pending` vs owner aprobado con estado contextual y bloqueo de operaciones.
+
+### Falta para cerrar
+- Consolidar refresh de token/estado en sesión abierta inmediatamente después de resoluciones admin (evitar latencia perceptible de transición).
+- Definir y ejecutar estrategia multi-merchant/multi-claim para evitar ambigüedades en `merchantId` principal.
+- Integrar restricciones por fraude/abuso al ciclo de reingreso a carril owner con política explícita de rehabilitación.
+- Completar pruebas E2E cruzadas claim -> admin -> owner con navegación profunda y estados concurrentes.
+
 ## 1. Objetivo
 Definir la integración entre dominio de claim y sistema de roles para cerrar de forma explícita:
 - cuándo el usuario es solo `CUSTOMER`,

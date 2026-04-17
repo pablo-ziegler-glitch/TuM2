@@ -192,11 +192,22 @@ class ImportDataRepository {
     }
 
     for (final collectionName in _zoneCollectionCandidates) {
-      final snapshot = await _firestore
-          .collection(collectionName)
-          .limit(_maxZonesPerQuery)
-          .get();
-      final docs = snapshot.docs.where(_isActiveZoneDoc).toList();
+      final docs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+      QueryDocumentSnapshot<Map<String, dynamic>>? cursor;
+      while (true) {
+        Query<Map<String, dynamic>> query = _firestore
+            .collection(collectionName)
+            .orderBy(FieldPath.documentId)
+            .limit(_maxZonesPerQuery);
+        if (cursor != null) {
+          query = query.startAfterDocument(cursor);
+        }
+        final snapshot = await query.get();
+        if (snapshot.docs.isEmpty) break;
+        docs.addAll(snapshot.docs.where(_isActiveZoneDoc));
+        if (snapshot.docs.length < _maxZonesPerQuery) break;
+        cursor = snapshot.docs.last;
+      }
       if (docs.isEmpty) continue;
       docs.sort(_compareZoneDocs);
       _zonesCache = docs;

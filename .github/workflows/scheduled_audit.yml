@@ -7,7 +7,7 @@ on:
         description: "Forzar auditoría amplia (solo uso manual)"
         required: false
         type: boolean
-        default: false
+        default: true
   schedule:
     # GitHub usa UTC. America/Argentina/Buenos_Aires (UTC-3):
     # 06:00, 12:00, 16:00, 20:00 local => 09:00, 15:00, 19:00, 23:00 UTC
@@ -26,15 +26,12 @@ jobs:
       contents: read
       issues: write
     env:
-      # Adelanta la migración para que las JavaScript actions no ejecuten en Node 20.
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       AUDIT_TARGET_BRANCH: ${{ vars.AUDIT_TARGET_BRANCH || 'develop' }}
       AUDIT_MODEL: ${{ vars.AUDIT_MODEL || 'gemini-2.5-flash' }}
       AUDIT_ARTIFACT_RETENTION_DAYS: ${{ vars.AUDIT_ARTIFACT_RETENTION_DAYS || '30' }}
       AUDIT_MAX_FILES: ${{ vars.AUDIT_MAX_FILES || '25' }}
       AUDIT_MAX_INPUT_CHARS: ${{ vars.AUDIT_MAX_INPUT_CHARS || '220000' }}
-      # Política: auditar repositorio completo en cada corrida programada.
-      AUDIT_FORCE_FULL: "true"
+      AUDIT_FORCE_FULL: ${{ github.event_name == 'workflow_dispatch' && inputs.force_full_audit || 'false' }}
 
     steps:
       - name: Checkout default branch

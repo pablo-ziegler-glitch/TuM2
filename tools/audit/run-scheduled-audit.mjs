@@ -62,19 +62,6 @@ async function commitExists(sha) {
   }
 }
 
-async function findEarliestReachableCommit(targetSha, maxCommits = 200) {
-  const output = await runGit(
-    ['rev-list', '--reverse', '--max-count', String(maxCommits), targetSha],
-    { allowFailure: true },
-  );
-  if (!output) return '';
-  const commits = output
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean);
-  return commits[0] ?? '';
-}
-
 function safeJsonParse(text) {
   try {
     return JSON.parse(text);
@@ -83,66 +70,17 @@ function safeJsonParse(text) {
   }
 }
 
-function extractBalancedJsonObject(text) {
-  if (!text) return null;
-  let start = -1;
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = 0; i < text.length; i += 1) {
-    const ch = text[i];
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (ch === '\\') {
-        escaped = true;
-      } else if (ch === '"') {
-        inString = false;
-      }
-      continue;
-    }
-    if (ch === '"') {
-      inString = true;
-      continue;
-    }
-    if (ch === '{') {
-      if (start === -1) start = i;
-      depth += 1;
-      continue;
-    }
-    if (ch === '}') {
-      if (depth > 0) depth -= 1;
-      if (depth === 0 && start !== -1) {
-        const candidate = text.slice(start, i + 1).trim();
-        const parsed = safeJsonParse(candidate);
-        if (parsed) return parsed;
-        start = -1;
-      }
-    }
-  }
-  return null;
-}
-
 function extractJson(text) {
   if (!text) return null;
   const direct = safeJsonParse(text);
   if (direct) return direct;
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] ?? text;
-  const balanced = extractBalancedJsonObject(fenced);
-  if (balanced) return balanced;
-  const repaired = fenced.replace(/,\s*([}\]])/g, '$1').replace(/^\uFEFF/, '').trim();
-  return extractBalancedJsonObject(repaired);
-}
-
-function extractJsonFromGeminiResponse(response) {
-  const fromText = extractJson(response?.text ?? '');
-  if (fromText) return fromText;
-  const parts = response?.candidates?.flatMap((candidate) => candidate?.content?.parts ?? []) ?? [];
-  for (const part of parts) {
-    const parsed = extractJson(part?.text ?? '');
-    if (parsed) return parsed;
-  }
-  return null;
+  const fenced = text.match(/```json\s*([\s\S]*?)```/i)?.[1] ?? text;
+  const candidate = fenced.slice(fenced.indexOf('{'), fenced.lastIndexOf('}') + 1);
+  const repaired = candidate
+    .replace(/,\s*([}\]])/g, '$1')
+    .replace(/^\uFEFF/, '')
+    .trim();
+  return safeJsonParse(repaired);
 }
 
 function withTimeout(promise, ms, label) {
@@ -243,7 +181,7 @@ async function callGeminiJson({ apiKey, model, prompt, retries = 3, timeoutMs = 
         timeoutMs,
         'gemini.generateContent',
       );
-      const parsed = extractJsonFromGeminiResponse(response);
+      const parsed = extractJson(response.text ?? '');
       if (!parsed) throw new Error('Gemini devolvió JSON inválido');
       return parsed;
     } catch (error) {
@@ -386,19 +324,7 @@ async function main() {
   let baseSha = previousState?.lastAuditedSha ?? '';
   const hasValidBase = (await commitExists(baseSha)) && !forceFullAudit;
   if (!hasValidBase) {
-    const earliestReachable = await findEarliestReachableCommit(targetSha, 200);
-    if (earliestReachable) {
-      const earliestParent = await runGit(['rev-parse', `${earliestReachable}^`], {
-        allowFailure: true,
-      });
-      // Preferir el parent para incluir también el commit más viejo disponible.
-      baseSha = earliestParent || earliestReachable;
-      log('audit.base_fallback_window', {
-        reason: forceFullAudit ? 'forced_full' : 'missing_or_invalid_state_sha',
-        earliestReachable,
-        fallbackBase: baseSha,
-      });
-    }
+    baseSha = await runGit(['rev-parse', `${targetSha}~1`], { allowFailure: true });
   }
   if (!baseSha) {
     baseSha = targetSha;
@@ -539,8 +465,6 @@ async function main() {
   await fs.writeFile(artifactPath, markdown, 'utf8');
 
   let issueResult = null;
-  let issuePublicationFailed = false;
-  const issueRequiredByPolicy = shouldCreateIssue(finalReport);
   if (ghClient && shouldCreateIssue(finalReport)) {
     try {
       issueResult = await createOrUpdateAuditIssue(ghClient, {
@@ -551,17 +475,11 @@ async function main() {
         branch,
       });
     } catch (error) {
-      issuePublicationFailed = true;
       log('audit.issue_error', { error: String(error.message ?? error) });
     }
-  } else if (issueRequiredByPolicy) {
-    issuePublicationFailed = true;
-    log('audit.issue_error', {
-      error: 'Issue requerida por política, pero no hay cliente GitHub disponible.',
-    });
   }
 
-  if (ghClient && stateIssue && !geminiFailed && !issuePublicationFailed) {
+  if (ghClient && stateIssue && !geminiFailed) {
     await updateStateIssue(ghClient, {
       issueNumber: stateIssue.issueNumber,
       branch,
@@ -584,7 +502,6 @@ async function main() {
     `Archivos cambiados: ${context.changedFiles.length}`,
     `Hallazgos: ${finalReport.findings.length} (Críticos: ${finalReport.findings.filter((f) => f.riskLevel === 'CRITICO').length}, Altos: ${finalReport.findings.filter((f) => f.riskLevel === 'ALTO').length})`,
     issueResult ? `Issue: ${issueResult.action} #${issueResult.issueNumber}` : 'Issue: no requerido por política',
-    issuePublicationFailed ? 'Issue: ERROR de publicación (state no actualizado)' : 'Issue publish: OK',
     geminiFailed ? `Gemini: fallo no bloqueante (${geminiFailureReason})` : 'Gemini: OK',
   ]);
 

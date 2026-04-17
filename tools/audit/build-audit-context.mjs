@@ -31,6 +31,15 @@ const KNOWN_COLLECTION_HINTS = [
   'categoryId',
 ];
 
+const DOMAIN_PRIORITY = {
+  functions: 0,
+  mobile: 1,
+  web: 2,
+  schema: 3,
+  infra: 4,
+  other: 5,
+};
+
 export function classifyDomain(filePath) {
   if (filePath.startsWith('functions/')) return 'functions';
   if (filePath.startsWith('mobile/')) return 'mobile';
@@ -166,14 +175,59 @@ async function expandDirectories(pathsOrFiles) {
   return [...files].filter((filePath) => !shouldExcludePath(filePath));
 }
 
-async function buildBatch({ files, baseSha, targetSha, maxInputChars, maxCharsPerFile }) {
+function selectFullAuditFiles(files, maxFullAuditFiles) {
+  const byDomain = new Map();
+  for (const filePath of files) {
+    const domain = classifyDomain(filePath);
+    if (!byDomain.has(domain)) byDomain.set(domain, []);
+    byDomain.get(domain).push(filePath);
+  }
+  for (const domainFiles of byDomain.values()) {
+    domainFiles.sort((a, b) => a.localeCompare(b));
+  }
+
+  const domainOrder = [...byDomain.keys()].sort((a, b) => {
+    const priorityA = DOMAIN_PRIORITY[a] ?? DOMAIN_PRIORITY.other;
+    const priorityB = DOMAIN_PRIORITY[b] ?? DOMAIN_PRIORITY.other;
+    return priorityA - priorityB;
+  });
+
+  const selected = [];
+  while (selected.length < maxFullAuditFiles && domainOrder.length > 0) {
+    for (const domain of domainOrder) {
+      if (selected.length >= maxFullAuditFiles) break;
+      const queue = byDomain.get(domain);
+      if (queue && queue.length > 0) selected.push(queue.shift());
+    }
+    for (let i = domainOrder.length - 1; i >= 0; i -= 1) {
+      const domain = domainOrder[i];
+      if ((byDomain.get(domain)?.length ?? 0) === 0) domainOrder.splice(i, 1);
+    }
+  }
+  return selected;
+}
+
+async function buildBatch({
+  files,
+  baseSha,
+  targetSha,
+  maxInputChars,
+  maxCharsPerFile,
+  includeDiff = true,
+}) {
   const selected = [];
   let chars = 0;
-  const diffByBatch = await runGit(['diff', '--unified=3', '--no-color', `${baseSha}..${targetSha}`, '--', ...files], { allowFailure: true });
-  const cappedDiff =
-    diffByBatch.length > Math.floor(maxInputChars * 0.55)
-      ? `${diffByBatch.slice(0, Math.floor(maxInputChars * 0.55))}\n\n[DIFF TRUNCADO ${diffByBatch.length} chars]`
-      : diffByBatch;
+
+  let cappedDiff = '';
+  if (includeDiff) {
+    const diffByBatch = await runGit(['diff', '--unified=3', '--no-color', `${baseSha}..${targetSha}`, '--', ...files], { allowFailure: true });
+    cappedDiff =
+      diffByBatch.length > Math.floor(maxInputChars * 0.55)
+        ? `${diffByBatch.slice(0, Math.floor(maxInputChars * 0.55))}\n\n[DIFF TRUNCADO ${diffByBatch.length} chars]`
+        : diffByBatch;
+  } else {
+    cappedDiff = '[FULL_SNAPSHOT_MODE] Diff incremental omitido para priorizar estabilidad de salida JSON.';
+  }
   chars += cappedDiff.length;
 
   for (const filePath of files) {
@@ -200,17 +254,23 @@ export async function buildAuditContext({
   maxFiles = 25,
   maxInputChars = 220000,
   forceFullAudit = false,
+  maxFullAuditFiles = 180,
+  maxBatches = 0,
 }) {
   const maxCharsPerFile = 12000;
-  const changedFiles = forceFullAudit
-    ? (
-        await runGit(['ls-tree', '-r', '--name-only', targetSha], { allowFailure: false })
-      )
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .filter((filePath) => !shouldExcludePath(filePath))
-    : await getChangedFiles(baseSha, targetSha);
+  let changedFiles = [];
+  if (forceFullAudit) {
+    const repoFiles = (
+      await runGit(['ls-tree', '-r', '--name-only', targetSha], { allowFailure: false })
+    )
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((filePath) => !shouldExcludePath(filePath));
+    changedFiles = selectFullAuditFiles(repoFiles, maxFullAuditFiles);
+  } else {
+    changedFiles = await getChangedFiles(baseSha, targetSha);
+  }
 
   if (changedFiles.length === 0) {
     return {
@@ -222,15 +282,19 @@ export async function buildAuditContext({
     };
   }
 
-  const globalDiff = await runGit(['diff', '--unified=3', '--no-color', `${baseSha}..${targetSha}`, '--', ...changedFiles], { allowFailure: true });
-  const keywords = extractCollectionKeywords(globalDiff);
-  const staticRelated = inferStaticRelatedFiles(changedFiles, keywords);
-  const referencedFiles = await collectReferenceMatches(keywords);
-  const expandedStatic = await expandDirectories(staticRelated);
-  const mergedRelated = [...new Set([...expandedStatic, ...referencedFiles])]
-    .filter((filePath) => !changedFiles.includes(filePath))
-    .filter((filePath) => !shouldExcludePath(filePath))
-    .slice(0, 80);
+  let keywords = [];
+  let mergedRelated = [];
+  if (!forceFullAudit) {
+    const globalDiff = await runGit(['diff', '--unified=3', '--no-color', `${baseSha}..${targetSha}`, '--', ...changedFiles], { allowFailure: true });
+    keywords = extractCollectionKeywords(globalDiff);
+    const staticRelated = inferStaticRelatedFiles(changedFiles, keywords);
+    const referencedFiles = await collectReferenceMatches(keywords);
+    const expandedStatic = await expandDirectories(staticRelated);
+    mergedRelated = [...new Set([...expandedStatic, ...referencedFiles])]
+      .filter((filePath) => !changedFiles.includes(filePath))
+      .filter((filePath) => !shouldExcludePath(filePath))
+      .slice(0, 80);
+  }
 
   const allCandidateFiles = [...new Set([...changedFiles, ...mergedRelated])];
   const grouped = new Map();
@@ -252,6 +316,7 @@ export async function buildAuditContext({
         targetSha,
         maxInputChars,
         maxCharsPerFile,
+        includeDiff: !forceFullAudit,
       });
       batches.push({
         domain,
@@ -261,12 +326,39 @@ export async function buildAuditContext({
     }
   }
 
+  let cappedBatches = batches;
+  if (maxBatches > 0 && batches.length > maxBatches) {
+    const byDomain = new Map();
+    for (const batch of batches) {
+      if (!byDomain.has(batch.domain)) byDomain.set(batch.domain, []);
+      byDomain.get(batch.domain).push(batch);
+    }
+    const domainOrder = [...byDomain.keys()].sort((a, b) => {
+      const priorityA = DOMAIN_PRIORITY[a] ?? DOMAIN_PRIORITY.other;
+      const priorityB = DOMAIN_PRIORITY[b] ?? DOMAIN_PRIORITY.other;
+      return priorityA - priorityB;
+    });
+    const selected = [];
+    while (selected.length < maxBatches && domainOrder.length > 0) {
+      for (const domain of domainOrder) {
+        if (selected.length >= maxBatches) break;
+        const queue = byDomain.get(domain);
+        if (queue && queue.length > 0) selected.push(queue.shift());
+      }
+      for (let i = domainOrder.length - 1; i >= 0; i -= 1) {
+        const domain = domainOrder[i];
+        if ((byDomain.get(domain)?.length ?? 0) === 0) domainOrder.splice(i, 1);
+      }
+    }
+    cappedBatches = selected;
+  }
+
   return {
     hasChanges: true,
     changedFiles,
     relatedFiles: mergedRelated,
     changedAreas,
     keywords,
-    batches,
+    batches: cappedBatches,
   };
 }

@@ -1,9 +1,22 @@
 # TuM2-0127 — Validación automática inicial de claims
 
-Estado propuesto: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126 — Flujo de claim del comercio
+
+## Estado real de implementación (corte 2026-04-16)
+### Hecho
+- Motor de validación automática implementado en backend con outcomes canónicos: `under_review`, `needs_more_info`, `duplicate_claim`, `conflict_detected` (`functions/src/callables/merchantClaims.ts`).
+- Integración real en submit y re-evaluación admin (`submitMerchantClaim`, `evaluateMerchantClaim`) con `reasonCode` y estados de workflow.
+- Detección de duplicado por usuario+comercio con query acotada y `limit`, evitando scans amplios.
+- Pruebas de integración cubren escenarios clave de validación, conflicto y duplicado (`functions/src/callables/__tests__/merchantClaims.integration.test.ts`).
+
+### Falta para cerrar
+- Extender señal de conflicto a disputa multi-actor (mismo comercio, distinto usuario) con mayor granularidad de `conflictType`.
+- Completar matriz por `categoryId`/riesgo (TuM2-0129) para reglas automáticas más finas.
+- Endurecer antifraude de reincidencia/abuso y su integración con restricciones funcionales.
+- Publicar métricas operativas de precisión (falsos positivos/negativos) y carga manual evitada para calibrar reglas.
 
 ## 1. Objetivo
 Definir la capa de validación automática inicial que corre inmediatamente después del envío de un claim para:

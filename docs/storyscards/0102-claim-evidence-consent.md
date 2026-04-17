@@ -1,6 +1,6 @@
 # TuM2-0102 — Consentimiento de evidencia y documentación
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: TODO  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la épica de claims sobre aceptación informada de evidencia visual/documental, revisión manual restringida, uso acotado y resguardo de adjuntos sensibles.
 

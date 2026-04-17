@@ -1,9 +1,22 @@
 # TuM2-0133 — Conflictos, duplicados y disputa de titularidad
 
-Estado propuesto: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0131
+
+## Estado real de implementación (corte 2026-04-16)
+### Hecho
+- Duplicados simples ya detectados en backend (mismo `userId` + `merchantId` + claim activo) con salida `duplicate_claim`.
+- Conflicto básico implementado cuando comercio ya tiene owner o estado de ownership reclamado (`conflict_detected`).
+- Flujo submit/evaluate/resolve ya respeta bloqueo de promoción automática en estados conflictivos.
+- Tests de integración verifican flujo conflictivo, mantenimiento de `owner_pending` y resolución aprobada controlada.
+
+### Falta para cerrar
+- Completar detección de disputa real multi-actor (múltiples reclamantes plausibles sobre mismo comercio no reclamado).
+- Modelar relación explícita entre claims vinculados (expediente, prioridad, historial de resolución).
+- Implementar carril de resolución de disputa en UI Admin (clasificación visual, decisiones, escalamiento y trazabilidad completa).
+- Afinar heurísticas para separar duplicado benigno vs abuso recurrente con guardrails de costo y sin falsos positivos altos.
 
 ## 1. Objetivo
 Definir el tratamiento de casos no lineales de claim:

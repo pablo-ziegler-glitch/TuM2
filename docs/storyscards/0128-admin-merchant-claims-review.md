@@ -1,9 +1,22 @@
 # TuM2-0128 — Revisión manual de claims en Admin Web
 
-Estado propuesto: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126 — Flujo de claim del comercio, TuM2-0127 — Validación automática inicial de claims
+
+## Estado real de implementación (corte 2026-04-16)
+### Hecho
+- Backend admin ya disponible para cola y decisión manual: `listMerchantClaimsForReview`, `evaluateMerchantClaim`, `resolveMerchantClaim`.
+- Cola admin implementada con scope obligatorio (`zoneId` + `claimStatus`) y paginación por cursor (`createdAt` + `claimId`) para control de costo.
+- Reveal sensible operativo y auditado en colección dedicada (`merchant_claim_sensitive_reveals`).
+- Tests de integración cubren cola admin, paginación, reveal y rechazo de usuarios no admin.
+
+### Falta para cerrar
+- Frontend Admin Web pendiente: listado, filtros, detalle, timeline y panel de decisión todavía no consumen estos callables.
+- Falta implementar control explícito de concurrencia en UI (stale data/decisión simultánea) con UX de conflicto.
+- Completar permisos granulares de reviewer/senior reviewer para reveal y resolución crítica.
+- Cerrar QA E2E de operación admin con masking/reveal temporal en contexto real.
 
 ## 1. Objetivo
 Definir el módulo de revisión manual de claims en Admin Web para que el equipo administrador pueda evaluar, decidir y auditar reclamos de titularidad no resolubles de forma automática con seguridad suficiente.

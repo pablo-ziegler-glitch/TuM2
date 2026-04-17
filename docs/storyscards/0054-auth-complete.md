@@ -1,6 +1,6 @@
 # TuM2-0054 — Auth completa
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: DONE  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad sobre autenticación, resolución de claims, refresh de token y navegación post-login.
 

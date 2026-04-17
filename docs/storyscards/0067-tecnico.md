@@ -1,5 +1,7 @@
 # TuM2-0067 — Implementación técnica (OWNER señales operativas)
 
+Estado: DONE
+
 ## Objetivo técnico
 Implementar carga y mantenimiento de señal operativa manual OWNER con prioridad sobre cálculo automático de horarios, preservando el patrón dual-collection y minimizando costo Firestore.
 
@@ -105,4 +107,3 @@ Implementar carga y mantenimiento de señal operativa manual OWNER con prioridad
 - [x] no-op write avoidance en trigger
 - [x] tests unitarios actualizados
 - [x] `CLAUDE.md` actualizado
-

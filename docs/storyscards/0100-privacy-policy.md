@@ -1,6 +1,6 @@
 # TuM2-0100 — Política de Privacidad
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: TODO  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la épica de claims sobre recolección, tratamiento, acceso, revisión manual, auditoría y retención de datos personales/sensibles.
 

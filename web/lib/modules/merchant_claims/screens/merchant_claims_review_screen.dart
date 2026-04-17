@@ -39,6 +39,7 @@ class _MerchantClaimsReviewScreenState
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'es');
 
   final TextEditingController _zoneIdController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final TextEditingController _resolveReasonController =
       TextEditingController();
   final TextEditingController _resolveNotesController = TextEditingController();
@@ -64,6 +65,7 @@ class _MerchantClaimsReviewScreenState
   bool _loadingDetail = false;
   String? _detailError;
   MerchantClaimDetail? _detail;
+  bool _detailView = false;
 
   bool _runningAction = false;
   MerchantClaimStatus _resolveTargetStatus = MerchantClaimStatus.needsMoreInfo;
@@ -85,6 +87,7 @@ class _MerchantClaimsReviewScreenState
   @override
   void dispose() {
     _zoneIdController.dispose();
+    _searchController.dispose();
     _resolveReasonController.dispose();
     _resolveNotesController.dispose();
     _revealReasonController.dispose();
@@ -206,6 +209,7 @@ class _MerchantClaimsReviewScreenState
     setState(() {
       _selectedClaimId = claimId;
       _loadingDetail = true;
+      _detailView = true;
       if (!silent) _detailError = null;
     });
     try {
@@ -395,60 +399,101 @@ class _MerchantClaimsReviewScreenState
 
   @override
   Widget build(BuildContext context) {
+    final detail = _detail;
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: Padding(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 12),
-            _buildFiltersCard(),
-            const SizedBox(height: 12),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (constraints.maxWidth < 1280) {
-                    return Column(
-                      children: [
-                        Expanded(child: _buildQueuePanel()),
-                        const SizedBox(height: 12),
-                        Expanded(child: _buildDetailPanel()),
-                      ],
-                    );
-                  }
-                  return Row(
-                    children: [
-                      Expanded(flex: 5, child: _buildQueuePanel()),
-                      const SizedBox(width: 12),
-                      Expanded(flex: 4, child: _buildDetailPanel()),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+        child: _detailView && detail != null
+            ? _buildDetailWorkspace(detail)
+            : _buildTriageWorkspace(),
       ),
+    );
+  }
+
+  Widget _buildTriageWorkspace() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(),
+        const SizedBox(height: 12),
+        _buildFiltersCard(),
+        const SizedBox(height: 12),
+        _buildTriageMetrics(),
+        const SizedBox(height: 12),
+        Expanded(child: _buildQueuePanel()),
+      ],
+    );
+  }
+
+  Widget _buildDetailWorkspace(MerchantClaimDetail detail) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildDetailHeader(detail),
+        const SizedBox(height: 12),
+        Expanded(child: _buildDetailPanel()),
+      ],
     );
   }
 
   Widget _buildHeader() {
     return Row(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Claims Review', style: AppTextStyles.headingMd),
-            const SizedBox(height: 2),
-            Text(
-              'Queue manual de reclamos de titularidad (sin listeners globales).',
-              style: AppTextStyles.bodySm,
+        Text(
+          'CLAIMS DE COMERCIOS',
+          style: AppTextStyles.headingMd.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+            color: AppColors.primary700,
+          ),
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: SizedBox(
+            height: 40,
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by Claim ID...',
+                hintStyle: AppTextStyles.bodySm,
+                filled: true,
+                fillColor: AppColors.neutral100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(4),
+                  borderSide: BorderSide.none,
+                ),
+                prefixIcon: const Icon(Icons.search, size: 18),
+              ),
+              onSubmitted: (raw) {
+                final query = raw.trim();
+                if (query.isEmpty) return;
+                final match = _claims
+                    .where((item) => item.claimId
+                        .toLowerCase()
+                        .contains(query.toLowerCase()))
+                    .toList(growable: false);
+                if (match.isEmpty) {
+                  _showSnack('No encontramos ese claim en la cola actual.',
+                      isError: true);
+                  return;
+                }
+                _loadDetail(match.first.claimId);
+              },
             ),
-          ],
+          ),
         ),
         const Spacer(),
+        IconButton(
+          tooltip: 'Notificaciones',
+          onPressed: () {},
+          icon: const Icon(Icons.notifications_none),
+        ),
+        IconButton(
+          tooltip: 'Ayuda',
+          onPressed: () {},
+          icon: const Icon(Icons.help_outline),
+        ),
         OutlinedButton.icon(
           onPressed: _loadingQueue ? null : () => _loadQueue(reset: true),
           icon: const Icon(Icons.refresh, size: 16),
@@ -457,6 +502,199 @@ class _MerchantClaimsReviewScreenState
             foregroundColor: AppColors.neutral700,
             side: const BorderSide(color: AppColors.neutral300),
             textStyle: AppTextStyles.labelSm,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailHeader(MerchantClaimDetail detail) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextButton.icon(
+            onPressed: () {
+              setState(() => _detailView = false);
+            },
+            icon: const Icon(Icons.arrow_back, size: 16),
+            label: const Text('Back to list'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.neutral700,
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                detail.claimId,
+                style: AppTextStyles.headingMd.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _StatusBadge(
+                label: detail.userVisibleStatus.label.toUpperCase(),
+                background: _statusBg(detail.userVisibleStatus),
+                foreground: _statusFg(detail.userVisibleStatus),
+              ),
+              const Spacer(),
+              OutlinedButton(
+                onPressed: () {},
+                child: const Text('Export Evidence'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: _runningAction
+                    ? null
+                    : () {
+                        setState(() {
+                          _resolveTargetStatus =
+                              MerchantClaimStatus.conflictDetected;
+                        });
+                        _runResolve();
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary500,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Flag for Escalation'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Assigned to: Human Reviewer',
+            style: AppTextStyles.bodySm.copyWith(fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTriageMetrics() {
+    final highRisk = _claims
+        .where((item) =>
+            item.claimStatus == MerchantClaimStatus.conflictDetected ||
+            item.claimStatus == MerchantClaimStatus.duplicateClaim)
+        .length;
+    final needInfo = _claims
+        .where((item) => item.claimStatus == MerchantClaimStatus.needsMoreInfo)
+        .length;
+    return Row(
+      children: [
+        Expanded(
+          flex: 7,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'QUEUE VELOCITY',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_claims.length}',
+                        style: AppTextStyles.headingLg.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      minHeight: 12,
+                      value: _claims.isEmpty
+                          ? 0
+                          : (_claims.length.clamp(1, 100) / 100),
+                      backgroundColor: AppColors.neutral100,
+                      color: AppColors.primary500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary600,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PRIORITY ACTIONS',
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                _priorityLine('$highRisk High Risk Pending'),
+                const SizedBox(height: 6),
+                _priorityLine('$needInfo Claims needing info'),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {},
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.12),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('VIEW PRIORITY QUEUE'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _priorityLine(String text) {
+    return Row(
+      children: [
+        const Icon(Icons.priority_high, color: Colors.white, size: 16),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.bodySm.copyWith(color: Colors.white),
           ),
         ),
       ],
@@ -648,7 +886,7 @@ class _MerchantClaimsReviewScreenState
                           child: Row(
                             children: [
                               SizedBox(
-                                width: 120,
+                                width: 110,
                                 child: Text(
                                   item.claimId,
                                   style: AppTextStyles.bodyXs.copyWith(
@@ -667,6 +905,15 @@ class _MerchantClaimsReviewScreenState
                                 ),
                               ),
                               const SizedBox(width: 10),
+                              SizedBox(
+                                width: 75,
+                                child: Text(
+                                  item.zoneId,
+                                  style: AppTextStyles.bodyXs,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
                               _StatusBadge(
                                 label: item.claimStatus.label,
                                 background: _statusBg(item.claimStatus),
@@ -674,7 +921,7 @@ class _MerchantClaimsReviewScreenState
                               ),
                               const SizedBox(width: 10),
                               SizedBox(
-                                width: 82,
+                                width: 70,
                                 child: Text(
                                   item.categoryId ?? '-',
                                   style: AppTextStyles.bodyXs,
@@ -683,11 +930,35 @@ class _MerchantClaimsReviewScreenState
                               ),
                               const SizedBox(width: 10),
                               SizedBox(
-                                width: 120,
+                                width: 60,
+                                child: _riskFlag(item.claimStatus),
+                              ),
+                              const SizedBox(width: 10),
+                              SizedBox(
+                                width: 140,
                                 child: Text(
-                                  _formatDate(item.updatedAtMillis),
+                                  _maskIdentity(item.userId),
+                                  style: AppTextStyles.bodyXs.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              SizedBox(
+                                width: 110,
+                                child: Text(
+                                  _formatDate(item.createdAtMillis),
                                   style: AppTextStyles.bodyXs,
                                   textAlign: TextAlign.right,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              SizedBox(
+                                width: 70,
+                                child: TextButton(
+                                  onPressed: () => _loadDetail(item.claimId),
+                                  child: const Text('REVISAR'),
                                 ),
                               ),
                             ],
@@ -726,10 +997,15 @@ class _MerchantClaimsReviewScreenState
       child: Row(
         children: [
           SizedBox(
-            width: 120,
-            child: Text('Claim', style: AppTextStyles.labelSm),
+            width: 110,
+            child: Text('Claim ID', style: AppTextStyles.labelSm),
           ),
           Expanded(child: Text('Merchant', style: AppTextStyles.labelSm)),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 75,
+            child: Text('Zone', style: AppTextStyles.labelSm),
+          ),
           const SizedBox(width: 10),
           SizedBox(
             width: 95,
@@ -737,21 +1013,59 @@ class _MerchantClaimsReviewScreenState
           ),
           const SizedBox(width: 10),
           SizedBox(
-            width: 82,
+            width: 70,
             child: Text('Category', style: AppTextStyles.labelSm),
           ),
           const SizedBox(width: 10),
           SizedBox(
-            width: 120,
+            width: 60,
+            child: Text('Risk', style: AppTextStyles.labelSm),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 140,
+            child: Text('Applicant', style: AppTextStyles.labelSm),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 110,
             child: Text(
-              'Updated',
+              'Date',
               style: AppTextStyles.labelSm,
               textAlign: TextAlign.right,
             ),
           ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 70,
+            child: Text('Actions', style: AppTextStyles.labelSm),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _riskFlag(MerchantClaimStatus status) {
+    final high = status == MerchantClaimStatus.conflictDetected;
+    final medium = status == MerchantClaimStatus.duplicateClaim ||
+        status == MerchantClaimStatus.needsMoreInfo;
+    if (high) {
+      return const Icon(Icons.warning_amber_rounded,
+          color: AppColors.errorFg, size: 16);
+    }
+    if (medium) {
+      return const Icon(Icons.error_outline,
+          color: AppColors.warningFg, size: 16);
+    }
+    return const Icon(Icons.check_circle_outline,
+        color: AppColors.secondary500, size: 16);
+  }
+
+  String _maskIdentity(String raw) {
+    final value = raw.trim();
+    if (value.length <= 4) return '******';
+    final suffix = value.substring(value.length - 4);
+    return '******$suffix';
   }
 
   Widget _buildDetailPanel() {

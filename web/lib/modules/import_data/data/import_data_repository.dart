@@ -34,6 +34,7 @@ class ZoneOption {
     required this.zoneId,
     required this.name,
     required this.cityId,
+    required this.departmentName,
     required this.countryName,
     required this.provinceName,
     required this.localityName,
@@ -42,14 +43,19 @@ class ZoneOption {
   final String zoneId;
   final String name;
   final String cityId;
+  final String departmentName;
   final String countryName;
   final String provinceName;
   final String localityName;
 
   String get label {
     final locality = localityName.trim().isEmpty ? name : localityName;
+    final department = departmentName.trim();
     final province = provinceName.trim();
-    return province.isEmpty ? locality : '$locality — $province';
+    if (department.isEmpty && province.isEmpty) return locality;
+    if (department.isEmpty) return '$locality — $province';
+    if (province.isEmpty) return '$locality — $department';
+    return '$locality — $department — $province';
   }
 }
 
@@ -158,6 +164,13 @@ class ImportDataRepository {
         zoneId: doc.id,
         name: _readText(data, const ['name', 'nombre']) ?? localityName,
         cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
+        departmentName: _readText(data, const [
+              'departmentName',
+              'departamentoNombre',
+              'department',
+              'departamento',
+            ]) ??
+            localityName,
         countryName:
             _readText(data, const ['countryName', 'paisNombre']) ?? 'Argentina',
         provinceName:

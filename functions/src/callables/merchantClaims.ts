@@ -156,6 +156,8 @@ interface SearchClaimableMerchantsResponse {
 }
 
 interface ListMerchantClaimsForReviewRequest {
+  provinceName?: unknown;
+  departmentName?: unknown;
   zoneId?: unknown;
   statuses?: unknown;
   limit?: unknown;
@@ -168,6 +170,9 @@ interface ReviewQueueItem {
   merchantId: string;
   userId: string;
   zoneId: string;
+  provinceName: string | null;
+  departmentName: string | null;
+  localityName: string | null;
   categoryId: string | null;
   claimStatus: ClaimStatus;
   declaredRole: DeclaredRole;
@@ -569,6 +574,32 @@ function normalizeReviewQueueStatuses(value: unknown): UserVisibleStatus[] {
   }
   return unique;
 }
+
+function normalizeGeoText(value: unknown, field: string): string {
+  if (typeof value !== "string") {
+    throw new HttpsError("invalid-argument", `${field} es requerido.`);
+  }
+  const normalized = value.trim();
+  if (!normalized) {
+    throw new HttpsError("invalid-argument", `${field} es requerido.`);
+  }
+  if (normalized.length > 120) {
+    throw new HttpsError(
+      "invalid-argument",
+      `${field} supera el máximo de 120 caracteres.`
+    );
+  }
+  return normalized;
+}
+
+function toGeoKey(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function toUserVisibleStatus(raw: unknown): UserVisibleStatus {
   if (typeof raw !== "string") return "draft";
   const normalized = raw.trim() as UserVisibleStatus;
@@ -630,6 +661,56 @@ function resolveMerchantName(data: Record<string, unknown>): string | null {
     return name.trim();
   }
   return null;
+}
+
+function readTrimmedString(
+  data: Record<string, unknown>,
+  keys: string[]
+): string | null {
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+async function resolveZoneGeo(zoneId: string): Promise<{
+  provinceName: string | null;
+  departmentName: string | null;
+  localityName: string | null;
+}> {
+  const snap = await db().collection("zones").doc(zoneId).get();
+  if (!snap.exists) {
+    return {
+      provinceName: null,
+      departmentName: null,
+      localityName: null,
+    };
+  }
+  const data = snap.data() ?? {};
+  const provinceName = readTrimmedString(data, [
+    "provinceName",
+    "provinciaNombre",
+  ]);
+  const departmentName = readTrimmedString(data, [
+    "departmentName",
+    "departamentoNombre",
+    "department",
+    "departamento",
+  ]);
+  const localityName = readTrimmedString(data, [
+    "localityName",
+    "cityName",
+    "name",
+    "nombre",
+  ]);
+  return {
+    provinceName,
+    departmentName,
+    localityName,
+  };
 }
 
 function evidenceSignature(value: unknown): string {
@@ -750,6 +831,28 @@ export const upsertMerchantClaimDraft = onCall<
   const merchantData = merchantSnap.data() ?? {};
   const categoryId = normalizeRequiredString(merchantData.categoryId, "merchant.categoryId");
   const zoneId = normalizeRequiredString(merchantData.zoneId, "merchant.zoneId");
+  const merchantProvinceName = readTrimmedString(merchantData, [
+    "provinceName",
+    "provinciaNombre",
+  ]);
+  const merchantDepartmentName = readTrimmedString(merchantData, [
+    "departmentName",
+    "departamentoNombre",
+    "department",
+    "departamento",
+  ]);
+  const merchantLocalityName = readTrimmedString(merchantData, [
+    "localityName",
+    "cityName",
+    "name",
+    "nombre",
+  ]);
+  const zoneGeo = await resolveZoneGeo(zoneId);
+  const provinceName = merchantProvinceName ?? zoneGeo.provinceName;
+  const departmentName = merchantDepartmentName ?? zoneGeo.departmentName;
+  const localityName = merchantLocalityName ?? zoneGeo.localityName;
+  const provinceKey = provinceName ? toGeoKey(provinceName) : null;
+  const departmentKey = departmentName ? toGeoKey(departmentName) : null;
 
   const claimId =
     request.data.claimId == null
@@ -859,6 +962,11 @@ export const upsertMerchantClaimDraft = onCall<
     ownershipDocumentUploaded: requiredEvidence.ownershipDocument,
     hasAcceptedDataProcessingConsent,
     hasAcceptedLegitimacyDeclaration,
+    provinceName: provinceName ?? null,
+    provinceKey: provinceKey ?? null,
+    departmentName: departmentName ?? null,
+    departmentKey: departmentKey ?? null,
+    localityName: localityName ?? null,
     updatedAt: now,
     lastStatusAt: now,
   };
@@ -1235,7 +1343,20 @@ export const listMerchantClaimsForReview = onCall<
   const auth = assertAuthenticated(request.auth as CallableAuth);
   assertAdmin(auth);
 
-  const zoneId = normalizeRequiredString(request.data.zoneId, "zoneId");
+  const provinceName = normalizeGeoText(
+    request.data.provinceName,
+    "provinceName"
+  );
+  const departmentName = normalizeGeoText(
+    request.data.departmentName,
+    "departmentName"
+  );
+  const provinceKey = toGeoKey(provinceName);
+  const departmentKey = toGeoKey(departmentName);
+  const zoneId =
+    request.data.zoneId == null
+      ? null
+      : normalizeRequiredString(request.data.zoneId, "zoneId");
   const statuses = normalizeReviewQueueStatuses(request.data.statuses);
   const limit = normalizeReviewQueueLimit(request.data.limit);
   const cursorCreatedAtMillis = normalizeCursorMillis(
@@ -1253,11 +1374,16 @@ export const listMerchantClaimsForReview = onCall<
 
   let query = db()
     .collection("merchant_claims")
-    .where("zoneId", "==", zoneId)
+    .where("provinceKey", "==", provinceKey)
+    .where("departmentKey", "==", departmentKey)
     .where("claimStatus", "in", statuses)
     .orderBy("createdAt", "desc")
     .orderBy(FieldPath.documentId(), "desc")
     .limit(limit);
+
+  if (zoneId != null) {
+    query = query.where("zoneId", "==", zoneId);
+  }
 
   if (cursorCreatedAtMillis != null && cursorClaimId != null) {
     query = query.startAfter(
@@ -1266,7 +1392,23 @@ export const listMerchantClaimsForReview = onCall<
     );
   }
 
-  const snapshot = await query.get();
+  let snapshot = await query.get();
+  if (
+    snapshot.empty &&
+    zoneId != null &&
+    cursorCreatedAtMillis == null &&
+    cursorClaimId == null
+  ) {
+    // Compatibilidad temporal con claims legacy sin provinceKey/departmentKey.
+    snapshot = await db()
+      .collection("merchant_claims")
+      .where("zoneId", "==", zoneId)
+      .where("claimStatus", "in", statuses)
+      .orderBy("createdAt", "desc")
+      .orderBy(FieldPath.documentId(), "desc")
+      .limit(limit)
+      .get();
+  }
   const claims = snapshot.docs.map((doc) => {
     const data = doc.data() ?? {};
     return {
@@ -1274,6 +1416,12 @@ export const listMerchantClaimsForReview = onCall<
       merchantId: normalizeRequiredString(data.merchantId, "claim.merchantId"),
       userId: normalizeRequiredString(data.userId, "claim.userId"),
       zoneId: normalizeRequiredString(data.zoneId, "claim.zoneId"),
+      provinceName:
+        typeof data.provinceName === "string" ? data.provinceName : null,
+      departmentName:
+        typeof data.departmentName === "string" ? data.departmentName : null,
+      localityName:
+        typeof data.localityName === "string" ? data.localityName : null,
       categoryId: typeof data.categoryId === "string" ? data.categoryId : null,
       claimStatus: toUserVisibleStatus(data.userVisibleStatus ?? data.claimStatus),
       declaredRole: readDeclaredRole(data.declaredRole),

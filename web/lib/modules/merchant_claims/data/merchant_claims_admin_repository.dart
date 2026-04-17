@@ -78,13 +78,17 @@ class MerchantClaimReviewCursor {
 
 class MerchantClaimReviewFilters {
   const MerchantClaimReviewFilters({
-    required this.zoneId,
+    required this.provinceName,
+    required this.departmentName,
+    this.zoneId,
     required this.statuses,
     this.limit = 20,
     this.cursor,
   });
 
-  final String zoneId;
+  final String provinceName;
+  final String departmentName;
+  final String? zoneId;
   final List<MerchantClaimStatus> statuses;
   final int limit;
   final MerchantClaimReviewCursor? cursor;
@@ -286,8 +290,8 @@ class MerchantClaimsAdminRepository {
   MerchantClaimsAdminRepository({
     FirebaseFunctions? functions,
     FirebaseFirestore? firestore,
-  }) : _functions = functions ?? FirebaseFunctions.instance,
-       _firestore = firestore ?? FirebaseFirestore.instance;
+  })  : _functions = functions ?? FirebaseFunctions.instance,
+        _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFunctions _functions;
   final FirebaseFirestore _firestore;
@@ -297,7 +301,10 @@ class MerchantClaimsAdminRepository {
   }) async {
     final callable = _functions.httpsCallable('listMerchantClaimsForReview');
     final response = await callable.call(<String, dynamic>{
-      'zoneId': filters.zoneId,
+      'provinceName': filters.provinceName,
+      'departmentName': filters.departmentName,
+      if (filters.zoneId != null && filters.zoneId!.trim().isNotEmpty)
+        'zoneId': filters.zoneId,
       'statuses': filters.statuses.map((status) => status.apiValue).toList(),
       'limit': filters.limit,
       if (filters.cursor != null)
@@ -355,10 +362,8 @@ class MerchantClaimsAdminRepository {
   }
 
   Future<MerchantClaimDetail> getClaimDetail({required String claimId}) async {
-    final snapshot = await _firestore
-        .collection('merchant_claims')
-        .doc(claimId)
-        .get();
+    final snapshot =
+        await _firestore.collection('merchant_claims').doc(claimId).get();
     if (!snapshot.exists) {
       throw StateError('No encontramos el claim seleccionado.');
     }

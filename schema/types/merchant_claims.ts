@@ -52,6 +52,11 @@ export interface MerchantClaimDocument {
   userId: string;
   categoryId: string;
   zoneId: string;
+  provinceName?: string | null;
+  provinceKey?: string | null;
+  departmentName?: string | null;
+  departmentKey?: string | null;
+  localityName?: string | null;
   claimStatus: MerchantClaimStatus;
   /**
    * Estado técnico interno del workflow (backend).

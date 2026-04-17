@@ -259,6 +259,29 @@
       "collectionGroup": "merchant_claims",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "provinceKey", "order": "ASCENDING" },
+        { "fieldPath": "departmentKey", "order": "ASCENDING" },
+        { "fieldPath": "claimStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "merchant_claims",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "provinceKey", "order": "ASCENDING" },
+        { "fieldPath": "departmentKey", "order": "ASCENDING" },
+        { "fieldPath": "zoneId", "order": "ASCENDING" },
+        { "fieldPath": "claimStatus", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "merchant_claims",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "userId", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" },
         { "fieldPath": "__name__", "order": "DESCENDING" }

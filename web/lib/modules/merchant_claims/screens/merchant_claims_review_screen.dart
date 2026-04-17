@@ -38,7 +38,6 @@ class _MerchantClaimsReviewScreenState
   final ImportDataRepository _zonesRepository = ImportDataRepository();
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy HH:mm', 'es');
 
-  final TextEditingController _zoneIdController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _resolveReasonController =
       TextEditingController();
@@ -53,7 +52,9 @@ class _MerchantClaimsReviewScreenState
   final Set<SensitiveFieldKind> _revealFields = {...SensitiveFieldKind.values};
 
   List<ZoneOption> _zones = const [];
-  bool _loadingZones = true;
+  String? _selectedProvince;
+  String? _selectedDepartment;
+  String? _selectedCityZoneId;
 
   int _selectedLimit = 20;
   bool _loadingQueue = false;
@@ -84,9 +85,48 @@ class _MerchantClaimsReviewScreenState
     await _loadQueue(reset: true);
   }
 
+  List<String> _provinceOptions() {
+    final values = _zones
+        .map((zone) => zone.provinceName.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    values.sort();
+    return values;
+  }
+
+  List<String> _departmentOptions(String province) {
+    final target = province.trim();
+    final values = _zones
+        .where((zone) => zone.provinceName.trim() == target)
+        .map((zone) => zone.departmentName.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    values.sort();
+    return values;
+  }
+
+  List<ZoneOption> _cityOptions({
+    required String province,
+    required String department,
+  }) {
+    final targetProvince = province.trim();
+    final targetDepartment = department.trim();
+    final values = _zones
+        .where(
+          (zone) =>
+              zone.provinceName.trim() == targetProvince &&
+              zone.departmentName.trim() == targetDepartment,
+        )
+        .toList(growable: false);
+    values
+        .sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
+    return values;
+  }
+
   @override
   void dispose() {
-    _zoneIdController.dispose();
     _searchController.dispose();
     _resolveReasonController.dispose();
     _resolveNotesController.dispose();
@@ -95,14 +135,39 @@ class _MerchantClaimsReviewScreenState
   }
 
   Future<void> _loadZones() async {
-    setState(() => _loadingZones = true);
     try {
       final zones = await _zonesRepository.fetchAvailableZones();
       if (!mounted) return;
       setState(() {
         _zones = zones;
-        if (_zoneIdController.text.trim().isEmpty && zones.isNotEmpty) {
-          _zoneIdController.text = zones.first.zoneId;
+        final provinces = _provinceOptions();
+        if (_selectedProvince == null && provinces.isNotEmpty) {
+          _selectedProvince = provinces.first;
+        }
+        final province = _selectedProvince;
+        if (province != null) {
+          final departments = _departmentOptions(province);
+          if (departments.isEmpty) {
+            _selectedDepartment = null;
+            _selectedCityZoneId = null;
+          } else {
+            if (_selectedDepartment == null ||
+                !departments.contains(_selectedDepartment)) {
+              _selectedDepartment = departments.first;
+              _selectedCityZoneId = null;
+            }
+            final department = _selectedDepartment;
+            if (department != null) {
+              final cities = _cityOptions(
+                province: province,
+                department: department,
+              );
+              if (_selectedCityZoneId != null &&
+                  !cities.any((zone) => zone.zoneId == _selectedCityZoneId)) {
+                _selectedCityZoneId = null;
+              }
+            }
+          }
         }
       });
     } catch (error) {
@@ -112,17 +177,17 @@ class _MerchantClaimsReviewScreenState
         isError: true,
       );
       setState(() => _zones = const []);
-    } finally {
-      if (mounted) setState(() => _loadingZones = false);
     }
   }
 
   Future<void> _loadQueue({required bool reset}) async {
     if (_loadingQueue) return;
-    final zoneId = _zoneIdController.text.trim();
-    if (zoneId.isEmpty) {
+    final province = _selectedProvince?.trim() ?? '';
+    final department = _selectedDepartment?.trim() ?? '';
+    if (province.isEmpty || department.isEmpty) {
       setState(() {
-        _queueError = 'Seleccioná una ciudad/zona para consultar la cola.';
+        _queueError =
+            'Seleccioná provincia y departamento para consultar la cola.';
         if (reset) {
           _claims = const [];
           _nextCursor = null;
@@ -142,10 +207,36 @@ class _MerchantClaimsReviewScreenState
       _queueError = null;
     });
 
+    final matchingZones = _cityOptions(
+      province: province,
+      department: department,
+    );
+    if (matchingZones.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _loadingQueue = false;
+        _queueError =
+            'No encontramos ciudades para ese departamento/provincia.';
+        if (reset) {
+          _claims = const [];
+          _nextCursor = null;
+        }
+      });
+      return;
+    }
+
+    final selectedCityZoneId = _selectedCityZoneId?.trim();
+    final selectedZoneId =
+        selectedCityZoneId == null || selectedCityZoneId.isEmpty
+            ? null
+            : selectedCityZoneId;
+
     try {
       final page = await _claimsRepository.listForReview(
         filters: MerchantClaimReviewFilters(
-          zoneId: zoneId,
+          provinceName: province,
+          departmentName: department,
+          zoneId: selectedZoneId,
           statuses: _selectedStatuses.toList(growable: false),
           limit: _selectedLimit,
           cursor: reset ? null : _nextCursor,
@@ -763,6 +854,19 @@ class _MerchantClaimsReviewScreenState
   }
 
   Widget _buildFiltersCard() {
+    final provinceOptions = _provinceOptions();
+    final selectedProvince = _selectedProvince;
+    final departmentOptions = selectedProvince == null
+        ? const <String>[]
+        : _departmentOptions(selectedProvince);
+    final selectedDepartment = _selectedDepartment;
+    final cityOptions = (selectedProvince == null || selectedDepartment == null)
+        ? const <ZoneOption>[]
+        : _cityOptions(
+            province: selectedProvince,
+            department: selectedDepartment,
+          );
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -776,54 +880,87 @@ class _MerchantClaimsReviewScreenState
           Row(
             children: [
               SizedBox(
-                width: 360,
-                child: _zones.isNotEmpty
-                    ? DropdownMenu<String>(
-                        width: 360,
-                        initialSelection: _zoneIdController.text.trim().isEmpty
-                            ? _zones.first.zoneId
-                            : _zoneIdController.text.trim(),
-                        enableFilter: true,
-                        enableSearch: true,
-                        label: const Text('Ciudad / Zona'),
-                        dropdownMenuEntries: _zones
-                            .map(
-                              (zone) => DropdownMenuEntry<String>(
-                                value: zone.zoneId,
-                                label: zone.label,
-                              ),
-                            )
-                            .toList(growable: false),
-                        onSelected: (value) {
-                          if (value == null) return;
-                          setState(() => _zoneIdController.text = value);
-                        },
+                width: 220,
+                child: DropdownMenu<String>(
+                  width: 220,
+                  enabled: provinceOptions.isNotEmpty,
+                  enableFilter: true,
+                  enableSearch: true,
+                  initialSelection: _selectedProvince,
+                  label: const Text('Provincia *'),
+                  dropdownMenuEntries: provinceOptions
+                      .map(
+                        (item) =>
+                            DropdownMenuEntry<String>(value: item, label: item),
                       )
-                    : TextField(
-                        enabled: false,
-                        decoration: InputDecoration(
-                          labelText: 'Ciudad / Zona',
-                          hintText: 'No hay zonas disponibles para seleccionar',
-                          border: const OutlineInputBorder(),
-                          isDense: true,
-                          suffixIcon: _loadingZones
-                              ? const Padding(
-                                  padding: EdgeInsets.all(10),
-                                  child: SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                )
-                              : null,
-                        ),
-                      ),
+                      .toList(growable: false),
+                  onSelected: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _selectedProvince = value;
+                      final departments = _departmentOptions(value);
+                      _selectedDepartment =
+                          departments.isEmpty ? null : departments.first;
+                      _selectedCityZoneId = null;
+                    });
+                  },
+                ),
               ),
               const SizedBox(width: 10),
               SizedBox(
-                width: 120,
+                width: 220,
+                child: DropdownMenu<String>(
+                  width: 220,
+                  enabled:
+                      selectedProvince != null && departmentOptions.isNotEmpty,
+                  enableFilter: true,
+                  enableSearch: true,
+                  initialSelection: _selectedDepartment,
+                  label: const Text('Departamento *'),
+                  dropdownMenuEntries: departmentOptions
+                      .map(
+                        (item) =>
+                            DropdownMenuEntry<String>(value: item, label: item),
+                      )
+                      .toList(growable: false),
+                  onSelected: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _selectedDepartment = value;
+                      _selectedCityZoneId = null;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 280,
+                child: DropdownMenu<String>(
+                  width: 280,
+                  enabled: selectedDepartment != null && cityOptions.isNotEmpty,
+                  enableFilter: true,
+                  enableSearch: true,
+                  initialSelection: _selectedCityZoneId,
+                  label: const Text('Ciudad (opcional)'),
+                  hintText: 'Todas las ciudades del departamento',
+                  dropdownMenuEntries: cityOptions
+                      .map(
+                        (zone) => DropdownMenuEntry<String>(
+                          value: zone.zoneId,
+                          label: zone.label,
+                        ),
+                      )
+                      .toList(growable: false),
+                  onSelected: (value) {
+                    setState(() {
+                      _selectedCityZoneId = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 110,
                 child: DropdownMenu<int>(
                   initialSelection: _selectedLimit,
                   label: const Text('Límite'),
@@ -851,24 +988,14 @@ class _MerchantClaimsReviewScreenState
               ),
             ],
           ),
-          if (_zones.isNotEmpty) ...[
+          if (cityOptions.isNotEmpty && _selectedCityZoneId == null) ...[
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: _zones
-                  .take(8)
-                  .map(
-                    (zone) => ActionChip(
-                      label: Text(zone.label),
-                      onPressed: () {
-                        setState(() {
-                          _zoneIdController.text = zone.zoneId;
-                        });
-                      },
-                    ),
-                  )
-                  .toList(growable: false),
+            Text(
+              'Modo departamento activo: se buscará en todo el departamento con paginación.',
+              style: AppTextStyles.bodyXs.copyWith(
+                color: AppColors.neutral700,
+                fontFamily: 'Inter',
+              ),
             ),
           ],
           const SizedBox(height: 12),

@@ -6,6 +6,12 @@ Prioridad: P0 (MVP crítica)
 Dependencia directa del flujo: TuM2-0126 — Flujo de claim del comercio  
 Actualización clave incorporada: criterio documental flexible para Tiendas de comida al paso / puestos móviles.
 
+## Sync 0127 implementado (2026-04-16)
+- El motor backend aplica validación mínima por categoría con `categoryId` canónico.
+- `pharmacy` exige `regulatory_document`.
+- `veterinary` exige `reinforced_relationship_evidence`.
+- `fast_food` acepta combinación flexible (`operational_point_photo` y/o `alternative_relationship_evidence`) con flag de revisión manual por ambigüedad.
+
 ## 1. Objetivo
 Definir la matriz canónica de evidencia y documentación por categoría de comercio para el dominio de claims de TuM2, estableciendo:
 

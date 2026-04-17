@@ -1,5 +1,10 @@
 # TuM2-0004 — Arquitectura de roles, segmentos y ciclo de vida de acceso
 
+## Sync 0127 implementado (2026-04-16)
+- 0127 se ejecuta en backend al entrar a `submitted` y mantiene separación estricta entre `claimStatus` y permisos.
+- No existe promoción automática a `OWNER` desde auto-validación.
+- `owner_pending` sigue siendo señal intermedia backend-driven.
+
 Estado propuesto: UPDATE REQUIRED  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad de comercio (`merchant_claims`) sobre roles, estados intermedios, navegación, seguridad y ciclo de vida de acceso.

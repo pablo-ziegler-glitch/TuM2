@@ -5,6 +5,11 @@ Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0130
 
+## Sync 0127 implementado (2026-04-16)
+- `submitMerchantClaim` deja estado `submitted` y dispara auto-validación backend idempotente.
+- 0127 nunca otorga OWNER ni muta permisos de owner.
+- `owner_pending` se sincroniza server-side con estados post validación (`under_review`, `needs_more_info`, `conflict_detected`, `duplicate_claim`, `rejected`).
+
 ## 1. Objetivo
 Definir la integración entre dominio de claim y sistema de roles para cerrar de forma explícita:
 - cuándo el usuario es solo `CUSTOMER`,

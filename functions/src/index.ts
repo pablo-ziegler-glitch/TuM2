@@ -24,7 +24,10 @@ export {
 } from "./triggers/ownerSchedules";
 export { onSignalsWriteSyncPublic } from "./triggers/signals";
 export { onPharmacyDutyWriteSyncMerchant } from "./triggers/duties";
-export { onClaimApprovedPromoteMerchant } from "./triggers/claims";
+export {
+  onClaimSubmittedRunAutoValidation,
+  onClaimApprovedPromoteMerchant,
+} from "./triggers/claims";
 export { onReportThresholdSuppressMerchant } from "./triggers/reports";
 export { onExternalPlaceCreateNormalize } from "./triggers/externalPlaces";
 

@@ -1,5 +1,10 @@
 # TuM2-0128 — Revisión manual de claims en Admin Web
 
+## Sync 0127 implementado (2026-04-16)
+- El backend ahora persiste `autoValidationReasons`, `hasConflict`, `hasDuplicate`, `requiresManualReview`, `riskPriority`, `reviewQueuePriority`, `missingEvidenceTypes`.
+- `listMerchantClaimsForReview` expone esos campos para filtros/priorización del listado admin.
+- Los reason codes son internos; el claimant no recibe señales antifraude crudas.
+
 Estado propuesto: TODO  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  

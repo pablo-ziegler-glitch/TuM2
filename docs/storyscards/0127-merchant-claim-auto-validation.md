@@ -5,6 +5,51 @@ Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126 — Flujo de claim del comercio
 
+## Implementación backend real (2026-04-16)
+Estado: IMPLEMENTED (MVP v1)
+
+### Arquitectura implementada
+- Dominio puro: `functions/src/lib/merchantClaimAutoValidation.ts`
+- Orquestación IO idempotente: `functions/src/lib/merchantClaimAutoValidationService.ts`
+- Trigger transición `submitted`: `onClaimSubmittedRunAutoValidation`
+- Integración submit/admin rerun en `callables/merchantClaims.ts`
+- Reuso de sync `owner_pending` en `functions/src/lib/merchantClaimOwnerPending.ts`
+
+### Precedencia cerrada implementada
+1. `rejected`
+2. `conflict_detected`
+3. `duplicate_claim`
+4. `needs_more_info`
+5. `under_review`
+
+### Reason codes internos implementados
+- Identidad/eligibilidad: `auth_user_missing`, `claim_email_mismatch`, `claim_user_ineligible`, `missing_required_consent`
+- Evidencia/completitud: `missing_storefront_photo`, `missing_basic_relationship_document`, `missing_category_required_evidence`, `missing_merchant_identification_data`
+- Duplicado/conflicto: `duplicate_active_claim_same_user_same_merchant`, `existing_owner_conflict`, `multiple_incompatible_claims`, `merchant_state_conflict`
+- Riesgo: `sensitive_category_requires_manual_review`, `ambiguous_food_stand_evidence`, `risk_signal_contact_reuse`, `risk_signal_abuse_pattern`, `risk_signal_non_terminal_inconsistency`
+
+### Matriz mínima por categoría implementada
+- `pharmacy`: requiere `storefront_photo` + `ownership_document` + `regulatory_document`; si falta regulatoria -> `needs_more_info`; completo -> `under_review`.
+- `veterinary`: requiere `storefront_photo` + `ownership_document` + `reinforced_relationship_evidence`; si falta reforzada -> `needs_more_info`; completo -> `under_review`.
+- `kiosk`, `grocery`, `tire_shop`, `prepared_food`: `storefront_photo` + `ownership_document`; faltantes -> `needs_more_info`; completo -> `under_review`.
+- `fast_food` (comida al paso): evidencia visual flexible (`storefront_photo` u `operational_point_photo`) + documento base flexible (`ownership_document` o `alternative_relationship_evidence` o `regulatory_document`); ambiguo/completo -> `under_review` con risk flag.
+
+### Idempotencia y costo Firestore
+- Auto-validación por claim puntual, sin listeners.
+- Queries acotadas con `limit` para dedupe/conflicto/reuse.
+- Hash de entrada: `lastAutoValidationHash` para no-op real.
+- Sin write redundante cuando resultado y hash son idénticos.
+- Índice agregado: `merchant_claims(userId, merchantId, claimStatus)`.
+
+### Seguridad implementada
+- No promoción automática a OWNER.
+- No mutación de `merchant_public`.
+- No exposición de fingerprints/hashes/ipHash al claimant.
+- Logs estructurados sin PII: `claimId`, `merchantId`, `userId`, estados, flags, duración.
+
+### Contradicciones detectadas y decisión
+- Se detectó uso legacy de categoría `gomeria` en UI de claim; para 0127 backend se priorizó `categoryId` canónico (`tire_shop`) y no se introdujeron nuevos legacy aliases en el motor.
+
 ## 1. Objetivo
 Definir la capa de validación automática inicial que corre inmediatamente después del envío de un claim para:
 - bloquear casos inválidos o incompletos antes de revisión humana,

@@ -1,5 +1,9 @@
 # TuM2-0064 — Implementar módulo OWNER
 
+## Sync 0127 implementado (2026-04-16)
+- `submit` de claim no habilita OWNER: queda condicionado a auto-validación + revisión manual.
+- Estados `needs_more_info`, `duplicate_claim` y `conflict_detected` quedan listos para UX contextual owner_pending sin permisos operativos.
+
 Estado propuesto: UPDATE REQUIRED  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad sobre Dashboard OWNER, incorporación formal de `owner_pending` y separación entre revisión de claim y ownership aprobado.

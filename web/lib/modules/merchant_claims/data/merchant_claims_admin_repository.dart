@@ -103,6 +103,12 @@ class MerchantClaimReviewItem {
     required this.submittedAtMillis,
     required this.createdAtMillis,
     required this.updatedAtMillis,
+    required this.hasConflict,
+    required this.hasDuplicate,
+    required this.requiresManualReview,
+    required this.riskPriority,
+    required this.reviewQueuePriority,
+    required this.autoValidationReasons,
   });
 
   final String claimId;
@@ -116,6 +122,12 @@ class MerchantClaimReviewItem {
   final int? submittedAtMillis;
   final int? createdAtMillis;
   final int? updatedAtMillis;
+  final bool hasConflict;
+  final bool hasDuplicate;
+  final bool requiresManualReview;
+  final String? riskPriority;
+  final int? reviewQueuePriority;
+  final List<String> autoValidationReasons;
 }
 
 class MerchantClaimReviewPage {
@@ -170,6 +182,14 @@ class MerchantClaimDetail {
     required this.conflictType,
     required this.duplicateOfClaimId,
     required this.autoValidationReasonCode,
+    required this.autoValidationReasons,
+    required this.hasConflict,
+    required this.hasDuplicate,
+    required this.requiresManualReview,
+    required this.missingEvidenceTypes,
+    required this.riskFlags,
+    required this.riskPriority,
+    required this.reviewQueuePriority,
     required this.storefrontPhotoUploaded,
     required this.ownershipDocumentUploaded,
     required this.hasAcceptedDataProcessingConsent,
@@ -202,6 +222,14 @@ class MerchantClaimDetail {
   final String? conflictType;
   final String? duplicateOfClaimId;
   final String? autoValidationReasonCode;
+  final List<String> autoValidationReasons;
+  final bool hasConflict;
+  final bool hasDuplicate;
+  final bool requiresManualReview;
+  final List<String> missingEvidenceTypes;
+  final List<String> riskFlags;
+  final String? riskPriority;
+  final int? reviewQueuePriority;
   final bool storefrontPhotoUploaded;
   final bool ownershipDocumentUploaded;
   final bool hasAcceptedDataProcessingConsent;
@@ -296,6 +324,15 @@ class MerchantClaimsAdminRepository {
             submittedAtMillis: _readInt(row['submittedAtMillis']),
             createdAtMillis: _readInt(row['createdAtMillis']),
             updatedAtMillis: _readInt(row['updatedAtMillis']),
+            hasConflict: _readBool(row['hasConflict']),
+            hasDuplicate: _readBool(row['hasDuplicate']),
+            requiresManualReview: _readBool(row['requiresManualReview']),
+            riskPriority: _readString(row['riskPriority']),
+            reviewQueuePriority: _readInt(row['reviewQueuePriority']),
+            autoValidationReasons: _asList(row['autoValidationReasons'])
+                .map((item) => _readString(item) ?? '')
+                .where((item) => item.isNotEmpty)
+                .toList(growable: false),
           ),
         )
         .where((row) => row.claimId.isNotEmpty)
@@ -369,6 +406,23 @@ class MerchantClaimsAdminRepository {
       conflictType: _readString(data['conflictType']),
       duplicateOfClaimId: _readString(data['duplicateOfClaimId']),
       autoValidationReasonCode: _readString(data['autoValidationReasonCode']),
+      autoValidationReasons: _asList(data['autoValidationReasons'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      hasConflict: _readBool(data['hasConflict']),
+      hasDuplicate: _readBool(data['hasDuplicate']),
+      requiresManualReview: _readBool(data['requiresManualReview']),
+      missingEvidenceTypes: _asList(data['missingEvidenceTypes'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      riskFlags: _asList(data['riskFlags'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      riskPriority: _readString(data['riskPriority']),
+      reviewQueuePriority: _readInt(data['reviewQueuePriority']),
       storefrontPhotoUploaded: _readBool(data['storefrontPhotoUploaded']),
       ownershipDocumentUploaded: _readBool(data['ownershipDocumentUploaded']),
       hasAcceptedDataProcessingConsent: _readBool(

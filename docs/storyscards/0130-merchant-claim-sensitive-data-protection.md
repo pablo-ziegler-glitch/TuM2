@@ -5,6 +5,11 @@ Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0129
 
+## Sync 0127 implementado (2026-04-16)
+- Auto-validación usa `merchant_claim_private.fingerprintPrimary` solo para señal interna de reuse (`risk_signal_contact_reuse`).
+- No se exponen fingerprints/hashes al claimant.
+- Logging técnico de auto-validación se mantiene sin PII (sin email/teléfono/documentos).
+
 ## 1. Objetivo
 Definir el modelo integral de protección, almacenamiento, exposición controlada y auditoría de datos sensibles del dominio `merchant_claims`.
 

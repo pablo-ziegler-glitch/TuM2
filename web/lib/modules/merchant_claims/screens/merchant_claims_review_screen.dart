@@ -108,7 +108,7 @@ class _MerchantClaimsReviewScreenState
     } catch (error) {
       if (!mounted) return;
       _showSnack(
-        'No pudimos cargar zonas. Podes escribir zoneId manualmente.',
+        'No pudimos cargar ciudades/zonas. Reintentá en unos segundos.',
         isError: true,
       );
       setState(() => _zones = const []);
@@ -122,7 +122,7 @@ class _MerchantClaimsReviewScreenState
     final zoneId = _zoneIdController.text.trim();
     if (zoneId.isEmpty) {
       setState(() {
-        _queueError = 'ZoneId es obligatorio para consultar la cola.';
+        _queueError = 'Seleccioná una ciudad/zona para consultar la cola.';
         if (reset) {
           _claims = const [];
           _nextCursor = null;
@@ -185,7 +185,7 @@ class _MerchantClaimsReviewScreenState
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
       setState(() {
-        _queueError = error.message ?? 'No pudimos cargar la cola de claims.';
+        _queueError = error.message ?? 'No pudimos cargar la cola de reclamos.';
         if (reset) {
           _claims = const [];
           _nextCursor = null;
@@ -194,7 +194,7 @@ class _MerchantClaimsReviewScreenState
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _queueError = 'No pudimos cargar la cola de claims.';
+        _queueError = 'No pudimos cargar la cola de reclamos.';
         if (reset) {
           _claims = const [];
           _nextCursor = null;
@@ -230,7 +230,7 @@ class _MerchantClaimsReviewScreenState
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _detailError = 'No pudimos cargar el detalle del claim.';
+        _detailError = 'No pudimos cargar el detalle del reclamo.';
         _detail = null;
         _loadingDetail = false;
       });
@@ -244,18 +244,18 @@ class _MerchantClaimsReviewScreenState
     try {
       final result = await _claimsRepository.evaluateClaim(claimId: claimId);
       if (!mounted) return;
-      _showSnack('Claim reevaluado: ${result.claimStatus.label}.');
+      _showSnack('Reclamo reevaluado: ${result.claimStatus.label}.');
       setState(() => _selectedClaimId = claimId);
       await _loadQueue(reset: true);
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
       _showSnack(
-        error.message ?? 'No pudimos reevaluar el claim.',
+        error.message ?? 'No pudimos reevaluar el reclamo.',
         isError: true,
       );
     } catch (_) {
       if (!mounted) return;
-      _showSnack('No pudimos reevaluar el claim.', isError: true);
+      _showSnack('No pudimos reevaluar el reclamo.', isError: true);
     } finally {
       if (mounted) setState(() => _runningAction = false);
     }
@@ -273,18 +273,18 @@ class _MerchantClaimsReviewScreenState
         reviewNotes: _resolveNotesController.text.trim(),
       );
       if (!mounted) return;
-      _showSnack('Claim resuelto: ${result.claimStatus.label}.');
+      _showSnack('Reclamo resuelto: ${result.claimStatus.label}.');
       setState(() => _selectedClaimId = claimId);
       await _loadQueue(reset: true);
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
       _showSnack(
-        error.message ?? 'No pudimos resolver el claim.',
+        error.message ?? 'No pudimos resolver el reclamo.',
         isError: true,
       );
     } catch (_) {
       if (!mounted) return;
-      _showSnack('No pudimos resolver el claim.', isError: true);
+      _showSnack('No pudimos resolver el reclamo.', isError: true);
     } finally {
       if (mounted) setState(() => _runningAction = false);
     }
@@ -294,12 +294,18 @@ class _MerchantClaimsReviewScreenState
     final claimId = _selectedClaimId;
     if (claimId == null || _runningAction) return;
     if (_revealFields.isEmpty) {
-      _showSnack('Selecciona al menos un campo para reveal.', isError: true);
+      _showSnack(
+        'Seleccioná al menos un campo para revelar.',
+        isError: true,
+      );
       return;
     }
     final reason = _revealReasonController.text.trim();
     if (reason.isEmpty) {
-      _showSnack('Reason code es obligatorio para reveal.', isError: true);
+      _showSnack(
+        'El código de motivo es obligatorio para revelar.',
+        isError: true,
+      );
       return;
     }
 
@@ -317,7 +323,7 @@ class _MerchantClaimsReviewScreenState
           result.expiresAtMillis,
         );
       });
-      _showSnack('Reveal aplicado de forma temporal y auditada.');
+      _showSnack('Revelación aplicada de forma temporal y auditada.');
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
       _showSnack(
@@ -387,6 +393,37 @@ class _MerchantClaimsReviewScreenState
     };
   }
 
+  TextStyle _headlineStyle({
+    double? size,
+    FontWeight weight = FontWeight.w800,
+    Color? color,
+    double? letterSpacing,
+  }) {
+    return AppTextStyles.headingMd.copyWith(
+      fontFamily: 'Manrope',
+      fontSize: size,
+      fontWeight: weight,
+      color: color ?? AppColors.neutral900,
+      letterSpacing: letterSpacing,
+    );
+  }
+
+  TextStyle _labelStyle({Color? color, FontWeight? weight}) {
+    return AppTextStyles.labelSm.copyWith(
+      fontFamily: 'Inter',
+      color: color ?? AppColors.neutral700,
+      fontWeight: weight,
+    );
+  }
+
+  TextStyle _bodyStyle({Color? color, FontWeight? weight}) {
+    return AppTextStyles.bodySm.copyWith(
+      fontFamily: 'Inter',
+      color: color ?? AppColors.neutral700,
+      fontWeight: weight,
+    );
+  }
+
   void _showSnack(String message, {bool isError = false}) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.showSnackBar(
@@ -439,14 +476,28 @@ class _MerchantClaimsReviewScreenState
 
   Widget _buildHeader() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
-          'CLAIMS DE COMERCIOS',
-          style: AppTextStyles.headingMd.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
-            color: AppColors.primary700,
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'CONSOLA DE AUDITORÍA',
+              style: _labelStyle(color: AppColors.primary600).copyWith(
+                letterSpacing: 1.1,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Triaje de reclamos',
+              style: _headlineStyle(
+                size: 24,
+                color: AppColors.primary700,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ],
         ),
         const SizedBox(width: 18),
         Expanded(
@@ -455,8 +506,8 @@ class _MerchantClaimsReviewScreenState
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by Claim ID...',
-                hintStyle: AppTextStyles.bodySm,
+                hintText: 'Buscar por ID de reclamo...',
+                hintStyle: _bodyStyle(color: AppColors.neutral600),
                 filled: true,
                 fillColor: AppColors.neutral100,
                 border: OutlineInputBorder(
@@ -474,7 +525,7 @@ class _MerchantClaimsReviewScreenState
                         .contains(query.toLowerCase()))
                     .toList(growable: false);
                 if (match.isEmpty) {
-                  _showSnack('No encontramos ese claim en la cola actual.',
+                  _showSnack('No encontramos ese reclamo en la cola actual.',
                       isError: true);
                   return;
                 }
@@ -483,7 +534,6 @@ class _MerchantClaimsReviewScreenState
             ),
           ),
         ),
-        const Spacer(),
         IconButton(
           tooltip: 'Notificaciones',
           onPressed: () {},
@@ -497,7 +547,7 @@ class _MerchantClaimsReviewScreenState
         OutlinedButton.icon(
           onPressed: _loadingQueue ? null : () => _loadQueue(reset: true),
           icon: const Icon(Icons.refresh, size: 16),
-          label: const Text('Refresh'),
+          label: const Text('Actualizar'),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.neutral700,
             side: const BorderSide(color: AppColors.neutral300),
@@ -524,7 +574,7 @@ class _MerchantClaimsReviewScreenState
               setState(() => _detailView = false);
             },
             icon: const Icon(Icons.arrow_back, size: 16),
-            label: const Text('Back to list'),
+            label: const Text('Volver al triaje'),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.neutral700,
               padding: EdgeInsets.zero,
@@ -537,8 +587,8 @@ class _MerchantClaimsReviewScreenState
             children: [
               Text(
                 detail.claimId,
-                style: AppTextStyles.headingMd.copyWith(
-                  fontWeight: FontWeight.w800,
+                style: _headlineStyle(
+                  size: 23,
                   letterSpacing: 0.2,
                 ),
               ),
@@ -551,7 +601,7 @@ class _MerchantClaimsReviewScreenState
               const Spacer(),
               OutlinedButton(
                 onPressed: () {},
-                child: const Text('Export Evidence'),
+                child: const Text('Exportar evidencia'),
               ),
               const SizedBox(width: 8),
               FilledButton(
@@ -568,14 +618,14 @@ class _MerchantClaimsReviewScreenState
                   backgroundColor: AppColors.primary500,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Flag for Escalation'),
+                child: const Text('Marcar para escalar'),
               ),
             ],
           ),
           const SizedBox(height: 4),
           Text(
-            'Assigned to: Human Reviewer',
-            style: AppTextStyles.bodySm.copyWith(fontStyle: FontStyle.italic),
+            'Asignado a: Revisor humano',
+            style: _bodyStyle().copyWith(fontStyle: FontStyle.italic),
           ),
         ],
       ),
@@ -585,11 +635,19 @@ class _MerchantClaimsReviewScreenState
   Widget _buildTriageMetrics() {
     final highRisk = _claims
         .where((item) =>
-            item.claimStatus == MerchantClaimStatus.conflictDetected ||
-            item.claimStatus == MerchantClaimStatus.duplicateClaim)
+            item.hasConflict ||
+            item.hasDuplicate ||
+            item.riskPriority == 'high' ||
+            item.riskPriority == 'critical')
         .length;
     final needInfo = _claims
-        .where((item) => item.claimStatus == MerchantClaimStatus.needsMoreInfo)
+        .where((item) =>
+            item.claimStatus == MerchantClaimStatus.needsMoreInfo ||
+            item.autoValidationReasons.contains('missing_storefront_photo') ||
+            item.autoValidationReasons
+                .contains('missing_basic_relationship_document') ||
+            item.autoValidationReasons
+                .contains('missing_category_required_evidence'))
         .length;
     return Row(
       children: [
@@ -608,8 +666,9 @@ class _MerchantClaimsReviewScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'QUEUE VELOCITY',
-                        style: AppTextStyles.bodyXs.copyWith(
+                        'VELOCIDAD DE COLA',
+                        style: _labelStyle().copyWith(
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.2,
                         ),
@@ -617,7 +676,7 @@ class _MerchantClaimsReviewScreenState
                       const SizedBox(height: 4),
                       Text(
                         '${_claims.length}',
-                        style: AppTextStyles.headingLg.copyWith(
+                        style: _headlineStyle(size: 28).copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -655,17 +714,19 @@ class _MerchantClaimsReviewScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'PRIORITY ACTIONS',
-                  style: AppTextStyles.bodyXs.copyWith(
+                  'ACCIONES PRIORITARIAS',
+                  style: _labelStyle(color: Colors.white.withValues(alpha: 0.9))
+                      .copyWith(
+                    fontSize: 11,
                     color: Colors.white.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.1,
                   ),
                 ),
                 const SizedBox(height: 10),
-                _priorityLine('$highRisk High Risk Pending'),
+                _priorityLine('$highRisk de alto riesgo pendientes'),
                 const SizedBox(height: 6),
-                _priorityLine('$needInfo Claims needing info'),
+                _priorityLine('$needInfo reclamos con información faltante'),
                 const SizedBox(height: 10),
                 SizedBox(
                   width: double.infinity,
@@ -675,7 +736,7 @@ class _MerchantClaimsReviewScreenState
                       backgroundColor: Colors.white.withValues(alpha: 0.12),
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('VIEW PRIORITY QUEUE'),
+                    child: const Text('VER COLA DE ALTO RIESGO'),
                   ),
                 ),
               ],
@@ -694,7 +755,7 @@ class _MerchantClaimsReviewScreenState
         Expanded(
           child: Text(
             text,
-            style: AppTextStyles.bodySm.copyWith(color: Colors.white),
+            style: _bodyStyle(color: Colors.white),
           ),
         ),
       ],
@@ -715,33 +776,57 @@ class _MerchantClaimsReviewScreenState
           Row(
             children: [
               SizedBox(
-                width: 260,
-                child: TextField(
-                  controller: _zoneIdController,
-                  decoration: InputDecoration(
-                    labelText: 'ZoneId',
-                    hintText: 'ej: zone-1',
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                    suffixIcon: _loadingZones
-                        ? const Padding(
-                            padding: EdgeInsets.all(10),
-                            child: SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : null,
-                  ),
-                ),
+                width: 360,
+                child: _zones.isNotEmpty
+                    ? DropdownMenu<String>(
+                        width: 360,
+                        initialSelection: _zoneIdController.text.trim().isEmpty
+                            ? _zones.first.zoneId
+                            : _zoneIdController.text.trim(),
+                        enableFilter: true,
+                        enableSearch: true,
+                        label: const Text('Ciudad / Zona'),
+                        dropdownMenuEntries: _zones
+                            .map(
+                              (zone) => DropdownMenuEntry<String>(
+                                value: zone.zoneId,
+                                label: zone.label,
+                              ),
+                            )
+                            .toList(growable: false),
+                        onSelected: (value) {
+                          if (value == null) return;
+                          setState(() => _zoneIdController.text = value);
+                        },
+                      )
+                    : TextField(
+                        enabled: false,
+                        decoration: InputDecoration(
+                          labelText: 'Ciudad / Zona',
+                          hintText: 'No hay zonas disponibles para seleccionar',
+                          border: const OutlineInputBorder(),
+                          isDense: true,
+                          suffixIcon: _loadingZones
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                      ),
               ),
               const SizedBox(width: 10),
               SizedBox(
                 width: 120,
                 child: DropdownMenu<int>(
                   initialSelection: _selectedLimit,
-                  label: const Text('Limit'),
+                  label: const Text('Límite'),
                   dropdownMenuEntries: const [10, 20, 30, 50]
                       .map(
                         (value) => DropdownMenuEntry<int>(
@@ -758,7 +843,7 @@ class _MerchantClaimsReviewScreenState
               FilledButton.icon(
                 onPressed: _loadingQueue ? null : () => _loadQueue(reset: true),
                 icon: const Icon(Icons.search, size: 16),
-                label: const Text('Run Query'),
+                label: const Text('Consultar'),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary500,
                   foregroundColor: Colors.white,
@@ -775,7 +860,7 @@ class _MerchantClaimsReviewScreenState
                   .take(8)
                   .map(
                     (zone) => ActionChip(
-                      label: Text(zone.zoneId),
+                      label: Text(zone.label),
                       onPressed: () {
                         setState(() {
                           _zoneIdController.text = zone.zoneId;
@@ -826,8 +911,8 @@ class _MerchantClaimsReviewScreenState
             child: Row(
               children: [
                 Text(
-                  'Queue (${_claims.length})',
-                  style: AppTextStyles.headingSm.copyWith(fontSize: 15),
+                  'Cola de reclamos (${_claims.length})',
+                  style: _headlineStyle(size: 17, weight: FontWeight.w700),
                 ),
                 const Spacer(),
                 if (_loadingQueue)
@@ -853,7 +938,7 @@ class _MerchantClaimsReviewScreenState
               ),
               child: Text(
                 _queueError!,
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.errorFg),
+                style: _bodyStyle(color: AppColors.errorFg),
               ),
             ),
           const Divider(height: 1, color: AppColors.neutral100),
@@ -865,8 +950,8 @@ class _MerchantClaimsReviewScreenState
                     child: Text(
                       _loadingQueue
                           ? 'Consultando cola...'
-                          : 'No hay claims para los filtros actuales.',
-                      style: AppTextStyles.bodySm,
+                          : 'No hay reclamos para los filtros actuales.',
+                      style: _bodyStyle(),
                     ),
                   )
                 : ListView.separated(
@@ -890,6 +975,7 @@ class _MerchantClaimsReviewScreenState
                                 child: Text(
                                   item.claimId,
                                   style: AppTextStyles.bodyXs.copyWith(
+                                    fontFamily: 'Inter',
                                     color: AppColors.neutral800,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -899,6 +985,7 @@ class _MerchantClaimsReviewScreenState
                                 child: Text(
                                   item.merchantName ?? item.merchantId,
                                   style: AppTextStyles.bodySm.copyWith(
+                                    fontFamily: 'Inter',
                                     color: AppColors.neutral900,
                                   ),
                                   overflow: TextOverflow.ellipsis,
@@ -906,10 +993,12 @@ class _MerchantClaimsReviewScreenState
                               ),
                               const SizedBox(width: 10),
                               SizedBox(
-                                width: 75,
+                                width: 170,
                                 child: Text(
-                                  item.zoneId,
-                                  style: AppTextStyles.bodyXs,
+                                  _zoneLabel(item.zoneId),
+                                  style: AppTextStyles.bodyXs.copyWith(
+                                    fontFamily: 'Inter',
+                                  ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
@@ -931,7 +1020,7 @@ class _MerchantClaimsReviewScreenState
                               const SizedBox(width: 10),
                               SizedBox(
                                 width: 60,
-                                child: _riskFlag(item.claimStatus),
+                                child: _riskFlag(item),
                               ),
                               const SizedBox(width: 10),
                               SizedBox(
@@ -949,7 +1038,9 @@ class _MerchantClaimsReviewScreenState
                                 width: 110,
                                 child: Text(
                                   _formatDate(item.createdAtMillis),
-                                  style: AppTextStyles.bodyXs,
+                                  style: AppTextStyles.bodyXs.copyWith(
+                                    fontFamily: 'Inter',
+                                  ),
                                   textAlign: TextAlign.right,
                                 ),
                               ),
@@ -958,7 +1049,7 @@ class _MerchantClaimsReviewScreenState
                                 width: 70,
                                 child: TextButton(
                                   onPressed: () => _loadDetail(item.claimId),
-                                  child: const Text('REVISAR'),
+                                  child: const Text('ABRIR'),
                                 ),
                               ),
                             ],
@@ -977,7 +1068,7 @@ class _MerchantClaimsReviewScreenState
                   onPressed:
                       _loadingQueue ? null : () => _loadQueue(reset: false),
                   icon: const Icon(Icons.expand_more, size: 16),
-                  label: const Text('Load more'),
+                  label: const Text('Cargar más'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.neutral700,
                     side: const BorderSide(color: AppColors.neutral300),
@@ -998,57 +1089,60 @@ class _MerchantClaimsReviewScreenState
         children: [
           SizedBox(
             width: 110,
-            child: Text('Claim ID', style: AppTextStyles.labelSm),
+            child: Text('ID de reclamo', style: _labelStyle()),
           ),
-          Expanded(child: Text('Merchant', style: AppTextStyles.labelSm)),
+          Expanded(child: Text('Comercio', style: _labelStyle())),
           const SizedBox(width: 10),
           SizedBox(
-            width: 75,
-            child: Text('Zone', style: AppTextStyles.labelSm),
+            width: 170,
+            child: Text('Zona', style: _labelStyle()),
           ),
           const SizedBox(width: 10),
           SizedBox(
             width: 95,
-            child: Text('Status', style: AppTextStyles.labelSm),
+            child: Text('Estado', style: _labelStyle()),
           ),
           const SizedBox(width: 10),
           SizedBox(
             width: 70,
-            child: Text('Category', style: AppTextStyles.labelSm),
+            child: Text('Categoría', style: _labelStyle()),
           ),
           const SizedBox(width: 10),
           SizedBox(
             width: 60,
-            child: Text('Risk', style: AppTextStyles.labelSm),
+            child: Text('Riesgo', style: _labelStyle()),
           ),
           const SizedBox(width: 10),
           SizedBox(
             width: 140,
-            child: Text('Applicant', style: AppTextStyles.labelSm),
+            child: Text('Solicitante', style: _labelStyle()),
           ),
           const SizedBox(width: 10),
           SizedBox(
             width: 110,
             child: Text(
-              'Date',
-              style: AppTextStyles.labelSm,
+              'Fecha',
+              style: _labelStyle(),
               textAlign: TextAlign.right,
             ),
           ),
           const SizedBox(width: 10),
           SizedBox(
             width: 70,
-            child: Text('Actions', style: AppTextStyles.labelSm),
+            child: Text('Acción', style: _labelStyle()),
           ),
         ],
       ),
     );
   }
 
-  Widget _riskFlag(MerchantClaimStatus status) {
-    final high = status == MerchantClaimStatus.conflictDetected;
-    final medium = status == MerchantClaimStatus.duplicateClaim ||
-        status == MerchantClaimStatus.needsMoreInfo;
+  Widget _riskFlag(MerchantClaimReviewItem item) {
+    final high = item.hasConflict ||
+        item.riskPriority == 'critical' ||
+        item.riskPriority == 'high';
+    final medium = item.hasDuplicate ||
+        item.claimStatus == MerchantClaimStatus.needsMoreInfo ||
+        item.riskPriority == 'medium';
     if (high) {
       return const Icon(Icons.warning_amber_rounded,
           color: AppColors.errorFg, size: 16);
@@ -1066,6 +1160,15 @@ class _MerchantClaimsReviewScreenState
     if (value.length <= 4) return '******';
     final suffix = value.substring(value.length - 4);
     return '******$suffix';
+  }
+
+  String _zoneLabel(String zoneId) {
+    final trimmed = zoneId.trim();
+    if (trimmed.isEmpty) return '-';
+    for (final zone in _zones) {
+      if (zone.zoneId == trimmed) return zone.label;
+    }
+    return trimmed;
   }
 
   Widget _buildDetailPanel() {
@@ -1108,8 +1211,8 @@ class _MerchantClaimsReviewScreenState
         ),
         child: Center(
           child: Text(
-            'Selecciona un claim para ver detalle.',
-            style: AppTextStyles.bodySm,
+            'Seleccioná un reclamo para ver detalle.',
+            style: _bodyStyle(),
           ),
         ),
       );
@@ -1123,84 +1226,80 @@ class _MerchantClaimsReviewScreenState
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.neutral100),
       ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Row(
-              children: [
-                Text(
-                  'Claim Detail',
-                  style: AppTextStyles.headingSm.copyWith(fontSize: 15),
-                ),
-                const SizedBox(width: 8),
-                _StatusBadge(
-                  label: detail.userVisibleStatus.label,
-                  background: _statusBg(detail.userVisibleStatus),
-                  foreground: _statusFg(detail.userVisibleStatus),
-                ),
-                const Spacer(),
-                if (_loadingDetail)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: AppColors.neutral100),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 1140;
+            final detailContent = SingleChildScrollView(
+              padding: const EdgeInsets.only(right: 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Panel de investigación',
+                        style:
+                            _headlineStyle(size: 17, weight: FontWeight.w700),
+                      ),
+                      const SizedBox(width: 8),
+                      _StatusBadge(
+                        label: detail.userVisibleStatus.label,
+                        background: _statusBg(detail.userVisibleStatus),
+                        foreground: _statusFg(detail.userVisibleStatus),
+                      ),
+                      const Spacer(),
+                      if (_loadingDetail)
+                        const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   _SectionCard(
-                    title: 'Summary',
+                    title: 'Resumen del caso',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _kv('Claim ID', detail.claimId),
-                        _kv(
-                          'Merchant',
-                          detail.merchantName ?? detail.merchantId,
-                        ),
-                        _kv('User ID', detail.userId),
-                        _kv('Zone', detail.zoneId ?? '-'),
-                        _kv('Category', detail.categoryId ?? '-'),
-                        _kv('Declared role', detail.declaredRole ?? '-'),
-                        _kv('Status (internal)', detail.claimStatus.apiValue),
-                        _kv('Workflow', detail.internalWorkflowStatus ?? '-'),
+                        _kv('ID de reclamo', detail.claimId),
+                        _kv('Comercio',
+                            detail.merchantName ?? detail.merchantId),
+                        _kv('Solicitante', _maskIdentity(detail.userId)),
+                        _kv('Zona/Ciudad', _zoneLabel(detail.zoneId ?? '-')),
+                        _kv('Categoría', detail.categoryId ?? '-'),
+                        _kv('Rol declarado', detail.declaredRole ?? '-'),
+                        _kv('Estado (interno)', detail.claimStatus.apiValue),
+                        _kv('Flujo interno',
+                            detail.internalWorkflowStatus ?? '-'),
                       ],
                     ),
                   ),
                   const SizedBox(height: 10),
                   _SectionCard(
-                    title: 'Evidence and consent',
+                    title: 'Evidencia y consentimiento',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _kv(
-                          'Storefront uploaded',
-                          detail.storefrontPhotoUploaded ? 'Yes' : 'No',
+                          'Foto de frente del local',
+                          detail.storefrontPhotoUploaded ? 'Sí' : 'No',
                         ),
                         _kv(
-                          'Ownership document uploaded',
-                          detail.ownershipDocumentUploaded ? 'Yes' : 'No',
+                          'Documento de titularidad',
+                          detail.ownershipDocumentUploaded ? 'Sí' : 'No',
                         ),
-                        _kv('Evidence files', '${detail.evidenceFiles.length}'),
+                        _kv('Archivos de evidencia',
+                            '${detail.evidenceFiles.length}'),
                         _kv(
-                          'Data processing consent',
-                          detail.hasAcceptedDataProcessingConsent
-                              ? 'Yes'
-                              : 'No',
+                          'Consentimiento de datos',
+                          detail.hasAcceptedDataProcessingConsent ? 'Sí' : 'No',
                         ),
                         _kv(
-                          'Legitimacy declaration',
-                          detail.hasAcceptedLegitimacyDeclaration
-                              ? 'Yes'
-                              : 'No',
+                          'Declaración de legitimidad',
+                          detail.hasAcceptedLegitimacyDeclaration ? 'Sí' : 'No',
                         ),
                         if (detail.evidenceFiles.isNotEmpty) ...[
                           const SizedBox(height: 8),
@@ -1209,99 +1308,10 @@ class _MerchantClaimsReviewScreenState
                               padding: const EdgeInsets.only(bottom: 4),
                               child: Text(
                                 '- ${file.kind} | ${file.originalFileName ?? file.id} | ${file.sizeBytes} bytes',
-                                style: AppTextStyles.bodyXs,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _SectionCard(
-                    title: 'Sensitive data (masked)',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _kv(
-                          'Authenticated email',
-                          detail.authenticatedEmail ?? '-',
-                        ),
-                        _kv('Phone', detail.phoneMasked ?? '-'),
-                        _kv(
-                          'Claimant name',
-                          detail.claimantDisplayNameMasked ?? '-',
-                        ),
-                        _kv('Claimant note', detail.claimantNoteMasked ?? '-'),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: SensitiveFieldKind.values
-                              .map(
-                                (field) => FilterChip(
-                                  selected: _revealFields.contains(field),
-                                  onSelected: (enabled) =>
-                                      _toggleRevealField(field, enabled),
-                                  label: Text(_sensitiveLabel(field)),
+                                style: AppTextStyles.bodyXs.copyWith(
+                                  fontFamily: 'Inter',
                                 ),
-                              )
-                              .toList(growable: false),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _revealReasonController,
-                          decoration: const InputDecoration(
-                            labelText: 'Reveal reason code',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            FilledButton.icon(
-                              onPressed: _runningAction ? null : _runReveal,
-                              icon: const Icon(Icons.visibility, size: 16),
-                              label: const Text('Reveal'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.neutral900,
-                                foregroundColor: Colors.white,
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (_revealExpiresAt != null)
-                              Text(
-                                'Expires: ${_formatDate(_revealExpiresAt!.millisecondsSinceEpoch)}',
-                                style: AppTextStyles.bodyXs,
-                              ),
-                          ],
-                        ),
-                        if (_revealedValues.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.infoBg,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.primary200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: _revealedValues.entries
-                                  .map(
-                                    (entry) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 4),
-                                      child: Text(
-                                        '${_sensitiveLabel(entry.key)}: ${entry.value}',
-                                        style: AppTextStyles.bodySm.copyWith(
-                                          color: AppColors.neutral900,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(growable: false),
                             ),
                           ),
                         ],
@@ -1310,33 +1320,62 @@ class _MerchantClaimsReviewScreenState
                   ),
                   const SizedBox(height: 10),
                   _SectionCard(
-                    title: 'Validation and resolution context',
+                    title: 'Señales de revisión',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _kv(
-                          'Auto validation reason',
+                          'Motivo de validación automática',
                           detail.autoValidationReasonCode ?? '-',
                         ),
-                        _kv('Conflict type', detail.conflictType ?? '-'),
                         _kv(
-                          'Duplicate of claim',
-                          detail.duplicateOfClaimId ?? '-',
+                          'Motivos de validación automática',
+                          detail.autoValidationReasons.isEmpty
+                              ? '-'
+                              : detail.autoValidationReasons.join(', '),
                         ),
-                        _kv('Review reason', detail.reviewReasonCode ?? '-'),
-                        _kv('Review notes', detail.reviewNotes ?? '-'),
-                        _kv('Reviewed by', detail.reviewedByUid ?? '-'),
+                        _kv('Tiene conflicto',
+                            detail.hasConflict ? 'Sí' : 'No'),
+                        _kv(
+                          'Tiene duplicado',
+                          detail.hasDuplicate ? 'Sí' : 'No',
+                        ),
+                        _kv(
+                          'Requiere revisión manual',
+                          detail.requiresManualReview ? 'Sí' : 'No',
+                        ),
+                        _kv(
+                          'Tipos de evidencia faltante',
+                          detail.missingEvidenceTypes.isEmpty
+                              ? '-'
+                              : detail.missingEvidenceTypes.join(', '),
+                        ),
+                        _kv(
+                          'Banderas de riesgo',
+                          detail.riskFlags.isEmpty
+                              ? '-'
+                              : detail.riskFlags.join(', '),
+                        ),
+                        _kv('Prioridad de riesgo', detail.riskPriority ?? '-'),
+                        _kv(
+                          'Prioridad en cola',
+                          detail.reviewQueuePriority?.toString() ?? '-',
+                        ),
+                        _kv('Tipo de conflicto', detail.conflictType ?? '-'),
+                        _kv('Duplicado de reclamo',
+                            detail.duplicateOfClaimId ?? '-'),
+                        _kv('Motivo de revisión',
+                            detail.reviewReasonCode ?? '-'),
+                        _kv('Notas de revisión', detail.reviewNotes ?? '-'),
+                        _kv('Revisado por', detail.reviewedByUid ?? '-'),
                       ],
                     ),
                   ),
                   const SizedBox(height: 10),
                   _SectionCard(
-                    title: 'Timeline',
+                    title: 'Línea de tiempo',
                     child: timeline.isEmpty
-                        ? Text(
-                            'Sin eventos de tiempo.',
-                            style: AppTextStyles.bodySm,
-                          )
+                        ? Text('Sin eventos de tiempo.', style: _bodyStyle())
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: timeline
@@ -1345,112 +1384,267 @@ class _MerchantClaimsReviewScreenState
                                     padding: const EdgeInsets.only(bottom: 6),
                                     child: Text(
                                       '${_formatDate(entry.millis)} - ${entry.label}',
-                                      style: AppTextStyles.bodySm,
+                                      style: _bodyStyle(),
                                     ),
                                   ),
                                 )
                                 .toList(growable: false),
                           ),
                   ),
-                  const SizedBox(height: 10),
-                  _SectionCard(
-                    title: 'Manual actions',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 250,
-                              child: DropdownMenu<MerchantClaimStatus>(
-                                initialSelection: _resolveTargetStatus,
-                                label: const Text('Resolve status'),
-                                dropdownMenuEntries: _resolveStatuses
-                                    .map(
-                                      (status) => DropdownMenuEntry<
-                                          MerchantClaimStatus>(
-                                        value: status,
-                                        label: status.label,
-                                      ),
-                                    )
-                                    .toList(growable: false),
-                                onSelected: (value) {
-                                  if (value == null) return;
-                                  setState(() => _resolveTargetStatus = value);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: _runningAction ? null : _runEvaluate,
-                              icon: const Icon(Icons.bolt, size: 16),
-                              label: const Text('Re-evaluate'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.neutral700,
-                                side: const BorderSide(
-                                  color: AppColors.neutral300,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _resolveReasonController,
-                          decoration: const InputDecoration(
-                            labelText: 'Review reason code (optional)',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _resolveNotesController,
-                          decoration: const InputDecoration(
-                            labelText: 'Review notes (optional)',
-                            border: OutlineInputBorder(),
-                            alignLabelWithHint: true,
-                          ),
-                          minLines: 2,
-                          maxLines: 4,
-                        ),
-                        const SizedBox(height: 8),
-                        FilledButton.icon(
-                          onPressed: _runningAction ? null : _runResolve,
-                          icon: const Icon(Icons.task_alt, size: 16),
-                          label: const Text('Resolve claim'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primary500,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
+            );
+
+            final verdictPanel =
+                _buildAuditorsVerdictPanel(detail, compact: compact);
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  verdictPanel,
+                  const SizedBox(height: 12),
+                  Expanded(child: detailContent),
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: detailContent),
+                const SizedBox(width: 16),
+                SizedBox(
+                  width: 360,
+                  height: constraints.maxHeight,
+                  child: verdictPanel,
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAuditorsVerdictPanel(
+    MerchantClaimDetail detail, {
+    required bool compact,
+  }) {
+    final panelBody = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Veredicto del auditor',
+          style: _headlineStyle(size: 18, weight: FontWeight.w800),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Definí la resolución final, ejecutá la acción y dejá trazabilidad clara.',
+          style: _bodyStyle(color: AppColors.neutral600),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Estado actual: ${detail.userVisibleStatus.label}',
+          style: AppTextStyles.bodyXs.copyWith(
+            fontFamily: 'Inter',
+            color: AppColors.neutral700,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Revisor asignado: Revisor humano',
+          style: AppTextStyles.bodyXs.copyWith(
+            fontFamily: 'Inter',
+            color: AppColors.neutral700,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('Estado de resolución',
+            style: _labelStyle(weight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        DropdownMenu<MerchantClaimStatus>(
+          initialSelection: _resolveTargetStatus,
+          width: double.infinity,
+          label: const Text('Definir veredicto'),
+          dropdownMenuEntries: _resolveStatuses
+              .map(
+                (status) => DropdownMenuEntry<MerchantClaimStatus>(
+                  value: status,
+                  label: status.label,
+                ),
+              )
+              .toList(growable: false),
+          onSelected: (value) {
+            if (value == null) return;
+            setState(() => _resolveTargetStatus = value);
+          },
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _resolveReasonController,
+          decoration: const InputDecoration(
+            labelText: 'Código de motivo (opcional)',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _resolveNotesController,
+          decoration: const InputDecoration(
+            labelText: 'Notas de decisión (opcional)',
+            border: OutlineInputBorder(),
+            alignLabelWithHint: true,
+          ),
+          minLines: 2,
+          maxLines: 4,
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _runningAction ? null : _runEvaluate,
+                icon: const Icon(Icons.bolt, size: 16),
+                label: const Text('Re-evaluar'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.neutral700,
+                  side: const BorderSide(color: AppColors.neutral300),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _runningAction ? null : _runResolve,
+                icon: const Icon(Icons.task_alt, size: 16),
+                label: const Text('Publicar veredicto'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary500,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        const Divider(height: 1, color: AppColors.neutral200),
+        const SizedBox(height: 12),
+        Text(
+          'Datos sensibles',
+          style: _headlineStyle(size: 15, weight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Revelación temporal solo para auditoría. Toda acción queda auditada.',
+          style: _bodyStyle(color: AppColors.neutral600),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: SensitiveFieldKind.values
+              .map(
+                (field) => FilterChip(
+                  selected: _revealFields.contains(field),
+                  onSelected: (enabled) => _toggleRevealField(field, enabled),
+                  label: Text(_sensitiveLabel(field)),
+                ),
+              )
+              .toList(growable: false),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _revealReasonController,
+          decoration: const InputDecoration(
+            labelText: 'Código de motivo de revelación',
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          onPressed: _runningAction ? null : _runReveal,
+          icon: const Icon(Icons.visibility, size: 16),
+          label: const Text('Revelar campos sensibles'),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.neutral900,
+            foregroundColor: Colors.white,
+          ),
+        ),
+        if (_revealExpiresAt != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Expira: ${_formatDate(_revealExpiresAt!.millisecondsSinceEpoch)}',
+            style: AppTextStyles.bodyXs.copyWith(
+              fontFamily: 'Inter',
+              color: AppColors.neutral700,
             ),
           ),
         ],
-      ),
+        if (_revealedValues.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.infoBg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.primary200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _revealedValues.entries
+                  .map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '${_sensitiveLabel(entry.key)}: ${entry.value}',
+                        style: _bodyStyle(color: AppColors.neutral900),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ),
+        ],
+      ],
     );
+
+    final panel = Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.neutral50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.neutral200),
+      ),
+      child: compact
+          ? SingleChildScrollView(child: panelBody)
+          : Column(
+              children: [
+                Expanded(child: SingleChildScrollView(child: panelBody)),
+              ],
+            ),
+    );
+    return panel;
   }
 
   List<_TimelineEntry> _buildTimeline(MerchantClaimDetail detail) {
     final events = <_TimelineEntry>[
       if (detail.createdAtMillis != null)
-        _TimelineEntry(label: 'Created', millis: detail.createdAtMillis!),
+        _TimelineEntry(label: 'Creado', millis: detail.createdAtMillis!),
       if (detail.submittedAtMillis != null)
-        _TimelineEntry(label: 'Submitted', millis: detail.submittedAtMillis!),
+        _TimelineEntry(label: 'Enviado', millis: detail.submittedAtMillis!),
       if (detail.reviewedAtMillis != null)
-        _TimelineEntry(label: 'Reviewed', millis: detail.reviewedAtMillis!),
+        _TimelineEntry(label: 'Revisado', millis: detail.reviewedAtMillis!),
       if (detail.lastStatusAtMillis != null)
         _TimelineEntry(
-          label: 'Last status change',
+          label: 'Último cambio de estado',
           millis: detail.lastStatusAtMillis!,
         ),
       if (detail.updatedAtMillis != null)
-        _TimelineEntry(label: 'Updated', millis: detail.updatedAtMillis!),
+        _TimelineEntry(label: 'Actualizado', millis: detail.updatedAtMillis!),
     ];
     events.sort((a, b) => a.millis.compareTo(b.millis));
     return events;
@@ -1458,9 +1652,9 @@ class _MerchantClaimsReviewScreenState
 
   String _sensitiveLabel(SensitiveFieldKind field) {
     return switch (field) {
-      SensitiveFieldKind.phone => 'Phone',
-      SensitiveFieldKind.claimantDisplayName => 'Claimant name',
-      SensitiveFieldKind.claimantNote => 'Claimant note',
+      SensitiveFieldKind.phone => 'Teléfono',
+      SensitiveFieldKind.claimantDisplayName => 'Nombre del solicitante',
+      SensitiveFieldKind.claimantNote => 'Nota del solicitante',
     };
   }
 
@@ -1474,13 +1668,16 @@ class _MerchantClaimsReviewScreenState
             width: 180,
             child: Text(
               label,
-              style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600),
+              style: AppTextStyles.bodyXs.copyWith(
+                fontFamily: 'Inter',
+                color: AppColors.neutral600,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral900),
+              style: _bodyStyle(color: AppColors.neutral900),
             ),
           ),
         ],
@@ -1538,7 +1735,13 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.labelMd),
+          Text(
+            title,
+            style: AppTextStyles.labelMd.copyWith(
+              fontFamily: 'Manrope',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 8),
           child,
         ],

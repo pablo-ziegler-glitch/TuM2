@@ -1,5 +1,9 @@
 # TuM2-0054 — Auth completa
 
+## Sync 0127 implementado (2026-04-16)
+- El claim pasa por `submitted` + auto-validación backend idempotente antes de revisión manual.
+- Auth no asume aprobación por submit; sigue leyendo `owner_pending`/`role` desde claims backend.
+
 Estado propuesto: UPDATE REQUIRED  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad sobre autenticación, resolución de claims, refresh de token y navegación post-login.

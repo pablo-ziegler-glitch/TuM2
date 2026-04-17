@@ -5,6 +5,11 @@ Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0131
 
+## Sync 0127 implementado (2026-04-16)
+- Conflicto y duplicado se evalúan con precedencia fija: `conflict_detected` > `duplicate_claim`.
+- Detección conflictiva basada en `ownerUserId`/`ownershipStatus` y claims activos incompatibles en el mismo `merchantId` con queries acotadas.
+- Dedupe basado en `userId + merchantId + claimStatus` con índice compuesto y `limit` bajo.
+
 ## 1. Objetivo
 Definir el tratamiento de casos no lineales de claim:
 - duplicado,

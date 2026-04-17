@@ -254,6 +254,7 @@ export interface MerchantClaimDoc {
     | "draft_editing"
     | "auto_validation_running"
     | "auto_validation_passed"
+    | "auto_validation_blocked_rejected"
     | "auto_validation_blocked_conflict"
     | "auto_validation_blocked_duplicate"
     | "auto_validation_needs_more_info"
@@ -268,8 +269,22 @@ export interface MerchantClaimDoc {
   hasAcceptedDataProcessingConsent: boolean;
   hasAcceptedLegitimacyDeclaration: boolean;
   submittedAt?: FirebaseFirestore.Timestamp | null;
+  autoValidationStatus?: "running" | "passed" | "blocked" | null;
+  autoValidationReasons?: string[];
+  autoValidationCompletedAt?: FirebaseFirestore.Timestamp | null;
   duplicateOfClaimId?: string | null;
   conflictType?: string | null;
+  hasConflict?: boolean;
+  hasDuplicate?: boolean;
+  requiresManualReview?: boolean;
+  missingEvidence?: boolean;
+  missingEvidenceTypes?: string[];
+  riskFlags?: string[];
+  riskPriority?: "low" | "medium" | "high" | "critical" | null;
+  reviewQueuePriority?: number | null;
+  lastAutoValidationHash?: string | null;
+  processedBySystem?: boolean;
+  systemVersion?: string | null;
   phoneMasked?: string | null;
   claimantDisplayNameMasked?: string | null;
   claimantNoteMasked?: string | null;

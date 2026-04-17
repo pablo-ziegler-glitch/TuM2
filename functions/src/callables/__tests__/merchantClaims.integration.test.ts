@@ -12,6 +12,9 @@ let upsertDraftRun:
 let submitClaimRun:
   | ((request: Record<string, unknown>) => Promise<unknown>)
   | undefined;
+let evaluateClaimRun:
+  | ((request: Record<string, unknown>) => Promise<unknown>)
+  | undefined;
 let resolveClaimRun:
   | ((request: Record<string, unknown>) => Promise<unknown>)
   | undefined;
@@ -83,6 +86,11 @@ if (!emulatorHost) {
         run: (request: Record<string, unknown>) => Promise<unknown>;
       }
     ).run;
+    evaluateClaimRun = (
+      callables.evaluateMerchantClaim as unknown as {
+        run: (request: Record<string, unknown>) => Promise<unknown>;
+      }
+    ).run;
     resolveClaimRun = (
       callables.resolveMerchantClaim as unknown as {
         run: (request: Record<string, unknown>) => Promise<unknown>;
@@ -148,6 +156,13 @@ if (!emulatorHost) {
         contentType: "image/jpeg",
         sizeBytes: 2048,
       },
+      {
+        id: "regulatory_1",
+        kind: "regulatory_document",
+        storagePath: `merchant-claims/${uid}/${claimId}/regulatory_document/reg.pdf`,
+        contentType: "application/pdf",
+        sizeBytes: 4096,
+      },
     ];
 
     const draftResponse = (await upsertDraftRun!(
@@ -199,13 +214,18 @@ if (!emulatorHost) {
     const submittedData = submittedSnap.data() ?? {};
     assert.equal(submittedData.userVisibleStatus, "under_review");
     assert.equal(submittedData.internalWorkflowStatus, "auto_validation_passed");
+    assert.deepEqual(submittedData.autoValidationReasons ?? [], [
+      "sensitive_category_requires_manual_review",
+    ]);
+    const merchantPublicDoc = await firestore.doc(`merchant_public/${merchantId}`).get();
+    assert.equal(merchantPublicDoc.exists, false);
 
     const userDoc = await firestore.doc(`users/${uid}`).get();
     assert.equal(userDoc.get("ownerPending"), true);
     assert.equal(userDoc.get("role"), "customer");
   });
 
-  test("submit de claim sin evidencia mínima falla", async () => {
+  test("submit de claim sin evidencia mínima deriva a needs_more_info", async () => {
     assert.ok(upsertDraftRun && submitClaimRun);
     const firestore = getFirestore();
     const merchantId = `merchant-${randomUUID()}`;
@@ -235,21 +255,24 @@ if (!emulatorHost) {
       })
     );
 
-    await assert.rejects(
-      async () =>
-        submitClaimRun!(
-          buildRequest({
-            uid: "user-1",
-            email: "owner@example.com",
-            data: { claimId: "claim-abcdefghij" },
-          })
-        ),
-      (error: unknown) => {
-        const err = error as { code?: string };
-        assert.equal(err.code, "failed-precondition");
-        return true;
-      }
-    );
+    const submitResponse = (await submitClaimRun!(
+      buildRequest({
+        uid: "user-1",
+        email: "owner@example.com",
+        data: { claimId: "claim-abcdefghij" },
+      })
+    )) as Record<string, unknown>;
+
+    assert.equal(submitResponse.claimStatus, "needs_more_info");
+    const updated = await firestore
+      .collection("merchant_claims")
+      .doc("claim-abcdefghij")
+      .get();
+    assert.equal(updated.get("missingEvidence"), true);
+    assert.deepEqual(updated.get("missingEvidenceTypes"), [
+      "storefront_photo",
+      "ownership_document",
+    ]);
   });
 
   test("submit conflictivo marca conflict_detected y mantiene owner_pending", async () => {
@@ -389,6 +412,84 @@ if (!emulatorHost) {
     const merchantDoc = await firestore.doc(`merchants/${merchantId}`).get();
     assert.equal(merchantDoc.get("ownerUserId"), uid);
     assert.equal(merchantDoc.get("ownershipStatus"), "claimed");
+  });
+
+  test("rerun admin no duplica decisión ni escribe no-op", async () => {
+    assert.ok(upsertDraftRun && submitClaimRun && evaluateClaimRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-rerun-1";
+    const uid = "user-rerun";
+
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Kiosco Centro",
+      categoryId: "kiosk",
+      zoneId: "zone-5",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "rerun@example.com",
+        data: {
+          claimId,
+          merchantId,
+          declaredRole: "owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [
+            {
+              id: "storefront_1",
+              kind: "storefront_photo",
+              storagePath: `merchant-claims/${uid}/${claimId}/storefront_photo/front.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1024,
+            },
+            {
+              id: "document_1",
+              kind: "ownership_document",
+              storagePath: `merchant-claims/${uid}/${claimId}/ownership_document/doc.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 2048,
+            },
+          ],
+        },
+      })
+    );
+
+    await submitClaimRun!(
+      buildRequest({
+        uid,
+        email: "rerun@example.com",
+        data: { claimId },
+      })
+    );
+
+    const before = await firestore.doc(`merchant_claims/${claimId}`).get();
+    const beforeUpdatedAt = (before.get("updatedAt") as Timestamp).toMillis();
+    const firstHash = before.get("lastAutoValidationHash");
+
+    await evaluateClaimRun!(
+      buildRequest({
+        uid: "admin-rerun-1",
+        email: "admin-rerun@example.com",
+        role: "admin",
+        data: { claimId },
+      })
+    );
+    const after = await firestore.doc(`merchant_claims/${claimId}`).get();
+    const afterUpdatedAt = (after.get("updatedAt") as Timestamp).toMillis();
+    const secondHash = after.get("lastAutoValidationHash");
+
+    assert.equal(before.get("claimStatus"), "under_review");
+    assert.equal(after.get("claimStatus"), "under_review");
+    assert.equal(firstHash, secondHash);
+    assert.equal(beforeUpdatedAt, afterUpdatedAt);
   });
 
   test("reveal sensible devuelve datos y registra auditoría append-only", async () => {

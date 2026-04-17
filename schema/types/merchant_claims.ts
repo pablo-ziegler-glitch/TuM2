@@ -19,7 +19,13 @@ export type MerchantClaimDeclaredRole =
   | 'co_owner'
   | 'authorized_representative';
 
-export type MerchantClaimEvidenceKind = 'storefront_photo' | 'ownership_document';
+export type MerchantClaimEvidenceKind =
+  | 'storefront_photo'
+  | 'ownership_document'
+  | 'regulatory_document'
+  | 'reinforced_relationship_evidence'
+  | 'operational_point_photo'
+  | 'alternative_relationship_evidence';
 
 export interface MerchantClaimEvidenceFile {
   id: string;
@@ -55,6 +61,7 @@ export interface MerchantClaimDocument {
     | 'draft_editing'
     | 'auto_validation_running'
     | 'auto_validation_passed'
+    | 'auto_validation_blocked_rejected'
     | 'auto_validation_blocked_conflict'
     | 'auto_validation_blocked_duplicate'
     | 'auto_validation_needs_more_info'
@@ -84,11 +91,24 @@ export interface MerchantClaimDocument {
   claimantDisplayNameMasked?: string | null;
   claimantNoteMasked?: string | null;
   autoValidationVersion?: number | null;
-  autoValidationResult?: 'passed' | 'blocked' | null;
+  autoValidationStatus?: 'running' | 'passed' | 'blocked' | null;
+  autoValidationResult?: 'running' | 'passed' | 'blocked' | null;
   autoValidationReasonCode?: string | null;
+  autoValidationReasons?: string[];
+  autoValidationCompletedAt?: Timestamp | null;
   duplicateOfClaimId?: string | null;
   conflictType?: 'merchant_already_owned' | 'active_claim_exists' | 'suspicious_payload' | null;
+  hasConflict?: boolean;
+  hasDuplicate?: boolean;
+  requiresManualReview?: boolean;
+  missingEvidence?: boolean;
+  missingEvidenceTypes?: string[];
   riskFlags?: string[];
+  riskPriority?: 'low' | 'medium' | 'high' | 'critical' | null;
+  reviewQueuePriority?: number | null;
+  lastAutoValidationHash?: string | null;
+  processedBySystem?: boolean;
+  systemVersion?: string | null;
   reviewedAt?: Timestamp | null;
   reviewedByUid?: string | null;
   reviewDecision?: MerchantClaimStatus | null;

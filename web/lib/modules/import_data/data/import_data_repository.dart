@@ -34,6 +34,7 @@ class ZoneOption {
     required this.zoneId,
     required this.name,
     required this.cityId,
+    required this.departmentName,
     required this.countryName,
     required this.provinceName,
     required this.localityName,
@@ -42,14 +43,19 @@ class ZoneOption {
   final String zoneId;
   final String name;
   final String cityId;
+  final String departmentName;
   final String countryName;
   final String provinceName;
   final String localityName;
 
   String get label {
     final locality = localityName.trim().isEmpty ? name : localityName;
+    final department = departmentName.trim();
     final province = provinceName.trim();
-    return province.isEmpty ? locality : '$locality — $province';
+    if (department.isEmpty && province.isEmpty) return locality;
+    if (department.isEmpty) return '$locality — $province';
+    if (province.isEmpty) return '$locality — $department';
+    return '$locality — $department — $province';
   }
 }
 
@@ -158,6 +164,13 @@ class ImportDataRepository {
         zoneId: doc.id,
         name: _readText(data, const ['name', 'nombre']) ?? localityName,
         cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
+        departmentName: _readText(data, const [
+              'departmentName',
+              'departamentoNombre',
+              'department',
+              'departamento',
+            ]) ??
+            localityName,
         countryName:
             _readText(data, const ['countryName', 'paisNombre']) ?? 'Argentina',
         provinceName:
@@ -179,11 +192,22 @@ class ImportDataRepository {
     }
 
     for (final collectionName in _zoneCollectionCandidates) {
-      final snapshot = await _firestore
-          .collection(collectionName)
-          .limit(_maxZonesPerQuery)
-          .get();
-      final docs = snapshot.docs.where(_isActiveZoneDoc).toList();
+      final docs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+      QueryDocumentSnapshot<Map<String, dynamic>>? cursor;
+      while (true) {
+        Query<Map<String, dynamic>> query = _firestore
+            .collection(collectionName)
+            .orderBy(FieldPath.documentId)
+            .limit(_maxZonesPerQuery);
+        if (cursor != null) {
+          query = query.startAfterDocument(cursor);
+        }
+        final snapshot = await query.get();
+        if (snapshot.docs.isEmpty) break;
+        docs.addAll(snapshot.docs.where(_isActiveZoneDoc));
+        if (snapshot.docs.length < _maxZonesPerQuery) break;
+        cursor = snapshot.docs.last;
+      }
       if (docs.isEmpty) continue;
       docs.sort(_compareZoneDocs);
       _zonesCache = docs;

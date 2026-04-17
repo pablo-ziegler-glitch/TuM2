@@ -48,6 +48,11 @@ class _AdminSidebar extends StatelessWidget {
       path: '/businesses',
     ),
     _NavItem(
+      icon: Icons.fact_check_outlined,
+      label: 'Claims Review',
+      path: '/claims',
+    ),
+    _NavItem(
       icon: Icons.storage_outlined,
       label: 'Import Management',
       path: '/imports',

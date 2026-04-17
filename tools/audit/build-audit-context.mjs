@@ -210,7 +210,6 @@ export async function buildAuditContext({
         .map((line) => line.trim())
         .filter(Boolean)
         .filter((filePath) => !shouldExcludePath(filePath))
-        .slice(0, 180)
     : await getChangedFiles(baseSha, targetSha);
 
   if (changedFiles.length === 0) {
@@ -244,19 +243,22 @@ export async function buildAuditContext({
   const changedAreas = [...new Set(changedFiles.map(classifyDomain))];
   const batches = [];
   for (const [domain, files] of grouped.entries()) {
-    const cappedFiles = files.slice(0, maxFiles);
-    const batch = await buildBatch({
-      files: cappedFiles,
-      baseSha,
-      targetSha,
-      maxInputChars,
-      maxCharsPerFile,
-    });
-    batches.push({
-      domain,
-      ...batch,
-      sourceFiles: cappedFiles,
-    });
+    const chunkSize = Math.max(1, Number(maxFiles) || 25);
+    for (let i = 0; i < files.length; i += chunkSize) {
+      const chunkFiles = files.slice(i, i + chunkSize);
+      const batch = await buildBatch({
+        files: chunkFiles,
+        baseSha,
+        targetSha,
+        maxInputChars,
+        maxCharsPerFile,
+      });
+      batches.push({
+        domain,
+        ...batch,
+        sourceFiles: chunkFiles,
+      });
+    }
   }
 
   return {

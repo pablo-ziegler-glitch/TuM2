@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 enum MerchantClaimStatus {
   draft,
@@ -368,25 +369,56 @@ abstract class MerchantClaimsAdminDataSource {
 class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
   MerchantClaimsAdminRepository({
     FirebaseFunctions? functions,
-  }) : _functions = functions ?? FirebaseFunctions.instance;
+    FirebaseAuth? auth,
+  })  : _functions = functions ?? FirebaseFunctions.instance,
+        _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFunctions _functions;
+  final FirebaseAuth _auth;
+
+  Future<HttpsCallableResult<dynamic>> _callWithAuthRetry({
+    required String callableName,
+    required Map<String, dynamic> payload,
+  }) async {
+    Future<HttpsCallableResult<dynamic>> invoke() async {
+      final user = _auth.currentUser;
+      if (user != null) {
+        // Fuerza refresh de token antes del callable para evitar sesiones
+        // visibles con token vencido/no propagado.
+        await user.getIdToken(true);
+      }
+      final callable = _functions.httpsCallable(callableName);
+      return callable.call(payload);
+    }
+
+    try {
+      return await invoke();
+    } on FirebaseFunctionsException catch (error) {
+      if (error.code != 'unauthenticated') rethrow;
+      final user = _auth.currentUser;
+      if (user == null) rethrow;
+      await user.getIdToken(true);
+      return invoke();
+    }
+  }
 
   Future<MerchantClaimReviewPage> listForReview({
     required MerchantClaimReviewFilters filters,
   }) async {
-    final callable = _functions.httpsCallable('listMerchantClaimsForReview');
-    final response = await callable.call(<String, dynamic>{
-      'provinceName': filters.provinceName,
-      'departmentName': filters.departmentName,
-      if (filters.zoneId != null && filters.zoneId!.trim().isNotEmpty)
-        'zoneId': filters.zoneId,
-      'statuses': filters.statuses.map((status) => status.apiValue).toList(),
-      'limit': filters.limit,
-      if (filters.cursor != null)
-        'cursorCreatedAtMillis': filters.cursor!.createdAtMillis,
-      if (filters.cursor != null) 'cursorClaimId': filters.cursor!.claimId,
-    });
+    final response = await _callWithAuthRetry(
+      callableName: 'listMerchantClaimsForReview',
+      payload: <String, dynamic>{
+        'provinceName': filters.provinceName,
+        'departmentName': filters.departmentName,
+        if (filters.zoneId != null && filters.zoneId!.trim().isNotEmpty)
+          'zoneId': filters.zoneId,
+        'statuses': filters.statuses.map((status) => status.apiValue).toList(),
+        'limit': filters.limit,
+        if (filters.cursor != null)
+          'cursorCreatedAtMillis': filters.cursor!.createdAtMillis,
+        if (filters.cursor != null) 'cursorClaimId': filters.cursor!.claimId,
+      },
+    );
 
     final data = _asMap(response.data);
     final claimsRaw = _asList(data['claims']);
@@ -438,8 +470,10 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
   }
 
   Future<MerchantClaimDetail> getClaimDetail({required String claimId}) async {
-    final callable = _functions.httpsCallable('getMerchantClaimReviewDetail');
-    final response = await callable.call(<String, dynamic>{'claimId': claimId});
+    final response = await _callWithAuthRetry(
+      callableName: 'getMerchantClaimReviewDetail',
+      payload: <String, dynamic>{'claimId': claimId},
+    );
     final data = _asMap(response.data);
     final claim = _asMap(data['claim']);
     final capabilitiesRaw = _asMap(data['capabilities']);
@@ -483,8 +517,9 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
       merchantName: _readString(claim['merchantName']),
       authenticatedEmailMasked: _readString(claim['authenticatedEmailMasked']),
       phoneMasked: _readString(claim['phoneMasked']),
-      claimantDisplayNameMasked:
-          _readString(claim['claimantDisplayNameMasked']),
+      claimantDisplayNameMasked: _readString(
+        claim['claimantDisplayNameMasked'],
+      ),
       claimantNoteMasked: _readString(claim['claimantNoteMasked']),
       reviewReasonCode: _readString(claim['reviewReasonCode']),
       reviewNotes: _readString(claim['reviewNotes']),
@@ -558,12 +593,14 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
     required String claimId,
     int? expectedUpdatedAtMillis,
   }) async {
-    final callable = _functions.httpsCallable('evaluateMerchantClaim');
-    final response = await callable.call(<String, dynamic>{
-      'claimId': claimId,
-      if (expectedUpdatedAtMillis != null)
-        'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
-    });
+    final response = await _callWithAuthRetry(
+      callableName: 'evaluateMerchantClaim',
+      payload: <String, dynamic>{
+        'claimId': claimId,
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
+    );
     final data = _asMap(response.data);
     return MerchantClaimEvaluateResult(
       claimId: _readString(data['claimId']) ?? claimId,
@@ -583,17 +620,19 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
     String? reviewNotes,
     int? expectedUpdatedAtMillis,
   }) async {
-    final callable = _functions.httpsCallable('resolveMerchantClaim');
-    final response = await callable.call(<String, dynamic>{
-      'claimId': claimId,
-      'userVisibleStatus': targetStatus.apiValue,
-      if (reviewReasonCode != null && reviewReasonCode.trim().isNotEmpty)
-        'reviewReasonCode': reviewReasonCode.trim(),
-      if (reviewNotes != null && reviewNotes.trim().isNotEmpty)
-        'reviewNotes': reviewNotes.trim(),
-      if (expectedUpdatedAtMillis != null)
-        'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
-    });
+    final response = await _callWithAuthRetry(
+      callableName: 'resolveMerchantClaim',
+      payload: <String, dynamic>{
+        'claimId': claimId,
+        'userVisibleStatus': targetStatus.apiValue,
+        if (reviewReasonCode != null && reviewReasonCode.trim().isNotEmpty)
+          'reviewReasonCode': reviewReasonCode.trim(),
+        if (reviewNotes != null && reviewNotes.trim().isNotEmpty)
+          'reviewNotes': reviewNotes.trim(),
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
+    );
     final data = _asMap(response.data);
     return MerchantClaimResolveResult(
       claimId: _readString(data['claimId']) ?? claimId,
@@ -610,16 +649,16 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
     required List<SensitiveFieldKind> fields,
     int? expectedUpdatedAtMillis,
   }) async {
-    final callable = _functions.httpsCallable(
-      'revealMerchantClaimSensitiveData',
+    final response = await _callWithAuthRetry(
+      callableName: 'revealMerchantClaimSensitiveData',
+      payload: <String, dynamic>{
+        'claimId': claimId,
+        'reasonCode': reasonCode,
+        'fields': fields.map((field) => field.apiValue).toList(growable: false),
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
     );
-    final response = await callable.call(<String, dynamic>{
-      'claimId': claimId,
-      'reasonCode': reasonCode,
-      'fields': fields.map((field) => field.apiValue).toList(growable: false),
-      if (expectedUpdatedAtMillis != null)
-        'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
-    });
     final data = _asMap(response.data);
     final revealedRaw = _asMap(data['revealed']);
     final revealed = <SensitiveFieldKind, String>{};

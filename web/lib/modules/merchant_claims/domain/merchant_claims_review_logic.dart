@@ -186,12 +186,7 @@ int _compareClaims(
 }
 
 int _compareRisk(String? left, String? right) {
-  const weights = {
-    'critical': 4,
-    'high': 3,
-    'medium': 2,
-    'low': 1,
-  };
+  const weights = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1};
   return (weights[right] ?? 0).compareTo(weights[left] ?? 0);
 }
 

@@ -66,6 +66,11 @@ export {
   deactivateMerchantProduct,
 } from "./callables/catalogLimits";
 export {
+  listAdminCategories,
+  upsertAdminCategory,
+  toggleAdminCategoryActive,
+} from "./callables/adminCategories";
+export {
   upsertMerchantClaimDraft,
   submitMerchantClaim,
   evaluateMerchantClaim,

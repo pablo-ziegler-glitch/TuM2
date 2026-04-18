@@ -167,3 +167,82 @@ npm run seed:zones:csv -- \
 - Si el CSV no trae coordenadas, marca `centroidMissing: true`.
 - Recomendado: correr primero en `staging`, validar conteo y recién después en
   `prod`.
+
+## `migrate_categories_canonical.js`
+
+Migración forzada para normalizar categorías legacy:
+
+- `vet` ➜ `veterinary`
+
+Alcance:
+
+- `categories` (renombra doc id `vet` a `veterinary` y agrega alias)
+- `admin_configs/catalog_limits` (`categoryLimits.vet`)
+- `merchants` (`category`, `categoryId`)
+- `merchant_public` (`category`, `categoryId`)
+- `merchant_claims` (`categoryId`)
+- `users` (`onboardingOwnerProgress.step1.categoryId`)
+
+### Ejecución
+
+Dry-run:
+
+```bash
+cd functions
+npm run migrate:categories:canonical -- \
+  --project tum2-dev-6283d
+```
+
+Aplicar cambios:
+
+```bash
+cd functions
+npm run migrate:categories:canonical -- \
+  --project tum2-dev-6283d \
+  --apply
+```
+
+Parámetros:
+
+- `--project <projectId>`: proyecto Firebase objetivo.
+- `--page-size <n>`: tamaño de página para scans (default `400`, max `1000`).
+- `--apply`: ejecuta escrituras. Sin este flag, corre en dry-run.
+
+## `seed_categories_es_latam.js`
+
+Seed idempotente de colección `categories` con catálogo base ES-LATAM.
+
+Incluye categorías canónicas:
+
+- `farmacia`
+- `kiosco`
+- `almacen`
+- `supermercado`
+- `veterinaria`
+- `casa_de_comidas`
+- `comida_al_paso`
+- `gomeria`
+- `cafeteria`
+- `panaderia`
+- `otro`
+
+También elimina IDs legacy en inglés (`pharmacy`, `kiosk`, etc.).
+
+### Ejecución
+
+Dry-run:
+
+```bash
+cd functions
+npm run seed:categories:es-latam -- \
+  --project tum2-dev-6283d
+```
+
+Aplicar cambios:
+
+```bash
+cd functions
+npm run seed:categories:es-latam -- \
+  --project tum2-dev-6283d \
+  --apply
+```

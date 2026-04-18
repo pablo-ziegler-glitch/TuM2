@@ -8,6 +8,20 @@ import {
 
 const db = () => getFirestore();
 
+function canonicalCategoryId(raw: string): string {
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "vet" || normalized === "veterinary") return "veterinaria";
+  if (normalized === "pharmacy") return "farmacia";
+  if (normalized === "kiosk") return "kiosco";
+  if (normalized === "grocery") return "almacen";
+  if (normalized === "supermarket") return "supermercado";
+  if (normalized === "prepared_food") return "casa_de_comidas";
+  if (normalized === "fast_food") return "comida_al_paso";
+  if (normalized === "tire_shop") return "gomeria";
+  if (normalized === "other") return "otro";
+  return normalized;
+}
+
 interface OnboardingOwnerSubmitRequest {
   draftMerchantId: string;
 }
@@ -98,12 +112,23 @@ export const onboardingOwnerSubmit = onCall(
       );
     }
 
-    // Validate categoryId exists in 'categories' collection
-    const categorySnap = await db().doc(`categories/${step1.categoryId}`).get();
-    if (!categorySnap.exists) {
+    const normalizedCategoryId = canonicalCategoryId(step1.categoryId);
+
+    // Validate categoryId exists in 'categories' collection.
+    // Compatibilidad temporal: aceptar 'vet' legacy si aún no corrió la migración.
+    const [canonicalCategorySnap, legacyCategorySnap] = await Promise.all([
+      db().doc(`categories/${normalizedCategoryId}`).get(),
+      normalizedCategoryId === step1.categoryId
+        ? Promise.resolve(null)
+        : db().doc(`categories/${step1.categoryId}`).get(),
+    ]);
+    const hasCategory =
+      canonicalCategorySnap.exists ||
+      (legacyCategorySnap != null && legacyCategorySnap.exists);
+    if (!hasCategory) {
       throw new HttpsError(
         "invalid-argument",
-        `La categoría '${step1.categoryId}' no existe.`
+        `La categoría '${normalizedCategoryId}' no existe.`
       );
     }
 
@@ -150,8 +175,8 @@ export const onboardingOwnerSubmit = onCall(
       tx.set(merchantRef, {
         merchantId: draftMerchantId,
         name: freshStep1!.name.trim(),
-        category: freshStep1!.categoryId,
-        categoryId: freshStep1!.categoryId,
+        category: canonicalCategoryId(freshStep1!.categoryId),
+        categoryId: canonicalCategoryId(freshStep1!.categoryId),
         zone: freshStep2!.zoneId,
         zoneId: freshStep2!.zoneId,
         address: freshStep2!.address,

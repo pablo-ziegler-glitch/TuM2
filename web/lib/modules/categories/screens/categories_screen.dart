@@ -10,7 +10,15 @@ const _categoryIdRegex = r'^[a-z0-9]+(?:_[a-z0-9]+)*$';
 
 String _canonicalCategoryToken(String raw) {
   final normalized = raw.trim().toLowerCase();
-  if (normalized == 'vet') return 'veterinary';
+  if (normalized == 'vet' || normalized == 'veterinary') return 'veterinaria';
+  if (normalized == 'pharmacy') return 'farmacia';
+  if (normalized == 'kiosk') return 'kiosco';
+  if (normalized == 'grocery') return 'almacen';
+  if (normalized == 'supermarket') return 'supermercado';
+  if (normalized == 'prepared_food') return 'casa_de_comidas';
+  if (normalized == 'fast_food') return 'comida_al_paso';
+  if (normalized == 'tire_shop') return 'gomeria';
+  if (normalized == 'other') return 'otro';
   return normalized;
 }
 
@@ -617,7 +625,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 enabled: !_isEdit,
                 decoration: const InputDecoration(
                   labelText: 'categoryId canónico',
-                  hintText: 'ej: prepared_food',
+                  hintText: 'ej: casa_de_comidas',
                 ),
                 validator: _validateCategoryId,
               ),

@@ -8,8 +8,8 @@ import {
 } from "../adminCategories";
 
 test("canonicalCategoryToken normaliza y mapea legacy vet", () => {
-  assert.equal(canonicalCategoryToken("  VeT "), "veterinary");
-  assert.equal(canonicalCategoryToken("prepared_food"), "prepared_food");
+  assert.equal(canonicalCategoryToken("  VeT "), "veterinaria");
+  assert.equal(canonicalCategoryToken("prepared_food"), "casa_de_comidas");
 });
 
 test("isCanonicalCategoryToken valida formato canónico", () => {
@@ -22,7 +22,7 @@ test("isCanonicalCategoryToken valida formato canónico", () => {
 
 test("uniqueCategoryTokens remueve duplicados preservando orden", () => {
   assert.deepEqual(
-    uniqueCategoryTokens(["veterinary", "pet_shop", "veterinary", "pet_shop", "vet"]),
-    ["veterinary", "pet_shop", "vet"]
+    uniqueCategoryTokens(["veterinaria", "pet_shop", "veterinaria", "pet_shop", "vet"]),
+    ["veterinaria", "pet_shop", "vet"]
   );
 });

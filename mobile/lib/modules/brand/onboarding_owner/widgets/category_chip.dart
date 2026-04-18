@@ -13,14 +13,15 @@ class CategoryOption {
 
 const kCategories = [
   CategoryOption(
-      id: 'pharmacy', label: 'Farmacia', icon: Icons.local_pharmacy_outlined),
-  CategoryOption(id: 'kiosk', label: 'Kiosco', icon: Icons.store_outlined),
+      id: 'farmacia', label: 'Farmacia', icon: Icons.local_pharmacy_outlined),
+  CategoryOption(id: 'kiosco', label: 'Kiosco', icon: Icons.store_outlined),
   CategoryOption(
-      id: 'grocery', label: 'Almacén', icon: Icons.shopping_basket_outlined),
-  CategoryOption(id: 'vet', label: 'Veterinaria', icon: Icons.pets_outlined),
+      id: 'almacen', label: 'Almacén', icon: Icons.shopping_basket_outlined),
   CategoryOption(
-      id: 'bakery', label: 'Panadería', icon: Icons.bakery_dining_outlined),
-  CategoryOption(id: 'other', label: 'Otro', icon: Icons.more_horiz),
+      id: 'veterinaria', label: 'Veterinaria', icon: Icons.pets_outlined),
+  CategoryOption(
+      id: 'panaderia', label: 'Panadería', icon: Icons.bakery_dining_outlined),
+  CategoryOption(id: 'otro', label: 'Otro', icon: Icons.more_horiz),
 ];
 
 class CategoryGrid extends StatelessWidget {

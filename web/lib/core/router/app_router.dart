@@ -1,6 +1,3 @@
-import 'dart:async';
-
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 
@@ -13,11 +10,13 @@ import '../../modules/import_data/screens/import_result_screen.dart';
 import '../../modules/import_data/screens/import_batch_history_screen.dart';
 import '../../modules/catalog_limits/screens/catalog_limits_screen.dart';
 import '../../modules/merchant_claims/screens/merchant_claims_review_screen.dart';
+import '../../modules/categories/screens/categories_screen.dart';
 
 /// Router principal del portal admin.
 /// Rutas disponibles:
 ///   /dashboard              — panel principal (placeholder)
 ///   /businesses             — límites de catálogo (global/categoría/override)
+///   /categories             — categorías (paginado, alta/edición, activación)
 ///   /imports                — overview dashboard de importaciones
 ///   /imports/new            — wizard de nueva importación (6 pasos)
 ///   /imports/history        — historial de batches con filtros
@@ -56,6 +55,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/businesses',
           builder: (context, state) => const CatalogLimitsScreen(),
+        ),
+        GoRoute(
+          path: '/categories',
+          builder: (context, state) => const CategoriesScreen(),
         ),
         GoRoute(
           path: '/catalog-limits',

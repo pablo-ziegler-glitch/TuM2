@@ -408,16 +408,16 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
     final response = await _callWithAuthRetry(
       callableName: 'listMerchantClaimsForReview',
       payload: <String, dynamic>{
-      'provinceName': filters.provinceName,
-      'departmentName': filters.departmentName,
-      if (filters.zoneId != null && filters.zoneId!.trim().isNotEmpty)
-        'zoneId': filters.zoneId,
-      'statuses': filters.statuses.map((status) => status.apiValue).toList(),
-      'limit': filters.limit,
-      if (filters.cursor != null)
-        'cursorCreatedAtMillis': filters.cursor!.createdAtMillis,
-      if (filters.cursor != null) 'cursorClaimId': filters.cursor!.claimId,
-    },
+        'provinceName': filters.provinceName,
+        'departmentName': filters.departmentName,
+        if (filters.zoneId != null && filters.zoneId!.trim().isNotEmpty)
+          'zoneId': filters.zoneId,
+        'statuses': filters.statuses.map((status) => status.apiValue).toList(),
+        'limit': filters.limit,
+        if (filters.cursor != null)
+          'cursorCreatedAtMillis': filters.cursor!.createdAtMillis,
+        if (filters.cursor != null) 'cursorClaimId': filters.cursor!.claimId,
+      },
     );
 
     final data = _asMap(response.data);
@@ -517,8 +517,9 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
       merchantName: _readString(claim['merchantName']),
       authenticatedEmailMasked: _readString(claim['authenticatedEmailMasked']),
       phoneMasked: _readString(claim['phoneMasked']),
-      claimantDisplayNameMasked:
-          _readString(claim['claimantDisplayNameMasked']),
+      claimantDisplayNameMasked: _readString(
+        claim['claimantDisplayNameMasked'],
+      ),
       claimantNoteMasked: _readString(claim['claimantNoteMasked']),
       reviewReasonCode: _readString(claim['reviewReasonCode']),
       reviewNotes: _readString(claim['reviewNotes']),
@@ -595,10 +596,10 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
     final response = await _callWithAuthRetry(
       callableName: 'evaluateMerchantClaim',
       payload: <String, dynamic>{
-      'claimId': claimId,
-      if (expectedUpdatedAtMillis != null)
-        'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
-    },
+        'claimId': claimId,
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
     );
     final data = _asMap(response.data);
     return MerchantClaimEvaluateResult(
@@ -622,15 +623,15 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
     final response = await _callWithAuthRetry(
       callableName: 'resolveMerchantClaim',
       payload: <String, dynamic>{
-      'claimId': claimId,
-      'userVisibleStatus': targetStatus.apiValue,
-      if (reviewReasonCode != null && reviewReasonCode.trim().isNotEmpty)
-        'reviewReasonCode': reviewReasonCode.trim(),
-      if (reviewNotes != null && reviewNotes.trim().isNotEmpty)
-        'reviewNotes': reviewNotes.trim(),
-      if (expectedUpdatedAtMillis != null)
-        'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
-    },
+        'claimId': claimId,
+        'userVisibleStatus': targetStatus.apiValue,
+        if (reviewReasonCode != null && reviewReasonCode.trim().isNotEmpty)
+          'reviewReasonCode': reviewReasonCode.trim(),
+        if (reviewNotes != null && reviewNotes.trim().isNotEmpty)
+          'reviewNotes': reviewNotes.trim(),
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
     );
     final data = _asMap(response.data);
     return MerchantClaimResolveResult(
@@ -651,12 +652,12 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
     final response = await _callWithAuthRetry(
       callableName: 'revealMerchantClaimSensitiveData',
       payload: <String, dynamic>{
-      'claimId': claimId,
-      'reasonCode': reasonCode,
-      'fields': fields.map((field) => field.apiValue).toList(growable: false),
-      if (expectedUpdatedAtMillis != null)
-        'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
-    },
+        'claimId': claimId,
+        'reasonCode': reasonCode,
+        'fields': fields.map((field) => field.apiValue).toList(growable: false),
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
     );
     final data = _asMap(response.data);
     final revealedRaw = _asMap(data['revealed']);

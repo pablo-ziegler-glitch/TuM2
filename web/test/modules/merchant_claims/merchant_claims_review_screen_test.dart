@@ -41,10 +41,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _buildHarness(
-        repository: repository,
-        fetchZones: _fakeFetchZones,
-      ),
+      _buildHarness(repository: repository, fetchZones: _fakeFetchZones),
     );
     await tester.pumpAndSettle();
 
@@ -58,8 +55,9 @@ void main() {
     expect(find.text('Reveal sensible'), findsOneWidget);
   });
 
-  testWidgets('deshabilita reveal cuando la capability no existe',
-      (tester) async {
+  testWidgets('deshabilita reveal cuando la capability no existe', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1600, 1200));
     final repository = _FakeMerchantClaimsRepository(
       claims: const [],

@@ -73,7 +73,6 @@ class _MerchantClaimsReviewScreenState
   bool _loadingDetail = false;
   bool _runningAction = false;
   String? _queueError;
-  String? _detailError;
   String? _actionError;
   String? _selectedClaimId;
 
@@ -170,9 +169,8 @@ class _MerchantClaimsReviewScreenState
         )
         .toList(growable: false);
     matches.sort(
-      (left, right) => left.label.toLowerCase().compareTo(
-            right.label.toLowerCase(),
-          ),
+      (left, right) =>
+          left.label.toLowerCase().compareTo(right.label.toLowerCase()),
     );
     return matches;
   }
@@ -227,8 +225,9 @@ class _MerchantClaimsReviewScreenState
         _claims = reset ? page.claims : [..._claims, ...page.claims];
         _nextCursor = page.nextCursor;
         if (reset && _selectedClaimId != null) {
-          final exists =
-              _claims.any((item) => item.claimId == _selectedClaimId);
+          final exists = _claims.any(
+            (item) => item.claimId == _selectedClaimId,
+          );
           if (!exists) {
             _selectedClaimId = null;
           }
@@ -255,7 +254,6 @@ class _MerchantClaimsReviewScreenState
   }) async {
     setState(() {
       _loadingDetail = true;
-      _detailError = null;
       _actionError = null;
       _selectedClaimId = claimId;
     });
@@ -294,14 +292,16 @@ class _MerchantClaimsReviewScreenState
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
       setState(() {
-        _detailError =
+        _actionError =
             error.message ?? 'No pudimos cargar el detalle del claim.';
+        _detail = null;
         _loadingDetail = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _detailError = 'No pudimos cargar el detalle del claim.';
+        _actionError = 'No pudimos cargar el detalle del claim.';
+        _detail = null;
         _loadingDetail = false;
       });
     }
@@ -412,8 +412,9 @@ class _MerchantClaimsReviewScreenState
       _revealTicker?.cancel();
       setState(() {
         _revealedValues = result.revealed;
-        _revealExpiresAt =
-            DateTime.fromMillisecondsSinceEpoch(result.expiresAtMillis);
+        _revealExpiresAt = DateTime.fromMillisecondsSinceEpoch(
+          result.expiresAtMillis,
+        );
       });
       _revealTicker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) return;
@@ -504,7 +505,6 @@ class _MerchantClaimsReviewScreenState
     setState(() {
       _selectedClaimId = null;
       _detail = null;
-      _detailError = null;
       _actionError = null;
       _detailStale = false;
       _revealedValues = const {};
@@ -1019,16 +1019,18 @@ class _MerchantClaimsReviewScreenState
                 label: 'Falta info',
                 value: _localFilters.missingInfoOnly,
                 onChanged: (value) => setState(() {
-                  _localFilters =
-                      _localFilters.copyWith(missingInfoOnly: value);
+                  _localFilters = _localFilters.copyWith(
+                    missingInfoOnly: value,
+                  );
                 }),
               ),
               _SwitchChip(
                 label: 'Owner existente',
                 value: _localFilters.existingOwnerOnly,
                 onChanged: (value) => setState(() {
-                  _localFilters =
-                      _localFilters.copyWith(existingOwnerOnly: value);
+                  _localFilters = _localFilters.copyWith(
+                    existingOwnerOnly: value,
+                  );
                 }),
               ),
               _SwitchChip(
@@ -1102,10 +1104,11 @@ class _MerchantClaimsReviewScreenState
           _kv('Usuario', detail.userIdMasked),
           _kv('Email auth', detail.authenticatedEmailMasked ?? '-'),
           _kv(
-              'Teléfono',
-              _revealedValues[SensitiveFieldKind.phone] ??
-                  detail.phoneMasked ??
-                  '-'),
+            'Teléfono',
+            _revealedValues[SensitiveFieldKind.phone] ??
+                detail.phoneMasked ??
+                '-',
+          ),
           _kv(
             'Nombre',
             _revealedValues[SensitiveFieldKind.claimantDisplayName] ??
@@ -1216,8 +1219,11 @@ class _MerchantClaimsReviewScreenState
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.circle,
-                        size: 10, color: AppColors.primary500),
+                    const Icon(
+                      Icons.circle,
+                      size: 10,
+                      color: AppColors.primary500,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
@@ -1236,10 +1242,7 @@ class _MerchantClaimsReviewScreenState
                             ),
                           ),
                           if ((item.detail ?? '').isNotEmpty)
-                            Text(
-                              item.detail!,
-                              style: AppTextStyles.bodyXs,
-                            ),
+                            Text(item.detail!, style: AppTextStyles.bodyXs),
                         ],
                       ),
                     ),
@@ -1317,7 +1320,9 @@ class _MerchantClaimsReviewScreenState
                 child: FilledButton.icon(
                   onPressed: _runningAction ||
                           !canResolveClaimStatus(
-                              detail, _resolveTargetStatus) ||
+                            detail,
+                            _resolveTargetStatus,
+                          ) ||
                           _detailStale
                       ? null
                       : _runResolve,
@@ -1337,10 +1342,7 @@ class _MerchantClaimsReviewScreenState
     );
   }
 
-  Widget _buildRevealCard(
-    MerchantClaimDetail detail, {
-    required bool enabled,
-  }) {
+  Widget _buildRevealCard(MerchantClaimDetail detail, {required bool enabled}) {
     return _PanelCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1426,17 +1428,10 @@ class _MerchantClaimsReviewScreenState
             width: 170,
             child: Text(
               label,
-              style: AppTextStyles.bodyXs.copyWith(
-                color: AppColors.neutral600,
-              ),
+              style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral600),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: AppTextStyles.bodySm,
-            ),
-          ),
+          Expanded(child: Text(value, style: AppTextStyles.bodySm)),
         ],
       ),
     );
@@ -1613,13 +1608,10 @@ class _DropdownField<T> extends StatelessWidget {
       width: width,
       child: DropdownButtonFormField<T>(
         isExpanded: true,
-        value: value,
+        initialValue: value,
         items: [
           if (allowEmpty)
-            DropdownMenuItem<T>(
-              value: null,
-              child: Text(emptyLabel),
-            ),
+            DropdownMenuItem<T>(value: null, child: Text(emptyLabel)),
           ...items.map(
             (item) => DropdownMenuItem<T>(
               value: item,

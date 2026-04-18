@@ -58,7 +58,11 @@ class _DefaultCategoriesRepository implements CategoriesAdminDataSource {
     String? cursor,
     bool includeInactive = true,
   }) {
-    return _repo.list(limit: limit, cursor: cursor, includeInactive: includeInactive);
+    return _repo.list(
+      limit: limit,
+      cursor: cursor,
+      includeInactive: includeInactive,
+    );
   }
 
   @override
@@ -138,7 +142,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       });
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
-      _showSnack(error.message ?? 'No pudimos cargar más categorías.', isError: true);
+      _showSnack(
+        error.message ?? 'No pudimos cargar más categorías.',
+        isError: true,
+      );
     } catch (_) {
       if (!mounted) return;
       _showSnack('No pudimos cargar más categorías.', isError: true);
@@ -176,7 +183,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       _showSnack('Categoría guardada.');
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
-      _showSnack(error.message ?? 'No se pudo guardar la categoría.', isError: true);
+      _showSnack(
+        error.message ?? 'No se pudo guardar la categoría.',
+        isError: true,
+      );
     } catch (_) {
       if (!mounted) return;
       _showSnack('No se pudo guardar la categoría.', isError: true);
@@ -194,7 +204,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         isActive: nextState,
       );
       if (!mounted) return;
-      final index = _items.indexWhere((row) => row.categoryId == item.categoryId);
+      final index = _items.indexWhere(
+        (row) => row.categoryId == item.categoryId,
+      );
       if (index >= 0) {
         setState(() {
           _items[index] = CategoryAdminItem(
@@ -211,7 +223,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       _showSnack(nextState ? 'Categoría activada.' : 'Categoría desactivada.');
     } on FirebaseFunctionsException catch (error) {
       if (!mounted) return;
-      _showSnack(error.message ?? 'No pudimos actualizar el estado.', isError: true);
+      _showSnack(
+        error.message ?? 'No pudimos actualizar el estado.',
+        isError: true,
+      );
     } catch (_) {
       if (!mounted) return;
       _showSnack('No pudimos actualizar el estado.', isError: true);
@@ -224,7 +239,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   void _mergeItems(List<CategoryAdminItem> incoming, {bool reset = false}) {
     final byId = <String, CategoryAdminItem>{
-      if (!reset) for (final item in _items) item.categoryId: item,
+      if (!reset)
+        for (final item in _items) item.categoryId: item,
     };
     for (final item in incoming) {
       byId[item.categoryId] = item;
@@ -323,7 +339,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 ),
                 Text(
                   'Mostrar inactivas',
-                  style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral800),
+                  style: AppTextStyles.bodySm.copyWith(
+                    color: AppColors.neutral800,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 OutlinedButton.icon(
@@ -467,10 +485,7 @@ class _CategoryRow extends StatelessWidget {
                 onChanged: isToggling ? null : onToggle,
               ),
               const SizedBox(width: 6),
-              OutlinedButton(
-                onPressed: onEdit,
-                child: const Text('Editar'),
-              ),
+              OutlinedButton(onPressed: onEdit, child: const Text('Editar')),
             ],
           ),
           const SizedBox(height: 6),
@@ -490,7 +505,9 @@ class _CategoryRow extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            item.aliases.isEmpty ? 'Aliases: —' : 'Aliases: ${item.aliases.join(', ')}',
+            item.aliases.isEmpty
+                ? 'Aliases: —'
+                : 'Aliases: ${item.aliases.join(', ')}',
             style: AppTextStyles.bodyXs,
           ),
         ],
@@ -540,11 +557,16 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   void initState() {
     super.initState();
     final initial = widget.initial;
-    _categoryIdController = TextEditingController(text: initial?.categoryId ?? '');
+    _categoryIdController = TextEditingController(
+      text: initial?.categoryId ?? '',
+    );
     _labelController = TextEditingController(text: initial?.label ?? '');
-    _iconNameController = TextEditingController(text: initial?.iconName ?? 'store');
-    _aliasesController =
-        TextEditingController(text: initial?.aliases.join(', ') ?? '');
+    _iconNameController = TextEditingController(
+      text: initial?.iconName ?? 'store',
+    );
+    _aliasesController = TextEditingController(
+      text: initial?.aliases.join(', ') ?? '',
+    );
     _isActive = initial?.isActive ?? true;
   }
 
@@ -681,10 +703,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('Guardar'),
-        ),
+        FilledButton(onPressed: _submit, child: const Text('Guardar')),
       ],
     );
   }

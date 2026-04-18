@@ -29,14 +29,13 @@ class AdminSession extends ChangeNotifier {
   }
 
   Future<void> refreshClaims() async {
-    await _refreshFromUser(FirebaseAuth.instance.currentUser,
-        forceRefresh: true);
+    await _refreshFromUser(
+      FirebaseAuth.instance.currentUser,
+      forceRefresh: true,
+    );
   }
 
-  Future<void> _refreshFromUser(
-    User? user, {
-    bool forceRefresh = false,
-  }) async {
+  Future<void> _refreshFromUser(User? user, {bool forceRefresh = false}) async {
     _user = user;
     if (user == null) {
       _role = '';

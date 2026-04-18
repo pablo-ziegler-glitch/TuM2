@@ -30,7 +30,8 @@ class CategoryAdminItem {
           .where((value) => value.isNotEmpty)
           .toList(growable: false),
       isActive: map['isActive'] != false,
-      productLimit: map['productLimit'] is int ? map['productLimit'] as int : null,
+      productLimit:
+          map['productLimit'] is int ? map['productLimit'] as int : null,
       updatedAtMillis:
           map['updatedAtMillis'] is int ? map['updatedAtMillis'] as int : null,
     );
@@ -38,10 +39,7 @@ class CategoryAdminItem {
 }
 
 class CategoryAdminPage {
-  const CategoryAdminPage({
-    required this.items,
-    required this.nextCursor,
-  });
+  const CategoryAdminPage({required this.items, required this.nextCursor});
 
   final List<CategoryAdminItem> items;
   final String? nextCursor;
@@ -95,15 +93,15 @@ class CategoriesAdminRepository {
   }
 
   Future<CategoryAdminItem> upsert(UpsertCategoryInput input) async {
-    final response = await _functions.httpsCallable('upsertAdminCategory').call(
-      <String, dynamic>{
-        'categoryId': input.categoryId,
-        'label': input.label,
-        'iconName': input.iconName,
-        'aliases': input.aliases,
-        'isActive': input.isActive,
-      },
-    );
+    final response = await _functions
+        .httpsCallable('upsertAdminCategory')
+        .call(<String, dynamic>{
+      'categoryId': input.categoryId,
+      'label': input.label,
+      'iconName': input.iconName,
+      'aliases': input.aliases,
+      'isActive': input.isActive,
+    });
     final data = (response.data as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
     final category =
@@ -116,10 +114,7 @@ class CategoriesAdminRepository {
     required bool isActive,
   }) async {
     await _functions.httpsCallable('toggleAdminCategoryActive').call(
-      <String, dynamic>{
-        'categoryId': categoryId,
-        'isActive': isActive,
-      },
+      <String, dynamic>{'categoryId': categoryId, 'isActive': isActive},
     );
   }
 }

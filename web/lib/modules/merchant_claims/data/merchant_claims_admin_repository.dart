@@ -567,27 +567,6 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),
-      evidencePolicyVersion: _readString(claim['evidencePolicyVersion']),
-      evidencePolicyCategoryId: _readString(claim['evidencePolicyCategoryId']),
-      evidencePolicyStrictnessLevel: _readString(
-        claim['evidencePolicyStrictnessLevel'],
-      ),
-      sufficiencyLevel: _readString(claim['sufficiencyLevel']),
-      requiredEvidenceSatisfied: _readBool(claim['requiredEvidenceSatisfied']),
-      primaryVisualEvidenceType:
-          _readString(claim['primaryVisualEvidenceType']),
-      relationshipEvidenceTypes: _asList(claim['relationshipEvidenceTypes'])
-          .map((item) => _readString(item) ?? '')
-          .where((item) => item.isNotEmpty)
-          .toList(growable: false),
-      manualReviewReasons: _asList(claim['manualReviewReasons'])
-          .map((item) => _readString(item) ?? '')
-          .where((item) => item.isNotEmpty)
-          .toList(growable: false),
-      riskHints: _asList(claim['riskHints'])
-          .map((item) => _readString(item) ?? '')
-          .where((item) => item.isNotEmpty)
-          .toList(growable: false),
       hasConflict: _readBool(claim['hasConflict']),
       hasDuplicate: _readBool(claim['hasDuplicate']),
       requiresManualReview: _readBool(claim['requiresManualReview']),

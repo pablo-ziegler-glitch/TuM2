@@ -17,6 +17,7 @@
     "audit:claims:categories:mvp": "node scripts/audit_claim_categories_mvp.js",
     "migrate:categories:canonical": "node scripts/migrate_categories_canonical.js",
     "migrate:claims:categories:mvp": "node scripts/migrate_claim_categories_mvp.js",
+    "rollback:claims:categories:mvp": "node scripts/rollback_claim_categories_mvp.js",
     "migrate:merchants:categories:mvp": "node scripts/migrate_merchants_categories_mvp.js",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",

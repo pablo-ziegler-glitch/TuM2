@@ -35,6 +35,8 @@ function baseInput(): MerchantClaimAutoValidationInput {
 test("claim completo general -> under_review", () => {
   const result = evaluateMerchantClaimAutoValidation(baseInput());
   assert.equal(result.nextStatus, "under_review");
+  assert.equal(result.evidencePolicyVersion.length > 0, true);
+  assert.equal(result.requiredEvidenceSatisfied, true);
 });
 
 test("claim sin fachada -> needs_more_info", () => {
@@ -43,6 +45,7 @@ test("claim sin fachada -> needs_more_info", () => {
   const result = evaluateMerchantClaimAutoValidation(input);
   assert.equal(result.nextStatus, "needs_more_info");
   assert.ok(result.reasonCodes.includes("missing_storefront_photo"));
+  assert.equal(result.requiredEvidenceSatisfied, false);
 });
 
 test("claim sin documento base -> needs_more_info", () => {
@@ -78,6 +81,8 @@ test("comida al paso con evidencia flexible válida -> under_review", () => {
   ];
   const result = evaluateMerchantClaimAutoValidation(input);
   assert.equal(result.nextStatus, "under_review");
+  assert.equal(result.requiredEvidenceSatisfied, true);
+  assert.ok(result.manualReviewReasons.length > 0);
 });
 
 test("mismo user + merchant + claim activo equivalente -> duplicate_claim", () => {

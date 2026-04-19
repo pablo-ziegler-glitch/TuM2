@@ -1394,7 +1394,7 @@ class _MerchantClaimsReviewScreenState
                         _kv('ID de reclamo', detail.claimId),
                         _kv('Comercio',
                             detail.merchantName ?? detail.merchantId),
-                        _kv('Solicitante', _maskIdentity(detail.userId)),
+                        _kv('Solicitante', detail.userIdMasked),
                         _kv('Zona/Ciudad', _zoneLabel(detail.zoneId ?? '-')),
                         _kv('Categoría', detail.categoryId ?? '-'),
                         _kv('Rol declarado', detail.declaredRole ?? '-'),

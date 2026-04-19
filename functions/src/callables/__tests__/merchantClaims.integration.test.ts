@@ -21,6 +21,9 @@ let resolveClaimRun:
 let revealSensitiveRun:
   | ((request: Record<string, unknown>) => Promise<unknown>)
   | undefined;
+let getReviewDetailRun:
+  | ((request: Record<string, unknown>) => Promise<unknown>)
+  | undefined;
 let listReviewQueueRun:
   | ((request: Record<string, unknown>) => Promise<unknown>)
   | undefined;
@@ -33,6 +36,7 @@ function buildRequest(params: {
   email: string;
   data: Record<string, unknown>;
   role?: "customer" | "admin" | "super_admin";
+  tokenExtras?: Record<string, unknown>;
 }): Record<string, unknown> {
   return {
     data: params.data,
@@ -41,6 +45,7 @@ function buildRequest(params: {
       token: {
         role: params.role ?? "customer",
         email: params.email,
+        ...(params.tokenExtras ?? {}),
       },
     },
     rawRequest: { headers: {} },
@@ -101,6 +106,11 @@ if (!emulatorHost) {
         run: (request: Record<string, unknown>) => Promise<unknown>;
       }
     ).run;
+    getReviewDetailRun = (
+      callables.getMerchantClaimReviewDetail as unknown as {
+        run: (request: Record<string, unknown>) => Promise<unknown>;
+      }
+    ).run;
     listReviewQueueRun = (
       callables.listMerchantClaimsForReview as unknown as {
         run: (request: Record<string, unknown>) => Promise<unknown>;
@@ -118,6 +128,7 @@ if (!emulatorHost) {
       deleteCollection("merchant_claims"),
       deleteCollection("merchant_claim_private"),
       deleteCollection("merchants"),
+      deleteCollection("zones"),
       deleteCollection("users"),
       deleteCollection("merchant_claim_sensitive_reveals"),
     ]);
@@ -345,7 +356,7 @@ if (!emulatorHost) {
     const uid = "user-3";
     await firestore.collection("merchants").doc(merchantId).set({
       name: "Panaderia Sol",
-      categoryId: "bakery",
+      categoryId: "kiosk",
       zoneId: "zone-3",
       status: "active",
       visibilityStatus: "visible",
@@ -500,7 +511,7 @@ if (!emulatorHost) {
     const uid = "user-4";
     await firestore.collection("merchants").doc(merchantId).set({
       name: "Heladeria Sur",
-      categoryId: "icecream",
+      categoryId: "fast_food",
       zoneId: "zone-4",
       status: "active",
       visibilityStatus: "visible",
@@ -560,6 +571,11 @@ if (!emulatorHost) {
     assert.ok(listReviewQueueRun);
     const firestore = getFirestore();
     const zoneId = "zone-review-1";
+    await firestore.collection("zones").doc(zoneId).set({
+      provinceName: "Buenos Aires",
+      departmentName: "Ezeiza",
+      localityName: "Ezeiza",
+    });
 
     const baseMillis = 1_710_000_000_000;
     const claims = [
@@ -602,6 +618,10 @@ if (!emulatorHost) {
           merchantId: `merchant-review-${index}`,
           userId: `user-review-${index}`,
           zoneId: item.zoneId,
+          provinceName: item.zoneId === zoneId ? "Buenos Aires" : "Buenos Aires",
+          provinceKey: "buenos aires",
+          departmentName: item.zoneId === zoneId ? "Ezeiza" : "Cañuelas",
+          departmentKey: item.zoneId === zoneId ? "ezeiza" : "canuelas",
           categoryId: "pharmacy",
           declaredRole: "owner",
           claimStatus: item.status,
@@ -620,6 +640,8 @@ if (!emulatorHost) {
         email: "admin-review@example.com",
         role: "admin",
         data: {
+          provinceName: "Buenos Aires",
+          departmentName: "Ezeiza",
           zoneId,
           limit: 2,
           statuses: ["under_review", "needs_more_info", "conflict_detected"],
@@ -643,6 +665,8 @@ if (!emulatorHost) {
         email: "admin-review@example.com",
         role: "admin",
         data: {
+          provinceName: "Buenos Aires",
+          departmentName: "Ezeiza",
           zoneId,
           limit: 2,
           statuses: ["under_review", "needs_more_info", "conflict_detected"],
@@ -765,6 +789,8 @@ if (!emulatorHost) {
             email: "user@example.com",
             role: "customer",
             data: {
+              provinceName: "Buenos Aires",
+              departmentName: "Ezeiza",
               zoneId: "zone-review-1",
               limit: 5,
             },
@@ -773,6 +799,409 @@ if (!emulatorHost) {
       (error: unknown) => {
         const err = error as { code?: string };
         assert.equal(err.code, "permission-denied");
+        return true;
+      }
+    );
+  });
+
+  test("detalle admin entrega masking, timeline y capabilities", async () => {
+    assert.ok(getReviewDetailRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-detail-01";
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Farmacia Centro",
+      categoryId: "pharmacy",
+      zoneId: "zone-detail-1",
+      address: "Av. Principal 123",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "claimed",
+      ownerUserId: "owner-existing-01",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await firestore.collection("merchant_claims").doc(claimId).set({
+      claimId,
+      merchantId,
+      merchantName: "Farmacia Centro",
+      userId: "user-detail-1",
+      zoneId: "zone-detail-1",
+      categoryId: "pharmacy",
+      claimStatus: "under_review",
+      userVisibleStatus: "under_review",
+      internalWorkflowStatus: "auto_validation_passed",
+      authenticatedEmail: "owner.detail@example.com",
+      phoneMasked: "+5***78",
+      claimantDisplayNameMasked: "J***z",
+      claimantNoteMasked: "D***o",
+      autoValidationReasons: ["sensitive_category_requires_manual_review"],
+      hasConflict: false,
+      hasDuplicate: false,
+      requiresManualReview: true,
+      evidenceFiles: [
+        {
+          id: "storefront_1",
+          kind: "storefront_photo",
+          contentType: "image/jpeg",
+          sizeBytes: 1024,
+          uploadedAt: Timestamp.fromMillis(1_710_000_000_000),
+          originalFileName: "fachada.jpg",
+        },
+      ],
+      createdAt: Timestamp.fromMillis(1_710_000_000_000),
+      submittedAt: Timestamp.fromMillis(1_710_000_100_000),
+      autoValidationCompletedAt: Timestamp.fromMillis(1_710_000_200_000),
+      updatedAt: Timestamp.fromMillis(1_710_000_300_000),
+      lastStatusAt: Timestamp.fromMillis(1_710_000_300_000),
+    });
+
+    const response = (await getReviewDetailRun!(
+      buildRequest({
+        uid: "admin-detail",
+        email: "admin@example.com",
+        role: "admin",
+        data: { claimId },
+      })
+    )) as {
+      claim: { authenticatedEmailMasked: string; userIdMasked: string };
+      capabilities: { canRevealSensitive: boolean; canResolveCritical: boolean };
+      timeline: Array<{ code: string }>;
+    };
+
+    assert.equal(response.claim.authenticatedEmailMasked, "o***l@example.com");
+    assert.equal(response.claim.userIdMasked, "****il-1");
+    assert.equal(response.capabilities.canRevealSensitive, true);
+    assert.equal(response.capabilities.canResolveCritical, true);
+    assert.deepEqual(
+      response.timeline.map((entry) => entry.code),
+      ["created", "submitted", "auto_validation_completed", "status_change"]
+    );
+  });
+
+  test("resolve rechaza stale decision token", async () => {
+    assert.ok(resolveClaimRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-stale-01";
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Kiosco Token",
+      categoryId: "kiosk",
+      zoneId: "zone-stale-1",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await firestore.collection("merchant_claims").doc(claimId).set({
+      claimId,
+      merchantId,
+      merchantName: "Kiosco Token",
+      userId: "user-stale-1",
+      zoneId: "zone-stale-1",
+      categoryId: "kiosk",
+      claimStatus: "under_review",
+      userVisibleStatus: "under_review",
+      updatedAt: Timestamp.fromMillis(1_710_000_300_000),
+      createdAt: Timestamp.fromMillis(1_710_000_100_000),
+    });
+
+    await assert.rejects(
+      async () =>
+        resolveClaimRun!(
+          buildRequest({
+            uid: "admin-stale",
+            email: "admin@example.com",
+            role: "admin",
+            data: {
+              claimId,
+              userVisibleStatus: "rejected",
+              expectedUpdatedAtMillis: 1_710_000_200_000,
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string; details?: { code?: string } };
+        assert.equal(err.code, "failed-precondition");
+        assert.equal(err.details?.code, "stale_claim");
+        return true;
+      }
+    );
+  });
+
+  test("reveal sensible exige capability senior cuando viene explicitada", async () => {
+    assert.ok(upsertDraftRun && revealSensitiveRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-reveal-cap-01";
+    const uid = "user-reveal-cap-1";
+
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Veterinaria Cap",
+      categoryId: "veterinary",
+      zoneId: "zone-cap-1",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "cap@example.com",
+        data: {
+          claimId,
+          merchantId,
+          declaredRole: "owner",
+          phone: "+54 9 11 1111 1111",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [],
+        },
+      })
+    );
+
+    await assert.rejects(
+      async () =>
+        revealSensitiveRun!(
+          buildRequest({
+            uid: "admin-reviewer",
+            email: "reviewer@example.com",
+            role: "admin",
+            tokenExtras: {
+              claimsReviewLevel: "reviewer",
+              capabilities: ["claims.review", "claims.resolve_standard"],
+            },
+            data: {
+              claimId,
+              reasonCode: "manual_review",
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string };
+        assert.equal(err.code, "permission-denied");
+        return true;
+      }
+    );
+  });
+
+  test("upsert draft rechaza categoría fuera de allowlist MVP", async () => {
+    assert.ok(upsertDraftRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Panadería Legacy",
+      categoryId: "panaderia",
+      zoneId: "zone-legacy-1",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await assert.rejects(
+      async () =>
+        upsertDraftRun!(
+          buildRequest({
+            uid: "user-legacy-1",
+            email: "legacy@example.com",
+            data: {
+              claimId: "claim-legacy-cat-01",
+              merchantId,
+              declaredRole: "owner",
+              hasAcceptedDataProcessingConsent: true,
+              hasAcceptedLegitimacyDeclaration: true,
+              evidenceFiles: [],
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string; details?: { code?: string } };
+        assert.equal(err.code, "failed-precondition");
+        assert.equal(err.details?.code, "claim_category_not_allowed");
+        return true;
+      }
+    );
+  });
+
+  test("submit rechaza stale token cuando otro dispositivo actualizó el draft", async () => {
+    assert.ok(upsertDraftRun && submitClaimRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-stale-submit-01";
+    const uid = "user-stale-submit";
+
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Kiosco Stale",
+      categoryId: "kiosk",
+      zoneId: "zone-stale-submit",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const firstDraft = (await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "stale@example.com",
+        data: {
+          claimId,
+          merchantId,
+          declaredRole: "owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [
+            {
+              id: "store_1",
+              kind: "storefront_photo",
+              storagePath:
+                `merchant-claims/${uid}/${claimId}/storefront_photo/front.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1024,
+            },
+          ],
+        },
+      })
+    )) as { updatedAtMillis?: number | null };
+
+    const tokenA = firstDraft.updatedAtMillis ?? null;
+    assert.ok(tokenA != null);
+
+    await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "stale@example.com",
+        data: {
+          claimId,
+          expectedUpdatedAtMillis: tokenA,
+          merchantId,
+          declaredRole: "owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [
+            {
+              id: "store_1",
+              kind: "storefront_photo",
+              storagePath:
+                `merchant-claims/${uid}/${claimId}/storefront_photo/front.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1024,
+            },
+            {
+              id: "doc_1",
+              kind: "ownership_document",
+              storagePath:
+                `merchant-claims/${uid}/${claimId}/ownership_document/doc.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1024,
+            },
+          ],
+        },
+      })
+    );
+
+    await assert.rejects(
+      async () =>
+        submitClaimRun!(
+          buildRequest({
+            uid,
+            email: "stale@example.com",
+            data: { claimId, expectedUpdatedAtMillis: tokenA },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string; details?: { code?: string } };
+        assert.equal(err.code, "failed-precondition");
+        assert.equal(err.details?.code, "stale_claim");
+        return true;
+      }
+    );
+  });
+
+  test("upsert draft rechaza stale token en edición concurrente multi-dispositivo", async () => {
+    assert.ok(upsertDraftRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-stale-upsert-01";
+    const uid = "user-stale-upsert";
+
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Almacén Concurrencia",
+      categoryId: "almacen",
+      zoneId: "zone-stale-upsert",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const draftA = (await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "stale-upsert@example.com",
+        data: {
+          claimId,
+          merchantId,
+          declaredRole: "owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [],
+        },
+      })
+    )) as { updatedAtMillis?: number | null };
+    const tokenA = draftA.updatedAtMillis ?? null;
+    assert.ok(tokenA != null);
+
+    const draftB = (await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "stale-upsert@example.com",
+        data: {
+          claimId,
+          expectedUpdatedAtMillis: tokenA,
+          merchantId,
+          declaredRole: "co_owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [],
+        },
+      })
+    )) as { updatedAtMillis?: number | null };
+
+    const tokenB = draftB.updatedAtMillis ?? null;
+    assert.ok(tokenB != null);
+    assert.notEqual(tokenB, tokenA);
+
+    await assert.rejects(
+      async () =>
+        upsertDraftRun!(
+          buildRequest({
+            uid,
+            email: "stale-upsert@example.com",
+            data: {
+              claimId,
+              expectedUpdatedAtMillis: tokenA,
+              merchantId,
+              declaredRole: "owner",
+              hasAcceptedDataProcessingConsent: true,
+              hasAcceptedLegitimacyDeclaration: true,
+              evidenceFiles: [],
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string; details?: { code?: string } };
+        assert.equal(err.code, "failed-precondition");
+        assert.equal(err.details?.code, "stale_claim");
         return true;
       }
     );

@@ -1,5 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 enum MerchantClaimStatus {
   draft,
@@ -42,14 +42,14 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
 
   String get label {
     return switch (this) {
-      MerchantClaimStatus.draft => 'Draft',
-      MerchantClaimStatus.submitted => 'Submitted',
-      MerchantClaimStatus.underReview => 'Under review',
-      MerchantClaimStatus.needsMoreInfo => 'Needs more info',
-      MerchantClaimStatus.approved => 'Approved',
-      MerchantClaimStatus.rejected => 'Rejected',
-      MerchantClaimStatus.duplicateClaim => 'Duplicate',
-      MerchantClaimStatus.conflictDetected => 'Conflict',
+      MerchantClaimStatus.draft => 'Borrador',
+      MerchantClaimStatus.submitted => 'Enviado',
+      MerchantClaimStatus.underReview => 'En revision',
+      MerchantClaimStatus.needsMoreInfo => 'Requiere mas informacion',
+      MerchantClaimStatus.approved => 'Aprobado',
+      MerchantClaimStatus.rejected => 'Rechazado',
+      MerchantClaimStatus.duplicateClaim => 'Duplicado',
+      MerchantClaimStatus.conflictDetected => 'Conflicto',
     };
   }
 }
@@ -148,7 +148,6 @@ class MerchantClaimEvidenceFile {
   const MerchantClaimEvidenceFile({
     required this.id,
     required this.kind,
-    required this.storagePath,
     required this.contentType,
     required this.sizeBytes,
     required this.uploadedAtMillis,
@@ -157,18 +156,55 @@ class MerchantClaimEvidenceFile {
 
   final String id;
   final String kind;
-  final String storagePath;
   final String contentType;
   final int sizeBytes;
   final int? uploadedAtMillis;
   final String? originalFileName;
 }
 
+class MerchantClaimTimelineEntry {
+  const MerchantClaimTimelineEntry({
+    required this.code,
+    required this.label,
+    required this.atMillis,
+    required this.actorMasked,
+    required this.detail,
+  });
+
+  final String code;
+  final String label;
+  final int atMillis;
+  final String? actorMasked;
+  final String? detail;
+}
+
+class MerchantClaimCapabilities {
+  const MerchantClaimCapabilities({
+    required this.canViewQueue,
+    required this.canViewDetail,
+    required this.canEvaluateClaim,
+    required this.canResolveStandard,
+    required this.canResolveCritical,
+    required this.canRevealSensitive,
+  });
+
+  final bool canViewQueue;
+  final bool canViewDetail;
+  final bool canEvaluateClaim;
+  final bool canResolveStandard;
+  final bool canResolveCritical;
+  final bool canRevealSensitive;
+}
+
 class MerchantClaimDetail {
   const MerchantClaimDetail({
     required this.claimId,
-    required this.userId,
+    required this.userIdMasked,
     required this.merchantId,
+    required this.merchantAddress,
+    required this.merchantStatus,
+    required this.merchantOwnershipStatus,
+    required this.existingOwnerMasked,
     required this.zoneId,
     required this.categoryId,
     required this.claimStatus,
@@ -176,7 +212,7 @@ class MerchantClaimDetail {
     required this.internalWorkflowStatus,
     required this.declaredRole,
     required this.merchantName,
-    required this.authenticatedEmail,
+    required this.authenticatedEmailMasked,
     required this.phoneMasked,
     required this.claimantDisplayNameMasked,
     required this.claimantNoteMasked,
@@ -191,6 +227,15 @@ class MerchantClaimDetail {
     required this.hasDuplicate,
     required this.requiresManualReview,
     required this.missingEvidenceTypes,
+    required this.evidencePolicyVersion,
+    required this.evidencePolicyCategoryId,
+    required this.evidencePolicyStrictnessLevel,
+    required this.requiredEvidenceSatisfied,
+    required this.primaryVisualEvidenceType,
+    required this.relationshipEvidenceTypes,
+    required this.sufficiencyLevel,
+    required this.manualReviewReasons,
+    required this.riskHints,
     required this.riskFlags,
     required this.riskPriority,
     required this.reviewQueuePriority,
@@ -204,11 +249,21 @@ class MerchantClaimDetail {
     required this.updatedAtMillis,
     required this.reviewedAtMillis,
     required this.lastStatusAtMillis,
+    required this.autoValidationCompletedAtMillis,
+    required this.capabilities,
+    required this.allowedStatuses,
+    required this.canTakeAction,
+    required this.canRevealSensitive,
+    required this.timeline,
   });
 
   final String claimId;
-  final String userId;
+  final String userIdMasked;
   final String merchantId;
+  final String? merchantAddress;
+  final String? merchantStatus;
+  final String? merchantOwnershipStatus;
+  final String? existingOwnerMasked;
   final String? zoneId;
   final String? categoryId;
   final MerchantClaimStatus claimStatus;
@@ -216,7 +271,7 @@ class MerchantClaimDetail {
   final String? internalWorkflowStatus;
   final String? declaredRole;
   final String? merchantName;
-  final String? authenticatedEmail;
+  final String? authenticatedEmailMasked;
   final String? phoneMasked;
   final String? claimantDisplayNameMasked;
   final String? claimantNoteMasked;
@@ -231,6 +286,15 @@ class MerchantClaimDetail {
   final bool hasDuplicate;
   final bool requiresManualReview;
   final List<String> missingEvidenceTypes;
+  final String? evidencePolicyVersion;
+  final String? evidencePolicyCategoryId;
+  final String? evidencePolicyStrictnessLevel;
+  final bool requiredEvidenceSatisfied;
+  final String? primaryVisualEvidenceType;
+  final List<String> relationshipEvidenceTypes;
+  final String? sufficiencyLevel;
+  final List<String> manualReviewReasons;
+  final List<String> riskHints;
   final List<String> riskFlags;
   final String? riskPriority;
   final int? reviewQueuePriority;
@@ -244,6 +308,12 @@ class MerchantClaimDetail {
   final int? updatedAtMillis;
   final int? reviewedAtMillis;
   final int? lastStatusAtMillis;
+  final int? autoValidationCompletedAtMillis;
+  final MerchantClaimCapabilities capabilities;
+  final List<MerchantClaimStatus> allowedStatuses;
+  final bool canTakeAction;
+  final bool canRevealSensitive;
+  final List<MerchantClaimTimelineEntry> timeline;
 }
 
 class MerchantClaimEvaluateResult {
@@ -286,31 +356,87 @@ class MerchantClaimRevealResult {
   final Map<SensitiveFieldKind, String> revealed;
 }
 
-class MerchantClaimsAdminRepository {
+abstract class MerchantClaimsAdminDataSource {
+  Future<MerchantClaimReviewPage> listForReview({
+    required MerchantClaimReviewFilters filters,
+  });
+
+  Future<MerchantClaimDetail> getClaimDetail({required String claimId});
+
+  Future<MerchantClaimEvaluateResult> evaluateClaim({
+    required String claimId,
+    int? expectedUpdatedAtMillis,
+  });
+
+  Future<MerchantClaimResolveResult> resolveClaim({
+    required String claimId,
+    required MerchantClaimStatus targetStatus,
+    String? reviewReasonCode,
+    String? reviewNotes,
+    int? expectedUpdatedAtMillis,
+  });
+
+  Future<MerchantClaimRevealResult> revealSensitiveData({
+    required String claimId,
+    required String reasonCode,
+    required List<SensitiveFieldKind> fields,
+    int? expectedUpdatedAtMillis,
+  });
+}
+
+class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
   MerchantClaimsAdminRepository({
     FirebaseFunctions? functions,
-    FirebaseFirestore? firestore,
+    FirebaseAuth? auth,
   })  : _functions = functions ?? FirebaseFunctions.instance,
-        _firestore = firestore ?? FirebaseFirestore.instance;
+        _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFunctions _functions;
-  final FirebaseFirestore _firestore;
+  final FirebaseAuth _auth;
+
+  Future<HttpsCallableResult<dynamic>> _callWithAuthRetry({
+    required String callableName,
+    required Map<String, dynamic> payload,
+  }) async {
+    Future<HttpsCallableResult<dynamic>> invoke() async {
+      final user = _auth.currentUser;
+      if (user != null) {
+        // Fuerza refresh de token antes del callable para evitar sesiones
+        // visibles con token vencido/no propagado.
+        await user.getIdToken(true);
+      }
+      final callable = _functions.httpsCallable(callableName);
+      return callable.call(payload);
+    }
+
+    try {
+      return await invoke();
+    } on FirebaseFunctionsException catch (error) {
+      if (error.code != 'unauthenticated') rethrow;
+      final user = _auth.currentUser;
+      if (user == null) rethrow;
+      await user.getIdToken(true);
+      return invoke();
+    }
+  }
 
   Future<MerchantClaimReviewPage> listForReview({
     required MerchantClaimReviewFilters filters,
   }) async {
-    final callable = _functions.httpsCallable('listMerchantClaimsForReview');
-    final response = await callable.call(<String, dynamic>{
-      'provinceName': filters.provinceName,
-      'departmentName': filters.departmentName,
-      if (filters.zoneId != null && filters.zoneId!.trim().isNotEmpty)
-        'zoneId': filters.zoneId,
-      'statuses': filters.statuses.map((status) => status.apiValue).toList(),
-      'limit': filters.limit,
-      if (filters.cursor != null)
-        'cursorCreatedAtMillis': filters.cursor!.createdAtMillis,
-      if (filters.cursor != null) 'cursorClaimId': filters.cursor!.claimId,
-    });
+    final response = await _callWithAuthRetry(
+      callableName: 'listMerchantClaimsForReview',
+      payload: <String, dynamic>{
+        'provinceName': filters.provinceName,
+        'departmentName': filters.departmentName,
+        if (filters.zoneId != null && filters.zoneId!.trim().isNotEmpty)
+          'zoneId': filters.zoneId,
+        'statuses': filters.statuses.map((status) => status.apiValue).toList(),
+        'limit': filters.limit,
+        if (filters.cursor != null)
+          'cursorCreatedAtMillis': filters.cursor!.createdAtMillis,
+        if (filters.cursor != null) 'cursorClaimId': filters.cursor!.claimId,
+      },
+    );
 
     final data = _asMap(response.data);
     final claimsRaw = _asList(data['claims']);
@@ -362,94 +488,157 @@ class MerchantClaimsAdminRepository {
   }
 
   Future<MerchantClaimDetail> getClaimDetail({required String claimId}) async {
-    final snapshot =
-        await _firestore.collection('merchant_claims').doc(claimId).get();
-    if (!snapshot.exists) {
-      throw StateError('No encontramos el claim seleccionado.');
-    }
-    final data = snapshot.data() ?? <String, dynamic>{};
-    final evidenceFiles = _asList(data['evidenceFiles'])
+    final response = await _callWithAuthRetry(
+      callableName: 'getMerchantClaimReviewDetail',
+      payload: <String, dynamic>{'claimId': claimId},
+    );
+    final data = _asMap(response.data);
+    final claim = _asMap(data['claim']);
+    final capabilitiesRaw = _asMap(data['capabilities']);
+    final timeline = _asList(data['timeline'])
         .map(_asMap)
         .map(
-          (item) => MerchantClaimEvidenceFile(
-            id: _readString(item['id']) ?? '',
-            kind: _readString(item['kind']) ?? '',
-            storagePath: _readString(item['storagePath']) ?? '',
-            contentType: _readString(item['contentType']) ?? '',
-            sizeBytes: _readInt(item['sizeBytes']) ?? 0,
-            uploadedAtMillis: _timestampToMillis(item['uploadedAt']),
-            originalFileName: _readString(item['originalFileName']),
+          (item) => MerchantClaimTimelineEntry(
+            code: _readString(item['code']) ?? '',
+            label: _readString(item['label']) ?? '',
+            atMillis: _readInt(item['atMillis']) ?? 0,
+            actorMasked: _readString(item['actorMasked']),
+            detail: _readString(item['detail']),
           ),
         )
-        .where((item) => item.id.isNotEmpty)
+        .where((item) => item.code.isNotEmpty && item.label.isNotEmpty)
+        .toList(growable: false);
+    final allowedStatuses = _asList(data['allowedStatuses'])
+        .map((item) => merchantClaimStatusFromApi(_readString(item) ?? 'draft'))
         .toList(growable: false);
 
     return MerchantClaimDetail(
-      claimId: snapshot.id,
-      userId: _readString(data['userId']) ?? '',
-      merchantId: _readString(data['merchantId']) ?? '',
-      zoneId: _readString(data['zoneId']),
-      categoryId: _readString(data['categoryId']),
+      claimId: _readString(claim['claimId']) ?? claimId,
+      userIdMasked: _readString(claim['userIdMasked']) ?? '****',
+      merchantId: _readString(claim['merchantId']) ?? '',
+      merchantAddress: _readString(claim['merchantAddress']),
+      merchantStatus: _readString(claim['merchantStatus']),
+      merchantOwnershipStatus: _readString(claim['merchantOwnershipStatus']),
+      existingOwnerMasked: _readString(claim['existingOwnerMasked']),
+      zoneId: _readString(claim['zoneId']),
+      categoryId: _readString(claim['categoryId']),
       claimStatus: merchantClaimStatusFromApi(
-        _readString(data['claimStatus']) ?? 'draft',
+        _readString(claim['claimStatus']) ?? 'draft',
       ),
       userVisibleStatus: merchantClaimStatusFromApi(
-        _readString(data['userVisibleStatus']) ??
-            _readString(data['claimStatus']) ??
+        _readString(claim['userVisibleStatus']) ??
+            _readString(claim['claimStatus']) ??
             'draft',
       ),
-      internalWorkflowStatus: _readString(data['internalWorkflowStatus']),
-      declaredRole: _readString(data['declaredRole']),
-      merchantName: _readString(data['merchantName']),
-      authenticatedEmail: _readString(data['authenticatedEmail']),
-      phoneMasked: _readString(data['phoneMasked']),
-      claimantDisplayNameMasked: _readString(data['claimantDisplayNameMasked']),
-      claimantNoteMasked: _readString(data['claimantNoteMasked']),
-      reviewReasonCode: _readString(data['reviewReasonCode']),
-      reviewNotes: _readString(data['reviewNotes']),
-      reviewedByUid: _readString(data['reviewedByUid']),
-      conflictType: _readString(data['conflictType']),
-      duplicateOfClaimId: _readString(data['duplicateOfClaimId']),
-      autoValidationReasonCode: _readString(data['autoValidationReasonCode']),
-      autoValidationReasons: _asList(data['autoValidationReasons'])
+      internalWorkflowStatus: _readString(claim['internalWorkflowStatus']),
+      declaredRole: _readString(claim['declaredRole']),
+      merchantName: _readString(claim['merchantName']),
+      authenticatedEmailMasked: _readString(claim['authenticatedEmailMasked']),
+      phoneMasked: _readString(claim['phoneMasked']),
+      claimantDisplayNameMasked: _readString(
+        claim['claimantDisplayNameMasked'],
+      ),
+      claimantNoteMasked: _readString(claim['claimantNoteMasked']),
+      reviewReasonCode: _readString(claim['reviewReasonCode']),
+      reviewNotes: _readString(claim['reviewNotes']),
+      reviewedByUid: _readString(claim['reviewedByUidMasked']),
+      conflictType: _readString(claim['conflictType']),
+      duplicateOfClaimId: _readString(claim['duplicateOfClaimId']),
+      autoValidationReasonCode: _readString(claim['autoValidationReasonCode']),
+      autoValidationReasons: _asList(claim['autoValidationReasons'])
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),
-      hasConflict: _readBool(data['hasConflict']),
-      hasDuplicate: _readBool(data['hasDuplicate']),
-      requiresManualReview: _readBool(data['requiresManualReview']),
-      missingEvidenceTypes: _asList(data['missingEvidenceTypes'])
+      hasConflict: _readBool(claim['hasConflict']),
+      hasDuplicate: _readBool(claim['hasDuplicate']),
+      requiresManualReview: _readBool(claim['requiresManualReview']),
+      missingEvidenceTypes: _asList(claim['missingEvidenceTypes'])
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),
-      riskFlags: _asList(data['riskFlags'])
+      evidencePolicyVersion: _readString(claim['evidencePolicyVersion']),
+      evidencePolicyCategoryId: _readString(claim['evidencePolicyCategoryId']),
+      evidencePolicyStrictnessLevel:
+          _readString(claim['evidencePolicyStrictnessLevel']),
+      requiredEvidenceSatisfied: _readBool(claim['requiredEvidenceSatisfied']),
+      primaryVisualEvidenceType:
+          _readString(claim['primaryVisualEvidenceType']),
+      relationshipEvidenceTypes: _asList(claim['relationshipEvidenceTypes'])
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),
-      riskPriority: _readString(data['riskPriority']),
-      reviewQueuePriority: _readInt(data['reviewQueuePriority']),
-      storefrontPhotoUploaded: _readBool(data['storefrontPhotoUploaded']),
-      ownershipDocumentUploaded: _readBool(data['ownershipDocumentUploaded']),
+      sufficiencyLevel: _readString(claim['sufficiencyLevel']),
+      manualReviewReasons: _asList(claim['manualReviewReasons'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      riskHints: _asList(claim['riskHints'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      riskFlags: _asList(claim['riskFlags'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      riskPriority: _readString(claim['riskPriority']),
+      reviewQueuePriority: _readInt(claim['reviewQueuePriority']),
+      storefrontPhotoUploaded: _readBool(claim['storefrontPhotoUploaded']),
+      ownershipDocumentUploaded: _readBool(claim['ownershipDocumentUploaded']),
       hasAcceptedDataProcessingConsent: _readBool(
-        data['hasAcceptedDataProcessingConsent'],
+        claim['hasAcceptedDataProcessingConsent'],
       ),
       hasAcceptedLegitimacyDeclaration: _readBool(
-        data['hasAcceptedLegitimacyDeclaration'],
+        claim['hasAcceptedLegitimacyDeclaration'],
       ),
-      evidenceFiles: evidenceFiles,
-      createdAtMillis: _timestampToMillis(data['createdAt']),
-      submittedAtMillis: _timestampToMillis(data['submittedAt']),
-      updatedAtMillis: _timestampToMillis(data['updatedAt']),
-      reviewedAtMillis: _timestampToMillis(data['reviewedAt']),
-      lastStatusAtMillis: _timestampToMillis(data['lastStatusAt']),
+      evidenceFiles: _asList(claim['evidenceFiles'])
+          .map(_asMap)
+          .map(
+            (item) => MerchantClaimEvidenceFile(
+              id: _readString(item['id']) ?? '',
+              kind: _readString(item['kind']) ?? '',
+              contentType: _readString(item['contentType']) ?? '',
+              sizeBytes: _readInt(item['sizeBytes']) ?? 0,
+              uploadedAtMillis: _readInt(item['uploadedAtMillis']),
+              originalFileName: _readString(item['originalFileName']),
+            ),
+          )
+          .where((item) => item.id.isNotEmpty)
+          .toList(growable: false),
+      createdAtMillis: _readInt(claim['createdAtMillis']),
+      submittedAtMillis: _readInt(claim['submittedAtMillis']),
+      updatedAtMillis: _readInt(claim['updatedAtMillis']),
+      reviewedAtMillis: _readInt(claim['reviewedAtMillis']),
+      lastStatusAtMillis: _readInt(claim['lastStatusAtMillis']),
+      autoValidationCompletedAtMillis: _readInt(
+        claim['autoValidationCompletedAtMillis'],
+      ),
+      capabilities: MerchantClaimCapabilities(
+        canViewQueue: _readBool(capabilitiesRaw['canViewQueue']),
+        canViewDetail: _readBool(capabilitiesRaw['canViewDetail']),
+        canEvaluateClaim: _readBool(capabilitiesRaw['canEvaluateClaim']),
+        canResolveStandard: _readBool(capabilitiesRaw['canResolveStandard']),
+        canResolveCritical: _readBool(capabilitiesRaw['canResolveCritical']),
+        canRevealSensitive: _readBool(capabilitiesRaw['canRevealSensitive']),
+      ),
+      allowedStatuses: allowedStatuses,
+      canTakeAction: _readBool(data['canTakeAction']),
+      canRevealSensitive: _readBool(data['canRevealSensitive']),
+      timeline: timeline,
     );
   }
 
   Future<MerchantClaimEvaluateResult> evaluateClaim({
     required String claimId,
+    int? expectedUpdatedAtMillis,
   }) async {
-    final callable = _functions.httpsCallable('evaluateMerchantClaim');
-    final response = await callable.call(<String, dynamic>{'claimId': claimId});
+    final response = await _callWithAuthRetry(
+      callableName: 'evaluateMerchantClaim',
+      payload: <String, dynamic>{
+        'claimId': claimId,
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
+    );
     final data = _asMap(response.data);
     return MerchantClaimEvaluateResult(
       claimId: _readString(data['claimId']) ?? claimId,
@@ -467,16 +656,21 @@ class MerchantClaimsAdminRepository {
     required MerchantClaimStatus targetStatus,
     String? reviewReasonCode,
     String? reviewNotes,
+    int? expectedUpdatedAtMillis,
   }) async {
-    final callable = _functions.httpsCallable('resolveMerchantClaim');
-    final response = await callable.call(<String, dynamic>{
-      'claimId': claimId,
-      'userVisibleStatus': targetStatus.apiValue,
-      if (reviewReasonCode != null && reviewReasonCode.trim().isNotEmpty)
-        'reviewReasonCode': reviewReasonCode.trim(),
-      if (reviewNotes != null && reviewNotes.trim().isNotEmpty)
-        'reviewNotes': reviewNotes.trim(),
-    });
+    final response = await _callWithAuthRetry(
+      callableName: 'resolveMerchantClaim',
+      payload: <String, dynamic>{
+        'claimId': claimId,
+        'userVisibleStatus': targetStatus.apiValue,
+        if (reviewReasonCode != null && reviewReasonCode.trim().isNotEmpty)
+          'reviewReasonCode': reviewReasonCode.trim(),
+        if (reviewNotes != null && reviewNotes.trim().isNotEmpty)
+          'reviewNotes': reviewNotes.trim(),
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
+    );
     final data = _asMap(response.data);
     return MerchantClaimResolveResult(
       claimId: _readString(data['claimId']) ?? claimId,
@@ -491,15 +685,18 @@ class MerchantClaimsAdminRepository {
     required String claimId,
     required String reasonCode,
     required List<SensitiveFieldKind> fields,
+    int? expectedUpdatedAtMillis,
   }) async {
-    final callable = _functions.httpsCallable(
-      'revealMerchantClaimSensitiveData',
+    final response = await _callWithAuthRetry(
+      callableName: 'revealMerchantClaimSensitiveData',
+      payload: <String, dynamic>{
+        'claimId': claimId,
+        'reasonCode': reasonCode,
+        'fields': fields.map((field) => field.apiValue).toList(growable: false),
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      },
     );
-    final response = await callable.call(<String, dynamic>{
-      'claimId': claimId,
-      'reasonCode': reasonCode,
-      'fields': fields.map((field) => field.apiValue).toList(growable: false),
-    });
     final data = _asMap(response.data);
     final revealedRaw = _asMap(data['revealed']);
     final revealed = <SensitiveFieldKind, String>{};
@@ -569,13 +766,4 @@ bool _readBool(Object? value) {
     return normalized == 'true' || normalized == '1';
   }
   return false;
-}
-
-int? _timestampToMillis(Object? value) {
-  if (value == null) return null;
-  if (value is Timestamp) return value.millisecondsSinceEpoch;
-  if (value is DateTime) return value.millisecondsSinceEpoch;
-  if (value is int) return value;
-  if (value is num) return value.toInt();
-  return null;
 }

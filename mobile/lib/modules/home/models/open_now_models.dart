@@ -64,6 +64,10 @@ class OpenNowMerchant {
     this.operationalSignalMessage,
     this.operationalStatusLabel,
     this.manualOverrideMode = 'none',
+    this.publicStatusLabel,
+    this.is24h,
+    this.twentyFourHourCooldownUntil,
+    this.twentyFourHourStrikeCount,
     required this.lastDataRefreshAt,
     required this.sortBoost,
     required this.lat,
@@ -88,6 +92,10 @@ class OpenNowMerchant {
   final String? operationalSignalMessage;
   final String? operationalStatusLabel;
   final String manualOverrideMode;
+  final String? publicStatusLabel;
+  final bool? is24h;
+  final DateTime? twentyFourHourCooldownUntil;
+  final int? twentyFourHourStrikeCount;
   final DateTime? lastDataRefreshAt;
   final double sortBoost;
   final double? lat;
@@ -149,6 +157,10 @@ class OpenNowMerchant {
       operationalSignalMessage: operationalSignalMessage,
       operationalStatusLabel: operationalStatusLabel,
       manualOverrideMode: manualOverrideMode,
+      publicStatusLabel: publicStatusLabel,
+      is24h: is24h,
+      twentyFourHourCooldownUntil: twentyFourHourCooldownUntil,
+      twentyFourHourStrikeCount: twentyFourHourStrikeCount,
       lastDataRefreshAt: lastDataRefreshAt,
       sortBoost: sortBoost,
       lat: lat,
@@ -200,6 +212,12 @@ class OpenNowMerchant {
           (data['operationalStatusLabel'] as String?)?.trim(),
       manualOverrideMode:
           (data['manualOverrideMode'] as String?)?.trim() ?? 'none',
+      publicStatusLabel: (data['publicStatusLabel'] as String?)?.trim(),
+      is24h: data['is24h'] as bool?,
+      twentyFourHourCooldownUntil:
+          _asDateTime(data['twentyFourHourCooldownUntil']),
+      twentyFourHourStrikeCount:
+          (data['twentyFourHourStrikeCount'] as num?)?.toInt(),
       lastDataRefreshAt: _asDateTime(data['lastDataRefreshAt']),
       sortBoost: (data['sortBoost'] as num?)?.toDouble() ?? 0,
       lat: _resolveLatitude(data, location),

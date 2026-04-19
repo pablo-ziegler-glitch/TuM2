@@ -109,6 +109,13 @@ export function resolveOperationalPublicState(
       ? raw.todayScheduleLabel
       : "";
   const hasPharmacyDutyToday = raw.hasPharmacyDutyToday === true;
+  const is24h = raw.is24h === true;
+  const twentyFourHourStrikeCount =
+    typeof raw.twentyFourHourStrikeCount === "number"
+      ? Math.max(0, raw.twentyFourHourStrikeCount)
+      : 0;
+  const twentyFourHourCooldownUntil =
+    raw.twentyFourHourCooldownUntil ?? null;
   const manual = sanitizeManualSignal(raw);
 
   const hasOperationalSignal = manual.isActive;
@@ -145,6 +152,9 @@ export function resolveOperationalPublicState(
       manualOverrideMode,
       operationalStatusLabel,
       hasPharmacyDutyToday,
+      is24h,
+      twentyFourHourStrikeCount,
+      twentyFourHourCooldownUntil,
       // Compatibilidad de lectura con clientes legacy.
       temporaryClosed:
         hasOperationalSignal &&

@@ -5,6 +5,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../merchant_badges/domain/merchant_badge_resolver.dart';
+import '../../merchant_badges/domain/merchant_visual_models.dart';
+import '../../merchant_badges/domain/merchant_visual_state_mappers.dart';
+import '../../merchant_badges/widgets/merchant_badge_widgets.dart';
 import '../models/pharmacy_duty_item.dart';
 import '../models/pharmacy_zone.dart';
 import '../providers/pharmacy_duty_notifier.dart';
@@ -490,6 +494,13 @@ class _PharmacyCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final analytics = ref.read(pharmacyDutyAnalyticsProvider);
+    final badgeResolution = MerchantBadgeResolver.resolve(
+      state: MerchantVisualStateMappers.fromPharmacyDutyItem(item),
+      surface: MerchantSurface.pharmacyPublic,
+    );
+    final primaryBadge = badgeResolution.primary;
+    final confidenceBadge =
+        _confidenceBadgeForVerification(item.verificationStatus);
     final actions = <Widget>[];
 
     if (item.canCall) {
@@ -550,20 +561,12 @@ class _PharmacyCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDC2626),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'GUARDIA',
-                        style: AppTextStyles.bodyXs.copyWith(
-                          color: Colors.white,
-                          letterSpacing: 0.8,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      child: primaryBadge == null
+                          ? const SizedBox.shrink()
+                          : MerchantStatusBadge(
+                              badge: primaryBadge,
+                              compact: true,
+                            ),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -616,30 +619,32 @@ class _PharmacyCard extends ConsumerWidget {
             children: [
               ...actions.expand((button) => [button, const SizedBox(width: 8)]),
               if (actions.isNotEmpty) const Spacer(),
-              if (item.verificationStatus != 'unverified')
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.verified,
-                      size: 16,
-                      color: AppColors.primary500,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'VERIFICADA',
-                      style: AppTextStyles.bodyXs.copyWith(
-                        color: AppColors.primary500,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
+              if (confidenceBadge != null)
+                MerchantConfidenceBadge(
+                  badge: confidenceBadge,
                 ),
             ],
           ),
         ],
       ),
     );
+  }
+
+  MerchantBadgeKey? _confidenceBadgeForVerification(String raw) {
+    switch (raw.trim().toLowerCase()) {
+      case 'verified':
+        return MerchantBadgeKey.confidenceVerified;
+      case 'validated':
+        return MerchantBadgeKey.confidenceValidated;
+      case 'claimed':
+        return MerchantBadgeKey.confidenceClaimed;
+      case 'community_submitted':
+        return MerchantBadgeKey.confidenceCommunity;
+      case 'referential':
+        return MerchantBadgeKey.confidenceReferential;
+      default:
+        return null;
+    }
   }
 }
 

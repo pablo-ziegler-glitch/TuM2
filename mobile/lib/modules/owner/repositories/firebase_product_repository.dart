@@ -29,14 +29,17 @@ class FirebaseProductRepository implements ProductRepository {
   @override
   Stream<List<MerchantProduct>> watchOwnerProducts({
     required String merchantId,
+    int limit = 120,
   }) {
     final normalizedMerchantId = normalizeProductField(merchantId);
     if (normalizedMerchantId.isEmpty) return const Stream.empty();
+    final safeLimit = limit.clamp(1, _maxOwnerProductsLimit).toInt();
 
     return _firestore
         .collection(_productsCollection)
         .where('merchantId', isEqualTo: normalizedMerchantId)
         .orderBy('updatedAt', descending: true)
+        .limit(safeLimit)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs

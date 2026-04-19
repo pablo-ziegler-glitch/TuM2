@@ -57,3 +57,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/
+    - assets/brand/
+    - assets/badges/
+    - assets/markers/
+    - assets/clusters/
+    - assets/icons/
+    - assets/logo/

@@ -3,10 +3,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../models/merchant_search_item.dart';
 
 enum MapClusterPriority {
-  guardia,
-  open,
-  defaultState,
-  closed,
+  red,
+  blue,
+  green,
+  neutral,
 }
 
 class MapCluster {

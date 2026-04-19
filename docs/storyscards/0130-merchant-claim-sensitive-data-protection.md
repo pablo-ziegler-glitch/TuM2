@@ -8,7 +8,6 @@ Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0129
 ## Sync 0129 (2026-04-19)
 - La policy de evidencia por categoría quedó en backend tipado/versionado sin mover adjuntos a colecciones públicas.
 - Se conserva separación: metadatos compactos en `merchant_claims` y binarios en Storage privado.
-
 ## Estado real de implementación (corte 2026-04-17)
 ### Hecho
 - Implementado vault sensible con cifrado reversible AES-GCM + fingerprints derivados (`functions/src/lib/claimSensitive.ts`).

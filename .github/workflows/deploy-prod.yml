@@ -345,7 +345,8 @@ jobs:
           firebase deploy \
             --project "${PROJECT_ID}" \
             --only "${{ steps.scope.outputs.deploy_only }}" \
-            --non-interactive
+            --non-interactive \
+            --force
 
       - name: Smoke check Hosting
         if: steps.scope.outputs.deploy_hosting == 'true'

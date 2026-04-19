@@ -55,7 +55,9 @@ class _ReassignmentTrackingScreenState
         error: (_, __) => _error('No pudimos validar tu comercio.'),
         data: (ownerResolution) {
           final merchant = ownerResolution.primaryMerchant;
-          if (merchant == null) return _error('No encontramos un comercio asociado.');
+          if (merchant == null) {
+            return _error('No encontramos un comercio asociado.');
+          }
 
           return openRoundAsync.when(
             loading: _loading,
@@ -80,12 +82,14 @@ class _ReassignmentTrackingScreenState
                 );
               }
 
-              final requestsAsync = ref.watch(roundRequestsProvider(round.roundId));
+              final requestsAsync =
+                  ref.watch(roundRequestsProvider(round.roundId));
               return requestsAsync.when(
                 loading: _loading,
                 error: (_, __) => _error('No pudimos cargar solicitudes.'),
                 data: (requests) {
-                  final hasPending = requests.any((item) => item.status == 'pending');
+                  final hasPending =
+                      requests.any((item) => item.status == 'pending');
                   if (!hasPending && round.status == 'open') {
                     PharmacyDutyFlowAnalytics.logRoundExpired(
                       zoneId: merchant.zoneId,
@@ -176,7 +180,8 @@ class _ReassignmentTrackingScreenState
                                         ),
                                         decoration: BoxDecoration(
                                           color: AppColors.neutral100,
-                                          borderRadius: BorderRadius.circular(999),
+                                          borderRadius:
+                                              BorderRadius.circular(999),
                                         ),
                                         child: Text(
                                           '${requests.length} TOTAL',
@@ -204,7 +209,8 @@ class _ReassignmentTrackingScreenState
                                             height: 36,
                                             decoration: BoxDecoration(
                                               color: AppColors.neutral100,
-                                              borderRadius: BorderRadius.circular(999),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
                                             ),
                                             child: const Icon(
                                               Icons.local_pharmacy,
@@ -220,7 +226,8 @@ class _ReassignmentTrackingScreenState
                                               children: [
                                                 Text(
                                                   item.candidateMerchantId,
-                                                  style: AppTextStyles.labelMd.copyWith(
+                                                  style: AppTextStyles.labelMd
+                                                      .copyWith(
                                                     fontWeight: FontWeight.w700,
                                                   ),
                                                 ),
@@ -238,11 +245,13 @@ class _ReassignmentTrackingScreenState
                                             ),
                                             decoration: BoxDecoration(
                                               color: AppColors.neutral100,
-                                              borderRadius: BorderRadius.circular(999),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
                                             ),
                                             child: Text(
                                               item.status.toUpperCase(),
-                                              style: AppTextStyles.bodyXs.copyWith(
+                                              style:
+                                                  AppTextStyles.bodyXs.copyWith(
                                                 fontWeight: FontWeight.w700,
                                               ),
                                             ),

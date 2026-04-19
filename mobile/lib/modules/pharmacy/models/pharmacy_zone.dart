@@ -28,10 +28,17 @@ class PharmacyZone {
 
   factory PharmacyZone.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
+    return PharmacyZone.fromMap(doc.id, data);
+  }
+
+  factory PharmacyZone.fromMap(
+    String zoneId,
+    Map<String, dynamic> data,
+  ) {
     final centroid = _readMap(data, const ['centroid', 'centroide']);
     return PharmacyZone(
-      zoneId: doc.id,
-      name: _readText(data, const ['name', 'nombre']) ?? doc.id,
+      zoneId: zoneId,
+      name: _readText(data, const ['name', 'nombre']) ?? zoneId,
       cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
       centroidLat: _readNum(centroid, const ['lat']) ??
           _readNum(data, const ['lat', 'latitude']),

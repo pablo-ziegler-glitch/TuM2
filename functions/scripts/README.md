@@ -49,6 +49,68 @@ npm run cost:guard -- \
 - `3`: se superó warning y se pasó `--fail-on-warn`.
 - `1`: error de ejecución/configuración.
 
+## `finops_summary.js`
+
+Consolida resultados generados por `firestore_cost_guard.js` en una vista
+operativa simple por ambiente.
+
+Entrada esperada:
+
+- `docs/ops/generated/cost-guard-*.json`
+
+### Ejecución
+
+```bash
+cd functions
+
+# Resumen por consola
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated
+
+# Resumen JSON consolidado
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated \
+  --out ../docs/ops/generated/finops-summary.json
+
+# Resumen Markdown para reporte semanal
+npm run finops:summary -- \
+  --input-dir ../docs/ops/generated \
+  --markdown \
+  --out ../docs/ops/generated/finops-summary.md
+```
+
+## `finops_gate.js`
+
+Evalúa el resumen consolidado y falla el proceso según política por ambiente.
+
+### Ejecución
+
+```bash
+cd functions
+
+# Política estándar: prod falla en warn/critical
+npm run finops:gate -- \
+  --summary ../docs/ops/generated/finops-summary.json \
+  --fail-on-warn-envs prod
+
+# Política estricta (release crítico): todos los ambientes fallan en warn
+npm run finops:gate -- \
+  --summary ../docs/ops/generated/finops-summary.json \
+  --fail-on-warn-envs dev,staging,prod
+
+# Evaluar solo un ambiente específico
+npm run finops:gate -- \
+  --summary ../docs/ops/generated/finops-summary.json \
+  --only-envs staging \
+  --fail-on-warn-envs prod
+```
+
+### Códigos de salida
+
+- `0`: OK.
+- `2`: al menos un ambiente en `critical`.
+- `3`: `warn` detectado en un ambiente incluido en `fail-on-warn-envs`.
+
 ## `seed_zones_from_csv.js`
 
 Carga/actualiza (`upsert`) documentos en `zones` desde un CSV de localidades.
@@ -105,3 +167,197 @@ npm run seed:zones:csv -- \
 - Si el CSV no trae coordenadas, marca `centroidMissing: true`.
 - Recomendado: correr primero en `staging`, validar conteo y recién después en
   `prod`.
+
+## `migrate_categories_canonical.js`
+
+Migración forzada para normalizar categorías legacy:
+
+- `vet` ➜ `veterinary`
+
+Alcance:
+
+- `categories` (renombra doc id `vet` a `veterinary` y agrega alias)
+- `admin_configs/catalog_limits` (`categoryLimits.vet`)
+- `merchants` (`category`, `categoryId`)
+- `merchant_public` (`category`, `categoryId`)
+- `merchant_claims` (`categoryId`)
+- `users` (`onboardingOwnerProgress.step1.categoryId`)
+
+### Ejecución
+
+Dry-run:
+
+```bash
+cd functions
+npm run migrate:categories:canonical -- \
+  --project tum2-dev-6283d
+```
+
+Aplicar cambios:
+
+```bash
+cd functions
+npm run migrate:categories:canonical -- \
+  --project tum2-dev-6283d \
+  --apply
+```
+
+Parámetros:
+
+- `--project <projectId>`: proyecto Firebase objetivo.
+- `--page-size <n>`: tamaño de página para scans (default `400`, max `1000`).
+- `--apply`: ejecuta escrituras. Sin este flag, corre en dry-run.
+
+## `migrate_claim_categories_mvp.js`
+
+Migración para normalizar `merchant_claims.categoryId` al set canónico de claims MVP.
+
+Objetivos:
+
+- normalizar alias legacy frecuentes (`farmacia` -> `pharmacy`, `veterinaria` -> `veterinary`, etc.),
+- detectar categorías fuera del allowlist MVP de claims,
+- dejar trazabilidad de cuántos casos quedan para resolución manual.
+
+No intenta auto-mapear categorías no MVP (ej. `panaderia`, `cafeteria`, `other`): las reporta como `unsupported`.
+
+### Ejecución
+
+Dry-run:
+
+```bash
+cd functions
+npm run migrate:claims:categories:mvp -- \
+  --project tum2-staging-45c83
+```
+
+Aplicar cambios:
+
+```bash
+cd functions
+npm run migrate:claims:categories:mvp -- \
+  --project tum2-staging-45c83 \
+  --apply
+```
+
+Parámetros:
+
+- `--project <projectId>`: proyecto Firebase objetivo.
+- `--page-size <n>`: tamaño de página para scans (default `400`, max `1000`).
+- `--apply`: ejecuta escrituras. Sin este flag, corre en dry-run.
+
+## `audit_claim_categories_mvp.js`
+
+Audita categorías de claims y comercios para detectar tokens legacy/no-MVP que hoy
+caen fuera del allowlist de reclamos.
+
+Colecciones auditadas:
+
+- `merchant_claims`
+- `merchants`
+- `merchant_public`
+
+Entrega conteos por categoría raw/normalizada y muestras acotadas de documentos
+`unsupported_non_mvp`.
+
+### Ejecución
+
+```bash
+cd functions
+npm run audit:claims:categories:mvp -- \
+  --project tum2-staging-45c83
+```
+
+Parámetros:
+
+- `--project <projectId>`: proyecto Firebase objetivo.
+- `--page-size <n>`: tamaño de página para scans (default `400`, max `1000`).
+
+## `claim_categories_allowlist_guard.js`
+
+Guard estático para CI que valida que backend y mobile mantengan la misma allowlist
+MVP para claims y que no se reintroduzcan categorías legacy bloqueadas en listas
+permitidas.
+
+Chequea:
+
+- `functions/src/lib/merchantClaimEvidencePolicy.ts` (`CLAIM_ALLOWED_CATEGORY_IDS`)
+- `mobile/lib/modules/merchant_claim/models/merchant_claim_evidence_policy.dart` (`kClaimAllowedCategoryIds`)
+
+### Ejecución
+
+```bash
+cd functions
+npm run guard:claim-categories:allowlist
+```
+
+## `migrate_merchants_categories_mvp.js`
+
+Normaliza categorías en `merchants` + `merchant_public` para aliases legacy
+conocidos y reporta categorías no-MVP que requieren curación manual.
+
+No fuerza auto-mapeo de categorías fuera de MVP (ej.: `panaderia`,
+`cafeteria`, `other`): las deja registradas como `unsupported_non_mvp`.
+
+### Ejecución
+
+Dry-run:
+
+```bash
+cd functions
+npm run migrate:merchants:categories:mvp -- \
+  --project tum2-staging-45c83
+```
+
+Aplicar cambios:
+
+```bash
+cd functions
+npm run migrate:merchants:categories:mvp -- \
+  --project tum2-staging-45c83 \
+  --apply
+```
+
+Parámetros:
+
+- `--project <projectId>`: proyecto Firebase objetivo.
+- `--page-size <n>`: tamaño de página para scans (default `400`, max `1000`).
+- `--apply`: ejecuta escrituras. Sin este flag, corre en dry-run.
+
+## `seed_categories_es_latam.js`
+
+Seed idempotente de colección `categories` con catálogo base ES-LATAM.
+
+Incluye categorías canónicas:
+
+- `farmacia`
+- `kiosco`
+- `almacen`
+- `supermercado`
+- `veterinaria`
+- `casa_de_comidas`
+- `comida_al_paso`
+- `gomeria`
+- `cafeteria`
+- `panaderia`
+- `otro`
+
+También elimina IDs legacy en inglés (`pharmacy`, `kiosk`, etc.).
+
+### Ejecución
+
+Dry-run:
+
+```bash
+cd functions
+npm run seed:categories:es-latam -- \
+  --project tum2-dev-6283d
+```
+
+Aplicar cambios:
+
+```bash
+cd functions
+npm run seed:categories:es-latam -- \
+  --project tum2-dev-6283d \
+  --apply
+```

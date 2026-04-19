@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../merchant_badges/domain/merchant_badge_resolver.dart';
+import '../../merchant_badges/domain/merchant_marker_resolver.dart';
+import '../../merchant_badges/domain/merchant_visual_models.dart';
+import '../../merchant_badges/widgets/merchant_badge_widgets.dart';
 import '../models/merchant_search_item.dart';
 
 class MerchantSearchCard extends StatelessWidget {
@@ -20,14 +24,22 @@ class MerchantSearchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final openNow = item.isOpenNow == true;
     final distanceText = item.distanceMeters == null
         ? null
         : _distanceLabel(item.distanceMeters!);
+    final visualState = MerchantVisualStateMapper.fromSearchItem(item);
+    final resolution = MerchantBadgeResolver.resolve(
+      state: visualState,
+      surface: MerchantSurface.searchCard,
+    );
+    final primaryBadge = resolution.primary;
     final hasTrustedVerification =
-        _verificationRank(item.verificationStatus) >= 5;
+        resolution.confidence == MerchantBadgeKey.confidenceVerified ||
+            resolution.confidence == MerchantBadgeKey.confidenceValidated;
     final imageUrl = _imageForCard(item: item, seed: imageSeed);
     final address = item.address.trim();
+    final rubricLabel = resolution.rubricLabel ??
+        (item.categoryLabel.isNotEmpty ? item.categoryLabel : item.categoryId);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -70,27 +82,13 @@ class MerchantSearchCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (openNow)
+                      if (primaryBadge != null)
                         Positioned(
                           top: 10,
                           left: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary500,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'ABIERTO AHORA',
-                              style: AppTextStyles.bodyXs.copyWith(
-                                color: AppColors.surface,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
+                          child: MerchantStatusBadge(
+                            badge: primaryBadge,
+                            compact: true,
                           ),
                         ),
                     ],
@@ -126,15 +124,7 @@ class MerchantSearchCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      Text(
-                        item.categoryLabel.isNotEmpty
-                            ? item.categoryLabel
-                            : item.categoryId,
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.neutral700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      MerchantRubricLabel(label: rubricLabel),
                       if (address.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Row(
@@ -195,23 +185,6 @@ class MerchantSearchCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static int _verificationRank(String verificationStatus) {
-    switch (verificationStatus) {
-      case 'verified':
-        return 6;
-      case 'validated':
-        return 5;
-      case 'claimed':
-        return 4;
-      case 'referential':
-        return 3;
-      case 'community_submitted':
-        return 2;
-      default:
-        return 1;
-    }
   }
 
   static String _imageForCard({

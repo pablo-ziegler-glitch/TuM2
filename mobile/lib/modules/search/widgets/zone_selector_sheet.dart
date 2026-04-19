@@ -42,7 +42,7 @@ class _ZoneSelectorSheetState extends ConsumerState<ZoneSelectorSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Seleccionar zona', style: AppTextStyles.headingSm),
+            const Text('Seleccionar zona', style: AppTextStyles.headingSm),
             const SizedBox(height: 12),
             zonesAsync.when(
               data: (zones) => Flexible(
@@ -92,9 +92,8 @@ class _ZoneSelectorSheetState extends ConsumerState<ZoneSelectorSheet> {
                         await ref
                             .read(searchNotifierProvider.notifier)
                             .setZone(_selectedZoneId!);
-                        if (mounted) {
-                          Navigator.of(context).pop();
-                        }
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop();
                       },
                 child: const Text('Confirmar zona'),
               ),

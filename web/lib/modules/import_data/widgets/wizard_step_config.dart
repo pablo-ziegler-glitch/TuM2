@@ -36,10 +36,10 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Field Mapping', style: AppTextStyles.headingMd),
+        Text('Mapeo de campos', style: AppTextStyles.headingMd),
         const SizedBox(height: 4),
         Text(
-          'Review and adjust how CSV columns map to TuM2 fields. AI confidence scores are shown for each mapping.',
+          'Revisa y ajusta como las columnas del CSV se asignan a los campos de TuM2. Cada mapeo muestra un nivel de confianza estimado.',
           style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
         ),
         const SizedBox(height: 20),
@@ -74,7 +74,9 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
                           ),
                           if (i < widget.mappings.length - 1)
                             const Divider(
-                                height: 1, color: AppColors.neutral100),
+                              height: 1,
+                              color: AppColors.neutral100,
+                            ),
                         ],
                       );
                     }),
@@ -97,19 +99,19 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
           children: [
             Expanded(
               child: _SettingsCard(
-                title: 'Deduplication',
+                title: 'Deduplicacion',
                 description:
-                    'Prevent duplicate entries by comparing Name and Address before creating new records.',
+                    'Evita duplicados comparando nombre y direccion antes de crear nuevos registros.',
                 child: Row(
                   children: [
                     Switch(
                       value: widget.deduplicationEnabled,
                       onChanged: widget.onDeduplicationChanged,
-                      activeColor: AppColors.primary500,
+                      activeThumbColor: AppColors.primary500,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      widget.deduplicationEnabled ? 'Enabled' : 'Disabled',
+                      widget.deduplicationEnabled ? 'Activa' : 'Desactivada',
                       style: AppTextStyles.labelSm,
                     ),
                   ],
@@ -119,16 +121,16 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
             const SizedBox(width: 16),
             Expanded(
               child: _SettingsCard(
-                title: 'Visibility after import',
+                title: 'Visibilidad despues de importar',
                 description:
-                    'Records imported as hidden require review before becoming public in the app.',
+                    'Los registros importados como ocultos requieren revision antes de quedar visibles en la app.',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _RadioOption(
-                      label: 'Hidden (staging)',
+                      label: 'Oculto (staging)',
                       description:
-                          'Records will be staged and not visible to users',
+                          'Los registros quedaran en staging y no seran visibles para usuarios',
                       value: 'hidden',
                       groupValue: widget.visibilityAfterImport,
                       onChanged: widget.onVisibilityChanged,
@@ -137,7 +139,7 @@ class _WizardStepConfigState extends State<WizardStepConfig> {
                     _RadioOption(
                       label: 'Visible',
                       description:
-                          'Records will be publicly visible immediately',
+                          'Los registros quedaran visibles de forma publica de inmediato',
                       value: 'visible',
                       groupValue: widget.visibilityAfterImport,
                       onChanged: widget.onVisibilityChanged,
@@ -171,21 +173,22 @@ class _MappingTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const style = TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w600,
-        color: AppColors.neutral500,
-        letterSpacing: 0.6);
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+      color: AppColors.neutral500,
+      letterSpacing: 0.6,
+    );
     return Container(
       color: AppColors.neutral50,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: const Row(
         children: [
-          SizedBox(width: 48, child: Text('IMPORT', style: style)),
-          Expanded(child: Text('CSV COLUMN', style: style)),
+          SizedBox(width: 48, child: Text('IMPORTAR', style: style)),
+          Expanded(child: Text('COLUMNA CSV', style: style)),
           SizedBox(width: 32),
-          Expanded(child: Text('TUM2 FIELD', style: style)),
-          SizedBox(width: 80, child: Text('AI CONFIDENCE', style: style)),
-          SizedBox(width: 90, child: Text('STATUS', style: style)),
+          Expanded(child: Text('CAMPO TUM2', style: style)),
+          SizedBox(width: 80, child: Text('CONFIANZA IA', style: style)),
+          SizedBox(width: 90, child: Text('ESTADO', style: style)),
         ],
       ),
     );
@@ -217,7 +220,7 @@ class _MappingRow extends StatelessWidget {
             child: Switch(
               value: mapping.enabled,
               onChanged: mapping.required ? null : onToggle,
-              activeColor: AppColors.primary500,
+              activeThumbColor: AppColors.primary500,
             ),
           ),
           // Campo CSV
@@ -265,18 +268,24 @@ class _MappingRow extends StatelessWidget {
                           : null,
                       isExpanded: true,
                       underline: const SizedBox(),
-                      hint: Text('Seleccionar campo...',
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.neutral500)),
+                      hint: Text(
+                        'Seleccionar campo...',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral500,
+                        ),
+                      ),
                       items: tum2Fields
-                          .map((f) => DropdownMenuItem(
-                                value: f,
-                                child: Text(f, style: AppTextStyles.bodySm),
-                              ))
+                          .map(
+                            (f) => DropdownMenuItem(
+                              value: f,
+                              child: Text(f, style: AppTextStyles.bodySm),
+                            ),
+                          )
                           .toList(),
                       onChanged: onFieldChanged,
-                      style: AppTextStyles.bodySm
-                          .copyWith(color: AppColors.neutral900),
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.neutral900,
+                      ),
                     ),
                   )
                 : Container(
@@ -287,9 +296,12 @@ class _MappingRow extends StatelessWidget {
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Center(
-                      child: Text('—',
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.neutral400)),
+                      child: Text(
+                        '—',
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral400,
+                        ),
+                      ),
                     ),
                   ),
           ),
@@ -300,9 +312,12 @@ class _MappingRow extends StatelessWidget {
               padding: const EdgeInsets.only(left: 8),
               child: mapping.aiConfidence != null
                   ? _ConfidenceBar(confidence: mapping.aiConfidence!)
-                  : Text('—',
-                      style: AppTextStyles.bodyXs
-                          .copyWith(color: AppColors.neutral400)),
+                  : Text(
+                      '—',
+                      style: AppTextStyles.bodyXs.copyWith(
+                        color: AppColors.neutral400,
+                      ),
+                    ),
             ),
           ),
           // Estado
@@ -313,20 +328,27 @@ class _MappingRow extends StatelessWidget {
               child: mapping.required
                   ? Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.errorBg,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text('Required',
-                          style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.errorFg)),
+                      child: Text(
+                        'Obligatorio',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.errorFg,
+                        ),
+                      ),
                     )
                   : Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: mapping.enabled
                             ? AppColors.successBg
@@ -334,13 +356,14 @@ class _MappingRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        mapping.enabled ? 'Optional' : 'Ignored',
+                        mapping.enabled ? 'Opcional' : 'Ignorado',
                         style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: mapping.enabled
-                                ? AppColors.successFg
-                                : AppColors.neutral500),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: mapping.enabled
+                              ? AppColors.successFg
+                              : AppColors.neutral500,
+                        ),
                       ),
                     ),
             ),
@@ -414,12 +437,12 @@ class _RadioOption extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Radio<String>(
-              value: value,
-              groupValue: groupValue,
-              onChanged: (v) => onChanged(v!),
-              activeColor: AppColors.primary500,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            Icon(
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              size: 20,
+              color: isSelected ? AppColors.primary500 : AppColors.neutral400,
             ),
             const SizedBox(width: 8),
             Column(
@@ -455,7 +478,10 @@ class _ConfidenceBar extends StatelessWidget {
         Text(
           '${(confidence * 100).toStringAsFixed(0)}%',
           style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w600, color: color),
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
         ),
         const SizedBox(height: 3),
         SizedBox(
@@ -502,18 +528,23 @@ class _SourceInsightPanel extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome_outlined,
-                  size: 14, color: AppColors.primary500),
+              const Icon(
+                Icons.auto_awesome_outlined,
+                size: 14,
+                color: AppColors.primary500,
+              ),
               const SizedBox(width: 6),
-              Text('Source Insight',
-                  style: AppTextStyles.labelMd.copyWith(fontSize: 12)),
+              Text(
+                'Resumen de origen',
+                style: AppTextStyles.labelMd.copyWith(fontSize: 12),
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          _InsightRow(label: 'Columns detected', value: '$_totalCount'),
-          _InsightRow(label: 'Mapped', value: '$_mappedCount / $_totalCount'),
+          _InsightRow(label: 'Columnas detectadas', value: '$_totalCount'),
+          _InsightRow(label: 'Mapeadas', value: '$_mappedCount / $_totalCount'),
           _InsightRow(
-            label: 'Avg AI confidence',
+            label: 'Promedio de confianza IA',
             value: '${(_avgConfidence * 100).toStringAsFixed(0)}%',
             valueColor: _avgConfidence >= 0.85
                 ? AppColors.successFg
@@ -522,29 +553,37 @@ class _SourceInsightPanel extends StatelessWidget {
           const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.neutral100),
           const SizedBox(height: 12),
-          Text('Sample values',
-              style: AppTextStyles.bodyXs.copyWith(
-                  color: AppColors.neutral400, fontWeight: FontWeight.w600)),
+          Text(
+            'Valores de ejemplo',
+            style: AppTextStyles.bodyXs.copyWith(
+              color: AppColors.neutral400,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 8),
-          ...mappings
-              .where((m) => m.sampleValue != null && m.enabled)
-              .map((m) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(m.csvColumn,
-                            style: AppTextStyles.bodyXs
-                                .copyWith(color: AppColors.neutral400)),
-                        Text(
-                          m.sampleValue!,
-                          style: AppTextStyles.bodyXs
-                              .copyWith(color: AppColors.neutral700),
-                          overflow: TextOverflow.ellipsis,
+          ...mappings.where((m) => m.sampleValue != null && m.enabled).map(
+                (m) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        m.csvColumn,
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral400,
                         ),
-                      ],
-                    ),
-                  )),
+                      ),
+                      Text(
+                        m.sampleValue!,
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
         ],
       ),
     );
@@ -552,8 +591,11 @@ class _SourceInsightPanel extends StatelessWidget {
 }
 
 class _InsightRow extends StatelessWidget {
-  const _InsightRow(
-      {required this.label, required this.value, this.valueColor});
+  const _InsightRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
   final String label;
   final String value;
   final Color? valueColor;
@@ -565,13 +607,17 @@ class _InsightRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-              child: Text(label,
-                  style: AppTextStyles.bodyXs
-                      .copyWith(color: AppColors.neutral500))),
+            child: Text(
+              label,
+              style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
+            ),
+          ),
           Text(
             value,
             style: AppTextStyles.labelSm.copyWith(
-                fontSize: 11, color: valueColor ?? AppColors.neutral800),
+              fontSize: 11,
+              color: valueColor ?? AppColors.neutral800,
+            ),
           ),
         ],
       ),

@@ -1,0 +1,81 @@
+prioridad,numero,nombre,estado,descripcion_corta
+P0,0011,Diseñar logo principal,todo,Completar 'Diseñar logo principal' para cerrar este frente del roadmap P0.
+P0,0012,Diseñar app icon,todo,Completar 'Diseñar app icon' para cerrar este frente del roadmap P0.
+P0,0015,Relevar rubros prioritarios,todo,Completar 'Relevar rubros prioritarios' para cerrar este frente del roadmap P0.
+P0,0016,Relevar caso farmacias de turno,todo,Completar 'Relevar caso farmacias de turno' para cerrar este frente del roadmap P0.
+P0,0017,Relevar señales operativas por rubro,todo,Completar 'Relevar señales operativas por rubro' para cerrar este frente del roadmap P0.
+P0,0038,Diseñar flujo carga de productos,todo,Completar 'Diseñar flujo carga de productos' para cerrar este frente del roadmap P0.
+P0,0039,Diseñar flujo carga de horarios y señales,todo,Completar 'Diseñar flujo carga de horarios y señales' para cerrar este frente del roadmap P0.
+P0,0040,Diseñar flujo carga de turnos de farmacia,todo,Completar 'Diseñar flujo carga de turnos de farmacia' para cerrar este frente del roadmap P0.
+P0,0064,Implementar módulo OWNER,in_progress,Completar 'Implementar módulo OWNER' para cerrar este frente del roadmap P0.
+P0,0065,Implementar alta/edición de productos,todo,Completar 'Implementar alta/edición de productos' para cerrar este frente del roadmap P0.
+P0,0072,Implementar ficha pública de comercio web,todo,Completar 'Implementar ficha pública de comercio web' para cerrar este frente del roadmap P0.
+P0,0074,Implementar landing Farmacias de turno web,todo,Completar 'Implementar landing Farmacias de turno web' para cerrar este frente del roadmap P0.
+P0,0075,Implementar landing Abierto ahora web,todo,Completar 'Implementar landing Abierto ahora web' para cerrar este frente del roadmap P0.
+P0,0082,Definir eventos analytics,todo,Completar 'Definir eventos analytics' para cerrar este frente del roadmap P0.
+P0,0083,Implementar tracking base,todo,Completar 'Implementar tracking base' para cerrar este frente del roadmap P0.
+P0,0087,Medir uso de señales operativas,todo,Completar 'Medir uso de señales operativas' para cerrar este frente del roadmap P0.
+P0,0090,Crear checklist QA MVP,todo,Completar 'Crear checklist QA MVP' para cerrar este frente del roadmap P0.
+P0,0091,Testear permisos por rol,todo,Completar 'Testear permisos por rol' para cerrar este frente del roadmap P0.
+P0,0092,Testear edge cases operativos,todo,Completar 'Testear edge cases operativos' para cerrar este frente del roadmap P0.
+P0,0094,Definir piloto geográfico,todo,Completar 'Definir piloto geográfico' para cerrar este frente del roadmap P0.
+P0,0095,Definir rubros iniciales de salida,todo,Completar 'Definir rubros iniciales de salida' para cerrar este frente del roadmap P0.
+P0,0097,Armar material para captar primeras farmacias,todo,Completar 'Armar material para captar primeras farmacias' para cerrar este frente del roadmap P0.
+P0,0100,Redactar política de privacidad,todo,Completar 'Redactar política de privacidad' para cerrar este frente del roadmap P0.
+P0,0101,Redactar términos y condiciones,todo,Completar 'Redactar términos y condiciones' para cerrar este frente del roadmap P0.
+P0,0102,Definir consentimiento y tratamiento de evidencia documental (claims),todo,Completar 'Definir consentimiento y tratamiento de evidencia documental (claims)' para cerrar este frente del roadmap P0.
+P0,0103,Definir derechos de rectificación/eliminación/revisión de datos de claim,todo,Completar 'Definir derechos de rectificación/eliminación/revisión de datos de claim' para cerrar este frente del roadmap P0.
+P0,0104,"Definir política de retención, acceso interno y resguardo de datos sensibles",todo,"Completar 'Definir política de retención, acceso interno y resguardo de datos sensibles' para cerrar este frente del roadmap P0."
+P0,0125,Épica: Reclamo de titularidad de comercio,todo,Completar 'Épica: Reclamo de titularidad de comercio' para cerrar este frente del roadmap P0.
+P0,0126,Flujo de claim del comercio (usuario/owner),todo,Completar 'Flujo de claim del comercio (usuario/owner)' para cerrar este frente del roadmap P0.
+P0,0127,Validación automática inicial de claims,todo,Completar 'Validación automática inicial de claims' para cerrar este frente del roadmap P0.
+P0,0128,Revisión manual de claims en Admin Web,todo,Completar 'Revisión manual de claims en Admin Web' para cerrar este frente del roadmap P0.
+P0,0129,Evidencia y documentación por categoría de comercio,todo,Completar 'Evidencia y documentación por categoría de comercio' para cerrar este frente del roadmap P0.
+P0,0130,Seguridad y protección de datos sensibles en claims,todo,Completar 'Seguridad y protección de datos sensibles en claims' para cerrar este frente del roadmap P0.
+P0,0131,Integración de claim con roles OWNER / owner_pending / aprobación,todo,Completar 'Integración de claim con roles OWNER / owner_pending / aprobación' para cerrar este frente del roadmap P0.
+P0,0133,"Conflictos, duplicados y disputa de titularidad",todo,"Completar 'Conflictos, duplicados y disputa de titularidad' para cerrar este frente del roadmap P0."
+P1,0002,Definir claim principal de marca,todo,Completar 'Definir claim principal de marca' para cerrar este frente del roadmap P1.
+P1,0008,Mantener actualizado ROADMAP.md,todo,Completar 'Mantener actualizado ROADMAP.md' para cerrar este frente del roadmap P1.
+P1,0009,Mantener actualizado PROMPT-PLAYBOOK.md,todo,Completar 'Mantener actualizado PROMPT-PLAYBOOK.md' para cerrar este frente del roadmap P1.
+P1,0013,Definir sistema de sellos,todo,Completar 'Definir sistema de sellos' para cerrar este frente del roadmap P1.
+P1,0018,Relevar flujo real del dueño,todo,Completar 'Relevar flujo real del dueño' para cerrar este frente del roadmap P1.
+P1,0025,Diseñar modelo de propuestas y votos,todo,Completar 'Diseñar modelo de propuestas y votos' para cerrar este frente del roadmap P1.
+P1,0032,Diseñar pantalla Mapa,todo,Completar 'Diseñar pantalla Mapa' para cerrar este frente del roadmap P1.
+P1,0034,Diseñar ficha de producto,todo,Completar 'Diseñar ficha de producto' para cerrar este frente del roadmap P1.
+P1,0041,Diseñar board de propuestas y votos,todo,Completar 'Diseñar board de propuestas y votos' para cerrar este frente del roadmap P1.
+P1,0051,Configurar CI/CD técnico mínimo,todo,Completar 'Configurar CI/CD técnico mínimo' para cerrar este frente del roadmap P1.
+P1,0055,Implementar home CUSTOMER,todo,Completar 'Implementar home CUSTOMER' para cerrar este frente del roadmap P1.
+P1,0069,Implementar módulo de propuestas y votos,todo,Completar 'Implementar módulo de propuestas y votos' para cerrar este frente del roadmap P1.
+P1,0070,Crear web pública base,todo,Completar 'Crear web pública base' para cerrar este frente del roadmap P1.
+P1,0071,Implementar landing principal,todo,Completar 'Implementar landing principal' para cerrar este frente del roadmap P1.
+P1,0076,Implementar links compartibles,todo,Completar 'Implementar links compartibles' para cerrar este frente del roadmap P1.
+P1,0080,Implementar moderación de contenido,todo,Completar 'Implementar moderación de contenido' para cerrar este frente del roadmap P1.
+P1,0081,Implementar revisión de señales operativas reportadas,todo,Completar 'Implementar revisión de señales operativas reportadas' para cerrar este frente del roadmap P1.
+P1,0084,Crear dashboard MVP,todo,Completar 'Crear dashboard MVP' para cerrar este frente del roadmap P1.
+P1,0085,Medir activación OWNER,todo,Completar 'Medir activación OWNER' para cerrar este frente del roadmap P1.
+P1,0086,Medir activación CUSTOMER,todo,Completar 'Medir activación CUSTOMER' para cerrar este frente del roadmap P1.
+P1,0088,Configurar App Check,todo,Completar 'Configurar App Check' para cerrar este frente del roadmap P1.
+P1,0089,Configurar Crashlytics,todo,Completar 'Configurar Crashlytics' para cerrar este frente del roadmap P1.
+P1,0093,Configurar alertas técnicas mínimas,todo,Completar 'Configurar alertas técnicas mínimas' para cerrar este frente del roadmap P1.
+P1,0096,Armar material de onboarding para comercios,todo,Completar 'Armar material de onboarding para comercios' para cerrar este frente del roadmap P1.
+P1,0098,Preparar publicación beta,todo,Completar 'Preparar publicación beta' para cerrar este frente del roadmap P1.
+P1,0099,Preparar metadata de stores y canales,todo,Completar 'Preparar metadata de stores y canales' para cerrar este frente del roadmap P1.
+P1,0105,Diseñar sistema de propuestas y votos usable,todo,Completar 'Diseñar sistema de propuestas y votos usable' para cerrar este frente del roadmap P1.
+P1,0132,Verificación de teléfono del usuario para fase 2,todo,Completar 'Verificación de teléfono del usuario para fase 2' para cerrar este frente del roadmap P1.
+P2,0026,Diseñar modelo de badges y branding snippets,todo,Completar 'Diseñar modelo de badges y branding snippets' para cerrar este frente del roadmap P2.
+P2,0059,Implementar ficha de producto,todo,Completar 'Implementar ficha de producto' para cerrar este frente del roadmap P2.
+P2,0062,Implementar favoritos,todo,Completar 'Implementar favoritos' para cerrar este frente del roadmap P2.
+P2,0063,Implementar seguir comercio,todo,Completar 'Implementar seguir comercio' para cerrar este frente del roadmap P2.
+P2,0073,Implementar ficha pública de producto web,todo,Completar 'Implementar ficha pública de producto web' para cerrar este frente del roadmap P2.
+P2,0078,Implementar listado de comercios,todo,Completar 'Implementar listado de comercios' para cerrar este frente del roadmap P2.
+P2,0079,Implementar listado de propuestas,todo,Completar 'Implementar listado de propuestas' para cerrar este frente del roadmap P2.
+P2,0106,Implementar links compartibles de propuestas,todo,Completar 'Implementar links compartibles de propuestas' para cerrar este frente del roadmap P2.
+P2,0107,Definir loop de invitación,todo,Completar 'Definir loop de invitación' para cerrar este frente del roadmap P2.
+P2,0109,Definir hipótesis de monetización no invasiva,todo,Completar 'Definir hipótesis de monetización no invasiva' para cerrar este frente del roadmap P2.
+P2,0110,Definir criterios para promociones patrocinadas,todo,Completar 'Definir criterios para promociones patrocinadas' para cerrar este frente del roadmap P2.
+P2,0111,Diseñar medición base para monetización futura,todo,Completar 'Diseñar medición base para monetización futura' para cerrar este frente del roadmap P2.
+P2,0112,Carga masiva de productos,todo,Completar 'Carga masiva de productos' para cerrar este frente del roadmap P2.
+P2,0114,Mejor discover geográfico,todo,Completar 'Mejor discover geográfico' para cerrar este frente del roadmap P2.
+P2,0115,Verificación avanzada,todo,Completar 'Verificación avanzada' para cerrar este frente del roadmap P2.
+P2,0119,Reputación de comercios,todo,Completar 'Reputación de comercios' para cerrar este frente del roadmap P2.
+P2,0120,Más automatización operativa,todo,Completar 'Más automatización operativa' para cerrar este frente del roadmap P2.

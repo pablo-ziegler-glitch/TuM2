@@ -1,10 +1,11 @@
-import { FieldValue } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import {
   MerchantDoc,
   MerchantPublicDoc,
   OperationalSignals,
   VerificationStatus,
 } from "./types";
+import { resolveOperationalPublicState } from "./operationalSignals";
 
 const VERIFICATION_BOOST: Record<VerificationStatus, number> = {
   verified: 40,
@@ -152,6 +153,39 @@ function resolveZoneId(merchant: MerchantDoc): string {
   return (merchant.zoneId ?? merchant.zone ?? "").trim();
 }
 
+function toMillis(value: unknown): number | null {
+  if (
+    value &&
+    typeof value === "object" &&
+    "toMillis" in (value as Record<string, unknown>) &&
+    typeof (value as { toMillis?: unknown }).toMillis === "function"
+  ) {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return null;
+}
+
+function resolve24hForProjection(
+  merchant: MerchantDoc,
+  signals: OperationalSignals | undefined,
+  isOpenNow: boolean
+): { is24h: boolean; cooldownUntilMs: number | null; strikeCount: number } {
+  const signalMap = (signals ?? {}) as Record<string, unknown>;
+  const manual24h = signalMap["is24h"] === true || merchant.is24h === true;
+  const cooldownUntilMs = toMillis(signalMap["twentyFourHourCooldownUntil"]);
+  const strikeCountRaw = signalMap["twentyFourHourStrikeCount"];
+  const strikeCount = typeof strikeCountRaw === "number" ? Math.max(0, strikeCountRaw) : 0;
+  const inCooldown = cooldownUntilMs != null && cooldownUntilMs > Date.now();
+  const visible24h = manual24h && !inCooldown && isOpenNow;
+  return {
+    is24h: visible24h,
+    cooldownUntilMs,
+    strikeCount,
+  };
+}
+
 function expandHonorifics(tokens: string[]): string[] {
   const expansions = tokens.flatMap((token) => HONORIFIC_EQUIVALENTS[token] ?? []);
   return [...tokens, ...expansions];
@@ -221,12 +255,22 @@ export function computeMerchantPublicProjection(
   if (merchant.address) projection.address = merchant.address;
   if (merchant.isPharmacy) projection.isPharmacy = merchant.isPharmacy;
 
-  if (signals) {
-    projection.isOpenNow = signals.isOpenNow ?? false;
-    projection.todayScheduleLabel = signals.todayScheduleLabel ?? "";
-    projection.hasPharmacyDutyToday = signals.hasPharmacyDutyToday ?? false;
-    projection.operationalSignals = signals;
-  }
+  const resolvedOperational = resolveOperationalPublicState(signals);
+  projection.isOpenNow = resolvedOperational.isOpenNow;
+  projection.todayScheduleLabel = resolvedOperational.todayScheduleLabel;
+  projection.hasPharmacyDutyToday = resolvedOperational.hasPharmacyDutyToday;
+  projection.hasOperationalSignal = resolvedOperational.hasOperationalSignal;
+  projection.operationalSignalType = resolvedOperational.operationalSignalType;
+  projection.operationalSignalMessage = resolvedOperational.operationalSignalMessage;
+  projection.manualOverrideMode = resolvedOperational.manualOverrideMode;
+  projection.operationalStatusLabel = resolvedOperational.operationalStatusLabel;
+  projection.operationalSignals = resolvedOperational.operationalSignals;
+  const h24 = resolve24hForProjection(merchant, signals, resolvedOperational.isOpenNow);
+  projection.is24h = h24.is24h;
+  projection.twentyFourHourStrikeCount = h24.strikeCount;
+  projection.twentyFourHourCooldownUntil = h24.cooldownUntilMs != null
+    ? Timestamp.fromMillis(h24.cooldownUntilMs)
+    : null;
 
   return projection;
 }

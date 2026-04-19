@@ -28,16 +28,24 @@ class WizardStepPreview extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline, size: 16, color: AppColors.primary500),
+              const Icon(
+                Icons.info_outline,
+                size: 16,
+                color: AppColors.primary500,
+              ),
               const SizedBox(width: 10),
               Text(
                 'Detectamos ${rows.length} filas y 12 columnas.',
-                style: AppTextStyles.bodySm.copyWith(color: AppColors.primary700),
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.primary700,
+                ),
               ),
               const SizedBox(width: 6),
               Text(
                 'Separador: punto y coma (;) — El archivo parece ser un CSV estándar.',
-                style: AppTextStyles.bodyXs.copyWith(color: AppColors.primary600),
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.primary600,
+                ),
               ),
             ],
           ),
@@ -46,11 +54,17 @@ class WizardStepPreview extends StatelessWidget {
         // Encabezado de la previsualización
         Row(
           children: [
-            Text('Vista previa (primeras 10 filas)', style: AppTextStyles.labelMd),
+            Text(
+              'Vista previa (primeras 10 filas)',
+              style: AppTextStyles.labelMd,
+            ),
             const Spacer(),
             if (_errorCount > 0 || _warningCount > 0)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.warningBg,
                   borderRadius: BorderRadius.circular(12),
@@ -58,11 +72,17 @@ class WizardStepPreview extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.warning_amber, size: 14, color: AppColors.warningFg),
+                    const Icon(
+                      Icons.warning_amber,
+                      size: 14,
+                      color: AppColors.warningFg,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       '${_errorCount + _warningCount} errores de validación',
-                      style: AppTextStyles.labelSm.copyWith(color: AppColors.warningFg),
+                      style: AppTextStyles.labelSm.copyWith(
+                        color: AppColors.warningFg,
+                      ),
                     ),
                   ],
                 ),
@@ -85,12 +105,17 @@ class WizardStepPreview extends StatelessWidget {
                   Expanded(
                     child: ListView.separated(
                       itemCount: rows.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.neutral100),
-                      itemBuilder: (context, i) => _PreviewTableRow(row: rows[i]),
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 1, color: AppColors.neutral100),
+                      itemBuilder: (context, i) =>
+                          _PreviewTableRow(row: rows[i]),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     color: AppColors.neutral50,
                     child: Text(
                       'Mostrando las primeras 10 de ${rows.length} filas',
@@ -111,7 +136,8 @@ class WizardStepPreview extends StatelessWidget {
                 icon: Icons.text_fields_outlined,
                 iconColor: AppColors.primary500,
                 title: 'Encoding',
-                subtitle: 'Detectado: UTF-8. Caracteres especiales (acentos) se muestran correctamente.',
+                subtitle:
+                    'Detectado: UTF-8. Caracteres especiales (acentos) se muestran correctamente.',
               ),
             ),
             const SizedBox(width: 12),
@@ -120,16 +146,20 @@ class WizardStepPreview extends StatelessWidget {
                 icon: Icons.grid_on_outlined,
                 iconColor: AppColors.neutral700,
                 title: 'Estructura',
-                subtitle: 'Se ignora la primera fila (encabezados). El resto ingresará al proceso de importación final.',
+                subtitle:
+                    'Se ignora la primera fila (encabezados). El resto ingresará al proceso de importación final.',
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _AnalysisCard(
                 icon: Icons.rule_outlined,
-                iconColor: _errorCount + _warningCount > 0 ? AppColors.errorFg : AppColors.successFg,
+                iconColor: _errorCount + _warningCount > 0
+                    ? AppColors.errorFg
+                    : AppColors.successFg,
                 title: 'Validaciones',
-                subtitle: '${_errorCount + _warningCount} fila${_errorCount + _warningCount != 1 ? 's' : ''} con coordenadas erróneas. Podés corregirlas o el proceso de importación las omitirá.',
+                subtitle:
+                    '${_errorCount + _warningCount} fila${_errorCount + _warningCount != 1 ? 's' : ''} con coordenadas erróneas. Podés corregirlas o el proceso de importación las omitirá.',
                 hasAlert: _errorCount > 0,
               ),
             ),
@@ -143,14 +173,33 @@ class WizardStepPreview extends StatelessWidget {
 class _PreviewTableHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    const style = TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.neutral500, letterSpacing: 0.5);
-    const cols = ['ESTABLECIMIENTO NOMBRE', 'LOCALIDAD', 'TIPOLOGÍA', 'DOMICILIO', 'LONGITUD', 'LATITUD', 'ESTADO'];
+    const style = TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w600,
+      color: AppColors.neutral500,
+      letterSpacing: 0.5,
+    );
+    const cols = [
+      'ESTABLECIMIENTO NOMBRE',
+      'LOCALIDAD',
+      'TIPOLOGÍA',
+      'DOMICILIO',
+      'LONGITUD',
+      'LATITUD',
+      'ESTADO',
+    ];
 
     return Container(
       color: AppColors.neutral50,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
-        children: cols.map((c) => Expanded(child: Text(c, style: style, overflow: TextOverflow.ellipsis))).toList(),
+        children: cols
+            .map(
+              (c) => Expanded(
+                child: Text(c, style: style, overflow: TextOverflow.ellipsis),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -162,20 +211,46 @@ class _PreviewTableRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = row.hasError ? AppColors.errorBg : (row.hasWarning ? AppColors.warningBg : Colors.transparent);
+    final bg = row.hasError
+        ? AppColors.errorBg
+        : (row.hasWarning ? AppColors.warningBg : Colors.transparent);
 
     return Container(
       color: bg,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          Expanded(child: Text(row.name, style: AppTextStyles.bodyXs, overflow: TextOverflow.ellipsis)),
+          Expanded(
+            child: Text(
+              row.name,
+              style: AppTextStyles.bodyXs,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           Expanded(child: Text(row.locality, style: AppTextStyles.bodyXs)),
           Expanded(child: Text(row.typology, style: AppTextStyles.bodyXs)),
-          Expanded(child: Text(row.address, style: AppTextStyles.bodyXs, overflow: TextOverflow.ellipsis)),
-          Expanded(child: _CoordCell(value: row.longitude, hasError: row.hasError || row.hasWarning)),
-          Expanded(child: _CoordCell(value: row.latitude, hasError: row.hasError)),
-          Expanded(child: _StatusDot(hasError: row.hasError, hasWarning: row.hasWarning)),
+          Expanded(
+            child: Text(
+              row.address,
+              style: AppTextStyles.bodyXs,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            child: _CoordCell(
+              value: row.longitude,
+              hasError: row.hasError || row.hasWarning,
+            ),
+          ),
+          Expanded(
+            child: _CoordCell(value: row.latitude, hasError: row.hasError),
+          ),
+          Expanded(
+            child: _StatusDot(
+              hasError: row.hasError,
+              hasWarning: row.hasWarning,
+            ),
+          ),
         ],
       ),
     );
@@ -206,9 +281,23 @@ class _StatusDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (hasError) return const Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.errorFg);
-    if (hasWarning) return const Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.warningFg);
-    return const Icon(Icons.check_circle_outline, size: 14, color: AppColors.successFg);
+    if (hasError)
+      return const Icon(
+        Icons.warning_amber_rounded,
+        size: 14,
+        color: AppColors.errorFg,
+      );
+    if (hasWarning)
+      return const Icon(
+        Icons.warning_amber_rounded,
+        size: 14,
+        color: AppColors.warningFg,
+      );
+    return const Icon(
+      Icons.check_circle_outline,
+      size: 14,
+      color: AppColors.successFg,
+    );
   }
 }
 
@@ -235,7 +324,9 @@ class _AnalysisCard extends StatelessWidget {
         color: hasAlert ? AppColors.errorBg : AppColors.surface,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: hasAlert ? AppColors.errorFg.withValues(alpha: 0.3) : AppColors.neutral100,
+          color: hasAlert
+              ? AppColors.errorFg.withValues(alpha: 0.3)
+              : AppColors.neutral100,
         ),
       ),
       child: Column(

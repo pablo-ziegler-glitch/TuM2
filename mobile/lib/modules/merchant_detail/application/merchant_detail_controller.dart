@@ -65,8 +65,7 @@ class MerchantDetailController
     );
     if (projectedSignals.isNotEmpty) {
       initial = initial.copyWith(
-        signals:
-            AsyncValue<List<MerchantOperationalSignalViewData>>.data(
+        signals: AsyncValue<List<MerchantOperationalSignalViewData>>.data(
           projectedSignals,
         ),
       );
@@ -82,9 +81,6 @@ class MerchantDetailController
 
     unawaited(_loadFeaturedProducts(merchantId, core.featuredProductIds));
     unawaited(_loadSchedule(merchantId));
-    if (projectedSignals.isEmpty) {
-      unawaited(_loadSignals(merchantId));
-    }
     unawaited(_loadDistance(core));
     if (core.hasPharmacyDutyToday) {
       unawaited(_loadPharmacyDuty(merchantId));
@@ -218,33 +214,6 @@ class MerchantDetailController
         ),
       );
       _logError('schedule', error);
-    }
-  }
-
-  Future<void> _loadSignals(String merchantId) async {
-    final repository = _repository;
-    try {
-      final dto = await repository.fetchSignals(merchantId);
-      final resolvedSignals = dto == null
-          ? const <MerchantOperationalSignalViewData>[]
-          : mapSignalsDtoToViewData(dto);
-      _updateLoadedState(
-        (current) => current.copyWith(
-          signals: AsyncValue<List<MerchantOperationalSignalViewData>>.data(
-            resolvedSignals,
-          ),
-        ),
-      );
-    } catch (error, stackTrace) {
-      _updateLoadedState(
-        (current) => current.copyWith(
-          signals: AsyncValue<List<MerchantOperationalSignalViewData>>.error(
-            error,
-            stackTrace,
-          ),
-        ),
-      );
-      _logError('signals', error);
     }
   }
 

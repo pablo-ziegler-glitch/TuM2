@@ -63,7 +63,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
     super.initState();
     if (widget.initialData != null) {
       _nameCtrl.text = widget.initialData!.name;
-      _selectedCategoryId = widget.initialData!.categoryId;
+      _selectedCategoryId = canonicalCategoryId(widget.initialData!.categoryId);
     }
     _loadCategories();
     _subscribeToDuplicates();
@@ -139,7 +139,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
     try {
       await widget.ownerRepository.saveStep1(Step1Data(
         name: _nameCtrl.text.trim(),
-        categoryId: _selectedCategoryId!,
+        categoryId: canonicalCategoryId(_selectedCategoryId!),
       ));
     } catch (_) {
       // Error de red al guardar: continuar de todos modos (se reintentará)
@@ -147,7 +147,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
 
     widget.onNext(Step1Data(
       name: _nameCtrl.text.trim(),
-      categoryId: _selectedCategoryId!,
+      categoryId: canonicalCategoryId(_selectedCategoryId!),
     ));
   }
 
@@ -196,7 +196,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Text('Este comercio ya existe',
+              const Text('Este comercio ya existe',
                   style: AppTextStyles.headingLg, textAlign: TextAlign.center),
               const SizedBox(height: 8),
               Text(
@@ -252,7 +252,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                 child: const Text('Registrar otro comercio'),
               ),
               const SizedBox(height: 12),
-              Text(
+              const Text(
                 'Si reclamás, verificamos tu identidad en 24 hs.',
                 style: AppTextStyles.bodyXs,
                 textAlign: TextAlign.center,
@@ -284,7 +284,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  Expanded(
+                  const Expanded(
                     child: Text('Tu comercio', style: AppTextStyles.headingMd),
                   ),
                   IconButton(
@@ -295,8 +295,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Paso 1 de 4', style: AppTextStyles.bodySm),
@@ -317,7 +317,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                   children: [
                     // EX-08: banner global
                     if (_hasErrors) ...[
-                      ValidationBanner(
+                      const ValidationBanner(
                         title: 'Revisá los campos',
                         body:
                             'Completá el nombre y seleccioná una categoría para continuar.',
@@ -370,7 +370,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                       ),
                     ),
                     if (nameHasError)
-                      InlineError(message: 'Ingresá el nombre del comercio'),
+                      const InlineError(
+                          message: 'Ingresá el nombre del comercio'),
                     // EX-13: warning soft duplicate
                     if (showDuplicateWarning && !nameHasError) ...[
                       const SizedBox(height: 8),
@@ -380,7 +381,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppColors.warningFg.withOpacity(0.4)),
+                              color:
+                                  AppColors.warningFg.withValues(alpha: 0.4)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,15 +439,15 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                           )
                         : CategoryGrid(
                             selectedId: _selectedCategoryId,
-                            onSelect: (id) =>
-                                setState(() => _selectedCategoryId = id),
+                            onSelect: (id) => setState(() =>
+                                _selectedCategoryId = canonicalCategoryId(id)),
                             hasError: categoryHasError,
                             categories: _categoryOptions.isNotEmpty
                                 ? _categoryOptions
                                 : null,
                           ),
                     if (categoryHasError)
-                      InlineError(message: 'Seleccioná una categoría'),
+                      const InlineError(message: 'Seleccioná una categoría'),
 
                     // EX-13: CTA continuar de todos modos
                     if (showDuplicateWarning) ...[
@@ -463,7 +465,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                         child: const Text('Continuar de todos modos'),
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      const Text(
                         'Podés aclarar la situación durante la revisión.',
                         style: AppTextStyles.bodyXs,
                         textAlign: TextAlign.center,

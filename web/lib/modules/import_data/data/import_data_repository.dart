@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/import_batch_ui.dart';
 
@@ -34,6 +34,7 @@ class ZoneOption {
     required this.zoneId,
     required this.name,
     required this.cityId,
+    required this.departmentName,
     required this.countryName,
     required this.provinceName,
     required this.localityName,
@@ -42,14 +43,19 @@ class ZoneOption {
   final String zoneId;
   final String name;
   final String cityId;
+  final String departmentName;
   final String countryName;
   final String provinceName;
   final String localityName;
 
   String get label {
     final locality = localityName.trim().isEmpty ? name : localityName;
+    final department = departmentName.trim();
     final province = provinceName.trim();
-    return province.isEmpty ? locality : '$locality — $province';
+    if (department.isEmpty && province.isEmpty) return locality;
+    if (department.isEmpty) return '$locality — $province';
+    if (province.isEmpty) return '$locality — $department';
+    return '$locality — $department — $province';
   }
 }
 
@@ -95,10 +101,10 @@ class ImportDataRepository {
   static const int _whereInLimit = 30;
   static const int _maxWatchedBatches = 150;
   static const int _maxZonesPerQuery = 300;
+  static const int _maxBatchPlacesPage = 300;
+  static const int _zonesCacheTtlSeconds = 300;
 
-  static const List<String> _zoneCollectionCandidates = <String>[
-    'zones',
-  ];
+  static const List<String> _zoneCollectionCandidates = <String>['zones'];
   static const Set<String> _inactiveZoneStatuses = <String>{
     'draft',
     'internal_test',
@@ -108,14 +114,25 @@ class ImportDataRepository {
     'pausada',
   };
 
-  ImportDataRepository({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+  ImportDataRepository({FirebaseFirestore? firestore, FirebaseAuth? auth})
+      : _firestore = firestore ?? FirebaseFirestore.instance,
         _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+
+  void _logFinOps(String event, Map<String, Object?> payload) {
+    debugPrint(
+      jsonEncode(<String, Object?>{
+        'domain': 'import_data',
+        'event': event,
+        ...payload,
+      }),
+    );
+  }
+
+  static List<QueryDocumentSnapshot<Map<String, dynamic>>>? _zonesCache;
+  static DateTime? _zonesCacheExpiresAtUtc;
 
   CollectionReference<Map<String, dynamic>> get _batches =>
       _firestore.collection('import_batches');
@@ -123,18 +140,17 @@ class ImportDataRepository {
   CollectionReference<Map<String, dynamic>> get _externalPlaces =>
       _firestore.collection('external_places');
 
-  Stream<List<ImportBatchUi>> watchBatches({
-    int limit = _maxWatchedBatches,
-  }) {
+  Stream<List<ImportBatchUi>> watchBatches({int limit = _maxWatchedBatches}) {
     final safeLimit = limit.clamp(1, _maxWatchedBatches).toInt();
     return _batches
         .orderBy('createdAt', descending: true)
         .limit(safeLimit)
         .snapshots()
         .map(
-        (snapshot) => snapshot.docs
-            .map((doc) => ImportBatchUi.fromDoc(doc.id, doc.data()))
-            .toList());
+          (snapshot) => snapshot.docs
+              .map((doc) => ImportBatchUi.fromDoc(doc.id, doc.data()))
+              .toList(),
+        );
   }
 
   Stream<ImportBatchUi?> watchBatch(String batchId) {
@@ -160,6 +176,13 @@ class ImportDataRepository {
         zoneId: doc.id,
         name: _readText(data, const ['name', 'nombre']) ?? localityName,
         cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
+        departmentName: _readText(data, const [
+              'departmentName',
+              'departamentoNombre',
+              'department',
+              'departamento',
+            ]) ??
+            localityName,
         countryName:
             _readText(data, const ['countryName', 'paisNombre']) ?? 'Argentina',
         provinceName:
@@ -171,24 +194,51 @@ class ImportDataRepository {
 
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
       _fetchActiveZoneDocs() async {
+    final now = DateTime.now().toUtc();
+    if (_zonesCache != null &&
+        _zonesCacheExpiresAtUtc != null &&
+        now.isBefore(_zonesCacheExpiresAtUtc!)) {
+      return List<QueryDocumentSnapshot<Map<String, dynamic>>>.unmodifiable(
+        _zonesCache!,
+      );
+    }
+
     for (final collectionName in _zoneCollectionCandidates) {
-      final snapshot = await _firestore
-          .collection(collectionName)
-          .limit(_maxZonesPerQuery)
-          .get();
-      final docs = snapshot.docs.where(_isActiveZoneDoc).toList();
+      final docs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+      QueryDocumentSnapshot<Map<String, dynamic>>? cursor;
+      while (true) {
+        Query<Map<String, dynamic>> query = _firestore
+            .collection(collectionName)
+            .orderBy(FieldPath.documentId)
+            .limit(_maxZonesPerQuery);
+        if (cursor != null) {
+          query = query.startAfterDocument(cursor);
+        }
+        final snapshot = await query.get();
+        if (snapshot.docs.isEmpty) break;
+        docs.addAll(snapshot.docs.where(_isActiveZoneDoc));
+        if (snapshot.docs.length < _maxZonesPerQuery) break;
+        cursor = snapshot.docs.last;
+      }
       if (docs.isEmpty) continue;
       docs.sort(_compareZoneDocs);
+      _zonesCache = docs;
+      _zonesCacheExpiresAtUtc = now.add(
+        const Duration(seconds: _zonesCacheTtlSeconds),
+      );
       return docs;
     }
     return <QueryDocumentSnapshot<Map<String, dynamic>>>[];
   }
 
   static bool _isActiveZoneDoc(
-      QueryDocumentSnapshot<Map<String, dynamic>> doc) {
+    QueryDocumentSnapshot<Map<String, dynamic>> doc,
+  ) {
     final data = doc.data();
-    final status =
-        _readText(data, const ['status', 'estado'])?.toLowerCase().trim();
+    final status = _readText(data, const [
+      'status',
+      'estado',
+    ])?.toLowerCase().trim();
     if (status == null || status.isEmpty) return true;
     return !_inactiveZoneStatuses.contains(status);
   }
@@ -197,8 +247,9 @@ class ImportDataRepository {
     QueryDocumentSnapshot<Map<String, dynamic>> a,
     QueryDocumentSnapshot<Map<String, dynamic>> b,
   ) {
-    final priorityCompare =
-        _zonePriority(a.data()).compareTo(_zonePriority(b.data()));
+    final priorityCompare = _zonePriority(
+      a.data(),
+    ).compareTo(_zonePriority(b.data()));
     if (priorityCompare != 0) return priorityCompare;
     final nameCompare = (_readText(a.data(), const ['name', 'nombre']) ?? a.id)
         .toLowerCase()
@@ -224,14 +275,19 @@ class ImportDataRepository {
   }
 
   Future<void> publishBatch(ImportBatchUi batch) async {
-    final placeDocs =
-        await _externalPlaces.where('importBatchId', isEqualTo: batch.id).get();
-    await _applyInChunks(placeDocs.docs, (writeBatch, doc) {
-      writeBatch.update(doc.reference, {
-        'visibilityStatus': 'visible',
-        'publishedAt': FieldValue.serverTimestamp(),
+    final startedAt = DateTime.now();
+    var placesRead = 0;
+    var placeWrites = 0;
+    await for (final docs in _readBatchPlaceDocs(batch.id)) {
+      placesRead += docs.length;
+      placeWrites += docs.length;
+      await _applyInChunks(docs, (writeBatch, doc) {
+        writeBatch.update(doc.reference, {
+          'visibilityStatus': 'visible',
+          'publishedAt': FieldValue.serverTimestamp(),
+        });
       });
-    });
+    }
 
     await _batches.doc(batch.id).set({
       'status': ImportBatchStatus.completed.name,
@@ -244,26 +300,46 @@ class ImportDataRepository {
           timestamp: DateTime.now(),
           actor: _auth.currentUser?.email ?? _auth.currentUser?.uid ?? 'admin',
           result: true,
-          detail: '${placeDocs.size} records visible',
+          detail: '$placeWrites records visible',
         ).toMap(),
       ]),
     }, SetOptions(merge: true));
+
+    _logFinOps('publish_batch', {
+      'batchId': batch.id,
+      'placesRead': placesRead,
+      'placeWrites': placeWrites,
+      'durationMs': DateTime.now().difference(startedAt).inMilliseconds,
+    });
   }
 
   Future<void> revertBatch(ImportBatchUi batch) async {
-    final placeDocs =
-        await _externalPlaces.where('importBatchId', isEqualTo: batch.id).get();
-
+    final startedAt = DateTime.now();
     final merchantUpdates =
         <DocumentReference<Map<String, dynamic>>, Map<String, Object?>>{};
-    final placeIds = placeDocs.docs.map((doc) => doc.id).toSet();
+    final placeIds = <String>{};
     final linkedMerchantIds = <String>{};
-    for (final placeDoc in placeDocs.docs) {
-      final linkedMerchantId =
-          placeDoc.data()['linkedMerchantId']?.toString().trim() ?? '';
-      if (linkedMerchantId.isNotEmpty) {
-        linkedMerchantIds.add(linkedMerchantId);
+    var placesRead = 0;
+    var placeWrites = 0;
+
+    await for (final docs in _readBatchPlaceDocs(batch.id)) {
+      placesRead += docs.length;
+      for (final placeDoc in docs) {
+        placeIds.add(placeDoc.id);
+        final linkedMerchantId =
+            placeDoc.data()['linkedMerchantId']?.toString().trim() ?? '';
+        if (linkedMerchantId.isNotEmpty) {
+          linkedMerchantIds.add(linkedMerchantId);
+        }
       }
+      placeWrites += docs.length;
+      await _applyInChunks(docs, (writeBatch, doc) {
+        writeBatch.update(doc.reference, {
+          'rolledBack': true,
+          'visibilityStatus': 'suppressed',
+          'rolledBackAt': FieldValue.serverTimestamp(),
+        });
+      });
     }
 
     final merchantsById = await _fetchMerchantsByIds(linkedMerchantIds);
@@ -287,14 +363,6 @@ class ImportDataRepository {
       await _applyMapInChunks(merchantUpdates);
     }
 
-    await _applyInChunks(placeDocs.docs, (writeBatch, doc) {
-      writeBatch.update(doc.reference, {
-        'rolledBack': true,
-        'visibilityStatus': 'suppressed',
-        'rolledBackAt': FieldValue.serverTimestamp(),
-      });
-    });
-
     await _batches.doc(batch.id).set({
       'status': ImportBatchStatus.rolledBack.name,
       'finishedAt': FieldValue.serverTimestamp(),
@@ -306,17 +374,26 @@ class ImportDataRepository {
           actor: _auth.currentUser?.email ?? _auth.currentUser?.uid ?? 'admin',
           result: true,
           detail:
-              '${placeDocs.size} external_places suppressed · ${merchantUpdates.length} merchants suppressed',
+              '$placeWrites external_places suppressed · ${merchantUpdates.length} merchants suppressed',
         ).toMap(),
       ]),
     }, SetOptions(merge: true));
+
+    _logFinOps('revert_batch', {
+      'batchId': batch.id,
+      'placesRead': placesRead,
+      'placeWrites': placeWrites,
+      'merchantWrites': merchantUpdates.length,
+      'durationMs': DateTime.now().difference(startedAt).inMilliseconds,
+    });
   }
 
   Future<String> submitImport(ImportSubmissionInput input) async {
     final actor = _auth.currentUser;
     if (actor == null) {
       throw StateError(
-          'Debes iniciar sesión como admin para ejecutar importaciones.');
+        'Debes iniciar sesión como admin para ejecutar importaciones.',
+      );
     }
 
     final validation = validateRows(
@@ -404,22 +481,24 @@ class ImportDataRepository {
         ...baseTrail.map((item) => item.toMap()),
         AuditTimelineEvent(
           stage: 'queue',
-          label: 'Import Queued',
+          label: 'Importacion en cola',
           timestamp: now,
           actor: 'system',
           result: true,
-          detail: 'Processing will continue in background',
+          detail: 'El procesamiento continuara en segundo plano',
         ).toMap(),
       ],
     });
 
-    unawaited(_processBatchInBackground(
-      batchRef: batchRef,
-      batchId: batchId,
-      input: input,
-      validation: validation,
-      createdBy: createdBy,
-    ));
+    unawaited(
+      _processBatchInBackground(
+        batchRef: batchRef,
+        batchId: batchId,
+        input: input,
+        validation: validation,
+        createdBy: createdBy,
+      ),
+    );
 
     return batchId;
   }
@@ -437,11 +516,11 @@ class ImportDataRepository {
         'auditTrail': FieldValue.arrayUnion([
           AuditTimelineEvent(
             stage: 'process',
-            label: 'Background Processing Started',
+            label: 'Procesamiento en segundo plano iniciado',
             timestamp: DateTime.now(),
             actor: 'system',
             result: true,
-            detail: 'Preparing rows and staging records',
+            detail: 'Preparando filas y registros en staging',
           ).toMap(),
         ]),
       }, SetOptions(merge: true));
@@ -532,20 +611,20 @@ class ImportDataRepository {
         'auditTrail': FieldValue.arrayUnion([
           AuditTimelineEvent(
             stage: 'stage',
-            label: 'Staged to Firestore',
+            label: 'Enviado a Firestore',
             timestamp: DateTime.now(),
             actor: 'system',
             result: true,
             detail:
-                '$createdCount records staged (${input.visibilityAfterImport})',
+                '$createdCount registros enviados a staging (${input.visibilityAfterImport})',
           ).toMap(),
           AuditTimelineEvent(
             stage: 'confirm',
-            label: 'Import Confirmed',
+            label: 'Importacion confirmada',
             timestamp: DateTime.now(),
             actor: createdBy,
             result: true,
-            detail: 'Batch marked as ${status.name}',
+            detail: 'Batch marcado como ${status.name}',
           ).toMap(),
         ]),
       }, SetOptions(merge: true));
@@ -556,7 +635,7 @@ class ImportDataRepository {
         'auditTrail': FieldValue.arrayUnion([
           AuditTimelineEvent(
             stage: 'process',
-            label: 'Background Processing Failed',
+            label: 'Fallo el procesamiento en segundo plano',
             timestamp: DateTime.now(),
             actor: 'system',
             result: false,
@@ -610,8 +689,10 @@ class ImportDataRepository {
     final errors = <ImportRowError>[];
 
     for (var i = 0; i < rows.length; i++) {
-      final state =
-          _rowState(rows[i], mappings.where((m) => m.enabled).toList());
+      final state = _rowState(
+        rows[i],
+        mappings.where((m) => m.enabled).toList(),
+      );
       if (state.$1) {
         errorRows++;
         errors.add(
@@ -706,8 +787,13 @@ class ImportDataRepository {
   String? _guessTum2Field(String header) {
     final isLikelyIdColumn = header.endsWith('_id') || header == 'id';
 
-    if (_matchesAny(header,
-        ['name', 'nombre', 'business', 'comercio', 'establecimiento'])) {
+    if (_matchesAny(header, [
+      'name',
+      'nombre',
+      'business',
+      'comercio',
+      'establecimiento',
+    ])) {
       return tum2FieldName;
     }
     if (_matchesAny(header, ['address', 'direccion', 'domicilio', 'calle'])) {
@@ -716,8 +802,12 @@ class ImportDataRepository {
     if (_matchesAny(header, ['phone', 'telefono', 'tel', 'whatsapp'])) {
       return tum2FieldPhone;
     }
-    if (_matchesAny(
-        header, ['category', 'rubro', 'tipologia_sigla', 'typology_sigla'])) {
+    if (_matchesAny(header, [
+      'category',
+      'rubro',
+      'tipologia_sigla',
+      'typology_sigla',
+    ])) {
       return tum2FieldCategory;
     }
     if (!isLikelyIdColumn &&
@@ -730,8 +820,13 @@ class ImportDataRepository {
     if (_matchesAny(header, ['lng', 'lon', 'longitude', 'longitud'])) {
       return tum2FieldLongitude;
     }
-    if (_matchesAny(
-        header, ['city', 'ciudad', 'locality', 'localidad', 'barrio'])) {
+    if (_matchesAny(header, [
+      'city',
+      'ciudad',
+      'locality',
+      'localidad',
+      'barrio',
+    ])) {
       return tum2FieldLocality;
     }
     if (_matchesAny(header, ['hours', 'horario', 'opening'])) {
@@ -852,6 +947,30 @@ class ImportDataRepository {
         apply(writeBatch, doc);
       }
       await writeBatch.commit();
+    }
+  }
+
+  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _readBatchPlaceDocs(
+    String batchId,
+  ) async* {
+    QueryDocumentSnapshot<Map<String, dynamic>>? cursor;
+    while (true) {
+      Query<Map<String, dynamic>> query = _externalPlaces
+          .where('importBatchId', isEqualTo: batchId)
+          .orderBy(FieldPath.documentId)
+          .limit(_maxBatchPlacesPage);
+      if (cursor != null) {
+        query = query.startAfterDocument(cursor);
+      }
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) {
+        break;
+      }
+      yield snapshot.docs;
+      if (snapshot.docs.length < _maxBatchPlacesPage) {
+        break;
+      }
+      cursor = snapshot.docs.last;
     }
   }
 

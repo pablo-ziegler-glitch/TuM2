@@ -14,8 +14,7 @@ class OnboardingAnalytics {
   static Future<void> logStarted() =>
       _analytics.logEvent(name: 'onboarding_owner_started');
 
-  static Future<void> logStepCompleted(String step) =>
-      _analytics.logEvent(
+  static Future<void> logStepCompleted(String step) => _analytics.logEvent(
         name: 'onboarding_owner_step_completed',
         parameters: {'step': step},
       );
@@ -29,8 +28,7 @@ class OnboardingAnalytics {
   static Future<void> logCompleted() =>
       _analytics.logEvent(name: 'onboarding_owner_completed');
 
-  static Future<void> logExited(String step) =>
-      _analytics.logEvent(
+  static Future<void> logExited(String step) => _analytics.logEvent(
         name: 'onboarding_owner_exited',
         parameters: {'step': step},
       );

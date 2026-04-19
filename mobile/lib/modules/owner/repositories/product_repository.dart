@@ -47,6 +47,7 @@ class ProductImageUploadResult {
 abstract interface class ProductRepository {
   Stream<List<MerchantProduct>> watchOwnerProducts({
     required String merchantId,
+    int limit,
   });
 
   Future<List<MerchantProduct>> fetchOwnerProducts({

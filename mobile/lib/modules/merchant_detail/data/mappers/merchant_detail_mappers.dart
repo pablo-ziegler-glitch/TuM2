@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../merchant_badges/domain/merchant_badge_resolver.dart';
+import '../../../merchant_badges/domain/merchant_visual_models.dart';
+import '../../../merchant_badges/widgets/merchant_badge_widgets.dart';
 import '../../domain/merchant_detail_view_data.dart';
 import '../dtos/merchant_detail_dto.dart';
 
@@ -91,42 +93,71 @@ MerchantPublicViewData mapCoreDtoToViewData(MerchantCoreDto dto) {
     featuredProductIds: _stringListValue(
       dto.data['featuredProductIds'] ?? dto.data['featuredProducts'],
     ),
+    verificationStatus: _firstNonEmpty(
+        _stringValue(dto.data['verificationStatus']), 'unverified'),
+    visibilityStatus:
+        _firstNonEmpty(_stringValue(dto.data['visibilityStatus']), 'visible'),
+    lifecycleStatus: _firstNonEmpty(_stringValue(dto.data['status']), 'active'),
+    operationalSignalType:
+        _firstNonEmpty(_stringValue(dto.data['operationalSignalType']), 'none'),
+    manualOverrideMode:
+        _firstNonEmpty(_stringValue(dto.data['manualOverrideMode']), 'none'),
+    publicStatusLabel:
+        _nonEmptyOrNull(_stringValue(dto.data['publicStatusLabel'])),
+    is24h: _boolValue(dto.data['is24h']),
   );
 }
 
 MerchantStatusBadgeViewData mapStatusBadge(MerchantPublicViewData merchant) {
-  if (merchant.hasPharmacyDutyToday) {
-    return const MerchantStatusBadgeViewData(
-      type: MerchantStatusBadgeType.duty,
-      label: 'Farmacia de turno',
-      backgroundColor: AppColors.merchantSecondaryFixedDim,
-      foregroundColor: AppColors.merchantOnSecondaryFixed,
-    );
-  }
+  final visualState = MerchantVisualState(
+    visibility: _visibility(merchant.visibilityStatus),
+    lifecycle: _lifecycle(merchant.lifecycleStatus),
+    confidence: _confidence(merchant.verificationStatus),
+    opening: _opening(merchant.isOpenNow),
+    guardState: _detailGuardState(merchant),
+    operationalSignal: _operational(merchant.operationalSignalType),
+    show24hBadge: merchant.is24h == true,
+    twentyFourHourCooldownActive: false,
+    categoryLabel: merchant.categoryLabel,
+    claimState: null,
+    hasSufficientScheduleInfo: merchant.openStatusLabel.trim().isNotEmpty,
+    manualOverrideMode: merchant.manualOverrideMode,
+    informational: merchant.manualOverrideMode == 'informational',
+  );
+  final resolution = MerchantBadgeResolver.resolve(
+    state: visualState,
+    surface: MerchantSurface.detail,
+  );
+  final primary = resolution.primary ?? MerchantBadgeKey.noInfo;
+  final style = MerchantBadgeStyleResolver.resolve(
+    badge: primary,
+    darkMode: false,
+    disabled: false,
+  );
+  final type = switch (primary) {
+    MerchantBadgeKey.onDuty => MerchantStatusBadgeType.duty,
+    MerchantBadgeKey.openNow ||
+    MerchantBadgeKey.openCompact =>
+      MerchantStatusBadgeType.open,
+    MerchantBadgeKey.closed ||
+    MerchantBadgeKey.closedForVacation ||
+    MerchantBadgeKey.temporaryClosure ||
+    MerchantBadgeKey.opensLater =>
+      MerchantStatusBadgeType.closed,
+    _ => MerchantStatusBadgeType.referential,
+  };
 
-  if (merchant.isOpenNow == true) {
-    return const MerchantStatusBadgeViewData(
-      type: MerchantStatusBadgeType.open,
-      label: 'Abierto ahora',
-      backgroundColor: AppColors.successBg,
-      foregroundColor: AppColors.successFg,
-    );
-  }
-
-  if (merchant.isOpenNow == false) {
-    return const MerchantStatusBadgeViewData(
-      type: MerchantStatusBadgeType.closed,
-      label: 'Cerrado',
-      backgroundColor: AppColors.errorBg,
-      foregroundColor: AppColors.errorFg,
-    );
-  }
-
-  return const MerchantStatusBadgeViewData(
-    type: MerchantStatusBadgeType.referential,
-    label: 'Horario referencial',
-    backgroundColor: AppColors.merchantSurfaceHighest,
-    foregroundColor: AppColors.merchantOnSurface,
+  return MerchantStatusBadgeViewData(
+    type: type,
+    label: MerchantBadgeLabelResolver.label(
+      badge: primary,
+      compact: false,
+    ),
+    backgroundColor: style.background,
+    foregroundColor: style.foreground,
+    primaryKey: primary,
+    secondary: resolution.secondary,
+    confidence: resolution.confidence,
   );
 }
 
@@ -201,6 +232,38 @@ List<MerchantOperationalSignalViewData> mapOperationalSignalsMapToViewData(
   if (source.isEmpty) return const [];
 
   final signals = <MerchantOperationalSignalViewData>[];
+  final signalType = _stringValue(source['signalType']);
+  final isActive = _boolValue(source['isActive']) == true ||
+      _boolValue(source['hasOperationalSignal']) == true;
+  final message = _stringValue(source['message']);
+
+  if (isActive) {
+    if (signalType == 'vacation') {
+      signals.add(
+        MerchantOperationalSignalViewData(
+          id: 'operationalSignalType',
+          label: message.isNotEmpty ? message : 'De vacaciones',
+          isAlert: true,
+        ),
+      );
+    } else if (signalType == 'temporary_closure') {
+      signals.add(
+        MerchantOperationalSignalViewData(
+          id: 'operationalSignalType',
+          label: message.isNotEmpty ? message : 'Cerrado temporalmente',
+          isAlert: true,
+        ),
+      );
+    } else if (signalType == 'delay') {
+      signals.add(
+        MerchantOperationalSignalViewData(
+          id: 'operationalSignalType',
+          label: message.isNotEmpty ? message : 'Abre más tarde',
+          isAlert: false,
+        ),
+      );
+    }
+  }
 
   void addSignal(
     String key,
@@ -249,6 +312,79 @@ PharmacyDutyViewData mapDutyDtoToViewData(PharmacyDutyDto dto) {
   return PharmacyDutyViewData(
     endsAt: _dateTimeValue(dto.data['endsAt']),
   );
+}
+
+MerchantVisibilityState _visibility(String raw) {
+  switch (raw.trim().toLowerCase()) {
+    case 'visible':
+      return MerchantVisibilityState.visible;
+    case 'review_pending':
+      return MerchantVisibilityState.reviewPending;
+    case 'suppressed':
+      return MerchantVisibilityState.suppressed;
+    default:
+      return MerchantVisibilityState.hidden;
+  }
+}
+
+MerchantLifecycleState _lifecycle(String raw) {
+  switch (raw.trim().toLowerCase()) {
+    case 'draft':
+      return MerchantLifecycleState.draft;
+    case 'inactive':
+      return MerchantLifecycleState.inactive;
+    case 'archived':
+      return MerchantLifecycleState.archived;
+    default:
+      return MerchantLifecycleState.active;
+  }
+}
+
+MerchantConfidenceState _confidence(String raw) {
+  switch (raw.trim().toLowerCase()) {
+    case 'verified':
+      return MerchantConfidenceState.verified;
+    case 'validated':
+      return MerchantConfidenceState.validated;
+    case 'claimed':
+      return MerchantConfidenceState.claimed;
+    case 'community_submitted':
+      return MerchantConfidenceState.communitySubmitted;
+    case 'referential':
+      return MerchantConfidenceState.referential;
+    default:
+      return MerchantConfidenceState.unverified;
+  }
+}
+
+MerchantOpeningState _opening(bool? value) {
+  if (value == true) return MerchantOpeningState.openNow;
+  if (value == false) return MerchantOpeningState.closed;
+  return MerchantOpeningState.noInfo;
+}
+
+MerchantOperationalSignalState _operational(String raw) {
+  switch (raw.trim().toLowerCase()) {
+    case 'vacation':
+      return MerchantOperationalSignalState.vacation;
+    case 'temporary_closure':
+      return MerchantOperationalSignalState.temporaryClosure;
+    case 'delay':
+      return MerchantOperationalSignalState.opensLater;
+    default:
+      return MerchantOperationalSignalState.none;
+  }
+}
+
+MerchantPharmacyGuardState _detailGuardState(MerchantPublicViewData merchant) {
+  if (merchant.publicStatusLabel == 'guardia_en_verificacion') {
+    return MerchantPharmacyGuardState.guardVerification;
+  }
+  if (merchant.publicStatusLabel == 'cambio_operativo_en_curso') {
+    return MerchantPharmacyGuardState.guardOperationalChange;
+  }
+  if (merchant.hasPharmacyDutyToday) return MerchantPharmacyGuardState.onDuty;
+  return MerchantPharmacyGuardState.none;
 }
 
 String _todayScheduleKey() {

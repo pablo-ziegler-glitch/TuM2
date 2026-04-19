@@ -1,50 +1,13 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore } from "firebase-admin/firestore";
 import { computeMerchantPublicProjection } from "../lib/projection";
 import { MerchantDoc, OperationalSignals } from "../lib/types";
+import {
+  areComparablePublicStatesEqual,
+  syncMerchantPublicProjection,
+} from "../lib/publicProjectionSync";
 
 const db = () => getFirestore();
-
-const RELEVANT_PROJECTION_FIELDS: Array<keyof MerchantDoc> = [
-  "merchantId",
-  "name",
-  "category",
-  "zone",
-  "zoneId",
-  "address",
-  "isPharmacy",
-  "verificationStatus",
-  "visibilityStatus",
-  "completenessScore",
-  "lastActivityAt",
-];
-
-function toComparableValue(value: unknown): unknown {
-  if (
-    value &&
-    typeof value === "object" &&
-    "toMillis" in (value as Record<string, unknown>) &&
-    typeof (value as { toMillis?: unknown }).toMillis === "function"
-  ) {
-    return (value as { toMillis: () => number }).toMillis();
-  }
-  return value;
-}
-
-function hasProjectionRelevantChanges(before: MerchantDoc, after: MerchantDoc): boolean {
-  return RELEVANT_PROJECTION_FIELDS.some((field) => {
-    const beforeValue = toComparableValue(before[field]);
-    const afterValue = toComparableValue(after[field]);
-    return JSON.stringify(beforeValue) !== JSON.stringify(afterValue);
-  });
-}
-
-function projectionSignature(value: unknown): string {
-  return JSON.stringify(
-    value,
-    (_key, currentValue) => toComparableValue(currentValue)
-  );
-}
 
 /**
  * onMerchantWriteSyncPublic
@@ -72,17 +35,6 @@ export const onMerchantWriteSyncPublic = onDocumentWritten(
     let beforeMerchant: MerchantDoc | undefined;
     if (beforeSnap?.exists) {
       beforeMerchant = beforeSnap.data() as MerchantDoc;
-      if (!hasProjectionRelevantChanges(beforeMerchant, merchant)) {
-        return;
-      }
-    }
-
-    // Suppressed merchants should not appear in public listings
-    if (merchant.visibilityStatus === "suppressed") {
-      await db()
-        .doc(`merchant_public/${merchantId}`)
-        .set({ visibilityStatus: "suppressed", merchantId }, { merge: true });
-      return;
     }
 
     // Fetch current signals (best-effort)
@@ -92,25 +44,26 @@ export const onMerchantWriteSyncPublic = onDocumentWritten(
 
     const signals = signalsSnap.exists
       ? (signalsSnap.data() as OperationalSignals)
-      : undefined;
+      : null;
 
-    const projection = computeMerchantPublicProjection(merchant, signals);
+    const projection = computeMerchantPublicProjection(merchant, signals ?? undefined);
     if (beforeMerchant) {
-      const beforeProjection = computeMerchantPublicProjection(beforeMerchant, signals);
-      if (projectionSignature(beforeProjection) === projectionSignature(projection)) {
+      const beforeProjection = computeMerchantPublicProjection(
+        beforeMerchant,
+        signals ?? undefined
+      );
+      // Se mantiene este pre-skip para reducir invocaciones al sync canónico
+      // sin perder consistencia de la proyección pública.
+      if (areComparablePublicStatesEqual(beforeProjection, projection)) {
         return;
       }
     }
 
-    await db()
-      .doc(`merchant_public/${merchantId}`)
-      .set(
-        {
-          ...projection,
-          syncedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: false }
-      );
+    await syncMerchantPublicProjection({
+      merchantId,
+      merchant,
+      signals,
+    });
 
     console.log(`[onMerchantWriteSyncPublic] Synced ${merchantId}`);
   }

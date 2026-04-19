@@ -16,10 +16,16 @@ class OpenNowZone {
   factory OpenNowZone.fromFirestore(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) {
-    final data = doc.data();
+    return OpenNowZone.fromMap(doc.id, doc.data());
+  }
+
+  factory OpenNowZone.fromMap(
+    String zoneId,
+    Map<String, dynamic> data,
+  ) {
     return OpenNowZone(
-      zoneId: doc.id,
-      name: _readText(data, const ['name', 'nombre']) ?? doc.id,
+      zoneId: zoneId,
+      name: _readText(data, const ['name', 'nombre']) ?? zoneId,
       cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
       priorityLevel: _readPriority(data),
     );
@@ -53,6 +59,15 @@ class OpenNowMerchant {
     required this.isOpenNow,
     required this.openStatusLabel,
     required this.todayScheduleLabel,
+    this.hasOperationalSignal = false,
+    this.operationalSignalType = 'none',
+    this.operationalSignalMessage,
+    this.operationalStatusLabel,
+    this.manualOverrideMode = 'none',
+    this.publicStatusLabel,
+    this.is24h,
+    this.twentyFourHourCooldownUntil,
+    this.twentyFourHourStrikeCount,
     required this.lastDataRefreshAt,
     required this.sortBoost,
     required this.lat,
@@ -72,6 +87,15 @@ class OpenNowMerchant {
   final bool isOpenNow;
   final String openStatusLabel;
   final String todayScheduleLabel;
+  final bool hasOperationalSignal;
+  final String operationalSignalType;
+  final String? operationalSignalMessage;
+  final String? operationalStatusLabel;
+  final String manualOverrideMode;
+  final String? publicStatusLabel;
+  final bool? is24h;
+  final DateTime? twentyFourHourCooldownUntil;
+  final int? twentyFourHourStrikeCount;
   final DateTime? lastDataRefreshAt;
   final double sortBoost;
   final double? lat;
@@ -128,6 +152,15 @@ class OpenNowMerchant {
       isOpenNow: isOpenNow,
       openStatusLabel: openStatusLabel,
       todayScheduleLabel: todayScheduleLabel,
+      hasOperationalSignal: hasOperationalSignal,
+      operationalSignalType: operationalSignalType,
+      operationalSignalMessage: operationalSignalMessage,
+      operationalStatusLabel: operationalStatusLabel,
+      manualOverrideMode: manualOverrideMode,
+      publicStatusLabel: publicStatusLabel,
+      is24h: is24h,
+      twentyFourHourCooldownUntil: twentyFourHourCooldownUntil,
+      twentyFourHourStrikeCount: twentyFourHourStrikeCount,
       lastDataRefreshAt: lastDataRefreshAt,
       sortBoost: sortBoost,
       lat: lat,
@@ -170,6 +203,21 @@ class OpenNowMerchant {
       isOpenNow: data['isOpenNow'] == true,
       openStatusLabel: (data['openStatusLabel'] as String?)?.trim() ?? '',
       todayScheduleLabel: (data['todayScheduleLabel'] as String?)?.trim() ?? '',
+      hasOperationalSignal: data['hasOperationalSignal'] == true,
+      operationalSignalType:
+          (data['operationalSignalType'] as String?)?.trim() ?? 'none',
+      operationalSignalMessage:
+          (data['operationalSignalMessage'] as String?)?.trim(),
+      operationalStatusLabel:
+          (data['operationalStatusLabel'] as String?)?.trim(),
+      manualOverrideMode:
+          (data['manualOverrideMode'] as String?)?.trim() ?? 'none',
+      publicStatusLabel: (data['publicStatusLabel'] as String?)?.trim(),
+      is24h: data['is24h'] as bool?,
+      twentyFourHourCooldownUntil:
+          _asDateTime(data['twentyFourHourCooldownUntil']),
+      twentyFourHourStrikeCount:
+          (data['twentyFourHourStrikeCount'] as num?)?.toInt(),
       lastDataRefreshAt: _asDateTime(data['lastDataRefreshAt']),
       sortBoost: (data['sortBoost'] as num?)?.toDouble() ?? 0,
       lat: _resolveLatitude(data, location),

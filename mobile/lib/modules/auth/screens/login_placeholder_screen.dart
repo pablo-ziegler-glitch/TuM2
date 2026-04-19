@@ -37,9 +37,9 @@ class LoginPlaceholderScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Inicio de sesión', style: AppTextStyles.headingMd),
+              const Text('Inicio de sesión', style: AppTextStyles.headingMd),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Pantalla en construcción — se implementa en TuM2-0054.',
                 style: AppTextStyles.bodySm,
               ),
@@ -47,7 +47,7 @@ class LoginPlaceholderScreen extends StatelessWidget {
               const Spacer(),
 
               // Botones de prueba para desarrollo
-              Text('Navegación de prueba', style: AppTextStyles.labelMd),
+              const Text('Navegación de prueba', style: AppTextStyles.labelMd),
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: () => context.go(AppRoutes.onboarding),

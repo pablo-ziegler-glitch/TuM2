@@ -1,5 +1,7 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 
+import '../models/operational_signals.dart';
+
 abstract class OwnerOperationalSignalsAnalytics {
   static FirebaseAnalytics? get _analytics {
     try {
@@ -22,19 +24,44 @@ abstract class OwnerOperationalSignalsAnalytics {
   static Future<void> logSaved({
     required String merchantId,
     required OperationalSignalsAnalyticsPayload payload,
-  }) =>
-      _safeLog(
-        'owner_operational_signal_saved',
-        parameters: {
-          'merchant_id': merchantId,
-          'signal_temporary_closed': payload.temporaryClosed,
-          'signal_has_delivery': payload.hasDelivery,
-          'signal_accepts_whatsapp_orders': payload.acceptsWhatsappOrders,
-          'signal_open_now_manual_override': payload.openNowManualOverride,
-          'save_result': 'success',
-          'source_screen': 'owner_signals',
-        },
-      );
+  }) async {
+    await _safeLog(
+      'owner_operational_signal_saved',
+      parameters: {
+        'merchant_id': merchantId,
+        'signal_type': payload.signalType.firestoreValue,
+        'is_active': payload.isActive,
+        'force_closed': payload.forceClosed,
+        'save_result': 'success',
+        'source_screen': 'owner_signals',
+      },
+    );
+    await _safeLog(
+      'senal_creada',
+      parameters: {
+        'merchant_id': merchantId,
+        'signal_type': payload.signalType.firestoreValue,
+      },
+    );
+  }
+
+  static Future<void> logDisabled({
+    required String merchantId,
+  }) async {
+    await _safeLog(
+      'owner_operational_signal_disabled',
+      parameters: {
+        'merchant_id': merchantId,
+        'source_screen': 'owner_signals',
+      },
+    );
+    await _safeLog(
+      'senal_desactivada',
+      parameters: {
+        'merchant_id': merchantId,
+      },
+    );
+  }
 
   static Future<void> logSaveFailed({
     required String merchantId,
@@ -45,10 +72,9 @@ abstract class OwnerOperationalSignalsAnalytics {
         'owner_operational_signal_save_failed',
         parameters: {
           'merchant_id': merchantId,
-          'signal_temporary_closed': payload.temporaryClosed,
-          'signal_has_delivery': payload.hasDelivery,
-          'signal_accepts_whatsapp_orders': payload.acceptsWhatsappOrders,
-          'signal_open_now_manual_override': payload.openNowManualOverride,
+          'signal_type': payload.signalType.firestoreValue,
+          'is_active': payload.isActive,
+          'force_closed': payload.forceClosed,
           'save_result': 'error',
           'source_screen': 'owner_signals',
           'reason': reason,
@@ -71,14 +97,12 @@ abstract class OwnerOperationalSignalsAnalytics {
 
 class OperationalSignalsAnalyticsPayload {
   const OperationalSignalsAnalyticsPayload({
-    required this.temporaryClosed,
-    required this.hasDelivery,
-    required this.acceptsWhatsappOrders,
-    required this.openNowManualOverride,
+    required this.signalType,
+    required this.isActive,
+    required this.forceClosed,
   });
 
-  final bool temporaryClosed;
-  final bool hasDelivery;
-  final bool acceptsWhatsappOrders;
-  final bool openNowManualOverride;
+  final OperationalSignalType signalType;
+  final bool isActive;
+  final bool forceClosed;
 }

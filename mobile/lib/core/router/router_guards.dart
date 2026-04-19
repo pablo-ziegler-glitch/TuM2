@@ -97,10 +97,30 @@ abstract class RouterGuards {
 
         // Guard: /owner solo owner o admin
         final isOwnerRoute = path.startsWith('/owner');
-        final canAccessOwnerRoute = role == 'owner' && !ownerPending;
+        final isOwnerRole = role == 'owner';
         final canAccessAsAdmin = role == 'admin' || role == 'super_admin';
-        if (isOwnerRoute && !canAccessOwnerRoute && !canAccessAsAdmin) {
-          return AppRoutes.profile;
+        if (isOwnerRoute && !isOwnerRole && !canAccessAsAdmin) {
+          final reason = path == AppRoutes.ownerDashboard
+              ? 'claim_closed'
+              : 'deep_route_access_changed';
+          return AppRoutes.accessUpdatedPath(
+            target: 'customer',
+            reason: reason,
+            from: path,
+          );
+        }
+        if (isOwnerRoute &&
+            isOwnerRole &&
+            ownerPending &&
+            path == AppRoutes.ownerResolve) {
+          return AppRoutes.ownerDashboard;
+        }
+        if (isOwnerRoute &&
+            isOwnerRole &&
+            ownerPending &&
+            path != AppRoutes.owner &&
+            path != AppRoutes.ownerDashboard) {
+          return AppRoutes.ownerDashboard;
         }
 
         // Guard: /admin solo admin o super_admin
@@ -120,7 +140,7 @@ abstract class RouterGuards {
     String? pendingRoute,
     void Function()? consumePendingRoute,
   }) {
-    final isOwner = role == 'owner' && !ownerPending;
+    final isOwner = role == 'owner';
     if (pendingRoute != null &&
         !isAuthPath(pendingRoute) &&
         canAccessRoute(pendingRoute, role) &&
@@ -128,6 +148,7 @@ abstract class RouterGuards {
       consumePendingRoute?.call();
       return pendingRoute;
     }
+    if (isOwner && ownerPending) return AppRoutes.ownerDashboard;
     if (isOwner) return AppRoutes.ownerResolve;
     return AppRoutes.home;
   }

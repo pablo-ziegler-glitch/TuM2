@@ -24,7 +24,10 @@ export {
 } from "./triggers/ownerSchedules";
 export { onSignalsWriteSyncPublic } from "./triggers/signals";
 export { onPharmacyDutyWriteSyncMerchant } from "./triggers/duties";
-export { onClaimApprovedPromoteMerchant } from "./triggers/claims";
+export {
+  onClaimSubmittedRunAutoValidation,
+  onClaimApprovedPromoteMerchant,
+} from "./triggers/claims";
 export { onReportThresholdSuppressMerchant } from "./triggers/reports";
 export { onExternalPlaceCreateNormalize } from "./triggers/externalPlaces";
 
@@ -43,6 +46,7 @@ export { onboardingOwnerSubmit } from "./callables/onboardingOwnerSubmit";
 export { checkMerchantDuplicates } from "./callables/checkMerchantDuplicates";
 export {
   upsertPharmacyDuty,
+  upsertPharmacyDutiesBatch,
   changePharmacyDutyStatus,
   confirmPharmacyDuty,
   reportPharmacyDutyIncident,
@@ -61,6 +65,23 @@ export {
   createMerchantProduct,
   deactivateMerchantProduct,
 } from "./callables/catalogLimits";
+export {
+  listAdminCategories,
+  upsertAdminCategory,
+  toggleAdminCategoryActive,
+} from "./callables/adminCategories";
+export {
+  upsertMerchantClaimDraft,
+  submitMerchantClaim,
+  evaluateMerchantClaim,
+  resolveMerchantClaim,
+  revealMerchantClaimSensitiveData,
+  getMerchantClaimReviewDetail,
+  getMyMerchantClaimStatus,
+  listMerchantClaimsForReview,
+  listMyMerchantClaims,
+  searchClaimableMerchants,
+} from "./callables/merchantClaims";
 
 // ─── Onboarding Scheduled Jobs ─────────────────────────────────────────────
 
@@ -75,3 +96,4 @@ export {
 export { runZoneBootstrapBatch } from "./jobs/bootstrap";
 export { adminRebuildMerchantPublic } from "./admin/rebuildPublic";
 export { backfillSearchKeywords } from "./admin/backfillKeywords";
+export { adminSanitizeMerchantClaimsSensitive } from "./admin/sanitizeMerchantClaims";

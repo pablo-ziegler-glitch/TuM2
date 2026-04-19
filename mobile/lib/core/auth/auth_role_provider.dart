@@ -5,9 +5,8 @@ import '../providers/auth_providers.dart';
 /// Provider que lee el rol del usuario desde el custom claim del idToken.
 ///
 /// NUNCA lee Firestore. Lee exclusivamente del idToken claim.
-/// Usa forceRefresh: true para garantizar que el claim 'role' esté disponible
-/// incluso en el primer login (la CF onUserCreate puede tardar unos segundos
-/// en propagarlo).
+/// Evita force refresh para no duplicar costo de red; el refresh forzado
+/// se centraliza en AuthNotifier al cambiar la sesión.
 ///
 /// Uso:
 ///   final role = ref.watch(authRoleProvider).valueOrNull;
@@ -16,8 +15,6 @@ final authRoleProvider = FutureProvider<String?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
 
-  // forceRefresh: true garantiza que el claim 'role' está disponible
-  // incluso en el primer login (race condition post-registro).
-  final idTokenResult = await user.getIdTokenResult(true);
+  final idTokenResult = await user.getIdTokenResult();
   return idTokenResult.claims?['role'] as String?;
 });

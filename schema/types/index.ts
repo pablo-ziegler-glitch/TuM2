@@ -46,10 +46,8 @@ export type {
 // ── Merchant operational signals ─────────────────────────────────────────────
 export type {
   MerchantOperationalSignalsDocument,
-  OperationalSignals,
-  DerivedSignals,
-  IsOpenNowSource,
-  IsOpenNowConfidence,
+  MerchantOperationalSignalType,
+  ManualOverrideMode,
 } from './merchant_operational_signals';
 
 // ── Merchant products ────────────────────────────────────────────────────────

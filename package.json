@@ -1,0 +1,14 @@
+{
+  "name": "tum2-audit-tooling",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "audit:scheduled": "node tools/audit/run-scheduled-audit.mjs",
+    "audit:scheduled:full": "AUDIT_FORCE_FULL=true node tools/audit/run-scheduled-audit.mjs",
+    "test:audit": "node --test tools/audit/__tests__/*.test.mjs",
+    "check:ui-copy": "node tools/check-ui-es-latam.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^1.0.1"
+  }
+}

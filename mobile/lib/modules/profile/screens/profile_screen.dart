@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_notifier.dart';
+import '../../../core/auth/auth_state.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../merchant_claim/application/merchant_claim_flow_controller.dart';
 
 /// PROFILE-01 — Tab Perfil.
 /// Muestra datos del usuario y accesos a favoritos, historial y configuración.
@@ -17,8 +20,14 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final authState = ref.watch(authNotifierProvider).authState;
     final isOwner = ref.watch(isOwnerProvider).valueOrNull ?? false;
     final isAdmin = ref.watch(isAdminProvider).valueOrNull ?? false;
+    final isOwnerPending = authState is AuthAuthenticated &&
+        authState.role == 'owner' &&
+        authState.ownerPending;
+    final claimSummary =
+        ref.watch(claimStatusForCurrentUserProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
@@ -27,9 +36,9 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           children: [
             const SizedBox(height: 20),
-            Text('Mi Perfil', style: AppTextStyles.headingLg),
+            const Text('Mi Perfil', style: AppTextStyles.headingLg),
             const SizedBox(height: 4),
-            Text(
+            const Text(
               'Gestiona tu experiencia en el barrio.',
               style: AppTextStyles.bodySm,
             ),
@@ -67,7 +76,7 @@ class ProfileScreen extends ConsumerWidget {
                           color: AppColors.neutral700,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.admin_panel_settings_outlined,
+                        child: const Icon(Icons.admin_panel_settings_outlined,
                             color: AppColors.surface, size: 22),
                       ),
                       const SizedBox(width: 12),
@@ -122,7 +131,7 @@ class ProfileScreen extends ConsumerWidget {
                           color: AppColors.primary400,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.storefront,
+                        child: const Icon(Icons.storefront,
                             color: AppColors.surface, size: 22),
                       ),
                       const SizedBox(width: 12),
@@ -140,6 +149,71 @@ class ProfileScreen extends ConsumerWidget {
                               'Gestionar mi comercio →',
                               style: AppTextStyles.bodySm
                                   .copyWith(color: AppColors.primary100),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (user != null && !isAdmin && (!isOwner || isOwnerPending)) ...[
+              const SizedBox(height: 20),
+              Text(
+                'RECLAMAR COMERCIO',
+                style: AppTextStyles.labelSm.copyWith(
+                  color: AppColors.neutral500,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => context.push(
+                  claimSummary == null
+                      ? AppRoutes.claimIntro
+                      : AppRoutes.claimStatus,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.infoBg,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.primary100),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary100,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.verified_user_outlined,
+                          color: AppColors.primary600,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              claimSummary == null
+                                  ? 'Reclamá tu comercio'
+                                  : 'Estado de tu reclamo',
+                              style: AppTextStyles.headingSm,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              claimSummary == null
+                                  ? 'Subí evidencia y seguí la revisión →'
+                                  : 'Ver estado actual y próximos pasos →',
+                              style: AppTextStyles.bodySm
+                                  .copyWith(color: AppColors.neutral700),
                             ),
                           ],
                         ),
@@ -235,7 +309,7 @@ class _UserCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.primary100,
             child: Icon(Icons.person_outline,
@@ -273,7 +347,8 @@ class _MenuCard extends StatelessWidget {
             children: [
               items[i],
               if (i < items.length - 1)
-                Divider(height: 1, color: AppColors.neutral100, indent: 52),
+                const Divider(
+                    height: 1, color: AppColors.neutral100, indent: 52),
             ],
           );
         }),
@@ -317,7 +392,8 @@ class _MenuItem extends StatelessWidget {
               ),
             ),
             if (showChevron)
-              Icon(Icons.chevron_right, color: AppColors.neutral400, size: 20),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.neutral400, size: 20),
           ],
         ),
       ),

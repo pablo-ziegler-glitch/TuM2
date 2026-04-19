@@ -45,6 +45,7 @@ dependencies:
   http: ^1.2.0
   url_launcher: ^6.3.0
   image_picker: ^1.1.2
+  file_picker: ^8.0.7
 
 dev_dependencies:
   flutter_test:
@@ -56,3 +57,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/
+    - assets/brand/
+    - assets/badges/
+    - assets/markers/
+    - assets/clusters/
+    - assets/icons/
+    - assets/logo/

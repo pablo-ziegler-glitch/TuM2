@@ -16,8 +16,6 @@ abstract interface class MerchantDetailDataSource {
   });
 
   Future<MerchantScheduleDto?> fetchSchedule(String merchantId);
-
-  Future<MerchantOperationalSignalsDto?> fetchSignals(String merchantId);
 }
 
 class MerchantDetailRepository implements MerchantDetailDataSource {
@@ -155,16 +153,6 @@ class MerchantDetailRepository implements MerchantDetailDataSource {
         .timeout(_secondaryTimeout);
     if (!snapshot.exists) return null;
     return MerchantScheduleDto.fromDocument(snapshot);
-  }
-
-  @override
-  Future<MerchantOperationalSignalsDto?> fetchSignals(String merchantId) async {
-    final snapshot = await _firestore
-        .doc('merchant_operational_signals/$merchantId')
-        .get()
-        .timeout(_secondaryTimeout);
-    if (!snapshot.exists) return null;
-    return MerchantOperationalSignalsDto.fromDocument(snapshot);
   }
 }
 

@@ -14,7 +14,15 @@ class MerchantSearchItem {
   final bool? isOpenNow;
   final bool? isOnDutyToday;
   final bool? is24h;
+  final DateTime? twentyFourHourCooldownUntil;
+  final int? twentyFourHourStrikeCount;
+  final String? publicStatusLabel;
   final String openStatusLabel;
+  final bool hasOperationalSignal;
+  final String operationalSignalType;
+  final String? operationalSignalMessage;
+  final String? operationalStatusLabel;
+  final String manualOverrideMode;
   final double sortBoost;
   final List<String> searchKeywords;
   final double? distanceMeters;
@@ -33,7 +41,15 @@ class MerchantSearchItem {
     required this.isOpenNow,
     this.isOnDutyToday,
     this.is24h,
+    this.twentyFourHourCooldownUntil,
+    this.twentyFourHourStrikeCount,
+    this.publicStatusLabel,
     required this.openStatusLabel,
+    this.hasOperationalSignal = false,
+    this.operationalSignalType = 'none',
+    this.operationalSignalMessage,
+    this.operationalStatusLabel,
+    this.manualOverrideMode = 'none',
     required this.sortBoost,
     required this.searchKeywords,
     this.distanceMeters,
@@ -44,6 +60,14 @@ class MerchantSearchItem {
     bool clearDistance = false,
     bool? isOnDutyToday,
     bool? is24h,
+    DateTime? twentyFourHourCooldownUntil,
+    int? twentyFourHourStrikeCount,
+    String? publicStatusLabel,
+    bool? hasOperationalSignal,
+    String? operationalSignalType,
+    String? operationalSignalMessage,
+    String? operationalStatusLabel,
+    String? manualOverrideMode,
   }) {
     return MerchantSearchItem(
       merchantId: merchantId,
@@ -59,7 +83,20 @@ class MerchantSearchItem {
       isOpenNow: isOpenNow,
       isOnDutyToday: isOnDutyToday ?? this.isOnDutyToday,
       is24h: is24h ?? this.is24h,
+      twentyFourHourCooldownUntil:
+          twentyFourHourCooldownUntil ?? this.twentyFourHourCooldownUntil,
+      twentyFourHourStrikeCount:
+          twentyFourHourStrikeCount ?? this.twentyFourHourStrikeCount,
+      publicStatusLabel: publicStatusLabel ?? this.publicStatusLabel,
       openStatusLabel: openStatusLabel,
+      hasOperationalSignal: hasOperationalSignal ?? this.hasOperationalSignal,
+      operationalSignalType:
+          operationalSignalType ?? this.operationalSignalType,
+      operationalSignalMessage:
+          operationalSignalMessage ?? this.operationalSignalMessage,
+      operationalStatusLabel:
+          operationalStatusLabel ?? this.operationalStatusLabel,
+      manualOverrideMode: manualOverrideMode ?? this.manualOverrideMode,
       sortBoost: sortBoost,
       searchKeywords: searchKeywords,
       distanceMeters:
@@ -92,11 +129,30 @@ class MerchantSearchItem {
       isOnDutyToday: (data['isOnDutyToday'] as bool?) ??
           (data['hasPharmacyDutyToday'] as bool?),
       is24h: data['is24h'] as bool?,
+      twentyFourHourCooldownUntil: _dateTimeValue(
+        data['twentyFourHourCooldownUntil'],
+      ),
+      twentyFourHourStrikeCount:
+          (data['twentyFourHourStrikeCount'] as num?)?.toInt(),
+      publicStatusLabel: data['publicStatusLabel'] as String?,
       openStatusLabel: (data['openStatusLabel'] as String?) ??
           (data['todayScheduleLabel'] as String?) ??
           '',
+      hasOperationalSignal: data['hasOperationalSignal'] == true,
+      operationalSignalType:
+          (data['operationalSignalType'] as String?) ?? 'none',
+      operationalSignalMessage: data['operationalSignalMessage'] as String?,
+      operationalStatusLabel: data['operationalStatusLabel'] as String?,
+      manualOverrideMode: (data['manualOverrideMode'] as String?) ?? 'none',
       sortBoost: (data['sortBoost'] as num?)?.toDouble() ?? 0,
       searchKeywords: rawKeywords.map((e) => e.toString()).toList(),
     );
+  }
+
+  static DateTime? _dateTimeValue(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 }

@@ -48,7 +48,8 @@ class _SelectReplacementCandidatesScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFFFAF9F7),
         elevation: 0,
-        title: const Text('Duty Reassignment', style: AppTextStyles.headingSm),
+        title:
+            const Text('Cobertura de guardia', style: AppTextStyles.headingSm),
         actions: [
           IconButton(
             onPressed: () {},
@@ -152,9 +153,7 @@ class _SelectReplacementCandidatesScreenState
                         ),
                         icon: const Icon(Icons.send),
                         label: Text(
-                          _submitting
-                              ? 'Enviando...'
-                              : 'Enviar solicitudes',
+                          _submitting ? 'Enviando...' : 'Enviar solicitudes',
                           style: AppTextStyles.labelMd.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -206,7 +205,8 @@ class _SelectReplacementCandidatesScreenState
               color: AppColors.neutral100,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.local_pharmacy, color: AppColors.primary500),
+            child:
+                const Icon(Icons.local_pharmacy, color: AppColors.primary500),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -222,8 +222,8 @@ class _SelectReplacementCandidatesScreenState
                 ),
                 Text(
                   candidate.merchantId,
-                  style:
-                      AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+                  style: AppTextStyles.bodySm
+                      .copyWith(color: AppColors.neutral700),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -310,10 +310,11 @@ class _SelectReplacementCandidatesScreenState
       final ownerMerchant = await ref.read(ownerMerchantProvider.future);
       final merchant = ownerMerchant.primaryMerchant;
       _merchantRef = merchant?.id ?? '';
-      final result =
-          await ref.read(pharmacyDutyCommandServiceProvider).getEligibleCandidates(
-                dutyId: widget.dutyId,
-              );
+      final result = await ref
+          .read(pharmacyDutyCommandServiceProvider)
+          .getEligibleCandidates(
+            dutyId: widget.dutyId,
+          );
       _candidates = result.candidates;
       _maxCandidates = result.maxCandidatesPerRound;
       _zoneId = _candidates.isNotEmpty ? _candidates.first.zoneId : '';
@@ -337,7 +338,9 @@ class _SelectReplacementCandidatesScreenState
       _error = null;
     });
     try {
-      await ref.read(pharmacyDutyCommandServiceProvider).createReassignmentRound(
+      await ref
+          .read(pharmacyDutyCommandServiceProvider)
+          .createReassignmentRound(
             dutyId: widget.dutyId,
             candidateMerchantIds: _selected.toList(growable: false),
           );

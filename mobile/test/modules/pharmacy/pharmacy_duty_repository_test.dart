@@ -125,6 +125,44 @@ void main() {
       expect(result.length, 1);
       expect(logger.codes, contains('duplicate_duty_published'));
     });
+
+    test('acepta flag is24h canonico de merchant_public', () async {
+      final repository = PharmacyDutyRepository(
+        dataSource: _FakeDataSource(
+          duties: const [
+            PharmacyDutyRecord(
+              id: 'duty-1',
+              merchantId: 'm-1',
+              zoneId: 'z1',
+              date: '2026-04-07',
+            ),
+          ],
+          merchants: const [
+            MerchantPublicRecord(
+              id: 'm-1',
+              data: {
+                'name': 'Farmacia Uno',
+                'categoryId': 'farmacia',
+                'zoneId': 'z1',
+                'addressLine': 'Calle 123',
+                'phone': '11 5555 1111',
+                'visibilityStatus': 'visible',
+                'isOpenNow': true,
+                'is24h': true,
+              },
+            ),
+          ],
+        ),
+      );
+
+      final result = await repository.getPublishedDuties(
+        zoneId: 'z1',
+        dateKey: '2026-04-07',
+      );
+
+      expect(result.length, 1);
+      expect(result.first.is24Hours, isTrue);
+    });
   });
 }
 

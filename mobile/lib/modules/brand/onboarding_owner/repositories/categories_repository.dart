@@ -1,5 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+String canonicalCategoryId(String rawId) {
+  final normalized = rawId.trim().toLowerCase();
+  if (normalized == 'vet' || normalized == 'veterinary') return 'veterinaria';
+  if (normalized == 'pharmacy') return 'farmacia';
+  if (normalized == 'kiosk') return 'kiosco';
+  if (normalized == 'grocery') return 'almacen';
+  if (normalized == 'supermarket') return 'supermercado';
+  if (normalized == 'prepared_food') return 'casa_de_comidas';
+  if (normalized == 'fast_food') return 'comida_al_paso';
+  if (normalized == 'tire_shop') return 'gomeria';
+  if (normalized == 'bakery') return 'panaderia';
+  if (normalized == 'other') return 'otro';
+  return normalized;
+}
+
 /// Modelo de categoría para el step 1 del onboarding OWNER.
 class CategoryModel {
   final String id;
@@ -14,7 +29,7 @@ class CategoryModel {
 
   factory CategoryModel.fromMap(String id, Map<String, dynamic> map) {
     return CategoryModel(
-      id: id,
+      id: canonicalCategoryId(id),
       label: map['label'] as String? ?? id,
       iconName: map['iconName'] as String? ?? 'store',
     );
@@ -45,9 +60,12 @@ class CategoriesRepository {
         _cache = _fallbackCategories;
         return _cache!;
       }
-      _cache = snap.docs
-          .map((doc) => CategoryModel.fromMap(doc.id, doc.data()))
-          .toList();
+      final byId = <String, CategoryModel>{};
+      for (final doc in snap.docs) {
+        final category = CategoryModel.fromMap(doc.id, doc.data());
+        byId.putIfAbsent(category.id, () => category);
+      }
+      _cache = byId.values.toList(growable: false);
       return _cache!;
     } catch (_) {
       // Si Firestore no responde, usar fallback local
@@ -60,11 +78,13 @@ class CategoriesRepository {
   static void clearCache() => _cache = null;
 
   static const List<CategoryModel> _fallbackCategories = [
-    CategoryModel(id: 'pharmacy', label: 'Farmacia', iconName: 'local_pharmacy'),
-    CategoryModel(id: 'kiosk', label: 'Kiosco', iconName: 'storefront'),
-    CategoryModel(id: 'grocery', label: 'Almacén', iconName: 'shopping_basket'),
-    CategoryModel(id: 'vet', label: 'Veterinaria', iconName: 'pets'),
-    CategoryModel(id: 'bakery', label: 'Panadería', iconName: 'bakery_dining'),
-    CategoryModel(id: 'other', label: 'Otro', iconName: 'store'),
+    CategoryModel(
+        id: 'farmacia', label: 'Farmacia', iconName: 'local_pharmacy'),
+    CategoryModel(id: 'kiosco', label: 'Kiosco', iconName: 'storefront'),
+    CategoryModel(id: 'almacen', label: 'Almacén', iconName: 'shopping_basket'),
+    CategoryModel(id: 'veterinaria', label: 'Veterinaria', iconName: 'pets'),
+    CategoryModel(
+        id: 'panaderia', label: 'Panadería', iconName: 'bakery_dining'),
+    CategoryModel(id: 'otro', label: 'Otro', iconName: 'store'),
   ];
 }

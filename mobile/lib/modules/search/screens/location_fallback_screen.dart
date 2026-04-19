@@ -112,14 +112,14 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
               color: AppColors.tertiary50,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(Icons.location_off_outlined,
+            child: const Icon(Icons.location_off_outlined,
                 size: 32, color: AppColors.tertiary500),
           ),
           const SizedBox(height: 16),
-          Text('Encontrá tu próximo\nlugar favorito',
+          const Text('Encontrá tu próximo\nlugar favorito',
               style: AppTextStyles.headingLg),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'No pudimos acceder a tu ubicación actual. '
             'Seleccioná manualmente tu barrio para explorar lo mejor de tu zona.',
             style: AppTextStyles.bodySm,
@@ -154,7 +154,7 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
             hintStyle:
                 AppTextStyles.bodyMd.copyWith(color: AppColors.neutral400),
             prefixIcon:
-                Icon(Icons.search, color: AppColors.neutral400, size: 20),
+                const Icon(Icons.search, color: AppColors.neutral400, size: 20),
             border: InputBorder.none,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 0, vertical: 14),
@@ -261,18 +261,18 @@ class _LocationFallbackScreenState extends State<LocationFallbackScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.neutral200),
         ),
-        child: Column(
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Icon(Icons.help_outline, size: 18, color: AppColors.neutral600),
-                const SizedBox(width: 8),
+                SizedBox(width: 8),
                 Text('¿Por qué seleccionar una zona?',
                     style: AppTextStyles.labelMd),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               'Al elegir un barrio, podemos mostrarte comercios con '
               'aviso rápido, promociones locales exclusivas y eventos '

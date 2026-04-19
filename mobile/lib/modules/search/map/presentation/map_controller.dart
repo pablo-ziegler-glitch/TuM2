@@ -1,22 +1,22 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../merchant_badges/domain/merchant_map_marker_factory.dart';
 import '../../models/merchant_search_item.dart';
 import '../cluster/map_cluster_factory.dart';
 import '../cluster/map_cluster_model.dart';
 import '../cluster/map_cluster_resolver.dart';
-import '../marker/map_marker_factory.dart';
 import 'map_state.dart';
 
 class SearchMapController {
   SearchMapController({
-    MapMarkerFactory? markerFactory,
+    MerchantMapMarkerFactory? markerFactory,
     MapClusterResolver? clusterResolver,
     MapClusterFactory? clusterFactory,
-  })  : _markerFactory = markerFactory ?? MapMarkerFactory(),
+  })  : _markerFactory = markerFactory ?? MerchantMapMarkerFactory(),
         _clusterResolver = clusterResolver ?? const MapClusterResolver(),
         _clusterFactory = clusterFactory ?? MapClusterFactory();
 
-  final MapMarkerFactory _markerFactory;
+  final MerchantMapMarkerFactory _markerFactory;
   final MapClusterResolver _clusterResolver;
   final MapClusterFactory _clusterFactory;
 
@@ -162,13 +162,13 @@ class SearchMapController {
 
   int _clusterZIndex(MapClusterPriority priority) {
     switch (priority) {
-      case MapClusterPriority.guardia:
+      case MapClusterPriority.red:
         return 950;
-      case MapClusterPriority.open:
+      case MapClusterPriority.blue:
         return 850;
-      case MapClusterPriority.defaultState:
+      case MapClusterPriority.green:
         return 750;
-      case MapClusterPriority.closed:
+      case MapClusterPriority.neutral:
         return 650;
     }
   }

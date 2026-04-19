@@ -127,7 +127,7 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
           address: details.formattedAddress,
           lat: details.lat,
           lng: details.lng,
-          geohash: '',    // computado server-side en CF-01
+          geohash: '', // computado server-side en CF-01
           zoneId: zone.zoneId,
           cityId: zone.cityId,
           provinceId: zone.provinceId,
@@ -189,7 +189,7 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Row(
                 children: [
-                  Expanded(
+                  const Expanded(
                     child: Text('¿Dónde está\ntu comercio?',
                         style: AppTextStyles.headingMd),
                   ),
@@ -201,8 +201,8 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text('Paso 2 de 4', style: AppTextStyles.bodySm),
@@ -229,7 +229,8 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                           color: AppColors.warningBg,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppColors.warningFg.withOpacity(0.4)),
+                              color:
+                                  AppColors.warningFg.withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +265,7 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                     ],
 
                     // Campo dirección con autocomplete
-                    Text('Dirección *', style: AppTextStyles.labelMd),
+                    const Text('Dirección *', style: AppTextStyles.labelMd),
                     const SizedBox(height: 6),
                     TextField(
                       controller: _addrCtrl,
@@ -299,7 +300,9 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                                 : _isNetworkError
                                     ? AppColors.warningFg
                                     : AppColors.neutral300,
-                            width: (_isInvalidAddress || _isNetworkError) ? 1.5 : 1,
+                            width: (_isInvalidAddress || _isNetworkError)
+                                ? 1.5
+                                : 1,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -326,7 +329,7 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                           border: Border.all(color: AppColors.neutral200),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -336,8 +339,8 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: _suggestions.length,
-                          separatorBuilder: (_, __) =>
-                              Divider(height: 1, color: AppColors.neutral200),
+                          separatorBuilder: (_, __) => const Divider(
+                              height: 1, color: AppColors.neutral200),
                           itemBuilder: (_, i) {
                             final s = _suggestions[i];
                             return InkWell(
@@ -380,8 +383,9 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
 
                     // EX-09: error inline + card
                     if (_isInvalidAddress && !_isNetworkError) ...[
-                      InlineError(
-                          message: 'No pudimos identificar la zona. Intentá con otra dirección.'),
+                      const InlineError(
+                          message:
+                              'No pudimos identificar la zona. Intentá con otra dirección.'),
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -389,7 +393,7 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                           color: AppColors.errorBg,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: AppColors.errorFg.withOpacity(0.3)),
+                              color: AppColors.errorFg.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
@@ -470,9 +474,8 @@ class _Step2DireccionScreenState extends State<Step2DireccionScreen> {
                     )
                   else
                     ElevatedButton(
-                      onPressed: _addressState == _AddressState.valid
-                          ? _onNext
-                          : null,
+                      onPressed:
+                          _addressState == _AddressState.valid ? _onNext : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary500,
                         foregroundColor: Colors.white,

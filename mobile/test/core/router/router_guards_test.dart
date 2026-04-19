@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:tum2/core/auth/auth_state.dart';
 import 'package:tum2/core/router/app_routes.dart';
 import 'package:tum2/core/router/router_guards.dart';
@@ -293,7 +292,7 @@ void main() {
       expect(result, equals(AppRoutes.home));
     });
 
-    test('owner_pending desde /login va a /home', () {
+    test('owner_pending desde /login va a /owner/dashboard', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(
           user: fakeUser,
@@ -302,7 +301,7 @@ void main() {
         ),
         location: AppRoutes.login,
       );
-      expect(result, equals(AppRoutes.home));
+      expect(result, equals(AppRoutes.ownerDashboard));
     });
 
     test('owner desde splash va a /owner/resolve', () {
@@ -349,20 +348,56 @@ void main() {
       expect(result, isNull);
     });
 
-    test('customer en /owner redirige a /profile', () {
+    test('customer en /owner redirige a guard de acceso actualizado', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
         location: '/owner',
       );
-      expect(result, equals(AppRoutes.profile));
+      expect(
+        result,
+        equals(
+          AppRoutes.accessUpdatedPath(
+            target: 'customer',
+            reason: 'deep_route_access_changed',
+            from: '/owner',
+          ),
+        ),
+      );
     });
 
-    test('customer en /owner/products redirige a /profile', () {
+    test('customer en /owner/products redirige a guard de acceso actualizado',
+        () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
         location: '/owner/products',
       );
-      expect(result, equals(AppRoutes.profile));
+      expect(
+        result,
+        equals(
+          AppRoutes.accessUpdatedPath(
+            target: 'customer',
+            reason: 'deep_route_access_changed',
+            from: '/owner/products',
+          ),
+        ),
+      );
+    });
+
+    test('customer en /owner/dashboard usa variante de cierre negativo', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
+        location: AppRoutes.ownerDashboard,
+      );
+      expect(
+        result,
+        equals(
+          AppRoutes.accessUpdatedPath(
+            target: 'customer',
+            reason: 'claim_closed',
+            from: AppRoutes.ownerDashboard,
+          ),
+        ),
+      );
     });
 
     test('customer en /admin redirige a /home', () {
@@ -410,7 +445,7 @@ void main() {
       expect(result, isNull);
     });
 
-    test('owner_pending en /owner redirige a /profile', () {
+    test('owner_pending en /owner no redirige', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(
           user: fakeUser,
@@ -419,7 +454,31 @@ void main() {
         ),
         location: '/owner',
       );
-      expect(result, equals(AppRoutes.profile));
+      expect(result, isNull);
+    });
+
+    test('owner_pending en /owner/products redirige a /owner/dashboard', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(
+          user: fakeUser,
+          role: 'owner',
+          ownerPending: true,
+        ),
+        location: '/owner/products',
+      );
+      expect(result, equals(AppRoutes.ownerDashboard));
+    });
+
+    test('owner_pending en /owner/resolve redirige a /owner/dashboard', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(
+          user: fakeUser,
+          role: 'owner',
+          ownerPending: true,
+        ),
+        location: AppRoutes.ownerResolve,
+      );
+      expect(result, equals(AppRoutes.ownerDashboard));
     });
 
     test('owner con onboarding en /admin redirige a /home', () {

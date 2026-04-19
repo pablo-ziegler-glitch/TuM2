@@ -9,15 +9,16 @@
 
 ## NOW
 
-### Estado real de ejecución (2026-04-10)
+### Estado real de ejecución (auditoría 2026-04-17)
 
-- ✅ Fundacional cerrado: 0001, 0003, 0004, 0005, 0006, 0007, 0010, 0014, 0019-0024, 0027, 0028, 0042-0048, 0052.
-- ✅ Discovery CUSTOMER en mobile avanzado: 0053, 0054, 0056, 0057, 0058, 0060, 0061.
-- ✅ Admin web adelantado: 0077 y 0122.
-- ✅ TuM2-0123 cerrado (PR #58): capacidad de catálogo con límites por comercio/categoría y enforcement transaccional vía Cloud Functions.
-- ✅ TuM2-0124 cerrado (PR #59): mitigación de guardias con incidente, reasignación por candidatas y cierre por primera aceptación.
-- ⚠️ Núcleo OWNER aún pendiente para cierre MVP: 0064-0068 (0068 en refactor operativo).
-- ⚠️ Bloques de lanzamiento/QA/legal aún abiertos: 0082-0083-0087, 0089-0092, 0094-0099, 0100-0104.
+- Fuente canónica de estado: `CLAUDE.md` (regla obligatoria del repo).
+- Snapshot global backlog: **134** tarjetas = **48 DONE**, **8 IN_PROGRESS**, **78 TODO**.
+- Abiertas por prioridad: **P0=35**, **P1=29**, **P2=17**, **P3=5**.
+- Claims (P0) es el frente principal activo: 0125, 0126, 0127, 0128, 0130, 0131, 0133.
+- Nueva tarjeta documental cargada: 0134 (Modo Selección Argentina + tarjeta pineada), en estado TODO y clasificación MVP+.
+- Evidencia de implementación fuerte en Functions + Mobile para claims; **gap principal**: UI Admin Web de revisión (0128).
+- Drift documental de estados **resuelto** en storycards (alineación aplicada contra `CLAUDE.md` en este corte).
+- Auditoría completa y desglose Backend/Frontend/UX: [docs/ops/AUDITORIA-TARJETAS-2026-04-16.md](/home/pablo/IdeaProjects/TuM2/docs/ops/AUDITORIA-TARJETAS-2026-04-16.md)
 
 ### Fase 0 — Definición maestra
 

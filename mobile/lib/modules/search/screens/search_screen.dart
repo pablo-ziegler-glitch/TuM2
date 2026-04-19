@@ -354,7 +354,7 @@ class _SearchSuggestions extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
       children: [
-        Text('Sugerencias', style: AppTextStyles.headingSm),
+        const Text('Sugerencias', style: AppTextStyles.headingSm),
         const SizedBox(height: 8),
         ...suggestions.take(6).map(
               (item) => ListTile(

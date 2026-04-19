@@ -21,8 +21,8 @@ import 'screens/step4_confirmacion_screen.dart';
 /// Persiste cada transición en Firestore vía [OnboardingOwnerRepository].
 class OnboardingOwnerFlow extends StatefulWidget {
   final OnboardingDraft? existingDraft;
-  final VoidCallback onComplete;  // → OWNER-01
-  final VoidCallback onExit;      // → HOME-01
+  final VoidCallback onComplete; // → OWNER-01
+  final VoidCallback onExit; // → HOME-01
 
   const OnboardingOwnerFlow({
     super.key,
@@ -47,7 +47,6 @@ class _OnboardingOwnerFlowState extends State<OnboardingOwnerFlow> {
   String _currentStep = 'entry';
   Step1Data? _step1;
   Step2Data? _step2;
-  List<DaySchedule>? _step3;
   bool _step3Skipped = false;
   String _draftMerchantId = '';
 
@@ -89,11 +88,6 @@ class _OnboardingOwnerFlowState extends State<OnboardingOwnerFlow> {
     super.dispose();
   }
 
-  /// Llamado por las pantallas que gestionan su propio exit modal (step1, step2, step3).
-  /// Para step4, el exit se delega directamente al widget.onExit sin abandon
-  /// porque el modal ya maneja las opciones.
-  void _onFlowExit() => widget.onExit();
-
   @override
   Widget build(BuildContext context) {
     switch (_currentStep) {
@@ -114,7 +108,6 @@ class _OnboardingOwnerFlowState extends State<OnboardingOwnerFlow> {
             setState(() {
               _step1 = null;
               _step2 = null;
-              _step3 = null;
               _step3Skipped = false;
               _currentStep = 'step_1';
             });
@@ -157,9 +150,8 @@ class _OnboardingOwnerFlowState extends State<OnboardingOwnerFlow> {
       case 'step_3':
         return Step3HorariosScreen(
           ownerRepository: _repository,
-          onNext: (schedules) {
+          onNext: (_) {
             setState(() {
-              _step3 = schedules;
               _step3Skipped = false;
               _currentStep = 'confirmation';
             });

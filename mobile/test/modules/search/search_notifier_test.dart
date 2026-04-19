@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tum2/modules/search/analytics/search_analytics.dart';
 import 'package:tum2/modules/search/models/merchant_search_item.dart';
 import 'package:tum2/modules/search/models/search_filters.dart';
+import 'package:tum2/modules/search/models/search_zone_item.dart';
 import 'package:tum2/modules/search/providers/search_notifier.dart';
 import 'package:tum2/modules/search/repositories/merchant_search_repository.dart';
 import 'package:tum2/modules/search/repositories/zone_search_repository.dart';
@@ -108,7 +109,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    ProviderContainer _buildContainer(List<MerchantSearchItem> items) {
+    ProviderContainer buildContainer(List<MerchantSearchItem> items) {
       return ProviderContainer(
         overrides: [
           merchantSearchRepositoryProvider.overrideWithValue(
@@ -121,7 +122,7 @@ void main() {
     }
 
     test('normaliza query sin tildes', () async {
-      final container = _buildContainer([
+      final container = buildContainer([
         _item(
           id: 'm1',
           name: 'Farmácia Ñandú',
@@ -142,7 +143,7 @@ void main() {
     });
 
     test('query menor a 3 no filtra resultados', () async {
-      final container = _buildContainer([
+      final container = buildContainer([
         _item(
           id: 'm1',
           name: 'Farmacia Uno',
@@ -168,7 +169,7 @@ void main() {
     });
 
     test('openNow activo excluye isOpenNow == null', () async {
-      final container = _buildContainer([
+      final container = buildContainer([
         _item(
           id: 'm1',
           name: 'Abierto',
@@ -202,7 +203,7 @@ void main() {
     });
 
     test('aplica filtros en cascada y orden por relevancia', () async {
-      final container = _buildContainer([
+      final container = buildContainer([
         _item(
           id: 'm1',
           name: 'Farmacia Alta',

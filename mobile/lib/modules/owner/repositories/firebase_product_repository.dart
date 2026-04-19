@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -27,14 +29,17 @@ class FirebaseProductRepository implements ProductRepository {
   @override
   Stream<List<MerchantProduct>> watchOwnerProducts({
     required String merchantId,
+    int limit = 120,
   }) {
     final normalizedMerchantId = normalizeProductField(merchantId);
     if (normalizedMerchantId.isEmpty) return const Stream.empty();
+    final safeLimit = limit.clamp(1, _maxOwnerProductsLimit).toInt();
 
     return _firestore
         .collection(_productsCollection)
         .where('merchantId', isEqualTo: normalizedMerchantId)
         .orderBy('updatedAt', descending: true)
+        .limit(safeLimit)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
@@ -165,6 +170,13 @@ class FirebaseProductRepository implements ProductRepository {
       throw _mapFirebaseException(error);
     } on ProductRepositoryException {
       rethrow;
+    } on TimeoutException catch (error) {
+      throw ProductRepositoryException(
+        code: 'product-create-timeout',
+        message:
+            'La creación está tardando más de lo esperado. Verificá el catálogo antes de reintentar.',
+        cause: error,
+      );
     } catch (error) {
       if (imageResult != null) {
         await _safeDeleteStorageObject(imageResult.storagePath);

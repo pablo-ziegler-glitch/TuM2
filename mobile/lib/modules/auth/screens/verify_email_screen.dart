@@ -57,8 +57,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   bool get _crossDeviceEmailValid {
     final email = _crossDeviceEmailController.text.trim();
-    return email.isNotEmpty &&
-        RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
+    return email.isNotEmpty && RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
   }
 
   bool get _canResend => _secondsLeft == 0;
@@ -91,9 +90,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   Future<void> _resend() async {
     if (!_canResend) return;
 
-    await ref
-        .read(authOpProvider.notifier)
-        .sendMagicLink(widget.email);
+    await ref.read(authOpProvider.notifier).sendMagicLink(widget.email);
 
     if (!mounted) return;
 
@@ -182,7 +179,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
               const SizedBox(height: 32),
 
-              Text(
+              const Text(
                 'Revisá tu email',
                 style: AppTextStyles.headingMd,
                 textAlign: TextAlign.center,
@@ -220,9 +217,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               // Botón reenviar con cooldown
               SecondaryButton(
                 label: 'Reenviar link',
-                disabledLabel: _secondsLeft > 0
-                    ? 'Reenviar en ${_secondsLeft}s'
-                    : null,
+                disabledLabel:
+                    _secondsLeft > 0 ? 'Reenviar en ${_secondsLeft}s' : null,
                 onPressed: _canResend && !isLoading ? _resend : null,
                 isLoading: isLoading,
               ),
@@ -236,8 +232,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                     child: LinearProgressIndicator(
                       value: _secondsLeft / _cooldownSeconds,
                       backgroundColor: AppColors.neutral100,
-                      valueColor: const AlwaysStoppedAnimation(
-                          AppColors.primary500),
+                      valueColor:
+                          const AlwaysStoppedAnimation(AppColors.primary500),
                       minHeight: 2,
                     ),
                   ),
@@ -291,7 +287,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
               const SizedBox(height: 24),
 
-              Text(
+              const Text(
                 '¿Abriste el link en otro dispositivo?',
                 style: AppTextStyles.headingMd,
               ),
@@ -429,7 +425,7 @@ class _SuccessBanner extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.successBg,
         border: Border.all(
-          color: AppColors.successFg.withOpacity(0.4),
+          color: AppColors.successFg.withValues(alpha: 0.4),
           width: 0.8,
         ),
         borderRadius: BorderRadius.circular(10),

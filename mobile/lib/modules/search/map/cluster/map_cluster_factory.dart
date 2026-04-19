@@ -101,10 +101,10 @@ class MapClusterFactory {
 
   BitmapDescriptor _fallback(MapClusterPriority priority) {
     final hue = switch (priority) {
-      MapClusterPriority.guardia => BitmapDescriptor.hueRed,
-      MapClusterPriority.open => BitmapDescriptor.hueGreen,
-      MapClusterPriority.defaultState => BitmapDescriptor.hueBlue,
-      MapClusterPriority.closed => BitmapDescriptor.hueOrange,
+      MapClusterPriority.red => BitmapDescriptor.hueRed,
+      MapClusterPriority.blue => BitmapDescriptor.hueAzure,
+      MapClusterPriority.green => BitmapDescriptor.hueGreen,
+      MapClusterPriority.neutral => BitmapDescriptor.hueOrange,
     };
     return BitmapDescriptor.defaultMarkerWithHue(hue);
   }

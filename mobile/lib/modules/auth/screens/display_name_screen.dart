@@ -48,7 +48,8 @@ class _DisplayNameScreenState extends ConsumerState<DisplayNameScreen> {
     if (name.isEmpty) return;
 
     if (name.length < 2) {
-      setState(() => _errorText = 'El nombre debe tener al menos 2 caracteres.');
+      setState(
+          () => _errorText = 'El nombre debe tener al menos 2 caracteres.');
       return;
     }
 
@@ -121,7 +122,7 @@ class _DisplayNameScreenState extends ConsumerState<DisplayNameScreen> {
 
               const SizedBox(height: 24),
 
-              Text('¿Cómo te llamamos?', style: AppTextStyles.headingMd),
+              const Text('¿Cómo te llamamos?', style: AppTextStyles.headingMd),
               const SizedBox(height: 8),
               Text(
                 'Podés cambiarlo después desde tu perfil.',

@@ -1,11 +1,19 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldPath, FieldValue } from "firebase-admin/firestore";
+import { logFinOpsEvent } from "../lib/finops";
 import { computeUsefulCoverageScore } from "../lib/scoring";
 import { MerchantPublicDoc, ZoneCoverageMetrics } from "../lib/types";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
+const ZONE_REFRESH_CURSOR_DOC = "system_jobs/scheduledRefreshZoneCoverage";
+const MAX_ZONES_PER_RUN = 10;
+const MERCHANTS_PER_ZONE_PAGE = 500;
+
+interface ZoneRefreshCursorDoc {
+  lastZoneId?: string;
+}
 
 function zoneKey(merchant: MerchantPublicDoc | undefined): string {
   if (!merchant) return "";
@@ -112,11 +120,6 @@ function parseCoverageBase(
  * Scheduled fallback (full recompute).
  */
 async function refreshZoneCoverage(zoneId: string): Promise<void> {
-  const byZoneIdSnap = await db()
-    .collection("merchant_public")
-    .where("zoneId", "==", zoneId)
-    .get();
-
   const metrics: ZoneCoverageMetrics = {
     merchantCount: 0,
     visibleMerchantCount: 0,
@@ -127,15 +130,48 @@ async function refreshZoneCoverage(zoneId: string): Promise<void> {
     usefulCoverageScore: 0,
   };
 
-  for (const doc of byZoneIdSnap.docs) {
-    const merchant = doc.data() as MerchantPublicDoc;
-    const contribution = metricContribution(merchant);
-    metrics.merchantCount += contribution.merchantCount;
-    metrics.visibleMerchantCount += contribution.visibleMerchantCount;
-    metrics.pharmacyCount += contribution.pharmacyCount;
-    metrics.verifiedCount += contribution.verifiedCount;
-    metrics.referentialCount += contribution.referentialCount;
-    metrics.communitySubmittedCount += contribution.communitySubmittedCount;
+  let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+  while (hasMore) {
+    let query = db()
+      .collection("merchant_public")
+      .where("zoneId", "==", zoneId)
+      .orderBy(FieldPath.documentId())
+      .limit(MERCHANTS_PER_ZONE_PAGE);
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
+
+    const byZoneIdSnap = await query.get();
+    if (byZoneIdSnap.empty) {
+      hasMore = false;
+      continue;
+    }
+
+    for (const doc of byZoneIdSnap.docs) {
+      const merchant = doc.data() as MerchantPublicDoc;
+      const contribution = metricContribution(merchant);
+      metrics.merchantCount += contribution.merchantCount;
+      metrics.visibleMerchantCount += contribution.visibleMerchantCount;
+      metrics.pharmacyCount += contribution.pharmacyCount;
+      metrics.verifiedCount += contribution.verifiedCount;
+      metrics.referentialCount += contribution.referentialCount;
+      metrics.communitySubmittedCount += contribution.communitySubmittedCount;
+    }
+
+    lastDoc = byZoneIdSnap.docs[byZoneIdSnap.docs.length - 1] ?? null;
+    hasMore = byZoneIdSnap.size === MERCHANTS_PER_ZONE_PAGE && lastDoc != null;
+  }
+
+  if (
+    metrics.merchantCount === 0 &&
+    metrics.visibleMerchantCount === 0 &&
+    metrics.pharmacyCount === 0 &&
+    metrics.verifiedCount === 0 &&
+    metrics.referentialCount === 0 &&
+    metrics.communitySubmittedCount === 0
+  ) {
+    console.log(`[zoneCoverage] Zone ${zoneId}: no merchants found in merchant_public`);
   }
 
   metrics.usefulCoverageScore = computeUsefulCoverageScore(metrics);
@@ -155,6 +191,17 @@ async function refreshZoneCoverage(zoneId: string): Promise<void> {
   console.log(
     `[zoneCoverage] Zone ${zoneId}: visible=${metrics.visibleMerchantCount} verified=${metrics.verifiedCount} score=${metrics.usefulCoverageScore}`
   );
+  logFinOpsEvent({
+    event: "zone_coverage_refresh",
+    module: "coverage.zoneCoverage",
+    payload: {
+      zoneId,
+      merchantCount: metrics.merchantCount,
+      visibleMerchantCount: metrics.visibleMerchantCount,
+      verifiedCount: metrics.verifiedCount,
+      usefulCoverageScore: metrics.usefulCoverageScore,
+    },
+  });
 }
 
 /**
@@ -223,12 +270,12 @@ export const updateZoneCoverageMetrics = onDocumentWritten(
 /**
  * scheduledRefreshZoneCoverage
  *
- * Scheduled fallback: runs daily at 01:00 Argentina time (04:00 UTC).
- * Refreshes coverage metrics for all zones in case triggers were missed.
+ * Scheduled fallback: runs hourly with bounded window.
+ * Refreshes coverage metrics incrementally in case triggers were missed.
  */
 export const scheduledRefreshZoneCoverage = onSchedule(
   {
-    schedule: "0 4 * * *",
+    schedule: "10 * * * *",
     timeZone: "America/Argentina/Buenos_Aires",
   },
   async () => {
@@ -237,15 +284,86 @@ export const scheduledRefreshZoneCoverage = onSchedule(
     }
     console.log("[scheduledRefreshZoneCoverage] Starting...");
 
-    const zonesSnap = await db().collection("zones").get();
+    const cursorRef = db().doc(ZONE_REFRESH_CURSOR_DOC);
+    const cursorSnap = await cursorRef.get();
+    const cursorRaw = cursorSnap.exists
+      ? (cursorSnap.data() as ZoneRefreshCursorDoc)
+      : undefined;
+    const cursorZoneId =
+      typeof cursorRaw?.lastZoneId === "string" && cursorRaw.lastZoneId.trim().length > 0
+        ? cursorRaw.lastZoneId.trim()
+        : null;
+
+    let zonesQuery = db()
+      .collection("zones")
+      .orderBy(FieldPath.documentId())
+      .limit(MAX_ZONES_PER_RUN);
+    if (cursorZoneId) {
+      zonesQuery = zonesQuery.startAfter(cursorZoneId);
+    }
+
+    let zonesSnap = await zonesQuery.get();
+    let restartedFromBeginning = false;
+    if (zonesSnap.empty && cursorZoneId != null) {
+      await cursorRef.set(
+        {
+          lastZoneId: "",
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      zonesSnap = await db()
+        .collection("zones")
+        .orderBy(FieldPath.documentId())
+        .limit(MAX_ZONES_PER_RUN)
+        .get();
+      restartedFromBeginning = true;
+    }
+
     if (zonesSnap.empty) {
       console.log("[scheduledRefreshZoneCoverage] No zones found.");
       return;
     }
 
     const zoneIds = zonesSnap.docs.map((d) => d.id);
-    await Promise.all(zoneIds.map(refreshZoneCoverage));
+    for (const zoneId of zoneIds) {
+      await refreshZoneCoverage(zoneId);
+    }
 
-    console.log(`[scheduledRefreshZoneCoverage] Done. Refreshed ${zoneIds.length} zones.`);
+    const lastZoneId = zonesSnap.docs[zonesSnap.docs.length - 1]?.id ?? "";
+    const hasMore = zonesSnap.size >= MAX_ZONES_PER_RUN;
+    await cursorRef.set(
+      {
+        lastZoneId: hasMore ? lastZoneId : "",
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    console.log(
+      `[scheduledRefreshZoneCoverage] Done. Refreshed ${zoneIds.length} zones. hasMore=${hasMore}`
+    );
+    console.log(
+      JSON.stringify({
+        job: "scheduledRefreshZoneCoverage",
+        scanned: zonesSnap.size,
+        refreshed: zoneIds.length,
+        hasMore,
+        restartedFromBeginning,
+        lastZoneId,
+      })
+    );
+    logFinOpsEvent({
+      event: "job_zone_coverage_window",
+      level: hasMore ? "warning" : "info",
+      module: "coverage.zoneCoverage",
+      payload: {
+        scanned: zonesSnap.size,
+        refreshed: zoneIds.length,
+        hasMore,
+        restartedFromBeginning,
+        lastZoneId,
+      },
+    });
   }
 );

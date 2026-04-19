@@ -11,6 +11,13 @@
 - En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
 - Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
 
+## Fuente de verdad de estado (obligatoria)
+
+- El único documento fuente de verdad para estado de tarjetas es **este `CLAUDE.md`**.
+- OpenSpec queda **discontinuado** en este repositorio para planificación/estado.
+- No usar artefactos de `openspec/` para decidir progreso ni para reportes ejecutivos.
+- Si hay diferencias entre `openspec/` y `CLAUDE.md`, **prevalece `CLAUDE.md`**.
+
 ---
 
 ## Convención de nombres de conversación y PR
@@ -52,6 +59,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0006]** Mantener actualizado PRD-MVP.md ✅ | Documentación maestra — PRD-MVP.md actualizado y vigente |
 | **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
 | **[0010]** Definir identidad visual base ✅ | Branding — paleta y tokens base definidos (color system inicial TuM2) |
+| **[0011]** Diseñar logo principal ✅ | Branding — sistema de logo y assets SVG base versionados (`design/branding_v1.json`, `mobile/assets/branding/*`) |
 | **[0014]** Definir tono de microcopy ✅ | Branding / UX/UI — guía de microcopy MVP Fase 3 documentada en docs/TuM2-0014-MICROCOPY.md |
 | **[0019]** Diseñar modelo de usuarios ✅ | Modelo de datos — modelo de usuarios definido con roles y atributos |
 | **[0020]** Diseñar modelo de comercios ✅ | Modelo de datos — modelo de comercios definido con campos públicos y operativos |
@@ -83,6 +91,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0058]** Implementar ficha de comercio ✅ | Mobile app — DETAIL-01 implementado con navegación real desde search/home/deep links |
 | **[0060]** Implementar vista Abierto ahora ✅ | Mobile app — HOME-02 implementado con filtros por rubro MVP y navegación al mapa |
 | **[0066]** Implementar carga de horarios ✅ | Mobile app — OWNER-06 implementado con UI Stitch completa, validaciones, excepciones/cierres, persistencia en subcolecciones, triggers backend de recompute, feature flag Remote Config y analytics de módulo |
+| **[0067]** Implementar carga de señales operativas ✅ | Mobile app / Backend — OWNER-08 migrado a señal operativa manual (`vacation`, `temporary_closure`, `delay`) con mensaje opcional (80), persistencia en `merchant_operational_signals`, precedencia server-side (`manual override > horario`) y proyección pública sincronizada por trigger con no-op write avoidance |
+| **[0068]** Implementar carga de turnos farmacia ✅ | Mobile app / Backend — OWNER-09/10/11 implementado con calendario mensual, alta/edición/borrado, publicación batch costo-optimizada, validaciones server-side y proyección pública vía Cloud Functions |
 | **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
 | **[0123]** Enforce de capacidad de catálogo por comercio ✅ | Backend / Mobile / Admin Web — límites globales/categoría/override en `admin_configs/catalog_limits`, creación de productos vía callable con validación transaccional y hard-block por cupo, telemetría de warning/bloqueo y gestión admin de límites |
@@ -122,7 +132,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### ÉPICA 3: Branding de TuM2
 - [0010] **Definir identidad visual base** — P0 — `Branding, UX/UI, Fundacional` ✅
-- [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional`
+- [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional` ✅
 - [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional`
 - [0013] **Definir sistema de sellos** — P1 — `Branding, Producto, MVP`
 - [0014] **Definir tono de microcopy** — P1 — `Branding, UX/UI, MVP` ✅
@@ -187,11 +197,11 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` ✅
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
-- [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP`
+- [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `IN_PROGRESS`
 - [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP`
 - [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` ✅
-- [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP`
-- [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP`
+- [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP` ✅
+- [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP` ✅
 - [0069] **Implementar módulo de propuestas y votos** — P1 — `Mobile, Growth, MVP`
 
 ### ÉPICA 9: Web pública
@@ -241,9 +251,9 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 14: Legal / compliance
 - [0100] **Redactar política de privacidad** — P0 — `Legal, Seguridad, Lanzamiento`
 - [0101] **Redactar términos y condiciones** — P0 — `Legal, Lanzamiento`
-- [0102] **Definir disclaimer para información operativa y farmacias** — P0 — `Legal, Operaciones, Lanzamiento`
-- [0103] **Definir consentimiento y permisos de ubicación** — P1 — `Legal, UX/UI, Mobile, Lanzamiento`
-- [0104] **Definir política básica de moderación y reportes** — P0 — `Legal, Admin, Seguridad, Lanzamiento`
+- [0102] **Definir consentimiento y tratamiento de evidencia documental (claims)** — P0 — `Legal, Seguridad, Lanzamiento`
+- [0103] **Definir derechos de rectificación/eliminación/revisión de datos de claim** — P0 — `Legal, Seguridad, Lanzamiento`
+- [0104] **Definir política de retención, acceso interno y resguardo de datos sensibles** — P0 — `Legal, Admin, Seguridad, Lanzamiento`
 
 ### ÉPICA 15: Growth / comunidad
 - [0105] **Diseñar sistema de propuestas y votos usable** — P1 — `Growth, Producto, MVP`
@@ -279,6 +289,20 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - PR #59: incidente → candidatas por `zoneId` + distancia + `limit` → ronda abierta con requests paralelos y cierre por primera aceptación.
   - Costo: scans programados incrementales (`limit` fijo) para recordatorios/expiraciones, sin listeners globales.
 
+### ÉPICA 18: Reclamo de titularidad de comercio
+- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP` `IN_PROGRESS`
+- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP` `IN_PROGRESS`
+- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP` `IN_PROGRESS`
+- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `IN_PROGRESS`
+- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `IN_PROGRESS`
+- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `IN_PROGRESS`
+- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `IN_PROGRESS`
+- [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
+- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `IN_PROGRESS`
+
+### ÉPICA 19: Estacionalidad y campañas contextuales
+- [0134] **Modo Selección Argentina + tarjeta pineada de próximo partido** — P1 — `Producto, Branding, Mobile, Web, Admin, Backend, Analytics, MVP+`
+
 ---
 
 ## Orden real de ejecución recomendado
@@ -310,15 +334,26 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0082 / 0083 / 0087 analytics base
 - TuM2-0090 / 0091 / 0092 QA y seguridad operativa
 
-### Fase C — Lanzamiento controlado
+### Fase C — Claims de titularidad (MVP inmediato)
+- TuM2-0125 épica madre
+- TuM2-0126 flujo de claim
+- TuM2-0127 validación automática inicial
+- TuM2-0128 revisión manual en Admin
+- TuM2-0129 evidencia por categoría
+- TuM2-0130 seguridad de datos sensibles
+- TuM2-0131 integración con OWNER / owner_pending
+- Actualización obligatoria: TuM2-0004, 0053, 0054, 0064
+- Actualización legal obligatoria: TuM2-0100, 0101, 0102, 0103, 0104
+
+### Fase D — Lanzamiento controlado
 - TuM2-0094 / 0095 piloto y rubros
 - TuM2-0097 material para farmacias
-- TuM2-0100 / 0101 / 0102 / 0104 legal mínimo
+- TuM2-0100 / 0101 / 0102 / 0103 / 0104 legal mínimo
 - TuM2-0089 / 0093 observabilidad
 - TuM2-0098 / 0099 beta y metadata
 - TuM2-0051 CI/CD mínimo
 
-### Fase D — Expansión MVP+
+### Fase E — Expansión MVP+
 - TuM2-0029 / 0032 / 0034 / 0041
 - TuM2-0122 ✅ (completado adelantado)
 - TuM2-0055 / 0059 / 0062 / 0063 / 0069 (TuM2-0057 ✅ completado adelantado)
@@ -326,6 +361,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0077 a 0081
 - TuM2-0084 / 0085 / 0086
 - TuM2-0105 / 0106 / 0107
+- TuM2-0132 verificación de teléfono (fase 2)
+- TuM2-0133 automatización avanzada de disputas (si aplica)
 
 ---
 
@@ -344,11 +381,12 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0030, 0031, 0033, 0035, 0036, 0037, 0038, 0039, 0040
 - TuM2-0049, 0053, 0054, 0056, 0058, 0060, 0061
 - TuM2-0064, 0065, 0066, 0067, 0068
+- TuM2-0125, 0126, 0127, 0128, 0129, 0130, 0131, 0133
 - TuM2-0072, 0074, 0075
 - TuM2-0082, 0083, 0087
 - TuM2-0090, 0091, 0092
 - TuM2-0094, 0095, 0097
-- TuM2-0100, 0101, 0102, 0104
+- TuM2-0100, 0101, 0102, 0103, 0104
 - TuM2-0077 ✅, TuM2-0078, 0079, 0080, 0081, TuM2-0122 ✅, TuM2-0123 ✅, TuM2-0124 ✅
 
 ---
@@ -365,8 +403,8 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - TuM2-0082 — Definir eventos analytics
 - TuM2-0094 — Definir piloto geográfico
 - TuM2-0095 — Definir rubros iniciales de salida
-- TuM2-0102 — Disclaimer operativo y farmacias
-- TuM2-0104 — Política básica de moderación
+- TuM2-0102 — Consentimiento de evidencia documental para claims
+- TuM2-0104 — Retención y acceso interno de datos sensibles
 - TuM2-0099 — Metadata de stores y canales
 
 ---
@@ -377,17 +415,17 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Backend:** TuM2-0042, 0043, 0044, 0045, 0046, 0048, 0049, 0050, 0123 ✅, 0124 ✅
 
-**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅
+**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅, 0126, 0131
 
 **Web:** TuM2-0070, 0071, 0072, 0074, 0075
 
-**Admin / Web portal:** TuM2-0077 ✅, TuM2-0122 ✅, TuM2-0123 ✅, TuM2-0078, 0079, 0080, 0081
+**Admin / Web portal:** TuM2-0077 ✅, TuM2-0122 ✅, TuM2-0123 ✅, TuM2-0078, 0079, 0080, 0081, 0128, 0130, 0133
 
-**Analytics / QA / Seguridad:** TuM2-0082, 0083, 0087, 0089, 0090, 0091, 0092
+**Analytics / QA / Seguridad:** TuM2-0082, 0083, 0087, 0089, 0090, 0091, 0092, 0127, 0130
 
 **Lanzamiento:** TuM2-0094, 0095, 0097, 0098, 0099
 
-**Legal:** TuM2-0100, 0101, 0102, 0104
+**Legal:** TuM2-0100, 0101, 0102, 0103, 0104, 0125
 
 ---
 
@@ -395,7 +433,36 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Claramente Post-MVP:** TuM2-0026, 0108, 0109, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117, 0118, 0119, 0120
 
-**MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
+**MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107, 0134 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
+
+---
+
+## Impacto cruzado: dominio de claim de titularidad (2026-04-14)
+
+Se incorpora la épica TuM2-0125 y tarjetas hijas 0126–0133 como backlog activo de MVP.
+
+Actualizaciones obligatorias sincronizadas por impacto:
+- TuM2-0004 — Role / Segment Architecture
+- TuM2-0054 — Auth completa
+- TuM2-0053 — Shell mobile
+- TuM2-0064 — Módulo OWNER
+- TuM2-0081 — Revisión/edición de perfil vinculada a estado de claim
+- TuM2-0100 a TuM2-0104 — Legal y consentimientos del flujo claim
+
+Reglas canónicas transversales del dominio claim:
+- El email del claim es siempre el email autenticado del usuario.
+- Teléfono en MVP: opcional y sin verificación.
+- Verificación de teléfono: fuera de MVP (TuM2-0132).
+- Todo claim pasa por validación automática antes de revisión humana.
+- Casos dudosos/conflictivos pasan a revisión manual en Admin.
+- Datos sensibles en Admin: masking por defecto, reveal temporal y auditoría.
+- Si un dato requiere revisión humana, debe existir cifrado reversible con control de acceso.
+- Privacidad/Términos/consentimientos deben cubrir explícitamente el flujo de claims.
+
+Sincronización documental aplicada (storycards, 2026-04-15):
+- Arquitectura y acceso: 0004, 0053, 0054, 0064, 0131.
+- Claim core: 0127, 0128, 0129, 0130, 0132, 0133.
+- Legal claims: 0100, 0101, 0102, 0103, 0104.
 
 ---
 
@@ -422,7 +489,19 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 - [0066] Implementadas excepciones por fecha y cierres temporales por rango con alta/edición/eliminación.
 - [0066] Integración Firestore sobre `schedule_config/weekly`, `schedule_exceptions` y `schedule_exceptions_ranges`, con reglas y triggers backend para recompute de proyección pública.
 - [0066] Integrado feature flag `owner_schedule_editor_enabled` vía Firebase Remote Config + eventos analytics `owner_schedule_*` para seguimiento de adopción y errores.
+- [0067] OWNER-08 implementado con flujo de señal manual activa/inactiva (sin listeners permanentes), tipos MVP (`vacation`, `temporary_closure`, `delay`), validación de mensaje (80 chars) y desactivación explícita.
+- [0067] Backend unificado en trigger `merchant_operational_signals -> merchant_public` con función canónica de precedencia: `vacation/temporary_closure` fuerzan cerrado, `delay` es informativa y preserva `isOpenNow` automático.
+- [0067] Reglas Firestore endurecidas: `merchant_public` client write deny, `merchant_operational_signals` restringido a owner/admin con validaciones de enum/tipos/ownership/path consistency y bloqueo de campos derivados en writes owner.
 - [0123] Límites de catálogo cerrados (PR #58, 2026-04-09): configuración global/categoría/override en `admin_configs/catalog_limits`, alta de producto vía callable transaccional y bloqueo duro por cupo.
 - [0123] UI OWNER/ADMIN integrada con capacidad (`used/limit/source`), eventos analytics de warning/bloqueo y controles de costo (`limit` en búsquedas admin + cache TTL de config).
 - [0124] Mitigación de guardias cerrada (PR #59, 2026-04-09): confirmación de guardia, reporte de incidente, selección de candidatas por zona/distancia y ronda de reasignación con primera aceptación ganadora.
 - [0124] Nuevas colecciones operativas (`pharmacy_duty_incidents`, `pharmacy_duty_reassignment_rounds`, `pharmacy_duty_reassignment_requests`) y jobs incrementales para recordatorios/expiraciones con límites de scan por ciclo.
+- [0126] Flujo claim en progreso (2026-04-14): implementado flujo mobile CLAIM-01..07 con Firebase real (draft, evidencia, consentimiento, submit, estado), sin listeners permanentes y con refresh por acción.
+- [0126] Backend inicial implementado: callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `evaluateMerchantClaim`, `resolveMerchantClaim`, `revealMerchantClaimSensitiveData`, `getMyMerchantClaimStatus`, `listMerchantClaimsForReview`, `listMyMerchantClaims`, `searchClaimableMerchants`; reglas Firestore/Storage endurecidas e índices `merchant_claims` actualizados a `claimStatus`.
+- [0128] Admin Web claims endurecido (2026-04-17): rutas `/claims` + `/claims/:claimId`, listado paginado con scope geográfico obligatorio y `limit`, detalle servido por callable `getMerchantClaimReviewDetail` (sin lectura directa cliente), masking por defecto, timeline, filtros locales sin lecturas extra, reveal temporal auditado y stale handling backend/UI por `expectedUpdatedAtMillis`.
+- [0128] Seguridad/capabilities: reviewer/senior reviewer soportados vía claims finos opcionales (`claimsReviewLevel` / `capabilities`) con fallback compatible para `admin`/`super_admin`; resoluciones críticas y reveal quedan hard-gated por backend, nunca por cliente.
+- [0127] Auto-validación inicial implementada (2026-04-16): dominio puro + orquestador idempotente (`merchantClaimAutoValidation*`), precedencia cerrada (`rejected > conflict > duplicate > needs_more_info > under_review`) y reason codes estructurados.
+- [0127] Integración productiva: submit pasa por estado `submitted`, trigger fallback por transición real a `submitted`, hash `lastAutoValidationHash` para no-op writes, sync `owner_pending` backend-only y sin mutación de `merchant_public`.
+- [0127] Costos/seguridad: queries dedupe-conflict con `limit` bajo e índice compuesto `merchant_claims(userId, merchantId, claimStatus)`, logs estructurados sin PII, sin grants OWNER automáticos.
+- [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.
+- [0134] Alta documental inicial (2026-04-17): creadas `docs/storyscards/0134-modo-seleccion-argentina.md` y `docs/storyscards/0134-modo-seleccion-argentina.prompt.md`; estado canónico `TODO` (sin implementación).

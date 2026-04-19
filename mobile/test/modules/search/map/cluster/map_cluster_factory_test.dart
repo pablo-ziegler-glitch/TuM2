@@ -7,12 +7,12 @@ void main() {
     final factory = MapClusterFactory();
 
     final a = factory.resolveIcon(
-      priority: MapClusterPriority.open,
+      priority: MapClusterPriority.green,
       count: 12,
       pixelRatio: 2.0,
     );
     final b = factory.resolveIcon(
-      priority: MapClusterPriority.open,
+      priority: MapClusterPriority.green,
       count: 12,
       pixelRatio: 2.0,
     );

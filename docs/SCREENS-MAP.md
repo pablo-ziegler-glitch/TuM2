@@ -253,11 +253,14 @@ TuM2 App
 
 ### OWNER-10 — Ver calendario de turnos
 - **UI:** calendario mensual con días de turno marcados.
-- **Fuente:** query privada por `merchantId` + rango mensual en `pharmacy_duties`.
+- **Fuente:** 1 query mensual privada por `merchantId` + rango de fechas acotado en `pharmacy_duties` (sin listener realtime permanente).
+- **Acciones:** seleccionar día, abrir alta rápida o edición de turno existente, activar multiselección mensual.
 
 ### OWNER-11 — Cargar / confirmar turno
-- **Flujo:** seleccionar fecha → confirmar guardia → callable `upsertPharmacyDuty`.
-- **Validación:** conflicto horario/ownership/rubro farmacia server-side.
+- **Flujo feliz:** seleccionar fecha(s) → configurar horario → publicar.
+- **Flujo edición:** abrir `/owner/pharmacy-duties/:dutyId/edit` → actualizar/eliminar.
+- **Backend:** callable batch `upsertPharmacyDutiesBatch` con validaciones de ownership, farmacia, formato, conflictos y no-op writes.
+- **Validación:** conflicto horario/ownership/rubro farmacia server-side + feedback de conflicto en UI.
 
 ### OWNER-12 — Carga masiva de turnos
 - **Estado:** Post-MVP (deshabilitado en runtime).

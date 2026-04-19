@@ -21,15 +21,18 @@ import '../../modules/search/screens/search_map_screen.dart';
 import '../../modules/search/screens/pharmacy_results_screen.dart';
 import '../../modules/search/screens/location_fallback_screen.dart';
 import '../../modules/profile/screens/profile_screen.dart';
+import '../../modules/merchant_claim/screens/merchant_claim_flow_screens.dart';
 import '../../modules/owner/screens/owner_panel_screen.dart';
 import '../../modules/owner/screens/owner_operational_signals_screen.dart';
 import '../../modules/owner/screens/owner_schedule_screen.dart';
 import '../../modules/owner/screens/owner_resolve_page.dart';
 import '../../modules/owner/screens/owner_access_guard_page.dart';
+import '../../modules/owner/screens/owner_access_updated_screen.dart';
 import '../../modules/owner/screens/owner_products_screen.dart';
 import '../../modules/owner/screens/product_form_screen.dart';
 import '../../modules/owner/screens/product_saved_screen.dart';
 import '../../modules/owner/screens/owner_pharmacy_duties_screen.dart';
+import '../../modules/owner/screens/owner_pharmacy_duty_editor_screen.dart';
 import '../../modules/owner/pharmacy/presentation/upcoming_duty_confirmation_screen.dart';
 import '../../modules/owner/pharmacy/presentation/report_duty_incident_screen.dart';
 import '../../modules/owner/pharmacy/presentation/select_replacement_candidates_screen.dart';
@@ -259,6 +262,62 @@ List<RouteBase> _buildRoutes() {
 
     // ── OwnerStack (modal full-screen) ────────────────────────────────────────
     GoRoute(
+      path: AppRoutes.claimIntro,
+      builder: (_, __) => const ClaimIntroScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimSelect,
+      builder: (_, __) => const ClaimSelectMerchantScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimApplicant,
+      builder: (_, __) => const ClaimApplicantDataScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimEvidence,
+      builder: (_, __) => const ClaimEvidenceScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimConsent,
+      builder: (_, __) => const ClaimConsentScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimSuccess,
+      builder: (_, __) => const ClaimSuccessScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.claimStatus,
+      builder: (_, __) => const ClaimStatusScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.accessUpdated,
+      builder: (_, state) {
+        final targetRaw =
+            (state.uri.queryParameters['target'] ?? 'customer').trim();
+        final reasonRaw =
+            (state.uri.queryParameters['reason'] ?? 'deep_route_access_changed')
+                .trim();
+        final from = state.uri.queryParameters['from'];
+
+        final target = targetRaw == 'owner'
+            ? OwnerAccessUpdatedTarget.owner
+            : OwnerAccessUpdatedTarget.customer;
+        final reason = switch (reasonRaw) {
+          'approved_transition' => OwnerAccessUpdatedReason.approvedTransition,
+          'claim_closed' => OwnerAccessUpdatedReason.claimClosed,
+          _ => OwnerAccessUpdatedReason.deepRouteAccessChanged,
+        };
+
+        return OwnerAccessUpdatedScreen(
+          target: target,
+          reason: reason,
+          fromPath: from,
+        );
+      },
+    ),
+
+    // ── OwnerStack (modal full-screen) ────────────────────────────────────────
+    GoRoute(
       path: AppRoutes.ownerResolve,
       pageBuilder: (context, state) => MaterialPage(
         key: state.pageKey,
@@ -365,6 +424,29 @@ List<RouteBase> _buildRoutes() {
         title: 'Turnos de farmacia',
         child: OwnerPharmacyDutiesScreen(),
       ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyNew,
+      builder: (_, state) => OwnerAccessGuardPage(
+        title: 'Nuevo turno',
+        child: OwnerPharmacyDutyEditorScreen(
+          initialDateKey: state.uri.queryParameters['date'],
+        ),
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ownerPharmacyDutyEdit,
+      builder: (_, state) {
+        final dutyId = state.pathParameters['dutyId']!;
+        final extra = state.extra as OwnerPharmacyDutyEditorExtra?;
+        return OwnerAccessGuardPage(
+          title: 'Editar turno',
+          child: OwnerPharmacyDutyEditorScreen(
+            dutyId: dutyId,
+            extra: extra,
+          ),
+        );
+      },
     ),
     GoRoute(
       path: AppRoutes.ownerPharmacyDutyUpcoming,

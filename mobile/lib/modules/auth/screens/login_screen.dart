@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/auth_providers.dart';
+import '../../../core/providers/legal_documents_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -76,9 +78,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref.read(authOpProvider.notifier).signInWithGoogle();
   }
 
+  Future<void> _openExternalUri(Uri uri,
+      {required String fallbackLabel}) async {
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (opened || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'No pudimos abrir $fallbackLabel. Intentá nuevamente en unos minutos.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authOpProvider);
+    final legalDocsAsync = ref.watch(legalDocumentsConfigProvider);
+    final legalDocs = legalDocsAsync.valueOrNull;
+    final termsUri =
+        legalDocs?.termsUri ?? Uri.parse('https://tum2.app/terminos');
+    final privacyUri =
+        legalDocs?.privacyUri ?? Uri.parse('https://tum2.app/privacidad');
     final isLoading = authState.isLoading;
     final networkError = authState.errorMessage;
 
@@ -92,8 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             children: [
               const SizedBox(height: 40),
 
-              // Logo TuM2 con ícono pin
-              // TODO(assets): reemplazar con asset logo TuM2
+              // Logo temporal hasta integrar el asset de marca final.
               const Icon(
                 Icons.location_on_rounded,
                 size: 28,
@@ -119,7 +139,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
+                      color: Colors.black.withValues(alpha: 0.06),
                       blurRadius: 16,
                       offset: const Offset(0, 4),
                     ),
@@ -128,9 +148,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Entrá a TuM2', style: AppTextStyles.headingMd),
+                    const Text('Entrá a TuM2', style: AppTextStyles.headingMd),
                     const SizedBox(height: 4),
-                    Text(
+                    const Text(
                       'Usá tu email o Google para continuar',
                       style: AppTextStyles.bodySm,
                     ),
@@ -149,8 +169,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.done,
                           autocorrect: false,
-                          prefixIcon:
-                              const Icon(Icons.mail_outline, size: 20),
+                          prefixIcon: const Icon(Icons.mail_outline, size: 20),
                           suffixIcon: _emailIsValid
                               ? const Icon(
                                   Icons.check_circle_rounded,
@@ -188,17 +207,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const SizedBox(height: 20),
 
                     // Separador
-                    Row(
+                    const Row(
                       children: [
-                        const Expanded(
-                            child: Divider(color: AppColors.neutral200)),
+                        Expanded(child: Divider(color: AppColors.neutral200)),
                         Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text('o', style: AppTextStyles.bodyXs),
                         ),
-                        const Expanded(
-                            child: Divider(color: AppColors.neutral200)),
+                        Expanded(child: Divider(color: AppColors.neutral200)),
                       ],
                     ),
 
@@ -216,11 +232,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Center(
-                          // TODO(assets): reemplazar con asset logo Google
+                          // Placeholder visual hasta incorporar el logo oficial.
                           child: Text('G',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700)),
+                                  fontSize: 12, fontWeight: FontWeight.w700)),
                         ),
                       ),
                     ),
@@ -249,7 +264,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const TextSpan(text: 'Al continuar aceptás los '),
                     WidgetSpan(
                       child: GestureDetector(
-                        onTap: () {/* TODO: abrir términos */},
+                        onTap: () => _openExternalUri(
+                          termsUri,
+                          fallbackLabel: 'Términos y condiciones',
+                        ),
                         child: Text(
                           'Términos y condiciones',
                           style: AppTextStyles.bodyXs.copyWith(
@@ -262,7 +280,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const TextSpan(text: ' y la '),
                     WidgetSpan(
                       child: GestureDetector(
-                        onTap: () {/* TODO: abrir política */},
+                        onTap: () => _openExternalUri(
+                          privacyUri,
+                          fallbackLabel: 'Política de privacidad',
+                        ),
                         child: Text(
                           'Política de privacidad',
                           style: AppTextStyles.bodyXs.copyWith(

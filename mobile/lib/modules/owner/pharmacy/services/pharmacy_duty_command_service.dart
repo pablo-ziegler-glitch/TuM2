@@ -78,6 +78,16 @@ class PharmacyDutyCommandService {
     });
   }
 
+  Future<Map<String, dynamic>> upsertDutiesBatch({
+    required String merchantId,
+    required List<Map<String, dynamic>> duties,
+  }) {
+    return _call('upsertPharmacyDutiesBatch', {
+      'merchantId': merchantId,
+      'duties': duties,
+    });
+  }
+
   Future<void> confirmPharmacyDuty({
     required String dutyId,
   }) async {
@@ -99,12 +109,13 @@ class PharmacyDutyCommandService {
     return (data['incidentId'] as String?)?.trim() ?? '';
   }
 
-  Future<({
-    String dutyId,
-    String originMerchantId,
-    int maxCandidatesPerRound,
-    List<DutyReplacementCandidate> candidates,
-  })> getEligibleCandidates({
+  Future<
+      ({
+        String dutyId,
+        String originMerchantId,
+        int maxCandidatesPerRound,
+        List<DutyReplacementCandidate> candidates,
+      })> getEligibleCandidates({
     required String dutyId,
   }) async {
     final data = await _call('getEligibleReplacementCandidates', {

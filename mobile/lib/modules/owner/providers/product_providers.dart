@@ -27,6 +27,7 @@ final merchantProductsProvider =
     disposeTimer?.cancel();
     disposeTimer = Timer(_kOwnerProductsProviderTtl, link.close);
   }
+
   ref.onCancel(scheduleDispose);
   ref.onResume(() => disposeTimer?.cancel());
   ref.onDispose(() => disposeTimer?.cancel());
@@ -43,6 +44,7 @@ final merchantProductByIdProvider = FutureProvider.autoDispose
     disposeTimer?.cancel();
     disposeTimer = Timer(_kOwnerProductByIdProviderTtl, link.close);
   }
+
   ref.onCancel(scheduleDispose);
   ref.onResume(() => disposeTimer?.cancel());
   ref.onDispose(() => disposeTimer?.cancel());

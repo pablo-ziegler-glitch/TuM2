@@ -82,7 +82,7 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!hasMerchant) {
-        context.go(AppRoutes.onboardingOwner);
+        context.go(AppRoutes.ownerDashboard);
         return;
       }
 
@@ -120,7 +120,9 @@ class _OwnerResolvePageState extends ConsumerState<OwnerResolvePage> {
         path == AppRoutes.ownerSchedules ||
         path == AppRoutes.ownerSignals ||
         path == AppRoutes.ownerPharmacyDuties ||
-        path == AppRoutes.ownerDuties;
+        path == AppRoutes.ownerDuties ||
+        path == AppRoutes.ownerPharmacyDutyNew ||
+        (path.startsWith('/owner/pharmacy-duties/') && path.endsWith('/edit'));
   }
 }
 

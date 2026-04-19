@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/auth/auth_notifier.dart';
+import '../../../core/auth/auth_state.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/router/app_routes.dart';
@@ -718,6 +720,8 @@ class ClaimStatusScreen extends ConsumerStatefulWidget {
 }
 
 class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
+  bool _handledApprovedTransition = false;
+
   @override
   void initState() {
     super.initState();
@@ -737,6 +741,25 @@ class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(merchantClaimFlowControllerProvider);
     final summary = state.statusSummary;
+    final authState = ref.watch(authNotifierProvider).authState;
+
+    if (!_handledApprovedTransition &&
+        summary?.claimStatus == MerchantClaimStatus.approved &&
+        authState is AuthAuthenticated &&
+        authState.role == 'owner' &&
+        !authState.ownerPending) {
+      _handledApprovedTransition = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.go(
+          AppRoutes.accessUpdatedPath(
+            target: 'owner',
+            reason: 'approved_transition',
+            from: AppRoutes.claimStatus,
+          ),
+        );
+      });
+    }
 
     return _ClaimScaffold(
       title: 'Estado de tu reclamo',

@@ -8,10 +8,7 @@ void downloadBytesFile({
   required Uint8List bytes,
   required String mimeType,
 }) {
-  final blob = web.Blob(
-    [bytes.toJS].toJS,
-    web.BlobPropertyBag(type: mimeType),
-  );
+  final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: mimeType));
   final url = web.URL.createObjectURL(blob);
   final anchor = web.HTMLAnchorElement()
     ..href = url

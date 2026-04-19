@@ -444,11 +444,11 @@ class ImportDataRepository {
         ...baseTrail.map((item) => item.toMap()),
         AuditTimelineEvent(
           stage: 'queue',
-          label: 'Import Queued',
+          label: 'Importacion en cola',
           timestamp: now,
           actor: 'system',
           result: true,
-          detail: 'Processing will continue in background',
+          detail: 'El procesamiento continuara en segundo plano',
         ).toMap(),
       ],
     });
@@ -479,11 +479,11 @@ class ImportDataRepository {
         'auditTrail': FieldValue.arrayUnion([
           AuditTimelineEvent(
             stage: 'process',
-            label: 'Background Processing Started',
+            label: 'Procesamiento en segundo plano iniciado',
             timestamp: DateTime.now(),
             actor: 'system',
             result: true,
-            detail: 'Preparing rows and staging records',
+            detail: 'Preparando filas y registros en staging',
           ).toMap(),
         ]),
       }, SetOptions(merge: true));
@@ -574,20 +574,20 @@ class ImportDataRepository {
         'auditTrail': FieldValue.arrayUnion([
           AuditTimelineEvent(
             stage: 'stage',
-            label: 'Staged to Firestore',
+            label: 'Enviado a Firestore',
             timestamp: DateTime.now(),
             actor: 'system',
             result: true,
             detail:
-                '$createdCount records staged (${input.visibilityAfterImport})',
+                '$createdCount registros enviados a staging (${input.visibilityAfterImport})',
           ).toMap(),
           AuditTimelineEvent(
             stage: 'confirm',
-            label: 'Import Confirmed',
+            label: 'Importacion confirmada',
             timestamp: DateTime.now(),
             actor: createdBy,
             result: true,
-            detail: 'Batch marked as ${status.name}',
+            detail: 'Batch marcado como ${status.name}',
           ).toMap(),
         ]),
       }, SetOptions(merge: true));
@@ -598,7 +598,7 @@ class ImportDataRepository {
         'auditTrail': FieldValue.arrayUnion([
           AuditTimelineEvent(
             stage: 'process',
-            label: 'Background Processing Failed',
+            label: 'Fallo el procesamiento en segundo plano',
             timestamp: DateTime.now(),
             actor: 'system',
             result: false,

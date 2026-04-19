@@ -27,6 +27,7 @@ import '../../modules/owner/screens/owner_operational_signals_screen.dart';
 import '../../modules/owner/screens/owner_schedule_screen.dart';
 import '../../modules/owner/screens/owner_resolve_page.dart';
 import '../../modules/owner/screens/owner_access_guard_page.dart';
+import '../../modules/owner/screens/owner_access_updated_screen.dart';
 import '../../modules/owner/screens/owner_products_screen.dart';
 import '../../modules/owner/screens/product_form_screen.dart';
 import '../../modules/owner/screens/product_saved_screen.dart';
@@ -287,6 +288,32 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: AppRoutes.claimStatus,
       builder: (_, __) => const ClaimStatusScreen(),
+    ),
+    GoRoute(
+      path: AppRoutes.accessUpdated,
+      builder: (_, state) {
+        final targetRaw =
+            (state.uri.queryParameters['target'] ?? 'customer').trim();
+        final reasonRaw =
+            (state.uri.queryParameters['reason'] ?? 'deep_route_access_changed')
+                .trim();
+        final from = state.uri.queryParameters['from'];
+
+        final target = targetRaw == 'owner'
+            ? OwnerAccessUpdatedTarget.owner
+            : OwnerAccessUpdatedTarget.customer;
+        final reason = switch (reasonRaw) {
+          'approved_transition' => OwnerAccessUpdatedReason.approvedTransition,
+          'claim_closed' => OwnerAccessUpdatedReason.claimClosed,
+          _ => OwnerAccessUpdatedReason.deepRouteAccessChanged,
+        };
+
+        return OwnerAccessUpdatedScreen(
+          target: target,
+          reason: reason,
+          fromPath: from,
+        );
+      },
     ),
 
     // ── OwnerStack (modal full-screen) ────────────────────────────────────────

@@ -18,22 +18,22 @@ extension ImportTypeLabel on ImportType {
   String get label {
     switch (this) {
       case ImportType.officialDataset:
-        return 'Official Dataset';
+        return 'Dataset oficial';
       case ImportType.masterCatalog:
-        return 'Master Catalog';
+        return 'Catalogo maestro';
       case ImportType.genericInternal:
-        return 'Generic / Internal';
+        return 'Generico / Interno';
     }
   }
 
   String get description {
     switch (this) {
       case ImportType.officialDataset:
-        return 'Government or institutional datasets — pharmacies, WiFi hotspots, municipal markets';
+        return 'Datasets gubernamentales o institucionales - farmacias, puntos WiFi y mercados municipales';
       case ImportType.masterCatalog:
-        return 'Product catalog data — barcodes, names, brands, categories';
+        return 'Datos de catalogo de productos - codigos de barras, nombres, marcas y categorias';
       case ImportType.genericInternal:
-        return 'Custom internal sources — manual exports, partner data, one-off imports';
+        return 'Fuentes internas personalizadas - exportaciones manuales, datos de partners e importaciones puntuales';
     }
   }
 }
@@ -69,11 +69,11 @@ extension ImportIssueSeverityLabel on ImportIssueSeverity {
   String get label {
     switch (this) {
       case ImportIssueSeverity.critical:
-        return 'CRITICAL';
+        return 'CRITICO';
       case ImportIssueSeverity.error:
         return 'ERROR';
       case ImportIssueSeverity.warning:
-        return 'WARNING';
+        return 'ADVERTENCIA';
       case ImportIssueSeverity.info:
         return 'INFO';
     }

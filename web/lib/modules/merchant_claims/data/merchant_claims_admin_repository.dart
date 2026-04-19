@@ -223,6 +223,15 @@ class MerchantClaimDetail {
     required this.duplicateOfClaimId,
     required this.autoValidationReasonCode,
     required this.autoValidationReasons,
+    this.evidencePolicyVersion,
+    this.evidencePolicyCategoryId,
+    this.evidencePolicyStrictnessLevel,
+    this.sufficiencyLevel,
+    this.requiredEvidenceSatisfied = false,
+    this.primaryVisualEvidenceType,
+    this.relationshipEvidenceTypes = const <String>[],
+    this.manualReviewReasons = const <String>[],
+    this.riskHints = const <String>[],
     required this.hasConflict,
     required this.hasDuplicate,
     required this.requiresManualReview,
@@ -282,6 +291,15 @@ class MerchantClaimDetail {
   final String? duplicateOfClaimId;
   final String? autoValidationReasonCode;
   final List<String> autoValidationReasons;
+  final String? evidencePolicyVersion;
+  final String? evidencePolicyCategoryId;
+  final String? evidencePolicyStrictnessLevel;
+  final String? sufficiencyLevel;
+  final bool requiredEvidenceSatisfied;
+  final String? primaryVisualEvidenceType;
+  final List<String> relationshipEvidenceTypes;
+  final List<String> manualReviewReasons;
+  final List<String> riskHints;
   final bool hasConflict;
   final bool hasDuplicate;
   final bool requiresManualReview;
@@ -549,17 +567,12 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),
-      hasConflict: _readBool(claim['hasConflict']),
-      hasDuplicate: _readBool(claim['hasDuplicate']),
-      requiresManualReview: _readBool(claim['requiresManualReview']),
-      missingEvidenceTypes: _asList(claim['missingEvidenceTypes'])
-          .map((item) => _readString(item) ?? '')
-          .where((item) => item.isNotEmpty)
-          .toList(growable: false),
       evidencePolicyVersion: _readString(claim['evidencePolicyVersion']),
       evidencePolicyCategoryId: _readString(claim['evidencePolicyCategoryId']),
-      evidencePolicyStrictnessLevel:
-          _readString(claim['evidencePolicyStrictnessLevel']),
+      evidencePolicyStrictnessLevel: _readString(
+        claim['evidencePolicyStrictnessLevel'],
+      ),
+      sufficiencyLevel: _readString(claim['sufficiencyLevel']),
       requiredEvidenceSatisfied: _readBool(claim['requiredEvidenceSatisfied']),
       primaryVisualEvidenceType:
           _readString(claim['primaryVisualEvidenceType']),
@@ -567,12 +580,18 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),
-      sufficiencyLevel: _readString(claim['sufficiencyLevel']),
       manualReviewReasons: _asList(claim['manualReviewReasons'])
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),
       riskHints: _asList(claim['riskHints'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      hasConflict: _readBool(claim['hasConflict']),
+      hasDuplicate: _readBool(claim['hasDuplicate']),
+      requiresManualReview: _readBool(claim['requiresManualReview']),
+      missingEvidenceTypes: _asList(claim['missingEvidenceTypes'])
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),

@@ -127,6 +127,13 @@ class AuthNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Fuerza una relectura del token/claims del usuario actual.
+  /// Útil para transiciones de acceso sin relogin manual.
+  Future<void> refreshSession() async {
+    final user = FirebaseAuth.instance.currentUser;
+    await _onUserChanged(user);
+  }
+
   @override
   void dispose() {
     _authSub?.cancel();

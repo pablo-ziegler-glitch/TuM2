@@ -18,6 +18,9 @@ class _FakeAuthNotifier extends ChangeNotifier implements AuthNotifier {
     _state = const AuthUnauthenticated();
     notifyListeners();
   }
+
+  @override
+  Future<void> refreshSession() async {}
 }
 
 void main() {

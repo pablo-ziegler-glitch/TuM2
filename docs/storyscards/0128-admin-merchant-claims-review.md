@@ -8,7 +8,6 @@ Depende de: TuM2-0126 — Flujo de claim del comercio, TuM2-0127 — Validación
 ## Sync 0129 (2026-04-19)
 - El detalle admin muestra policy aplicada, versión, strictness, suficiencia, faltantes y razones de revisión manual en la misma vista del claim.
 - Se mantiene carga lazy de metadata de evidencia; no se descargan binarios en listados.
-
 ## Estado real de implementación (corte 2026-04-17)
 ### Hecho
 - Backend admin ya disponible para cola y decisión manual: `listMerchantClaimsForReview`, `evaluateMerchantClaim`, `resolveMerchantClaim`.

@@ -33,6 +33,7 @@ abstract class AppRoutes {
   static const claimConsent = '/claim/consent';
   static const claimSuccess = '/claim/success';
   static const claimStatus = '/claim/status';
+  static const accessUpdated = '/access-updated';
 
   // ── OwnerStack (modal full-screen) ──────────────────────────────────────────
   static const ownerRoot = '/owner';
@@ -120,6 +121,19 @@ abstract class AppRoutes {
 
   static String ownerPharmacyDutyPublicStatusPath() =>
       '/owner/pharmacy-duty/public-status';
+
+  static String accessUpdatedPath({
+    required String target,
+    required String reason,
+    String? from,
+  }) {
+    final query = <String, String>{
+      'target': target,
+      'reason': reason,
+      if (from != null && from.isNotEmpty) 'from': from,
+    };
+    return Uri(path: accessUpdated, queryParameters: query).toString();
+  }
 
   /// Construye la ruta concreta de detalle de una farmacia de turno.
   static String pharmacyDutyDetailPath(String id) => '/pharmacy/$id';

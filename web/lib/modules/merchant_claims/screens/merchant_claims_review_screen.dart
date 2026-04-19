@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/admin_semantic_assets.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../import_data/data/import_data_repository.dart';
 import '../data/merchant_claims_admin_repository.dart';
@@ -537,29 +538,16 @@ class _MerchantClaimsReviewScreenState
     );
   }
 
-  Color _statusBg(MerchantClaimStatus status) {
+  AdminBadgeKey _claimBadgeKey(MerchantClaimStatus status) {
     return switch (status) {
-      MerchantClaimStatus.approved => AppColors.successBg,
-      MerchantClaimStatus.rejected => AppColors.errorBg,
-      MerchantClaimStatus.needsMoreInfo => AppColors.warningBg,
-      MerchantClaimStatus.conflictDetected => AppColors.errorBg,
-      MerchantClaimStatus.duplicateClaim => AppColors.warningBg,
-      MerchantClaimStatus.underReview => AppColors.infoBg,
-      MerchantClaimStatus.submitted => AppColors.primary50,
-      MerchantClaimStatus.draft => AppColors.neutral100,
-    };
-  }
-
-  Color _statusFg(MerchantClaimStatus status) {
-    return switch (status) {
-      MerchantClaimStatus.approved => AppColors.successFg,
-      MerchantClaimStatus.rejected => AppColors.errorFg,
-      MerchantClaimStatus.needsMoreInfo => AppColors.warningFg,
-      MerchantClaimStatus.conflictDetected => AppColors.errorFg,
-      MerchantClaimStatus.duplicateClaim => AppColors.warningFg,
-      MerchantClaimStatus.underReview => AppColors.primary600,
-      MerchantClaimStatus.submitted => AppColors.primary700,
-      MerchantClaimStatus.draft => AppColors.neutral700,
+      MerchantClaimStatus.draft => AdminBadgeKey.claimDraft,
+      MerchantClaimStatus.submitted => AdminBadgeKey.claimSubmitted,
+      MerchantClaimStatus.underReview => AdminBadgeKey.claimUnderReview,
+      MerchantClaimStatus.needsMoreInfo => AdminBadgeKey.claimNeedsMoreInfo,
+      MerchantClaimStatus.approved => AdminBadgeKey.claimApproved,
+      MerchantClaimStatus.rejected => AdminBadgeKey.claimRejected,
+      MerchantClaimStatus.duplicateClaim => AdminBadgeKey.claimDuplicate,
+      MerchantClaimStatus.conflictDetected => AdminBadgeKey.claimConflict,
     };
   }
 
@@ -665,9 +653,10 @@ class _MerchantClaimsReviewScreenState
                                 crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   _StatusBadge(
+                                    badgeKey: _claimBadgeKey(
+                                      item.claimStatus,
+                                    ),
                                     label: item.claimStatus.label,
-                                    background: _statusBg(item.claimStatus),
-                                    foreground: _statusFg(item.claimStatus),
                                   ),
                                   if (item.hasConflict)
                                     const Icon(
@@ -729,9 +718,8 @@ class _MerchantClaimsReviewScreenState
             ),
             const SizedBox(width: 8),
             _StatusBadge(
+              badgeKey: _claimBadgeKey(detail.userVisibleStatus),
               label: detail.userVisibleStatus.label,
-              background: _statusBg(detail.userVisibleStatus),
-              foreground: _statusFg(detail.userVisibleStatus),
             ),
             const Spacer(),
             OutlinedButton.icon(
@@ -1071,6 +1059,9 @@ class _MerchantClaimsReviewScreenState
           _kv('Estado visible', detail.userVisibleStatus.label),
           _kv('Zona', _zoneLabel(detail.zoneId ?? '-')),
           _kv('Categoría', detail.categoryId ?? '-'),
+          _kv('Policy versión', detail.evidencePolicyVersion ?? '-'),
+          _kv('Policy categoría', detail.evidencePolicyCategoryId ?? '-'),
+          _kv('Policy strictness', detail.evidencePolicyStrictnessLevel ?? '-'),
           _kv('Flujo interno', detail.internalWorkflowStatus ?? '-'),
           _kv('Creado', _formatDate(detail.createdAtMillis)),
           _kv('Enviado', _formatDate(detail.submittedAtMillis)),
@@ -1143,6 +1134,24 @@ class _MerchantClaimsReviewScreenState
                 ? '-'
                 : detail.missingEvidenceTypes.join(', '),
           ),
+          _kv(
+            'Suficiencia',
+            detail.sufficiencyLevel ?? '-',
+          ),
+          _kv(
+            'Cumple mínimos',
+            detail.requiredEvidenceSatisfied ? 'Sí' : 'No',
+          ),
+          _kv(
+            'Visual primaria detectada',
+            detail.primaryVisualEvidenceType ?? '-',
+          ),
+          _kv(
+            'Tipos de vínculo',
+            detail.relationshipEvidenceTypes.isEmpty
+                ? '-'
+                : detail.relationshipEvidenceTypes.join(', '),
+          ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () {
@@ -1195,6 +1204,16 @@ class _MerchantClaimsReviewScreenState
           _kv('Conflicto', detail.hasConflict ? 'Sí' : 'No'),
           _kv('Duplicado', detail.hasDuplicate ? 'Sí' : 'No'),
           _kv('Riesgo', detail.riskPriority ?? '-'),
+          _kv(
+            'Razones de revisión manual',
+            detail.manualReviewReasons.isEmpty
+                ? '-'
+                : detail.manualReviewReasons.join(', '),
+          ),
+          _kv(
+            'Risk hints',
+            detail.riskHints.isEmpty ? '-' : detail.riskHints.join(', '),
+          ),
           _kv(
             'Flags de riesgo',
             detail.riskFlags.isEmpty ? '-' : detail.riskFlags.join(', '),
@@ -1510,30 +1529,19 @@ class _InlineBanner extends StatelessWidget {
 
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({
+    required this.badgeKey,
     required this.label,
-    required this.background,
-    required this.foreground,
   });
 
+  final AdminBadgeKey badgeKey;
   final String label;
-  final Color background;
-  final Color foreground;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.bodyXs.copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+    return AdminSemanticBadge(
+      badgeKey: badgeKey,
+      label: label,
+      compact: true,
     );
   }
 }

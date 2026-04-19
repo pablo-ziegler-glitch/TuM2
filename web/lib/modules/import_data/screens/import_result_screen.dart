@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/admin_semantic_assets.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../data/import_data_repository.dart';
@@ -787,69 +788,28 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (color, bg, label) = switch (status) {
+    final (badgeKey, label) = switch (status) {
       ImportBatchStatus.completed => (
-          AppColors.successFg,
-          AppColors.successFg.withValues(alpha: 0.1),
+          AdminBadgeKey.importCompleted,
           'Completado',
         ),
-      ImportBatchStatus.running => (
-          AppColors.primary500,
-          AppColors.primary500.withValues(alpha: 0.1),
-          'En proceso',
-        ),
-      ImportBatchStatus.failed => (
-          AppColors.errorFg,
-          AppColors.errorFg.withValues(alpha: 0.1),
-          'Fallido',
-        ),
-      ImportBatchStatus.hidden => (
-          AppColors.neutral500,
-          AppColors.neutral200,
-          'En staging',
-        ),
+      ImportBatchStatus.running => (AdminBadgeKey.importRunning, 'En proceso'),
+      ImportBatchStatus.failed => (AdminBadgeKey.importFailed, 'Fallido'),
+      ImportBatchStatus.hidden => (AdminBadgeKey.importHidden, 'En staging'),
       ImportBatchStatus.rolledBack => (
-          AppColors.warningFg,
-          AppColors.warningFg.withValues(alpha: 0.1),
+          AdminBadgeKey.importRolledBack,
           'Revertido',
         ),
       ImportBatchStatus.validated => (
-          AppColors.secondary500,
-          AppColors.secondary500.withValues(alpha: 0.1),
+          AdminBadgeKey.importValidated,
           'Validado',
         ),
-      ImportBatchStatus.partial => (
-          AppColors.warningFg,
-          AppColors.warningFg.withValues(alpha: 0.1),
-          'Parcial',
-        ),
-      ImportBatchStatus.draft => (
-          AppColors.neutral500,
-          AppColors.neutral100,
-          'En cola',
-        ),
-      ImportBatchStatus.archived => (
-          AppColors.neutral400,
-          AppColors.neutral100,
-          'Archivado',
-        ),
+      ImportBatchStatus.partial => (AdminBadgeKey.importPartial, 'Parcial'),
+      ImportBatchStatus.draft => (AdminBadgeKey.importDraft, 'En cola'),
+      ImportBatchStatus.archived => (AdminBadgeKey.importArchived, 'Archivado'),
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
-    );
+    return AdminSemanticBadge(badgeKey: badgeKey, label: label, compact: true);
   }
 }
 

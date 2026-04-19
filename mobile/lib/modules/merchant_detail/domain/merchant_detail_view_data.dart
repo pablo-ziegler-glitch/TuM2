@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../merchant_badges/domain/merchant_visual_models.dart';
+
 @immutable
 class MerchantPublicViewData {
   const MerchantPublicViewData({
@@ -19,6 +21,13 @@ class MerchantPublicViewData {
     required this.openStatusLabel,
     required this.lastDataRefreshAt,
     required this.featuredProductIds,
+    required this.verificationStatus,
+    required this.visibilityStatus,
+    required this.lifecycleStatus,
+    required this.operationalSignalType,
+    required this.manualOverrideMode,
+    required this.publicStatusLabel,
+    required this.is24h,
   });
 
   final String merchantId;
@@ -37,6 +46,13 @@ class MerchantPublicViewData {
   final String openStatusLabel;
   final DateTime? lastDataRefreshAt;
   final List<String> featuredProductIds;
+  final String verificationStatus;
+  final String visibilityStatus;
+  final String lifecycleStatus;
+  final String operationalSignalType;
+  final String manualOverrideMode;
+  final String? publicStatusLabel;
+  final bool? is24h;
 
   bool get hasPhone => (phonePrimary ?? '').trim().isNotEmpty;
   bool get isPharmacyCategory {
@@ -59,12 +75,18 @@ class MerchantStatusBadgeViewData {
     required this.label,
     required this.backgroundColor,
     required this.foregroundColor,
+    required this.primaryKey,
+    this.secondary = const <MerchantBadgeKey>[],
+    this.confidence,
   });
 
   final MerchantStatusBadgeType type;
   final String label;
   final Color backgroundColor;
   final Color foregroundColor;
+  final MerchantBadgeKey primaryKey;
+  final List<MerchantBadgeKey> secondary;
+  final MerchantBadgeKey? confidence;
 }
 
 @immutable

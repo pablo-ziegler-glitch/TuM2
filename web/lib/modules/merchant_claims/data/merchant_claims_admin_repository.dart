@@ -227,6 +227,15 @@ class MerchantClaimDetail {
     required this.hasDuplicate,
     required this.requiresManualReview,
     required this.missingEvidenceTypes,
+    required this.evidencePolicyVersion,
+    required this.evidencePolicyCategoryId,
+    required this.evidencePolicyStrictnessLevel,
+    required this.requiredEvidenceSatisfied,
+    required this.primaryVisualEvidenceType,
+    required this.relationshipEvidenceTypes,
+    required this.sufficiencyLevel,
+    required this.manualReviewReasons,
+    required this.riskHints,
     required this.riskFlags,
     required this.riskPriority,
     required this.reviewQueuePriority,
@@ -277,6 +286,15 @@ class MerchantClaimDetail {
   final bool hasDuplicate;
   final bool requiresManualReview;
   final List<String> missingEvidenceTypes;
+  final String? evidencePolicyVersion;
+  final String? evidencePolicyCategoryId;
+  final String? evidencePolicyStrictnessLevel;
+  final bool requiredEvidenceSatisfied;
+  final String? primaryVisualEvidenceType;
+  final List<String> relationshipEvidenceTypes;
+  final String? sufficiencyLevel;
+  final List<String> manualReviewReasons;
+  final List<String> riskHints;
   final List<String> riskFlags;
   final String? riskPriority;
   final int? reviewQueuePriority;
@@ -535,6 +553,26 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
       hasDuplicate: _readBool(claim['hasDuplicate']),
       requiresManualReview: _readBool(claim['requiresManualReview']),
       missingEvidenceTypes: _asList(claim['missingEvidenceTypes'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      evidencePolicyVersion: _readString(claim['evidencePolicyVersion']),
+      evidencePolicyCategoryId: _readString(claim['evidencePolicyCategoryId']),
+      evidencePolicyStrictnessLevel:
+          _readString(claim['evidencePolicyStrictnessLevel']),
+      requiredEvidenceSatisfied: _readBool(claim['requiredEvidenceSatisfied']),
+      primaryVisualEvidenceType:
+          _readString(claim['primaryVisualEvidenceType']),
+      relationshipEvidenceTypes: _asList(claim['relationshipEvidenceTypes'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      sufficiencyLevel: _readString(claim['sufficiencyLevel']),
+      manualReviewReasons: _asList(claim['manualReviewReasons'])
+          .map((item) => _readString(item) ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false),
+      riskHints: _asList(claim['riskHints'])
           .map((item) => _readString(item) ?? '')
           .where((item) => item.isNotEmpty)
           .toList(growable: false),

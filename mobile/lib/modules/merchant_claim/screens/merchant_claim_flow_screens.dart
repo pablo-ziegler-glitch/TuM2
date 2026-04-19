@@ -2,19 +2,22 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/auth/auth_notifier.dart';
 import '../../../core/auth/auth_state.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/providers/feature_flags_provider.dart';
+import '../../../core/providers/legal_documents_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_text_input.dart';
 import '../analytics/merchant_claim_analytics.dart';
 import '../application/merchant_claim_flow_controller.dart';
+import '../models/merchant_claim_evidence_policy.dart';
 import '../models/merchant_claim_models.dart';
 
 class ClaimIntroScreen extends ConsumerWidget {
@@ -85,7 +88,7 @@ class ClaimIntroScreen extends ConsumerWidget {
           const SizedBox(height: 10),
           const _InfoCard(
             icon: Icons.photo_camera_outlined,
-            title: 'Subí una foto del frente y una prueba de vínculo',
+            title: 'Subí evidencia según la categoría del comercio',
             subtitle:
                 'La revisión inicial combina controles automáticos y humanos.',
           ),
@@ -393,20 +396,45 @@ class ClaimEvidenceScreen extends ConsumerStatefulWidget {
 }
 
 class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
-  final ImagePicker _picker = ImagePicker();
+  bool _didLogRequirements = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didLogRequirements) return;
+    final state = ref.read(merchantClaimFlowControllerProvider);
+    final policy =
+        resolveMerchantClaimEvidencePolicy(state.selectedMerchant?.categoryId);
+    MerchantClaimAnalytics.logEvidenceRequirementsViewed(
+      categoryId: policy.categoryId,
+      policyVersion: policy.policyVersion,
+    ).ignore();
+    MerchantClaimAnalytics.logCategorySpecificHelpViewed(
+      categoryId: policy.categoryId,
+    ).ignore();
+    _didLogRequirements = true;
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(merchantClaimFlowControllerProvider);
-    final categoryCopy = _evidenceCopyForCategory(
-      state.selectedMerchant?.categoryId,
-    );
+    final policy =
+        resolveMerchantClaimEvidencePolicy(state.selectedMerchant?.categoryId);
+    final evidenceByKind = {
+      for (final file in state.evidenceFiles) file.kind: file,
+    };
+    final primaryPresent = policy.isPrimaryVisualSatisfied(state.evidenceFiles);
+    final relationshipPresent =
+        policy.isRelationshipSatisfied(state.evidenceFiles);
+    final additionalMissing = policy.requiredAdditionalKinds
+        .where((kind) => !evidenceByKind.containsKey(kind))
+        .toList(growable: false);
 
     return _ClaimScaffold(
       title: 'Subí evidencia',
       step: 4,
       totalSteps: 5,
-      subtitle: 'Subí una foto de fachada y una prueba documental mínima.',
+      subtitle: policy.subtitle,
       footer: SizedBox(
         width: double.infinity,
         child: FilledButton(
@@ -437,30 +465,96 @@ class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
           ),
           const SizedBox(height: 10),
           _EvidenceUploadTile(
-            title: 'Foto de fachada (obligatoria)',
-            subtitle: categoryCopy.storefrontHint,
-            hasFile: state.evidenceFiles.any(
-              (file) => file.kind == MerchantClaimEvidenceKind.storefrontPhoto,
-            ),
+            title: '${policy.title} (visual obligatoria)',
+            subtitle: policy.primaryVisualHint,
+            hasFile: primaryPresent,
             onUpload: state.isBusy
                 ? null
                 : () => _pickAndUpload(
-                      kind: MerchantClaimEvidenceKind.storefrontPhoto,
+                      kind: policy.preferredPrimaryVisualKind,
                     ),
           ),
+          if (policy.primaryVisualAcceptedKinds
+              .where((kind) => kind != policy.preferredPrimaryVisualKind)
+              .isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _EvidenceUploadTile(
+              title: 'Visual alternativa',
+              subtitle:
+                  'Podés subir una alternativa visual aceptada para esta categoría.',
+              hasFile: policy.primaryVisualAcceptedKinds.any(
+                (kind) =>
+                    kind != policy.preferredPrimaryVisualKind &&
+                    evidenceByKind.containsKey(kind),
+              ),
+              onUpload: state.isBusy
+                  ? null
+                  : () => _pickAndUpload(
+                        kind: policy.primaryVisualAcceptedKinds.firstWhere(
+                            (kind) =>
+                                kind != policy.preferredPrimaryVisualKind),
+                      ),
+            ),
+          ],
           const SizedBox(height: 10),
           _EvidenceUploadTile(
-            title: 'Prueba documental (obligatoria)',
-            subtitle: categoryCopy.documentHint,
-            hasFile: state.evidenceFiles.any(
-              (file) =>
-                  file.kind == MerchantClaimEvidenceKind.ownershipDocument,
-            ),
+            title: 'Prueba de vínculo (obligatoria)',
+            subtitle: policy.relationshipHint,
+            hasFile: relationshipPresent,
             onUpload: state.isBusy
                 ? null
                 : () => _pickAndUpload(
-                      kind: MerchantClaimEvidenceKind.ownershipDocument,
+                      kind: policy.preferredRelationshipKind,
                     ),
+          ),
+          if (policy.relationshipAcceptedKinds
+              .where((kind) => kind != policy.preferredRelationshipKind)
+              .isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _EvidenceUploadTile(
+              title: 'Vínculo alternativo',
+              subtitle:
+                  'Podés usar otra evidencia de vínculo aceptada para tu categoría.',
+              hasFile: policy.relationshipAcceptedKinds.any(
+                (kind) =>
+                    kind != policy.preferredRelationshipKind &&
+                    evidenceByKind.containsKey(kind),
+              ),
+              onUpload: state.isBusy
+                  ? null
+                  : () => _pickAndUpload(
+                        kind: policy.relationshipAcceptedKinds.firstWhere(
+                            (kind) => kind != policy.preferredRelationshipKind),
+                      ),
+            ),
+          ],
+          if (policy.requiredAdditionalKinds.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...policy.requiredAdditionalKinds.map(
+              (kind) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _EvidenceUploadTile(
+                  title: '${kind.label} (obligatoria)',
+                  subtitle:
+                      'Evidencia adicional requerida para esta categoría.',
+                  hasFile: evidenceByKind.containsKey(kind),
+                  onUpload:
+                      state.isBusy ? null : () => _pickAndUpload(kind: kind),
+                ),
+              ),
+            ),
+          ],
+          if (additionalMissing.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Faltan adjuntos: ${additionalMissing.map((kind) => kind.label).join(', ')}',
+              style: AppTextStyles.bodySm.copyWith(color: AppColors.warningFg),
+            ),
+          ],
+          const SizedBox(height: 8),
+          const Text(
+            'Tipos permitidos: JPG, JPEG, PNG, WEBP, PDF. Tamaño máximo por archivo: 8 MB.',
+            style: AppTextStyles.bodySm,
           ),
           if (state.errorMessage != null) ...[
             const SizedBox(height: 10),
@@ -496,30 +590,63 @@ class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
     required MerchantClaimEvidenceKind kind,
   }) async {
     try {
-      final file = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1800,
-        imageQuality: 88,
+      MerchantClaimAnalytics.logEvidenceUploadStarted(kind: kind.apiValue)
+          .ignore();
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        withData: true,
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp', 'pdf'],
       );
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
-      final contentType = (file.mimeType ?? 'image/jpeg').trim().toLowerCase();
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        throw Exception('empty_file');
+      }
+      final extension = (file.extension ?? '').trim().toLowerCase();
+      final contentType = _resolveContentType(extension);
+      if (contentType == null) {
+        throw Exception('invalid_extension');
+      }
       final upload = MerchantClaimEvidenceUpload(
         id: '${kind.apiValue}_${DateTime.now().millisecondsSinceEpoch}',
         kind: kind,
         bytes: bytes,
-        contentType: contentType.isEmpty ? 'image/jpeg' : contentType,
-        originalFileName: file.name,
+        contentType: contentType,
+        originalFileName: file.name.trim().isEmpty ? 'archivo' : file.name,
       );
       await ref
           .read(merchantClaimFlowControllerProvider.notifier)
           .uploadEvidence(upload);
       MerchantClaimAnalytics.logEvidenceUploaded(kind.apiValue).ignore();
+      MerchantClaimAnalytics.logEvidenceUploadCompleted(kind: kind.apiValue)
+          .ignore();
     } catch (_) {
+      MerchantClaimAnalytics.logEvidenceUploadFailed(
+        kind: kind.apiValue,
+        code: 'upload_failed',
+      ).ignore();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No pudimos cargar el archivo.')),
       );
+    }
+  }
+
+  String? _resolveContentType(String extension) {
+    switch (extension) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'pdf':
+        return 'application/pdf';
+      default:
+        return null;
     }
   }
 }
@@ -531,6 +658,13 @@ class ClaimConsentScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(merchantClaimFlowControllerProvider);
     final controller = ref.read(merchantClaimFlowControllerProvider.notifier);
+    final legalDocs = ref.watch(legalDocumentsConfigProvider).valueOrNull;
+    final termsUri =
+        legalDocs?.termsUri ?? Uri.parse('https://tum2.app/terminos');
+    final privacyUri =
+        legalDocs?.privacyUri ?? Uri.parse('https://tum2.app/privacidad');
+    final claimConsentUri = legalDocs?.claimConsentUri ??
+        Uri.parse('https://tum2.app/claim-consentimiento');
 
     return _ClaimScaffold(
       title: 'Confirmación y envío',
@@ -579,6 +713,20 @@ class ClaimConsentScreen extends ConsumerWidget {
                           currentState.statusSummary?.claimStatus.apiValue ??
                               MerchantClaimStatus.submitted.apiValue;
                       MerchantClaimAnalytics.logSubmitted(status).ignore();
+                      if (currentState.statusSummary?.claimStatus ==
+                              MerchantClaimStatus.underReview ||
+                          currentState.statusSummary?.claimStatus ==
+                              MerchantClaimStatus.conflictDetected ||
+                          currentState.statusSummary?.claimStatus ==
+                              MerchantClaimStatus.duplicateClaim) {
+                        final policy = resolveMerchantClaimEvidencePolicy(
+                          currentState.selectedMerchant?.categoryId,
+                        );
+                        MerchantClaimAnalytics.logSentToManualReview(
+                          categoryId: policy.categoryId,
+                          policyVersion: policy.policyVersion,
+                        ).ignore();
+                      }
                       if (!context.mounted) return;
                       context.go(AppRoutes.claimSuccess);
                     },
@@ -622,6 +770,37 @@ class ClaimConsentScreen extends ConsumerWidget {
               style: AppTextStyles.bodySm,
             ),
             controlAffinity: ListTileControlAffinity.leading,
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              TextButton(
+                onPressed: () => _openExternalUri(
+                  context,
+                  termsUri,
+                  fallbackLabel: 'Términos y condiciones',
+                ),
+                child: const Text('Términos'),
+              ),
+              TextButton(
+                onPressed: () => _openExternalUri(
+                  context,
+                  privacyUri,
+                  fallbackLabel: 'Política de privacidad',
+                ),
+                child: const Text('Privacidad'),
+              ),
+              TextButton(
+                onPressed: () => _openExternalUri(
+                  context,
+                  claimConsentUri,
+                  fallbackLabel: 'Consentimiento de evidencia',
+                ),
+                child: const Text('Consentimiento de evidencia'),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           if (state.errorMessage != null) ...[
@@ -1470,35 +1649,20 @@ String _claimReference(MerchantClaimStatusSummary summary) {
   return 'Tu caso quedó registrado para revisión.';
 }
 
-({String storefrontHint, String documentHint}) _evidenceCopyForCategory(
-  String? categoryId,
-) {
-  switch ((categoryId ?? '').trim()) {
-    case 'pharmacy':
-      return (
-        storefrontHint:
-            'Mostrá la farmacia y su cartel visible desde la calle.',
-        documentHint:
-            'Podés subir habilitación, constancia fiscal o factura del local.',
-      );
-    case 'kiosk':
-      return (
-        storefrontHint: 'Mostrá el frente del kiosco con su identificación.',
-        documentHint:
-            'Podés subir habilitación municipal, contrato o factura vinculada.',
-      );
-    case 'gomeria':
-      return (
-        storefrontHint: 'Mostrá el frente de la gomería y su acceso principal.',
-        documentHint:
-            'Subí una constancia comercial o factura asociada al local.',
-      );
-    default:
-      return (
-        storefrontHint: 'Mostrá frente/cartel del comercio.',
-        documentHint: 'Por ejemplo habilitación, factura o constancia.',
-      );
-  }
+Future<void> _openExternalUri(
+  BuildContext context,
+  Uri uri, {
+  required String fallbackLabel,
+}) async {
+  final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (opened || !context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        'No pudimos abrir $fallbackLabel. Intentá nuevamente en unos minutos.',
+      ),
+    ),
+  );
 }
 
 extension on Future<void> {

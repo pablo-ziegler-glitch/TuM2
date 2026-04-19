@@ -3,5 +3,35 @@
     "dev": "tum2-dev-6283d",
     "staging": "tum2-staging-45c83",
     "prod": "tum2-prod-bc9b4"
-  }
+  },
+  "targets": {
+    "tum2-dev-6283d": {
+      "hosting": {
+        "web": [
+          "tum2-dev-6283d"
+        ],
+        "admin": [
+          "tum2-dev-admin"
+        ]
+      }
+    },
+    "tum2-staging-45c83": {
+      "hosting": {
+        "admin": [
+          "tum2-staging-45c83"
+        ]
+      }
+    },
+    "tum2-prod-bc9b4": {
+      "hosting": {
+        "web": [
+          "tum2-web-prod"
+        ],
+        "admin": [
+          "tum2-admin-prod"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

@@ -4,6 +4,10 @@ Estado: IN_PROGRESS
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio
 
+## Sync 0129 (2026-04-19)
+- El paso de evidencia de mobile pasó a resolver policy canónica por `categoryId`.
+- Copy y validación local ya no usan regla rígida única; distinguen `pharmacy`, `veterinary`, `fast_food`, general y fallback.
+
 ## 1. Objetivo
 Diseñar y formalizar el flujo completo para que un usuario autenticado pueda reclamar la titularidad de un comercio en TuM2, aportando evidencia mínima suficiente para habilitar validación automática y, cuando corresponda, revisión manual en Admin.
 

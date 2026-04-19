@@ -59,6 +59,10 @@ export interface OperationalSignals {
   acceptsWhatsappOrders?: boolean;
   openNowManualOverride?: boolean;
   hasPharmacyDutyToday?: boolean;
+  is24h?: boolean;
+  twentyFourHourStrikeCount?: number;
+  twentyFourHourCooldownUntil?: FirebaseFirestore.Timestamp | null;
+  twentyFourHourBadgeRemovedAt?: FirebaseFirestore.Timestamp | null;
   manualOverrides?: Record<string, unknown>;
   updatedAt?: FirebaseFirestore.Timestamp;
 }
@@ -84,6 +88,7 @@ export interface MerchantDoc {
   completenessScore?: number;
   lastActivityAt?: FirebaseFirestore.Timestamp;
   externalPlaceId?: string;
+  is24h?: boolean;
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
 }
@@ -174,6 +179,9 @@ export interface MerchantPublicDoc {
   todayScheduleLabel?: string;
   hasPharmacyDutyToday?: boolean;
   isOnDutyToday?: boolean;
+  is24h?: boolean;
+  twentyFourHourCooldownUntil?: FirebaseFirestore.Timestamp | null;
+  twentyFourHourStrikeCount?: number;
   confidenceLevel?: "high" | "medium" | "low" | null;
   publicStatusLabel?:
     | "guardia_confirmada"
@@ -279,6 +287,15 @@ export interface MerchantClaimDoc {
   requiresManualReview?: boolean;
   missingEvidence?: boolean;
   missingEvidenceTypes?: string[];
+  evidencePolicyVersion?: string | null;
+  evidencePolicyCategoryId?: string | null;
+  evidencePolicyStrictnessLevel?: string | null;
+  requiredEvidenceSatisfied?: boolean;
+  primaryVisualEvidenceType?: string | null;
+  relationshipEvidenceTypes?: string[];
+  sufficiencyLevel?: "insufficient" | "sufficient_manual_review" | "sufficient" | null;
+  manualReviewReasons?: string[];
+  riskHints?: string[];
   riskFlags?: string[];
   riskPriority?: "low" | "medium" | "high" | "critical" | null;
   reviewQueuePriority?: number | null;

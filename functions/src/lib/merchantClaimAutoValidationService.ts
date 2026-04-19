@@ -7,6 +7,7 @@ import {
   buildAutoValidationInputHash,
   evaluateMerchantClaimAutoValidation,
 } from "./merchantClaimAutoValidation";
+import { normalizeClaimCategoryId } from "./merchantClaimEvidencePolicy";
 import { syncOwnerPendingAccess } from "./merchantClaimOwnerPending";
 
 const db = () => getFirestore();
@@ -66,6 +67,27 @@ function pickAutoValidationState(data: Record<string, unknown>): Record<string, 
     riskFlags: Array.isArray(data.riskFlags) ? data.riskFlags : [],
     riskPriority: data.riskPriority ?? "low",
     reviewQueuePriority: data.reviewQueuePriority ?? 0,
+    evidencePolicyVersion:
+      typeof data.evidencePolicyVersion === "string" ? data.evidencePolicyVersion : null,
+    evidencePolicyCategoryId:
+      typeof data.evidencePolicyCategoryId === "string" ? data.evidencePolicyCategoryId : null,
+    evidencePolicyStrictnessLevel:
+      typeof data.evidencePolicyStrictnessLevel === "string"
+        ? data.evidencePolicyStrictnessLevel
+        : null,
+    requiredEvidenceSatisfied: data.requiredEvidenceSatisfied === true,
+    primaryVisualEvidenceType:
+      typeof data.primaryVisualEvidenceType === "string"
+        ? data.primaryVisualEvidenceType
+        : null,
+    relationshipEvidenceTypes: Array.isArray(data.relationshipEvidenceTypes)
+      ? data.relationshipEvidenceTypes
+      : [],
+    sufficiencyLevel: data.sufficiencyLevel ?? null,
+    manualReviewReasons: Array.isArray(data.manualReviewReasons)
+      ? data.manualReviewReasons
+      : [],
+    riskHints: Array.isArray(data.riskHints) ? data.riskHints : [],
     lastAutoValidationHash:
       typeof data.lastAutoValidationHash === "string" ? data.lastAutoValidationHash : null,
   };
@@ -183,8 +205,8 @@ export async function runMerchantClaimAutoValidation(
       return otherUserId !== userId || otherMerchantId !== merchantId;
     });
 
-  const categoryId = toLowerTrimmedString(
-    claimData.categoryId || merchantData.categoryId || ""
+  const categoryId = normalizeClaimCategoryId(
+    toLowerTrimmedString(claimData.categoryId || merchantData.categoryId || "")
   );
   const zoneId = toLowerTrimmedString(claimData.zoneId || merchantData.zoneId || "");
   const evidenceRaw = Array.isArray(claimData.evidenceFiles)
@@ -277,6 +299,15 @@ export async function runMerchantClaimAutoValidation(
       riskFlags: evaluation.riskFlags,
       riskPriority: evaluation.riskPriority,
       reviewQueuePriority: evaluation.reviewQueuePriority,
+      evidencePolicyVersion: evaluation.evidencePolicyVersion,
+      evidencePolicyCategoryId: evaluation.evidencePolicyCategoryId,
+      evidencePolicyStrictnessLevel: evaluation.evidencePolicyStrictnessLevel,
+      requiredEvidenceSatisfied: evaluation.requiredEvidenceSatisfied,
+      primaryVisualEvidenceType: evaluation.primaryVisualEvidenceType,
+      relationshipEvidenceTypes: evaluation.relationshipEvidenceTypes,
+      sufficiencyLevel: evaluation.sufficiencyLevel,
+      manualReviewReasons: evaluation.manualReviewReasons,
+      riskHints: evaluation.riskHints,
       processedBySystem: true,
       systemVersion: CLAIM_AUTO_VALIDATION_SYSTEM,
       duplicateOfClaimId: evaluation.hasDuplicate
@@ -325,10 +356,16 @@ export async function runMerchantClaimAutoValidation(
   logStructured("merchant_claim_auto_validation", {
     claimId: params.claimId,
     merchantId,
-    userId,
     origin: params.origin,
+    categoryId,
+    policyVersion: evaluation.evidencePolicyVersion,
+    sufficiencyLevel: evaluation.sufficiencyLevel,
+    manualReviewReasonCount: evaluation.manualReviewReasons.length,
+    manualReviewTriggered: evaluation.requiresManualReview,
     previousStatus,
     nextStatus,
+    updatedState: didChange ? evaluation.nextStatus : previousStatus,
+    writeSkipped: noOp,
     didChange,
     noOp,
     reasonCodes: evaluation.reasonCodes,

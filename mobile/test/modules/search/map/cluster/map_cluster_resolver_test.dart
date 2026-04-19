@@ -54,7 +54,7 @@ void main() {
     expect(clusters.any((cluster) => cluster.count >= 2), isTrue);
   });
 
-  test('prioridad guardia domina', () {
+  test('prioridad roja domina con de turno', () {
     final clusters = resolver.resolveClusters(
       items: [
         _merchant(id: '1', lat: -34.60, lng: -58.46, isOnDutyToday: true),
@@ -65,10 +65,10 @@ void main() {
     );
 
     final cluster = clusters.firstWhere((cluster) => cluster.count == 2);
-    expect(cluster.priority, MapClusterPriority.guardia);
+    expect(cluster.priority, MapClusterPriority.red);
   });
 
-  test('prioridad open por mayoría', () {
+  test('prioridad verde cuando no hay turno ni 24hs', () {
     final clusters = resolver.resolveClusters(
       items: [
         _merchant(id: '1', lat: -34.60, lng: -58.46, isOpenNow: true),
@@ -80,6 +80,21 @@ void main() {
     );
 
     final cluster = clusters.firstWhere((item) => item.count == 3);
-    expect(cluster.priority, MapClusterPriority.open);
+    expect(cluster.priority, MapClusterPriority.green);
+  });
+
+  test('prioridad azul cuando hay 24hs y no hay turno', () {
+    final clusters = resolver.resolveClusters(
+      items: [
+        _merchant(
+            id: '1', lat: -34.60, lng: -58.46, isOpenNow: true, is24h: true),
+        _merchant(id: '2', lat: -34.6004, lng: -58.4604, isOpenNow: true),
+      ],
+      bounds: bounds,
+      zoom: 17,
+    );
+
+    final cluster = clusters.firstWhere((item) => item.count == 2);
+    expect(cluster.priority, MapClusterPriority.blue);
   });
 }

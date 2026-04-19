@@ -63,7 +63,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
     super.initState();
     if (widget.initialData != null) {
       _nameCtrl.text = widget.initialData!.name;
-      _selectedCategoryId = widget.initialData!.categoryId;
+      _selectedCategoryId = canonicalCategoryId(widget.initialData!.categoryId);
     }
     _loadCategories();
     _subscribeToDuplicates();
@@ -139,7 +139,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
     try {
       await widget.ownerRepository.saveStep1(Step1Data(
         name: _nameCtrl.text.trim(),
-        categoryId: _selectedCategoryId!,
+        categoryId: canonicalCategoryId(_selectedCategoryId!),
       ));
     } catch (_) {
       // Error de red al guardar: continuar de todos modos (se reintentará)
@@ -147,7 +147,7 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
 
     widget.onNext(Step1Data(
       name: _nameCtrl.text.trim(),
-      categoryId: _selectedCategoryId!,
+      categoryId: canonicalCategoryId(_selectedCategoryId!),
     ));
   }
 
@@ -439,8 +439,8 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
                           )
                         : CategoryGrid(
                             selectedId: _selectedCategoryId,
-                            onSelect: (id) =>
-                                setState(() => _selectedCategoryId = id),
+                            onSelect: (id) => setState(() =>
+                                _selectedCategoryId = canonicalCategoryId(id)),
                             hasError: categoryHasError,
                             categories: _categoryOptions.isNotEmpty
                                 ? _categoryOptions

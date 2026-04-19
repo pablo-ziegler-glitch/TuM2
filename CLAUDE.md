@@ -59,6 +59,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0006]** Mantener actualizado PRD-MVP.md ✅ | Documentación maestra — PRD-MVP.md actualizado y vigente |
 | **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
 | **[0010]** Definir identidad visual base ✅ | Branding — paleta y tokens base definidos (color system inicial TuM2) |
+| **[0011]** Diseñar logo principal ✅ | Branding — sistema de logo y assets SVG base versionados (`design/branding_v1.json`, `mobile/assets/branding/*`) |
 | **[0014]** Definir tono de microcopy ✅ | Branding / UX/UI — guía de microcopy MVP Fase 3 documentada en docs/TuM2-0014-MICROCOPY.md |
 | **[0019]** Diseñar modelo de usuarios ✅ | Modelo de datos — modelo de usuarios definido con roles y atributos |
 | **[0020]** Diseñar modelo de comercios ✅ | Modelo de datos — modelo de comercios definido con campos públicos y operativos |
@@ -131,7 +132,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### ÉPICA 3: Branding de TuM2
 - [0010] **Definir identidad visual base** — P0 — `Branding, UX/UI, Fundacional` ✅
-- [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional`
+- [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional` ✅
 - [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional`
 - [0013] **Definir sistema de sellos** — P1 — `Branding, Producto, MVP`
 - [0014] **Definir tono de microcopy** — P1 — `Branding, UX/UI, MVP` ✅
@@ -293,7 +294,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP` `IN_PROGRESS`
 - [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP` `IN_PROGRESS`
 - [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `IN_PROGRESS`
-- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP`
+- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `IN_PROGRESS`
 - [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `IN_PROGRESS`
 - [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `IN_PROGRESS`
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`

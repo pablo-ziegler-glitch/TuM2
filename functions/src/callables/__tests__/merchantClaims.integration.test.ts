@@ -988,4 +988,222 @@ if (!emulatorHost) {
       }
     );
   });
+
+  test("upsert draft rechaza categoría fuera de allowlist MVP", async () => {
+    assert.ok(upsertDraftRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Panadería Legacy",
+      categoryId: "panaderia",
+      zoneId: "zone-legacy-1",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    await assert.rejects(
+      async () =>
+        upsertDraftRun!(
+          buildRequest({
+            uid: "user-legacy-1",
+            email: "legacy@example.com",
+            data: {
+              claimId: "claim-legacy-cat-01",
+              merchantId,
+              declaredRole: "owner",
+              hasAcceptedDataProcessingConsent: true,
+              hasAcceptedLegitimacyDeclaration: true,
+              evidenceFiles: [],
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string; details?: { code?: string } };
+        assert.equal(err.code, "failed-precondition");
+        assert.equal(err.details?.code, "claim_category_not_allowed");
+        return true;
+      }
+    );
+  });
+
+  test("submit rechaza stale token cuando otro dispositivo actualizó el draft", async () => {
+    assert.ok(upsertDraftRun && submitClaimRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-stale-submit-01";
+    const uid = "user-stale-submit";
+
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Kiosco Stale",
+      categoryId: "kiosk",
+      zoneId: "zone-stale-submit",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const firstDraft = (await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "stale@example.com",
+        data: {
+          claimId,
+          merchantId,
+          declaredRole: "owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [
+            {
+              id: "store_1",
+              kind: "storefront_photo",
+              storagePath:
+                `merchant-claims/${uid}/${claimId}/storefront_photo/front.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1024,
+            },
+          ],
+        },
+      })
+    )) as { updatedAtMillis?: number | null };
+
+    const tokenA = firstDraft.updatedAtMillis ?? null;
+    assert.ok(tokenA != null);
+
+    await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "stale@example.com",
+        data: {
+          claimId,
+          expectedUpdatedAtMillis: tokenA,
+          merchantId,
+          declaredRole: "owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [
+            {
+              id: "store_1",
+              kind: "storefront_photo",
+              storagePath:
+                `merchant-claims/${uid}/${claimId}/storefront_photo/front.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1024,
+            },
+            {
+              id: "doc_1",
+              kind: "ownership_document",
+              storagePath:
+                `merchant-claims/${uid}/${claimId}/ownership_document/doc.jpg`,
+              contentType: "image/jpeg",
+              sizeBytes: 1024,
+            },
+          ],
+        },
+      })
+    );
+
+    await assert.rejects(
+      async () =>
+        submitClaimRun!(
+          buildRequest({
+            uid,
+            email: "stale@example.com",
+            data: { claimId, expectedUpdatedAtMillis: tokenA },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string; details?: { code?: string } };
+        assert.equal(err.code, "failed-precondition");
+        assert.equal(err.details?.code, "stale_claim");
+        return true;
+      }
+    );
+  });
+
+  test("upsert draft rechaza stale token en edición concurrente multi-dispositivo", async () => {
+    assert.ok(upsertDraftRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-stale-upsert-01";
+    const uid = "user-stale-upsert";
+
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Almacén Concurrencia",
+      categoryId: "almacen",
+      zoneId: "zone-stale-upsert",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const draftA = (await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "stale-upsert@example.com",
+        data: {
+          claimId,
+          merchantId,
+          declaredRole: "owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [],
+        },
+      })
+    )) as { updatedAtMillis?: number | null };
+    const tokenA = draftA.updatedAtMillis ?? null;
+    assert.ok(tokenA != null);
+
+    const draftB = (await upsertDraftRun!(
+      buildRequest({
+        uid,
+        email: "stale-upsert@example.com",
+        data: {
+          claimId,
+          expectedUpdatedAtMillis: tokenA,
+          merchantId,
+          declaredRole: "co_owner",
+          hasAcceptedDataProcessingConsent: true,
+          hasAcceptedLegitimacyDeclaration: true,
+          evidenceFiles: [],
+        },
+      })
+    )) as { updatedAtMillis?: number | null };
+
+    const tokenB = draftB.updatedAtMillis ?? null;
+    assert.ok(tokenB != null);
+    assert.notEqual(tokenB, tokenA);
+
+    await assert.rejects(
+      async () =>
+        upsertDraftRun!(
+          buildRequest({
+            uid,
+            email: "stale-upsert@example.com",
+            data: {
+              claimId,
+              expectedUpdatedAtMillis: tokenA,
+              merchantId,
+              declaredRole: "owner",
+              hasAcceptedDataProcessingConsent: true,
+              hasAcceptedLegitimacyDeclaration: true,
+              evidenceFiles: [],
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string; details?: { code?: string } };
+        assert.equal(err.code, "failed-precondition");
+        assert.equal(err.details?.code, "stale_claim");
+        return true;
+      }
+    );
+  });
 }

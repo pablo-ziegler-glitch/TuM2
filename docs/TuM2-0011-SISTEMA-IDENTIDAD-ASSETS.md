@@ -118,5 +118,5 @@ Condición de UX:
 - [x] Reglas de safe area / grid / tamaños mínimos documentadas
 - [x] Integración base en Flutter (`AppBrand` + widgets)
 - [x] Semántica de badges aplicada en vistas críticas
-- [ ] Export PNG multi-tamaño (pendiente de pipeline de export)
-- [ ] Empaquetado final de app icon iOS/Android (pendiente de build release)
+- [x] Export PNG multi-tamaño (cubierto por `mobile/web/icons/*` y `mobile/web/favicon.png` para base web)
+- [ ] Empaquetado final de app icon iOS/Android (se gestiona en TuM2-0012)

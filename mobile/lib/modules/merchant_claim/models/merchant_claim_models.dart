@@ -20,6 +20,10 @@ enum MerchantClaimDeclaredRole {
 enum MerchantClaimEvidenceKind {
   storefrontPhoto,
   ownershipDocument,
+  regulatoryDocument,
+  reinforcedRelationshipEvidence,
+  operationalPointPhoto,
+  alternativeRelationshipEvidence,
 }
 
 class MerchantClaimEvidenceUpload {
@@ -126,12 +130,14 @@ class MerchantClaimDraftInput {
     required this.hasAcceptedLegitimacyDeclaration,
     required this.evidenceFiles,
     this.claimId,
+    this.expectedUpdatedAtMillis,
     this.phone,
     this.claimantDisplayName,
     this.claimantNote,
   });
 
   final String? claimId;
+  final int? expectedUpdatedAtMillis;
   final String merchantId;
   final MerchantClaimDeclaredRole declaredRole;
   final String? phone;
@@ -219,6 +225,14 @@ extension MerchantClaimEvidenceKindX on MerchantClaimEvidenceKind {
         return 'storefront_photo';
       case MerchantClaimEvidenceKind.ownershipDocument:
         return 'ownership_document';
+      case MerchantClaimEvidenceKind.regulatoryDocument:
+        return 'regulatory_document';
+      case MerchantClaimEvidenceKind.reinforcedRelationshipEvidence:
+        return 'reinforced_relationship_evidence';
+      case MerchantClaimEvidenceKind.operationalPointPhoto:
+        return 'operational_point_photo';
+      case MerchantClaimEvidenceKind.alternativeRelationshipEvidence:
+        return 'alternative_relationship_evidence';
     }
   }
 
@@ -228,6 +242,14 @@ extension MerchantClaimEvidenceKindX on MerchantClaimEvidenceKind {
         return 'Foto de fachada';
       case MerchantClaimEvidenceKind.ownershipDocument:
         return 'Prueba de vínculo';
+      case MerchantClaimEvidenceKind.regulatoryDocument:
+        return 'Documento regulatorio';
+      case MerchantClaimEvidenceKind.reinforcedRelationshipEvidence:
+        return 'Evidencia reforzada';
+      case MerchantClaimEvidenceKind.operationalPointPhoto:
+        return 'Foto del puesto';
+      case MerchantClaimEvidenceKind.alternativeRelationshipEvidence:
+        return 'Vínculo alternativo';
     }
   }
 }

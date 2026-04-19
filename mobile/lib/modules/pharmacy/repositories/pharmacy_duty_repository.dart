@@ -255,7 +255,7 @@ class PharmacyDutyRepository implements PharmacyDutySource {
           dutyDate: duty.date,
           isOnDuty: true,
           isOpenNow: merchant['isOpenNow'] == true,
-          is24Hours: merchant['is24Hours'] == true,
+          is24Hours: merchant['is24h'] == true || merchant['is24Hours'] == true,
           verificationStatus:
               (merchant['verificationStatus'] as String?) ?? 'unverified',
           sortBoost: (merchant['sortBoost'] as num?)?.toInt() ?? 0,

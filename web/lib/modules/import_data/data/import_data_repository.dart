@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/import_batch_ui.dart';
 
@@ -101,6 +101,7 @@ class ImportDataRepository {
   static const int _whereInLimit = 30;
   static const int _maxWatchedBatches = 150;
   static const int _maxZonesPerQuery = 300;
+  static const int _maxBatchPlacesPage = 300;
   static const int _zonesCacheTtlSeconds = 300;
 
   static const List<String> _zoneCollectionCandidates = <String>['zones'];
@@ -119,6 +120,17 @@ class ImportDataRepository {
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+
+  void _logFinOps(String event, Map<String, Object?> payload) {
+    debugPrint(
+      jsonEncode(<String, Object?>{
+        'domain': 'import_data',
+        'event': event,
+        ...payload,
+      }),
+    );
+  }
+
   static List<QueryDocumentSnapshot<Map<String, dynamic>>>? _zonesCache;
   static DateTime? _zonesCacheExpiresAtUtc;
 
@@ -263,14 +275,19 @@ class ImportDataRepository {
   }
 
   Future<void> publishBatch(ImportBatchUi batch) async {
-    final placeDocs =
-        await _externalPlaces.where('importBatchId', isEqualTo: batch.id).get();
-    await _applyInChunks(placeDocs.docs, (writeBatch, doc) {
-      writeBatch.update(doc.reference, {
-        'visibilityStatus': 'visible',
-        'publishedAt': FieldValue.serverTimestamp(),
+    final startedAt = DateTime.now();
+    var placesRead = 0;
+    var placeWrites = 0;
+    await for (final docs in _readBatchPlaceDocs(batch.id)) {
+      placesRead += docs.length;
+      placeWrites += docs.length;
+      await _applyInChunks(docs, (writeBatch, doc) {
+        writeBatch.update(doc.reference, {
+          'visibilityStatus': 'visible',
+          'publishedAt': FieldValue.serverTimestamp(),
+        });
       });
-    });
+    }
 
     await _batches.doc(batch.id).set({
       'status': ImportBatchStatus.completed.name,
@@ -283,26 +300,46 @@ class ImportDataRepository {
           timestamp: DateTime.now(),
           actor: _auth.currentUser?.email ?? _auth.currentUser?.uid ?? 'admin',
           result: true,
-          detail: '${placeDocs.size} records visible',
+          detail: '$placeWrites records visible',
         ).toMap(),
       ]),
     }, SetOptions(merge: true));
+
+    _logFinOps('publish_batch', {
+      'batchId': batch.id,
+      'placesRead': placesRead,
+      'placeWrites': placeWrites,
+      'durationMs': DateTime.now().difference(startedAt).inMilliseconds,
+    });
   }
 
   Future<void> revertBatch(ImportBatchUi batch) async {
-    final placeDocs =
-        await _externalPlaces.where('importBatchId', isEqualTo: batch.id).get();
-
+    final startedAt = DateTime.now();
     final merchantUpdates =
         <DocumentReference<Map<String, dynamic>>, Map<String, Object?>>{};
-    final placeIds = placeDocs.docs.map((doc) => doc.id).toSet();
+    final placeIds = <String>{};
     final linkedMerchantIds = <String>{};
-    for (final placeDoc in placeDocs.docs) {
-      final linkedMerchantId =
-          placeDoc.data()['linkedMerchantId']?.toString().trim() ?? '';
-      if (linkedMerchantId.isNotEmpty) {
-        linkedMerchantIds.add(linkedMerchantId);
+    var placesRead = 0;
+    var placeWrites = 0;
+
+    await for (final docs in _readBatchPlaceDocs(batch.id)) {
+      placesRead += docs.length;
+      for (final placeDoc in docs) {
+        placeIds.add(placeDoc.id);
+        final linkedMerchantId =
+            placeDoc.data()['linkedMerchantId']?.toString().trim() ?? '';
+        if (linkedMerchantId.isNotEmpty) {
+          linkedMerchantIds.add(linkedMerchantId);
+        }
       }
+      placeWrites += docs.length;
+      await _applyInChunks(docs, (writeBatch, doc) {
+        writeBatch.update(doc.reference, {
+          'rolledBack': true,
+          'visibilityStatus': 'suppressed',
+          'rolledBackAt': FieldValue.serverTimestamp(),
+        });
+      });
     }
 
     final merchantsById = await _fetchMerchantsByIds(linkedMerchantIds);
@@ -326,14 +363,6 @@ class ImportDataRepository {
       await _applyMapInChunks(merchantUpdates);
     }
 
-    await _applyInChunks(placeDocs.docs, (writeBatch, doc) {
-      writeBatch.update(doc.reference, {
-        'rolledBack': true,
-        'visibilityStatus': 'suppressed',
-        'rolledBackAt': FieldValue.serverTimestamp(),
-      });
-    });
-
     await _batches.doc(batch.id).set({
       'status': ImportBatchStatus.rolledBack.name,
       'finishedAt': FieldValue.serverTimestamp(),
@@ -345,10 +374,18 @@ class ImportDataRepository {
           actor: _auth.currentUser?.email ?? _auth.currentUser?.uid ?? 'admin',
           result: true,
           detail:
-              '${placeDocs.size} external_places suppressed · ${merchantUpdates.length} merchants suppressed',
+              '$placeWrites external_places suppressed · ${merchantUpdates.length} merchants suppressed',
         ).toMap(),
       ]),
     }, SetOptions(merge: true));
+
+    _logFinOps('revert_batch', {
+      'batchId': batch.id,
+      'placesRead': placesRead,
+      'placeWrites': placeWrites,
+      'merchantWrites': merchantUpdates.length,
+      'durationMs': DateTime.now().difference(startedAt).inMilliseconds,
+    });
   }
 
   Future<String> submitImport(ImportSubmissionInput input) async {
@@ -910,6 +947,30 @@ class ImportDataRepository {
         apply(writeBatch, doc);
       }
       await writeBatch.commit();
+    }
+  }
+
+  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _readBatchPlaceDocs(
+    String batchId,
+  ) async* {
+    QueryDocumentSnapshot<Map<String, dynamic>>? cursor;
+    while (true) {
+      Query<Map<String, dynamic>> query = _externalPlaces
+          .where('importBatchId', isEqualTo: batchId)
+          .orderBy(FieldPath.documentId)
+          .limit(_maxBatchPlacesPage);
+      if (cursor != null) {
+        query = query.startAfterDocument(cursor);
+      }
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) {
+        break;
+      }
+      yield snapshot.docs;
+      if (snapshot.docs.length < _maxBatchPlacesPage) {
+        break;
+      }
+      cursor = snapshot.docs.last;
     }
   }
 

@@ -5,6 +5,10 @@ Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126 — Flujo de claim del comercio
 
+## Sync 0129 (2026-04-19)
+- La validación automática ahora consume policy centralizada versionada (`merchantClaimEvidencePolicy`).
+- El resultado persiste trazabilidad por claim: `evidencePolicyVersion`, `sufficiencyLevel`, `requiredEvidenceSatisfied`, `manualReviewReasons` y `riskHints`.
+
 ## Estado real de implementación (corte 2026-04-16)
 ### Hecho
 - Motor de validación automática implementado en backend con outcomes canónicos: `under_review`, `needs_more_info`, `duplicate_claim`, `conflict_detected` (`functions/src/callables/merchantClaims.ts`).

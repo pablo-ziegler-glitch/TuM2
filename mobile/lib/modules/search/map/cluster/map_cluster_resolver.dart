@@ -1,8 +1,7 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../../merchant_badges/domain/merchant_marker_resolver.dart';
 import '../../models/merchant_search_item.dart';
-import '../marker/map_marker_resolver.dart';
-import '../marker/map_marker_type.dart';
 import 'map_cluster_model.dart';
 
 class MapClusterResolver {
@@ -90,39 +89,6 @@ class MapClusterResolver {
   }
 
   MapClusterPriority _resolvePriority(List<MerchantSearchItem> items) {
-    var guardia = 0;
-    var open = 0;
-    var closed = 0;
-    var defaultState = 0;
-
-    for (final item in items) {
-      final type = MapMarkerResolver.resolveBaseType(item);
-      switch (type) {
-        case MapMarkerType.guardia:
-          guardia++;
-          break;
-        case MapMarkerType.open:
-        case MapMarkerType.open24h:
-          open++;
-          break;
-        case MapMarkerType.closed:
-          closed++;
-          break;
-        case MapMarkerType.defaultState:
-          defaultState++;
-          break;
-      }
-    }
-
-    if (guardia > 0) {
-      return MapClusterPriority.guardia;
-    }
-    if (open > defaultState && open > closed) {
-      return MapClusterPriority.open;
-    }
-    if (closed > open && closed > defaultState) {
-      return MapClusterPriority.closed;
-    }
-    return MapClusterPriority.defaultState;
+    return MerchantMarkerResolver.resolveClusterPriority(items);
   }
 }

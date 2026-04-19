@@ -1,4 +1,10 @@
 import { createHash } from "node:crypto";
+import {
+  CLAIM_EVIDENCE_POLICY_VERSION,
+  ClaimEvidenceKind,
+  evaluateEvidenceAgainstPolicy,
+  normalizeClaimCategoryId,
+} from "./merchantClaimEvidencePolicy";
 
 export const CLAIM_AUTO_VALIDATION_VERSION = 3;
 export const CLAIM_AUTO_VALIDATION_SYSTEM = "merchant_claim_auto_validation_v3";
@@ -25,19 +31,12 @@ export type ClaimAutoValidationReasonCode =
   | "merchant_state_conflict"
   | "sensitive_category_requires_manual_review"
   | "ambiguous_food_stand_evidence"
+  | "fallback_category_policy_applied"
   | "risk_signal_contact_reuse"
   | "risk_signal_abuse_pattern"
   | "risk_signal_non_terminal_inconsistency";
 
 export type ClaimAutoValidationRiskPriority = "low" | "medium" | "high" | "critical";
-
-export type ClaimEvidenceKind =
-  | "storefront_photo"
-  | "ownership_document"
-  | "regulatory_document"
-  | "reinforced_relationship_evidence"
-  | "operational_point_photo"
-  | "alternative_relationship_evidence";
 
 export interface MerchantClaimEvidenceSummary {
   kind: string;
@@ -79,6 +78,15 @@ export interface MerchantClaimAutoValidationOutput {
   riskPriority: ClaimAutoValidationRiskPriority;
   reviewQueuePriority: number;
   autoValidationStatus: "passed" | "blocked";
+  evidencePolicyVersion: string;
+  evidencePolicyCategoryId: string;
+  evidencePolicyStrictnessLevel: string;
+  requiredEvidenceSatisfied: boolean;
+  primaryVisualEvidenceType: ClaimEvidenceKind | null;
+  relationshipEvidenceTypes: ClaimEvidenceKind[];
+  sufficiencyLevel: "insufficient" | "sufficient_manual_review" | "sufficient";
+  manualReviewReasons: string[];
+  riskHints: string[];
 }
 
 function normalizeKind(kind: string): ClaimEvidenceKind | null {
@@ -141,8 +149,12 @@ export function evaluateMerchantClaimAutoValidation(
   const missingReasons: ClaimAutoValidationReasonCode[] = [];
   const missingEvidenceTypes: string[] = [];
   const riskFlags: ClaimAutoValidationReasonCode[] = [];
-  const normalizedCategoryId = input.categoryId.trim().toLowerCase();
+  const normalizedCategoryId = normalizeClaimCategoryId(input.categoryId);
   const evidenceKinds = collectKinds(input.evidence);
+  const evidencePolicy = evaluateEvidenceAgainstPolicy({
+    categoryId: normalizedCategoryId,
+    evidenceKinds,
+  });
 
   if (!isTruthy(input.userId)) {
     rejectedReasons.push("auth_user_missing");
@@ -165,29 +177,29 @@ export function evaluateMerchantClaimAutoValidation(
     rejectedReasons.push("missing_merchant_identification_data");
   }
 
-  const hasStorefront = evidenceKinds.has("storefront_photo");
   const hasOperationalPointPhoto = evidenceKinds.has("operational_point_photo");
-  const hasVisualEvidence = isFoodStandCategory(normalizedCategoryId)
-    ? hasStorefront || hasOperationalPointPhoto
-    : hasStorefront;
-  if (!hasVisualEvidence) {
+  if (evidencePolicy.missingVisual) {
     missingReasons.push("missing_storefront_photo");
-    missingEvidenceTypes.push("storefront_photo");
+    missingEvidenceTypes.push(
+      evidencePolicy.missingEvidenceTypes.find((kind) =>
+        kind === "storefront_photo" || kind === "operational_point_photo"
+      ) ?? "storefront_photo"
+    );
   }
 
-  const hasBasicRelationshipDocument = evidenceKinds.has("ownership_document");
   const hasAlternativeRelationshipDocument = evidenceKinds.has(
     "alternative_relationship_evidence"
   );
   const hasRegulatoryDocument = evidenceKinds.has("regulatory_document");
-  const hasRelationshipEvidence = isFoodStandCategory(normalizedCategoryId)
-    ? hasBasicRelationshipDocument ||
-      hasAlternativeRelationshipDocument ||
-      hasRegulatoryDocument
-    : hasBasicRelationshipDocument;
-  if (!hasRelationshipEvidence) {
+  if (evidencePolicy.missingRelationship) {
     missingReasons.push("missing_basic_relationship_document");
-    missingEvidenceTypes.push("ownership_document");
+    missingEvidenceTypes.push(
+      evidencePolicy.missingEvidenceTypes.find((kind) =>
+        kind === "ownership_document" ||
+        kind === "alternative_relationship_evidence" ||
+        kind === "regulatory_document"
+      ) ?? "ownership_document"
+    );
   }
 
   if (normalizedCategoryId === "pharmacy" && !hasRegulatoryDocument) {
@@ -230,6 +242,10 @@ export function evaluateMerchantClaimAutoValidation(
   ) {
     riskFlags.push("ambiguous_food_stand_evidence");
   }
+  if (evidencePolicy.manualReviewReasons.includes("fallback_category_policy_applied")) {
+    riskFlags.push("fallback_category_policy_applied");
+  }
+
   if (input.riskSignals.contactReuseDetected) {
     riskFlags.push("risk_signal_contact_reuse");
   }
@@ -285,6 +301,15 @@ export function evaluateMerchantClaimAutoValidation(
       riskPriority,
     }),
     autoValidationStatus: nextStatus === "under_review" ? "passed" : "blocked",
+    evidencePolicyVersion: evidencePolicy.policyVersion || CLAIM_EVIDENCE_POLICY_VERSION,
+    evidencePolicyCategoryId: evidencePolicy.policyCategoryId,
+    evidencePolicyStrictnessLevel: evidencePolicy.strictnessLevel,
+    requiredEvidenceSatisfied: evidencePolicy.requiredEvidenceSatisfied,
+    primaryVisualEvidenceType: evidencePolicy.primaryVisualEvidenceType,
+    relationshipEvidenceTypes: evidencePolicy.relationshipEvidenceTypes,
+    sufficiencyLevel: evidencePolicy.sufficiencyLevel,
+    manualReviewReasons: evidencePolicy.manualReviewReasons,
+    riskHints: evidencePolicy.riskHints,
   };
 }
 

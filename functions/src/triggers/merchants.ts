@@ -52,8 +52,8 @@ export const onMerchantWriteSyncPublic = onDocumentWritten(
         beforeMerchant,
         signals ?? undefined
       );
-      // TODO(finops): Re-evaluar este pre-skip híbrido con métricas reales de costo.
-      // Mantener mientras reduzca invocaciones al sync canónico sin perder consistencia.
+      // Se mantiene este pre-skip para reducir invocaciones al sync canónico
+      // sin perder consistencia de la proyección pública.
       if (areComparablePublicStatesEqual(beforeProjection, projection)) {
         return;
       }

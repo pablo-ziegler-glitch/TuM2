@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../merchant_badges/widgets/merchant_badge_widgets.dart';
 import '../../domain/merchant_detail_view_data.dart';
 
 class MerchantHeader extends StatelessWidget {
@@ -58,23 +59,19 @@ class MerchantHeader extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: badge.backgroundColor,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        badge.label,
-                        style: AppTextStyles.labelSm.copyWith(
-                          color: badge.foregroundColor,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    MerchantStatusBadge(
+                      badge: badge.primaryKey,
+                    ),
+                    ...badge.secondary.map(
+                      (secondaryBadge) => MerchantStatusBadge(
+                        badge: secondaryBadge,
+                        compact: true,
                       ),
                     ),
+                    if (badge.confidence != null)
+                      MerchantConfidenceBadge(
+                        badge: badge.confidence!,
+                      ),
                     if ((distanceLabel ?? '').trim().isNotEmpty)
                       Container(
                         padding: const EdgeInsets.symmetric(

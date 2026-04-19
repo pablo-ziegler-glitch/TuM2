@@ -1,10 +1,14 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldPath, getFirestore } from "firebase-admin/firestore";
 import { buildSearchKeywords } from "../lib/projection";
 import { MerchantDoc } from "../lib/types";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 400;
+const DEFAULT_PAGE_SIZE = 300;
+const MAX_PAGE_SIZE = 1000;
+const DEFAULT_MAX_PAGES = 10;
+const MAX_PAGES = 100;
 
 export interface BackfillSearchKeywordsSummary {
   scanned: number;
@@ -12,6 +16,29 @@ export interface BackfillSearchKeywordsSummary {
   skipped: number;
   failed: number;
   missingBefore: number;
+  pageSize: number;
+  pagesProcessed: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+  durationMs: number;
+}
+
+export interface BackfillSearchKeywordsOptions {
+  pageSize?: number;
+  startAfterId?: string;
+  maxPages?: number;
+}
+
+function normalizeBackfillOptions(
+  options?: BackfillSearchKeywordsOptions
+): Required<BackfillSearchKeywordsOptions> {
+  const pageSizeRaw = Number(options?.pageSize ?? DEFAULT_PAGE_SIZE);
+  const maxPagesRaw = Number(options?.maxPages ?? DEFAULT_MAX_PAGES);
+  return {
+    pageSize: Math.max(1, Math.min(MAX_PAGE_SIZE, Number.isFinite(pageSizeRaw) ? pageSizeRaw : DEFAULT_PAGE_SIZE)),
+    startAfterId: (options?.startAfterId ?? "").trim(),
+    maxPages: Math.max(1, Math.min(MAX_PAGES, Number.isFinite(maxPagesRaw) ? maxPagesRaw : DEFAULT_MAX_PAGES)),
+  };
 }
 
 export function assertAdminCallableAccess(
@@ -60,56 +87,90 @@ export function shouldUpdateKeywords(
   return normalizedCurrent.some((value, index) => value !== nextKeywords[index]);
 }
 
-export async function runBackfillSearchKeywords(): Promise<BackfillSearchKeywordsSummary> {
-  const snapshot = await db().collection("merchant_public").get();
-
-  if (snapshot.empty) {
-    return { scanned: 0, updated: 0, skipped: 0, failed: 0, missingBefore: 0 };
-  }
+export async function runBackfillSearchKeywords(
+  options?: BackfillSearchKeywordsOptions
+): Promise<BackfillSearchKeywordsSummary> {
+  const startedAtMs = Date.now();
+  const normalizedOptions = normalizeBackfillOptions(options);
 
   let scanned = 0;
   let updated = 0;
   let skipped = 0;
   let failed = 0;
   let missingBefore = 0;
+  let pagesProcessed = 0;
+  let hasMore = false;
+  let nextCursor: string | null = normalizedOptions.startAfterId || null;
 
   let batchOps = 0;
   let batch = db().batch();
   const commits: Array<Promise<FirebaseFirestore.WriteResult[]>> = [];
 
-  for (const doc of snapshot.docs) {
-    scanned++;
-    try {
-      const data = doc.data();
-      const currentKeywords = data["searchKeywords"];
-      if (!Array.isArray(currentKeywords) || currentKeywords.length === 0) {
-        missingBefore++;
-      }
-
-      const source = asKeywordSource(data);
-      const nextKeywords = buildSearchKeywords(source);
-
-      if (!shouldUpdateKeywords(currentKeywords, nextKeywords)) {
-        skipped++;
-        continue;
-      }
-
-      batch.set(doc.ref, { searchKeywords: nextKeywords }, { merge: true });
-      updated++;
-      batchOps++;
-
-      if (batchOps >= BATCH_SIZE) {
-        commits.push(batch.commit());
-        batch = db().batch();
-        batchOps = 0;
-      }
-    } catch (error) {
-      failed++;
-      console.error("[backfillSearchKeywords] Failed doc", {
-        merchantId: doc.id,
-        error,
-      });
+  for (let page = 0; page < normalizedOptions.maxPages; page++) {
+    let query = db()
+      .collection("merchant_public")
+      .orderBy(FieldPath.documentId())
+      .limit(normalizedOptions.pageSize);
+    if (nextCursor) {
+      query = query.startAfter(nextCursor);
     }
+
+    const snapshot = await query.get();
+    if (snapshot.empty) {
+      hasMore = false;
+      nextCursor = null;
+      break;
+    }
+    pagesProcessed += 1;
+
+    for (const doc of snapshot.docs) {
+      scanned++;
+      try {
+        const data = doc.data();
+        const currentKeywords = data["searchKeywords"];
+        if (!Array.isArray(currentKeywords) || currentKeywords.length === 0) {
+          missingBefore++;
+        }
+
+        const source = asKeywordSource(data);
+        const nextKeywords = buildSearchKeywords(source);
+
+        if (!shouldUpdateKeywords(currentKeywords, nextKeywords)) {
+          skipped++;
+          continue;
+        }
+
+        batch.set(doc.ref, { searchKeywords: nextKeywords }, { merge: true });
+        updated++;
+        batchOps++;
+
+        if (batchOps >= BATCH_SIZE) {
+          commits.push(batch.commit());
+          batch = db().batch();
+          batchOps = 0;
+        }
+      } catch (error) {
+        failed++;
+        console.error("[backfillSearchKeywords] Failed doc", {
+          merchantId: doc.id,
+          error,
+        });
+      }
+    }
+
+    const lastDocId = snapshot.docs[snapshot.docs.length - 1]?.id ?? null;
+    if (!lastDocId) {
+      hasMore = false;
+      nextCursor = null;
+      break;
+    }
+    if (snapshot.size < normalizedOptions.pageSize) {
+      hasMore = false;
+      nextCursor = null;
+      break;
+    }
+    nextCursor = lastDocId;
+    hasMore = true;
   }
 
   if (batchOps > 0) {
@@ -117,7 +178,36 @@ export async function runBackfillSearchKeywords(): Promise<BackfillSearchKeyword
   }
 
   await Promise.all(commits);
-  return { scanned, updated, skipped, failed, missingBefore };
+
+  const durationMs = Date.now() - startedAtMs;
+  const summary = {
+    scanned,
+    updated,
+    skipped,
+    failed,
+    missingBefore,
+    pageSize: normalizedOptions.pageSize,
+    pagesProcessed,
+    hasMore,
+    nextCursor: hasMore ? nextCursor : null,
+    durationMs,
+  };
+  console.log(
+    JSON.stringify({
+      job: "backfillSearchKeywords",
+      readDocs: scanned,
+      writeDocs: updated,
+      skippedDocs: skipped,
+      failedDocs: failed,
+      missingBefore,
+      pageSize: normalizedOptions.pageSize,
+      pagesProcessed,
+      hasMore,
+      nextCursor: hasMore ? nextCursor : null,
+      durationMs,
+    })
+  );
+  return summary;
 }
 
 /**
@@ -131,7 +221,12 @@ export const backfillSearchKeywords = onCall(
   async (request) => {
     assertAdminCallableAccess(request.auth);
 
-    const summary = await runBackfillSearchKeywords();
+    const payload = (request.data ?? {}) as Record<string, unknown>;
+    const summary = await runBackfillSearchKeywords({
+      pageSize: typeof payload["pageSize"] === "number" ? payload["pageSize"] : undefined,
+      startAfterId: typeof payload["startAfterId"] === "string" ? payload["startAfterId"] : undefined,
+      maxPages: typeof payload["maxPages"] === "number" ? payload["maxPages"] : undefined,
+    });
     console.log("[backfillSearchKeywords] Summary", summary);
     return summary;
   }

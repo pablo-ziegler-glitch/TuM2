@@ -1,4 +1,5 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
+import { FieldValue, getFirestore, Timestamp } from "firebase-admin/firestore";
 import {
   normalizeOperationalPublicStateForDiff,
   resolveOperationalPublicState,
@@ -6,9 +7,24 @@ import {
 import { OperationalSignals } from "../lib/types";
 import { syncMerchantPublicProjection } from "../lib/publicProjectionSync";
 import { logFinOpsEvent } from "../lib/finops";
+import { apply24hClosePolicy } from "../lib/twentyFourHourPolicy";
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(value);
+}
+
+function toMillis(value: unknown): number | null {
+  if (
+    value &&
+    typeof value === "object" &&
+    "toMillis" in (value as Record<string, unknown>) &&
+    typeof (value as { toMillis?: unknown }).toMillis === "function"
+  ) {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return null;
 }
 
 /**
@@ -36,6 +52,48 @@ export const onSignalsWriteSyncPublic = onDocumentWritten(
     const resolvedAfter = resolveOperationalPublicState(afterSignals);
     const diffBefore = normalizeOperationalPublicStateForDiff(resolvedBefore);
     const diffAfter = normalizeOperationalPublicStateForDiff(resolvedAfter);
+    const nowMs = Date.now();
+    let effectiveAfterSignals = afterSignals;
+
+    if (afterSignals) {
+      const rawAfter = afterSignals as Record<string, unknown>;
+      const strikeCount =
+        typeof rawAfter["twentyFourHourStrikeCount"] === "number"
+          ? (rawAfter["twentyFourHourStrikeCount"] as number)
+          : 0;
+      const policy = apply24hClosePolicy({
+        previousIsOpenNow: resolvedBefore.isOpenNow,
+        nextIsOpenNow: resolvedAfter.isOpenNow,
+        nowMs,
+        state: {
+          is24hEnabled: rawAfter["is24h"] === true,
+          strikeCount,
+          cooldownUntilMs: toMillis(rawAfter["twentyFourHourCooldownUntil"]),
+        },
+      });
+
+      if (policy.removedBecauseClosed) {
+        const cooldownUntil = policy.next.cooldownUntilMs != null
+          ? Timestamp.fromMillis(policy.next.cooldownUntilMs)
+          : null;
+        const patch: Record<string, unknown> = {
+          is24h: false,
+          twentyFourHourStrikeCount: policy.next.strikeCount,
+          twentyFourHourCooldownUntil: cooldownUntil,
+          twentyFourHourBadgeRemovedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        await getFirestore()
+          .doc(`merchant_operational_signals/${merchantId}`)
+          .set(patch, { merge: true });
+        effectiveAfterSignals = {
+          ...afterSignals,
+          is24h: false,
+          twentyFourHourStrikeCount: policy.next.strikeCount,
+          twentyFourHourCooldownUntil: cooldownUntil,
+        };
+      }
+    }
 
     const skipWrite = stableStringify(diffBefore) === stableStringify(diffAfter);
     if (skipWrite) {
@@ -70,7 +128,7 @@ export const onSignalsWriteSyncPublic = onDocumentWritten(
 
     const syncResult = await syncMerchantPublicProjection({
       merchantId,
-      signals: afterSignals,
+      signals: effectiveAfterSignals,
     });
 
     const logPayload = {

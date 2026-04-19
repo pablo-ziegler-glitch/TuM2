@@ -281,6 +281,7 @@ class _FakeProductRepository implements ProductRepository {
   @override
   Stream<List<MerchantProduct>> watchOwnerProducts({
     required String merchantId,
+    int limit = 120,
   }) {
     return Stream.value(
       _products.values.where((item) => item.merchantId == merchantId).toList(),

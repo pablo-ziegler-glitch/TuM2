@@ -34,7 +34,8 @@ class _PublicDutyStatusScreenState
       appBar: AppBar(
         backgroundColor: const Color(0xFFFAF9F7),
         elevation: 0,
-        title: const Text('Duty Reassignment', style: AppTextStyles.headingSm),
+        title:
+            const Text('Cobertura de guardia', style: AppTextStyles.headingSm),
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back, color: AppColors.primary500),
@@ -55,7 +56,7 @@ class _PublicDutyStatusScreenState
               children: [
                 TextField(
                   decoration: InputDecoration(
-                    hintText: 'Search by name or neighborhood...',
+                    hintText: 'Buscar por nombre o barrio...',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: AppColors.surface,
@@ -69,23 +70,23 @@ class _PublicDutyStatusScreenState
                 Wrap(
                   spacing: 8,
                   children: [
-                    _chip('Close to me', 'close_to_me'),
-                    _chip('Open Now', 'open_now'),
-                    _chip('24 Hours', 'always_open'),
+                    _chip('Cerca mio', 'close_to_me'),
+                    _chip('Abiertas ahora', 'open_now'),
+                    _chip('24 horas', 'always_open'),
                   ],
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Text(
-                      'Active Pharmacies',
+                      'Farmacias activas',
                       style: AppTextStyles.headingMd.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const Spacer(),
                     Text(
-                      '${_items.length} results',
+                      '${_items.length} resultados',
                       style: AppTextStyles.bodySm,
                     ),
                   ],
@@ -194,7 +195,7 @@ class _PublicDutyStatusScreenState
                           minimumSize: const Size.fromHeight(40),
                         ),
                         icon: const Icon(Icons.directions, size: 18),
-                        label: const Text('Get Directions'),
+                        label: const Text('Como llegar'),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -240,7 +241,7 @@ class _PublicDutyStatusScreenState
               children: [
                 Expanded(
                   child: Text(
-                    'INTERACTIVE VIEW\nMap Overview',
+                    'VISTA INTERACTIVA\nResumen del mapa',
                     style: AppTextStyles.bodyXs.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -253,7 +254,7 @@ class _PublicDutyStatusScreenState
                     backgroundColor: Colors.white.withValues(alpha: 0.92),
                   ),
                   icon: const Icon(Icons.fullscreen, size: 16),
-                  label: const Text('Expand Map'),
+                  label: const Text('Ampliar mapa'),
                 ),
               ],
             ),

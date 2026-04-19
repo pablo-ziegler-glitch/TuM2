@@ -18,21 +18,21 @@ class ImportListScreen extends StatefulWidget {
 
 class _ImportListScreenState extends State<ImportListScreen> {
   final _repository = ImportDataRepository();
-  String _activeFilter = 'All';
+  String _activeFilter = 'Todos';
   static const _filters = [
-    'All',
-    'Official Dataset',
-    'Master Catalog',
-    'Generic',
+    'Todos',
+    'Dataset oficial',
+    'Catalogo maestro',
+    'Generico',
   ];
 
   List<ImportBatchUi> _filteredBatches(List<ImportBatchUi> batches) {
-    if (_activeFilter == 'All') return batches;
+    if (_activeFilter == 'Todos') return batches;
     return batches.where((b) {
       return switch (_activeFilter) {
-        'Official Dataset' => b.importType == ImportType.officialDataset,
-        'Master Catalog' => b.importType == ImportType.masterCatalog,
-        'Generic' => b.importType == ImportType.genericInternal,
+        'Dataset oficial' => b.importType == ImportType.officialDataset,
+        'Catalogo maestro' => b.importType == ImportType.masterCatalog,
+        'Generico' => b.importType == ImportType.genericInternal,
         _ => true,
       };
     }).toList();
@@ -95,10 +95,10 @@ class _ImportListScreenState extends State<ImportListScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Import Management', style: AppTextStyles.headingMd),
+            Text('Importaciones', style: AppTextStyles.headingMd),
             const SizedBox(height: 2),
             Text(
-              'Manage dataset imports, field mappings and data quality',
+              'Gestiona importaciones, mapeos de campos y calidad de datos',
               style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
             ),
           ],
@@ -107,7 +107,7 @@ class _ImportListScreenState extends State<ImportListScreen> {
         OutlinedButton.icon(
           onPressed: () => context.go('/imports/history'),
           icon: const Icon(Icons.history, size: 15),
-          label: const Text('Batch History'),
+          label: const Text('Historial'),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.neutral700,
             side: const BorderSide(color: AppColors.neutral300),
@@ -119,7 +119,7 @@ class _ImportListScreenState extends State<ImportListScreen> {
         FilledButton.icon(
           onPressed: () => context.go('/imports/new'),
           icon: const Icon(Icons.add, size: 16),
-          label: const Text('New Import'),
+          label: const Text('Nueva importacion'),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary500,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -134,42 +134,42 @@ class _ImportListScreenState extends State<ImportListScreen> {
     return Row(
       children: [
         _KpiCard(
-          label: 'Total Imports',
+          label: 'Importaciones totales',
           value: '${kpis.totalImports}',
           icon: Icons.upload_file_outlined,
           color: AppColors.primary500,
         ),
         const SizedBox(width: 12),
         _KpiCard(
-          label: 'Success Rate',
+          label: 'Tasa de exito',
           value: '${(kpis.successRate * 100).toStringAsFixed(1)}%',
           icon: Icons.check_circle_outline,
           color: AppColors.successFg,
         ),
         const SizedBox(width: 12),
         _KpiCard(
-          label: 'Failed Batches',
+          label: 'Batches fallidos',
           value: '${kpis.failedBatches}',
           icon: Icons.error_outline,
           color: AppColors.errorFg,
         ),
         const SizedBox(width: 12),
         _KpiCard(
-          label: 'Rows Processed',
+          label: 'Filas procesadas',
           value: NumberFormat.compact().format(kpis.rowsProcessed),
           icon: Icons.table_rows_outlined,
           color: AppColors.secondary500,
         ),
         const SizedBox(width: 12),
         _KpiCard(
-          label: 'Pending Conflicts',
+          label: 'Conflictos pendientes',
           value: '${kpis.pendingConflicts}',
           icon: Icons.merge_type_outlined,
           color: AppColors.warningFg,
         ),
         const SizedBox(width: 12),
         _KpiCard(
-          label: 'Active Templates',
+          label: 'Plantillas activas',
           value: '${kpis.activeTemplates}',
           icon: Icons.description_outlined,
           color: AppColors.neutral600,
@@ -227,7 +227,7 @@ class _ImportListScreenState extends State<ImportListScreen> {
             child: Row(
               children: [
                 Text(
-                  'Recent Batches',
+                  'Batches recientes',
                   style: AppTextStyles.headingSm.copyWith(fontSize: 14),
                 ),
                 const Spacer(),
@@ -238,7 +238,7 @@ class _ImportListScreenState extends State<ImportListScreen> {
                     padding: EdgeInsets.zero,
                     textStyle: AppTextStyles.labelSm,
                   ),
-                  child: const Text('View all →'),
+                  child: const Text('Ver todo ->'),
                 ),
               ],
             ),
@@ -277,7 +277,7 @@ class _ImportListScreenState extends State<ImportListScreen> {
           Row(
             children: [
               Text(
-                'Recent Audit Trail',
+                'Auditoria reciente',
                 style: AppTextStyles.headingSm.copyWith(fontSize: 14),
               ),
               const SizedBox(width: 8),
@@ -302,7 +302,7 @@ class _ImportListScreenState extends State<ImportListScreen> {
                   padding: EdgeInsets.zero,
                   textStyle: AppTextStyles.labelSm,
                 ),
-                child: const Text('View full audit →'),
+                child: const Text('Ver auditoria completa ->'),
               ),
             ],
           ),
@@ -335,10 +335,13 @@ class _ImportListScreenState extends State<ImportListScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            Text('No imports yet', style: AppTextStyles.headingSm),
+            Text(
+              'Todavia no hay importaciones',
+              style: AppTextStyles.headingSm,
+            ),
             const SizedBox(height: 8),
             Text(
-              'Start by importing an official dataset, master catalog or custom source.',
+              'Empeza importando un dataset oficial, un catalogo maestro o una fuente personalizada.',
               style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral500),
               textAlign: TextAlign.center,
             ),
@@ -346,7 +349,7 @@ class _ImportListScreenState extends State<ImportListScreen> {
             FilledButton.icon(
               onPressed: () => context.go('/imports/new'),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('New Import'),
+              label: const Text('Nueva importacion'),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary500,
                 padding: const EdgeInsets.symmetric(
@@ -361,20 +364,20 @@ class _ImportListScreenState extends State<ImportListScreen> {
               children: [
                 _FeatureCard(
                   icon: Icons.source_outlined,
-                  title: 'Official Datasets',
-                  description: 'REPES, WiFi, municipal data',
+                  title: 'Datasets oficiales',
+                  description: 'REPES, WiFi y datos municipales',
                 ),
                 const SizedBox(width: 16),
                 _FeatureCard(
                   icon: Icons.inventory_2_outlined,
-                  title: 'Master Catalog',
-                  description: 'Products with barcode + brand',
+                  title: 'Catalogo maestro',
+                  description: 'Productos con codigo de barras y marca',
                 ),
                 const SizedBox(width: 16),
                 _FeatureCard(
                   icon: Icons.tune_outlined,
-                  title: 'Smart Mapping',
-                  description: 'AI-assisted field detection',
+                  title: 'Mapeo asistido',
+                  description: 'Deteccion asistida de campos',
                 ),
               ],
             ),
@@ -451,11 +454,11 @@ class _TableHeader extends StatelessWidget {
       child: Row(
         children: [
           _headerCell('BATCH', flex: 1),
-          _headerCell('TYPE', flex: 2),
-          _headerCell('ZONE / SOURCE', flex: 2),
-          _headerCell('METRICS', flex: 2),
-          _headerCell('STATUS', flex: 2),
-          _headerCell('DATE', flex: 2),
+          _headerCell('TIPO', flex: 2),
+          _headerCell('ZONA / FUENTE', flex: 2),
+          _headerCell('METRICAS', flex: 2),
+          _headerCell('ESTADO', flex: 2),
+          _headerCell('FECHA', flex: 2),
           _headerCell('', flex: 1),
         ],
       ),
@@ -647,47 +650,47 @@ class _StatusBadge extends StatelessWidget {
       ImportBatchStatus.completed => (
           AppColors.successFg,
           AppColors.successFg.withValues(alpha: 0.1),
-          'Completed',
+          'Completado',
         ),
       ImportBatchStatus.running => (
           AppColors.primary500,
           AppColors.primary500.withValues(alpha: 0.1),
-          'Running',
+          'En proceso',
         ),
       ImportBatchStatus.failed => (
           AppColors.errorFg,
           AppColors.errorFg.withValues(alpha: 0.1),
-          'Failed',
+          'Fallido',
         ),
       ImportBatchStatus.hidden => (
           AppColors.neutral500,
           AppColors.neutral200,
-          'Staged',
+          'En staging',
         ),
       ImportBatchStatus.rolledBack => (
           AppColors.warningFg,
           AppColors.warningFg.withValues(alpha: 0.1),
-          'Rolled Back',
+          'Revertido',
         ),
       ImportBatchStatus.validated => (
           AppColors.secondary500,
           AppColors.secondary500.withValues(alpha: 0.1),
-          'Validated',
+          'Validado',
         ),
       ImportBatchStatus.partial => (
           AppColors.warningFg,
           AppColors.warningFg.withValues(alpha: 0.1),
-          'Partial',
+          'Parcial',
         ),
       ImportBatchStatus.draft => (
           AppColors.neutral500,
           AppColors.neutral100,
-          'Queued',
+          'En cola',
         ),
       ImportBatchStatus.archived => (
           AppColors.neutral400,
           AppColors.neutral100,
-          'Archived',
+          'Archivado',
         ),
     };
 

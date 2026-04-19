@@ -72,8 +72,10 @@ class _ImportResultScreenState extends State<ImportResultScreen>
                     color: AppColors.neutral400,
                   ),
                   const SizedBox(height: 16),
-                  Text('Importacion no encontrada',
-                      style: AppTextStyles.headingSm),
+                  Text(
+                    'Importacion no encontrada',
+                    style: AppTextStyles.headingSm,
+                  ),
                   const SizedBox(height: 8),
                   Text(
                     'ID de batch: ${widget.batchId}',
@@ -200,8 +202,9 @@ class _ImportResultScreenState extends State<ImportResultScreen>
         if (batch.status == ImportBatchStatus.completed ||
             batch.status == ImportBatchStatus.hidden)
           OutlinedButton.icon(
-            onPressed:
-                _isReverting ? null : () => _showRevertDialog(context, batch),
+            onPressed: _isReverting
+                ? null
+                : () => _showRevertDialog(context, batch),
             icon: const Icon(Icons.undo, size: 15),
             label: Text(_isReverting ? 'Revirtiendo...' : 'Revertir'),
             style: OutlinedButton.styleFrom(
@@ -666,8 +669,9 @@ class _TimelineRow extends StatelessWidget {
                   child: Icon(
                     event.result ? Icons.check : Icons.close,
                     size: 13,
-                    color:
-                        event.result ? AppColors.successFg : AppColors.errorFg,
+                    color: event.result
+                        ? AppColors.successFg
+                        : AppColors.errorFg,
                   ),
                 ),
                 if (!isLast)
@@ -788,48 +792,26 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (badgeKey, label) = switch (status) {
       ImportBatchStatus.completed => (
-          AdminBadgeKey.importCompleted,
-          'Completado',
-        ),
-      ImportBatchStatus.running => (
-          AdminBadgeKey.importRunning,
-          'En proceso',
-        ),
-      ImportBatchStatus.failed => (
-          AdminBadgeKey.importFailed,
-          'Fallido',
-        ),
-      ImportBatchStatus.hidden => (
-          AdminBadgeKey.importHidden,
-          'En staging',
-        ),
+        AdminBadgeKey.importCompleted,
+        'Completado',
+      ),
+      ImportBatchStatus.running => (AdminBadgeKey.importRunning, 'En proceso'),
+      ImportBatchStatus.failed => (AdminBadgeKey.importFailed, 'Fallido'),
+      ImportBatchStatus.hidden => (AdminBadgeKey.importHidden, 'En staging'),
       ImportBatchStatus.rolledBack => (
-          AdminBadgeKey.importRolledBack,
-          'Revertido',
-        ),
+        AdminBadgeKey.importRolledBack,
+        'Revertido',
+      ),
       ImportBatchStatus.validated => (
-          AdminBadgeKey.importValidated,
-          'Validado',
-        ),
-      ImportBatchStatus.partial => (
-          AdminBadgeKey.importPartial,
-          'Parcial',
-        ),
-      ImportBatchStatus.draft => (
-          AdminBadgeKey.importDraft,
-          'En cola',
-        ),
-      ImportBatchStatus.archived => (
-          AdminBadgeKey.importArchived,
-          'Archivado',
-        ),
+        AdminBadgeKey.importValidated,
+        'Validado',
+      ),
+      ImportBatchStatus.partial => (AdminBadgeKey.importPartial, 'Parcial'),
+      ImportBatchStatus.draft => (AdminBadgeKey.importDraft, 'En cola'),
+      ImportBatchStatus.archived => (AdminBadgeKey.importArchived, 'Archivado'),
     };
 
-    return AdminSemanticBadge(
-      badgeKey: badgeKey,
-      label: label,
-      compact: true,
-    );
+    return AdminSemanticBadge(badgeKey: badgeKey, label: label, compact: true);
   }
 }
 
@@ -933,8 +915,9 @@ class _IssueTableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCritical = error.severity == ImportIssueSeverity.critical;
     final isError = error.severity == ImportIssueSeverity.error;
-    final color =
-        isCritical || isError ? AppColors.errorFg : AppColors.warningFg;
+    final color = isCritical || isError
+        ? AppColors.errorFg
+        : AppColors.warningFg;
 
     return Column(
       children: [

@@ -136,10 +136,7 @@ void main() {
       timeline: [],
     );
 
-    expect(
-      canResolveClaimStatus(detail, MerchantClaimStatus.rejected),
-      isTrue,
-    );
+    expect(canResolveClaimStatus(detail, MerchantClaimStatus.rejected), isTrue);
     expect(
       canResolveClaimStatus(detail, MerchantClaimStatus.approved),
       isFalse,

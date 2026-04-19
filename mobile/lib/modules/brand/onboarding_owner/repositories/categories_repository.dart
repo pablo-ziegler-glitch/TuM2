@@ -83,7 +83,8 @@ class CategoriesRepository {
     CategoryModel(id: 'kiosco', label: 'Kiosco', iconName: 'storefront'),
     CategoryModel(id: 'almacen', label: 'Almacén', iconName: 'shopping_basket'),
     CategoryModel(id: 'veterinaria', label: 'Veterinaria', iconName: 'pets'),
-    CategoryModel(id: 'panaderia', label: 'Panadería', iconName: 'bakery_dining'),
+    CategoryModel(
+        id: 'panaderia', label: 'Panadería', iconName: 'bakery_dining'),
     CategoryModel(id: 'otro', label: 'Otro', iconName: 'store'),
   ];
 }

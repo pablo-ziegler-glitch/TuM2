@@ -8,9 +8,6 @@ import '../../../core/auth/auth_state.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../merchant_badges/domain/merchant_badge_resolver.dart';
-import '../../merchant_badges/domain/merchant_visual_models.dart';
-import '../../merchant_badges/widgets/merchant_badge_widgets.dart';
 import '../../merchant_claim/application/merchant_claim_flow_controller.dart';
 import '../../merchant_claim/models/merchant_claim_models.dart';
 import '../analytics/owner_dashboard_analytics.dart';
@@ -356,24 +353,6 @@ class _OwnerPendingStateContentState
   Widget build(BuildContext context) {
     final state = ref.watch(merchantClaimFlowControllerProvider);
     final claimStatus = state.statusSummary?.claimStatus;
-    final claimBadgeResolution = MerchantBadgeResolver.resolve(
-      state: MerchantVisualState(
-        visibility: MerchantVisibilityState.hidden,
-        lifecycle: MerchantLifecycleState.draft,
-        confidence: MerchantConfidenceState.unverified,
-        opening: MerchantOpeningState.noInfo,
-        guardState: MerchantPharmacyGuardState.none,
-        operationalSignal: MerchantOperationalSignalState.none,
-        show24hBadge: false,
-        twentyFourHourCooldownActive: false,
-        categoryLabel: null,
-        claimState: _toClaimWorkflowState(claimStatus),
-        hasSufficientScheduleInfo: false,
-        manualOverrideMode: 'none',
-        informational: false,
-      ),
-      surface: MerchantSurface.claimStatus,
-    );
     final isNeedsInfo = claimStatus == MerchantClaimStatus.needsMoreInfo;
     final isConflict = claimStatus == MerchantClaimStatus.conflictDetected ||
         claimStatus == MerchantClaimStatus.duplicateClaim;
@@ -424,12 +403,6 @@ class _OwnerPendingStateContentState
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              if (claimBadgeResolution.primary != null) ...[
-                const SizedBox(height: 6),
-                MerchantClaimStatusBadge(
-                  badge: claimBadgeResolution.primary!,
-                ),
-              ],
               const SizedBox(height: 6),
               Text(
                 headline,
@@ -513,29 +486,6 @@ class _OwnerPendingStateContentState
           ),
       ],
     );
-  }
-}
-
-MerchantClaimWorkflowState _toClaimWorkflowState(MerchantClaimStatus? status) {
-  switch (status) {
-    case MerchantClaimStatus.draft:
-      return MerchantClaimWorkflowState.draft;
-    case MerchantClaimStatus.submitted:
-      return MerchantClaimWorkflowState.submitted;
-    case MerchantClaimStatus.underReview:
-      return MerchantClaimWorkflowState.underReview;
-    case MerchantClaimStatus.needsMoreInfo:
-      return MerchantClaimWorkflowState.needsMoreInfo;
-    case MerchantClaimStatus.approved:
-      return MerchantClaimWorkflowState.approved;
-    case MerchantClaimStatus.rejected:
-      return MerchantClaimWorkflowState.rejected;
-    case MerchantClaimStatus.duplicateClaim:
-      return MerchantClaimWorkflowState.duplicateClaim;
-    case MerchantClaimStatus.conflictDetected:
-      return MerchantClaimWorkflowState.conflictDetected;
-    case null:
-      return MerchantClaimWorkflowState.underReview;
   }
 }
 

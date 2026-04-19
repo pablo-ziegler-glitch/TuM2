@@ -108,6 +108,15 @@ export interface MerchantClaimDocument {
   requiresManualReview?: boolean;
   missingEvidence?: boolean;
   missingEvidenceTypes?: string[];
+  evidencePolicyVersion?: string | null;
+  evidencePolicyCategoryId?: string | null;
+  evidencePolicyStrictnessLevel?: string | null;
+  requiredEvidenceSatisfied?: boolean;
+  primaryVisualEvidenceType?: MerchantClaimEvidenceKind | null;
+  relationshipEvidenceTypes?: MerchantClaimEvidenceKind[];
+  sufficiencyLevel?: 'insufficient' | 'sufficient_manual_review' | 'sufficient' | null;
+  manualReviewReasons?: string[];
+  riskHints?: string[];
   riskFlags?: string[];
   riskPriority?: 'low' | 'medium' | 'high' | 'critical' | null;
   reviewQueuePriority?: number | null;

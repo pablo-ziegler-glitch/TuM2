@@ -26,6 +26,63 @@ abstract class MerchantClaimAnalytics {
         parameters: {'evidence_kind': kind},
       );
 
+  static Future<void> logEvidenceRequirementsViewed({
+    required String categoryId,
+    required String policyVersion,
+  }) =>
+      _safeLog(
+        'merchant_claim_evidence_requirements_viewed',
+        parameters: {
+          'category_id': categoryId,
+          'policy_version': policyVersion,
+        },
+      );
+
+  static Future<void> logCategorySpecificHelpViewed({
+    required String categoryId,
+  }) =>
+      _safeLog(
+        'merchant_claim_category_specific_help_viewed',
+        parameters: {'category_id': categoryId},
+      );
+
+  static Future<void> logEvidenceUploadStarted({
+    required String kind,
+  }) =>
+      _safeLog(
+        'merchant_claim_evidence_upload_started',
+        parameters: {'evidence_kind': kind},
+      );
+
+  static Future<void> logEvidenceUploadCompleted({
+    required String kind,
+  }) =>
+      _safeLog(
+        'merchant_claim_evidence_upload_completed',
+        parameters: {'evidence_kind': kind},
+      );
+
+  static Future<void> logEvidenceUploadFailed({
+    required String kind,
+    required String code,
+  }) =>
+      _safeLog(
+        'merchant_claim_evidence_upload_failed',
+        parameters: {'evidence_kind': kind, 'error_code': code},
+      );
+
+  static Future<void> logSentToManualReview({
+    required String categoryId,
+    required String policyVersion,
+  }) =>
+      _safeLog(
+        'merchant_claim_sent_to_manual_review',
+        parameters: {
+          'category_id': categoryId,
+          'policy_version': policyVersion,
+        },
+      );
+
   static Future<void> logSubmitted(String status) => _safeLog(
         'merchant_claim_submitted',
         parameters: {'claim_status': status},

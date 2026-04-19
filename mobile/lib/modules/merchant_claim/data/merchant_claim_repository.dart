@@ -34,6 +34,14 @@ class MerchantClaimRepository {
 
   static const Duration _timeout = Duration(seconds: 12);
   static const int _maxSearchLimit = 20;
+  static const int maxEvidenceFileBytes = 8 * 1024 * 1024;
+  static const Set<String> allowedEvidenceMimeTypes = {
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+  };
 
   Future<List<ClaimableMerchantCandidate>> searchClaimableMerchants({
     required String zoneId,
@@ -82,13 +90,19 @@ class MerchantClaimRepository {
     }
   }
 
-  Future<({String claimId, MerchantClaimStatus claimStatus})> upsertDraft(
+  Future<
+      ({
+        String claimId,
+        MerchantClaimStatus claimStatus,
+        int? updatedAtMillis
+      })> upsertDraft(
     MerchantClaimDraftInput input,
   ) async {
     try {
       final callable = _functions.httpsCallable('upsertMerchantClaimDraft');
       final response = await callable.call(<String, dynamic>{
         'claimId': input.claimId,
+        'expectedUpdatedAtMillis': input.expectedUpdatedAtMillis,
         'merchantId': input.merchantId,
         'declaredRole': input.declaredRole.apiValue,
         'phone': input.phone,
@@ -114,6 +128,7 @@ class MerchantClaimRepository {
       return (
         claimId: claimId,
         claimStatus: MerchantClaimStatusX.fromApi(statusRaw),
+        updatedAtMillis: (data['updatedAtMillis'] as num?)?.toInt(),
       );
     } on FirebaseFunctionsException catch (error) {
       throw _mapFunctionsError(error);
@@ -128,11 +143,15 @@ class MerchantClaimRepository {
 
   Future<MerchantClaimStatusSummary> submitClaim({
     required String claimId,
+    int? expectedUpdatedAtMillis,
   }) async {
     try {
       final callable = _functions.httpsCallable('submitMerchantClaim');
-      final response = await callable
-          .call(<String, dynamic>{'claimId': claimId}).timeout(_timeout);
+      final response = await callable.call(<String, dynamic>{
+        'claimId': claimId,
+        if (expectedUpdatedAtMillis != null)
+          'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
+      }).timeout(_timeout);
       final data = (response.data as Map?)?.cast<String, dynamic>() ??
           const <String, dynamic>{};
       final status = MerchantClaimStatusX.fromApi(
@@ -223,12 +242,26 @@ class MerchantClaimRepository {
     final storagePath =
         'merchant-claims/$uid/$claimId/${upload.kind.apiValue}/$fileName';
     final ref = _storage.ref(storagePath);
+    final normalizedContentType = upload.contentType.trim().toLowerCase();
+    if (!allowedEvidenceMimeTypes.contains(normalizedContentType)) {
+      throw const MerchantClaimRepositoryException(
+        code: 'claim-evidence-invalid-type',
+        message:
+            'Tipo de archivo no permitido. Usá JPG, JPEG, PNG, WEBP o PDF.',
+      );
+    }
+    if (upload.bytes.isEmpty || upload.bytes.length > maxEvidenceFileBytes) {
+      throw const MerchantClaimRepositoryException(
+        code: 'claim-evidence-invalid-size',
+        message: 'El archivo excede el máximo de 8 MB.',
+      );
+    }
 
     try {
       await ref.putData(
         upload.bytes,
         SettableMetadata(
-          contentType: upload.contentType,
+          contentType: normalizedContentType,
           cacheControl: 'private,max-age=3600',
         ),
       );
@@ -236,7 +269,7 @@ class MerchantClaimRepository {
         id: upload.id,
         kind: upload.kind,
         storagePath: storagePath,
-        contentType: upload.contentType,
+        contentType: normalizedContentType,
         sizeBytes: upload.bytes.length,
         originalFileName: upload.originalFileName,
       );
@@ -256,6 +289,22 @@ class MerchantClaimRepository {
     if (details is Map) {
       final code = details['code'];
       if (code is String && code.trim().isNotEmpty) {
+        if (code.trim() == 'stale_claim') {
+          return MerchantClaimRepositoryException(
+            code: code.trim(),
+            message:
+                'El reclamo cambió desde otro dispositivo. Actualizá la pantalla y reintentá.',
+            cause: error,
+          );
+        }
+        if (code.trim() == 'claim_category_not_allowed') {
+          return MerchantClaimRepositoryException(
+            code: code.trim(),
+            message:
+                'La categoría del comercio no está habilitada para reclamo en el MVP.',
+            cause: error,
+          );
+        }
         return MerchantClaimRepositoryException(
           code: code.trim(),
           message: error.message ?? 'No se pudo completar la operación.',

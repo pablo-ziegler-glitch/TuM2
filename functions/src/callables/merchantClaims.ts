@@ -5,6 +5,11 @@ import {
   buildSensitiveVault,
   revealSensitiveFields,
 } from "../lib/claimSensitive";
+import {
+  isAllowedClaimCategoryId,
+  normalizeClaimCategoryId,
+  resolveClaimEvidencePolicy,
+} from "../lib/merchantClaimEvidencePolicy";
 import { runMerchantClaimAutoValidation } from "../lib/merchantClaimAutoValidationService";
 import { syncOwnerPendingAccess } from "../lib/merchantClaimOwnerPending";
 
@@ -53,6 +58,7 @@ interface ClaimEvidenceStored {
 interface UpsertMerchantClaimDraftRequest {
   claimId?: unknown;
   merchantId?: unknown;
+  expectedUpdatedAtMillis?: unknown;
   declaredRole?: unknown;
   phone?: unknown;
   claimantDisplayName?: unknown;
@@ -71,6 +77,7 @@ interface UpsertMerchantClaimDraftResponse {
 
 interface SubmitMerchantClaimRequest {
   claimId?: unknown;
+  expectedUpdatedAtMillis?: unknown;
 }
 
 interface SubmitMerchantClaimResponse {
@@ -172,6 +179,15 @@ interface GetMerchantClaimReviewDetailResponse {
     hasDuplicate: boolean;
     requiresManualReview: boolean;
     missingEvidenceTypes: string[];
+    evidencePolicyVersion: string | null;
+    evidencePolicyCategoryId: string | null;
+    evidencePolicyStrictnessLevel: string | null;
+    requiredEvidenceSatisfied: boolean;
+    primaryVisualEvidenceType: string | null;
+    relationshipEvidenceTypes: string[];
+    sufficiencyLevel: string | null;
+    manualReviewReasons: string[];
+    riskHints: string[];
     riskFlags: string[];
     riskPriority: string | null;
     reviewQueuePriority: number | null;
@@ -981,6 +997,18 @@ function normalizeResolveStatus(value: unknown): UserVisibleStatus {
   );
 }
 
+function assertClaimCategoryAllowed(categoryId: string): void {
+  if (isAllowedClaimCategoryId(categoryId)) return;
+  throw new HttpsError(
+    "failed-precondition",
+    "La categoría del comercio no está habilitada para claims en el MVP.",
+    {
+      code: "claim_category_not_allowed",
+      categoryId,
+    }
+  );
+}
+
 function normalizeRevealFields(value: unknown): SensitiveFieldKey[] {
   const allowed = new Set<SensitiveFieldKey>([
     "phone",
@@ -1153,6 +1181,9 @@ export const upsertMerchantClaimDraft = onCall<
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const uid = auth.uid;
   const authEmail = normalizeAuthEmail(auth.token);
+  const expectedUpdatedAtMillis = normalizeExpectedUpdatedAtMillis(
+    request.data.expectedUpdatedAtMillis
+  );
 
   const merchantId = normalizeRequiredString(request.data.merchantId, "merchantId");
   const declaredRole = normalizeDeclaredRole(request.data.declaredRole);
@@ -1182,7 +1213,10 @@ export const upsertMerchantClaimDraft = onCall<
     throw new HttpsError("not-found", "No encontramos el comercio seleccionado.");
   }
   const merchantData = merchantSnap.data() ?? {};
-  const categoryId = normalizeRequiredString(merchantData.categoryId, "merchant.categoryId");
+  const categoryId = normalizeClaimCategoryId(
+    normalizeRequiredString(merchantData.categoryId, "merchant.categoryId")
+  );
+  assertClaimCategoryAllowed(categoryId);
   const zoneId = normalizeRequiredString(merchantData.zoneId, "merchant.zoneId");
   const merchantProvinceName = readTrimmedString(merchantData, [
     "provinceName",
@@ -1239,6 +1273,11 @@ export const upsertMerchantClaimDraft = onCall<
     const currentStatus = toUserVisibleStatus(
       existingData.userVisibleStatus ?? existingData.claimStatus
     );
+    assertClaimFreshness({
+      expectedUpdatedAtMillis,
+      currentUpdatedAtMillis: readTimestampMillis(existingData.updatedAt),
+      currentStatus,
+    });
     if (!DRAFT_MUTABLE_STATUSES.has(currentStatus)) {
       throw new HttpsError(
         "failed-precondition",
@@ -1359,6 +1398,9 @@ export const submitMerchantClaim = onCall<
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const uid = auth.uid;
   const claimId = normalizeClaimId(request.data.claimId);
+  const expectedUpdatedAtMillis = normalizeExpectedUpdatedAtMillis(
+    request.data.expectedUpdatedAtMillis
+  );
   const authEmail = normalizeAuthEmail(auth.token);
 
   const claimRef = db().collection("merchant_claims").doc(claimId);
@@ -1374,6 +1416,11 @@ export const submitMerchantClaim = onCall<
   const currentStatus = toUserVisibleStatus(
     claimData.userVisibleStatus ?? claimData.claimStatus
   );
+  assertClaimFreshness({
+    expectedUpdatedAtMillis,
+    currentUpdatedAtMillis: readTimestampMillis(claimData.updatedAt),
+    currentStatus,
+  });
   if (!(currentStatus === "draft" || currentStatus === "needs_more_info")) {
     throw new HttpsError(
       "failed-precondition",
@@ -1382,9 +1429,14 @@ export const submitMerchantClaim = onCall<
   }
 
   const merchantId = normalizeRequiredString(claimData.merchantId, "merchantId");
+  const categoryId = normalizeClaimCategoryId(
+    normalizeRequiredString(claimData.categoryId, "categoryId")
+  );
+  assertClaimCategoryAllowed(categoryId);
   const now = FieldValue.serverTimestamp();
   await claimRef.set(
     {
+      categoryId,
       authenticatedEmail: authEmail,
       claimStatus: "submitted",
       userVisibleStatus: "submitted",
@@ -1403,6 +1455,12 @@ export const submitMerchantClaim = onCall<
       hasDuplicate: false,
       missingEvidence: false,
       missingEvidenceTypes: [],
+      requiredEvidenceSatisfied: false,
+      primaryVisualEvidenceType: null,
+      relationshipEvidenceTypes: [],
+      sufficiencyLevel: null,
+      manualReviewReasons: [],
+      riskHints: [],
       riskFlags: [],
       riskPriority: "low",
       reviewQueuePriority: 0,
@@ -1710,6 +1768,10 @@ export const getMerchantClaimReviewDetail = onCall<
   }
 
   const claimData = claimSnap.data() ?? {};
+  const detailCategoryId = normalizeClaimCategoryId(
+    typeof claimData.categoryId === "string" ? claimData.categoryId.trim() : ""
+  );
+  const resolvedPolicy = resolveClaimEvidencePolicy(detailCategoryId);
   const merchantId = normalizeRequiredString(claimData.merchantId, "claim.merchantId");
   const merchantSnap = await db().collection("merchants").doc(merchantId).get();
   const merchantData = merchantSnap.data() ?? {};
@@ -1801,6 +1863,30 @@ export const getMerchantClaimReviewDetail = onCall<
       hasDuplicate: claimData.hasDuplicate === true,
       requiresManualReview: claimData.requiresManualReview === true,
       missingEvidenceTypes: readStringArray(claimData.missingEvidenceTypes),
+      evidencePolicyVersion:
+        typeof claimData.evidencePolicyVersion === "string"
+          ? claimData.evidencePolicyVersion.trim()
+          : resolvedPolicy.policyVersion,
+      evidencePolicyCategoryId:
+        typeof claimData.evidencePolicyCategoryId === "string"
+          ? claimData.evidencePolicyCategoryId.trim()
+          : resolvedPolicy.categoryId,
+      evidencePolicyStrictnessLevel:
+        typeof claimData.evidencePolicyStrictnessLevel === "string"
+          ? claimData.evidencePolicyStrictnessLevel.trim()
+          : resolvedPolicy.strictnessLevel,
+      requiredEvidenceSatisfied: claimData.requiredEvidenceSatisfied === true,
+      primaryVisualEvidenceType:
+        typeof claimData.primaryVisualEvidenceType === "string"
+          ? claimData.primaryVisualEvidenceType.trim()
+          : null,
+      relationshipEvidenceTypes: readStringArray(claimData.relationshipEvidenceTypes),
+      sufficiencyLevel:
+        typeof claimData.sufficiencyLevel === "string"
+          ? claimData.sufficiencyLevel.trim()
+          : null,
+      manualReviewReasons: readStringArray(claimData.manualReviewReasons),
+      riskHints: readStringArray(claimData.riskHints),
       riskFlags: readStringArray(claimData.riskFlags),
       riskPriority:
         typeof claimData.riskPriority === "string" ? claimData.riskPriority.trim() : null,
@@ -2142,8 +2228,9 @@ export const searchClaimableMerchants = onCall<
               .normalize("NFD")
               .replace(/[\u0300-\u036f]/g, "")
               .toLowerCase();
-      const categoryId =
+      const categoryIdRaw =
         typeof data.categoryId === "string" ? data.categoryId.trim() : "";
+      const categoryId = normalizeClaimCategoryId(categoryIdRaw);
       const ownershipStatus =
         typeof data.ownershipStatus === "string"
           ? data.ownershipStatus.trim()
@@ -2155,7 +2242,7 @@ export const searchClaimableMerchants = onCall<
         merchantId: doc.id,
         name,
         address,
-        categoryId,
+      categoryId,
         zoneId,
         ownershipStatus,
         hasOwner: ownerUserId.length > 0,
@@ -2164,6 +2251,7 @@ export const searchClaimableMerchants = onCall<
       };
     })
     .filter((item) => item.name.length > 0)
+    .filter((item) => isAllowedClaimCategoryId(item.categoryId))
     .filter((item) => {
       if (!query) return true;
       return (

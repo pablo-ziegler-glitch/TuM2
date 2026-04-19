@@ -42,5 +42,16 @@ void main() {
       expect(payload['kind'], 'storefront_photo');
       expect(payload['sizeBytes'], 1024);
     });
+
+    test('expone apiValue para evidencia regulatoria', () {
+      expect(
+        MerchantClaimEvidenceKind.regulatoryDocument.apiValue,
+        'regulatory_document',
+      );
+      expect(
+        MerchantClaimEvidenceKind.alternativeRelationshipEvidence.apiValue,
+        'alternative_relationship_evidence',
+      );
+    });
   });
 }

@@ -32,6 +32,8 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
   String? _lastViewedMerchantId;
   bool _errorEventLogged = false;
   bool _emptyEventLogged = false;
+  bool _seenOwnerPending = false;
+  bool _handledPendingToOwnerTransition = false;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +68,34 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
       return const _OwnerDashboardScaffold(
         body: _OwnerDashboardUnauthorized(
           message: 'Necesitás iniciar sesión para usar este panel.',
+        ),
+      );
+    }
+
+    if (authState.role == 'owner' && authState.ownerPending) {
+      _seenOwnerPending = true;
+      _handledPendingToOwnerTransition = false;
+    }
+
+    if (authState.role == 'owner' &&
+        !authState.ownerPending &&
+        _seenOwnerPending &&
+        !_handledPendingToOwnerTransition) {
+      _handledPendingToOwnerTransition = true;
+      _seenOwnerPending = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.go(
+          AppRoutes.accessUpdatedPath(
+            target: 'owner',
+            reason: 'approved_transition',
+            from: AppRoutes.ownerDashboard,
+          ),
+        );
+      });
+      return const _OwnerDashboardScaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary500),
         ),
       );
     }

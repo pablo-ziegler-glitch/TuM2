@@ -348,20 +348,56 @@ void main() {
       expect(result, isNull);
     });
 
-    test('customer en /owner redirige a /profile', () {
+    test('customer en /owner redirige a guard de acceso actualizado', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
         location: '/owner',
       );
-      expect(result, equals(AppRoutes.profile));
+      expect(
+        result,
+        equals(
+          AppRoutes.accessUpdatedPath(
+            target: 'customer',
+            reason: 'deep_route_access_changed',
+            from: '/owner',
+          ),
+        ),
+      );
     });
 
-    test('customer en /owner/products redirige a /profile', () {
+    test('customer en /owner/products redirige a guard de acceso actualizado',
+        () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
         location: '/owner/products',
       );
-      expect(result, equals(AppRoutes.profile));
+      expect(
+        result,
+        equals(
+          AppRoutes.accessUpdatedPath(
+            target: 'customer',
+            reason: 'deep_route_access_changed',
+            from: '/owner/products',
+          ),
+        ),
+      );
+    });
+
+    test('customer en /owner/dashboard usa variante de cierre negativo', () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(user: fakeUser, role: 'customer'),
+        location: AppRoutes.ownerDashboard,
+      );
+      expect(
+        result,
+        equals(
+          AppRoutes.accessUpdatedPath(
+            target: 'customer',
+            reason: 'claim_closed',
+            from: AppRoutes.ownerDashboard,
+          ),
+        ),
+      );
     });
 
     test('customer en /admin redirige a /home', () {

@@ -32,7 +32,7 @@ final class AppEnvironmentConfig {
   static String get androidApplicationId => switch (current) {
         AppEnvironment.dev => 'com.floki.tum2.staging',
         AppEnvironment.staging => 'com.floki.tum2.staging',
-        AppEnvironment.prod => 'com.floki.tum2',
+        AppEnvironment.prod => 'com.tum2.app',
       };
 
   static String get iosBundleId => switch (current) {

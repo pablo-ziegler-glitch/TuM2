@@ -16,8 +16,8 @@ void main() {
 
     test('mapea enum -> estado api', () {
       expect(
-        MerchantClaimStatus.autoValidating.apiValue,
-        'auto_validating',
+        MerchantClaimStatus.underReview.apiValue,
+        'under_review',
       );
       expect(
         MerchantClaimStatus.duplicateClaim.apiValue,
@@ -41,6 +41,17 @@ void main() {
       expect(payload['id'], 'storefront_1');
       expect(payload['kind'], 'storefront_photo');
       expect(payload['sizeBytes'], 1024);
+    });
+
+    test('expone apiValue para evidencia regulatoria', () {
+      expect(
+        MerchantClaimEvidenceKind.regulatoryDocument.apiValue,
+        'regulatory_document',
+      );
+      expect(
+        MerchantClaimEvidenceKind.alternativeRelationshipEvidence.apiValue,
+        'alternative_relationship_evidence',
+      );
     });
   });
 }

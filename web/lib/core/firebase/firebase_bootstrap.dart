@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
@@ -16,6 +17,9 @@ class FirebaseBootstrap {
   );
   static const _measurementId = String.fromEnvironment(
     'FIREBASE_MEASUREMENT_ID',
+  );
+  static const _appCheckSiteKey = String.fromEnvironment(
+    'FIREBASE_APP_CHECK_SITE_KEY',
   );
   static const _useEmulators = String.fromEnvironment(
     'USE_FIREBASE_EMULATORS',
@@ -50,6 +54,18 @@ class FirebaseBootstrap {
         measurementId: _measurementId.isEmpty ? null : _measurementId,
       ),
     );
+
+    if (_useEmulators != 'true') {
+      if (_appCheckSiteKey.isEmpty) {
+        throw StateError(
+          'Falta FIREBASE_APP_CHECK_SITE_KEY para Web. '
+          'Las Cloud Functions callable usan enforceAppCheck=true.',
+        );
+      }
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider(_appCheckSiteKey),
+      );
+    }
 
     if (_useEmulators == 'true') {
       FirebaseAuth.instance.useAuthEmulator('localhost', 9099);

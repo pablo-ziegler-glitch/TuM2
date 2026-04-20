@@ -10,25 +10,25 @@ import '../../../core/theme/app_text_styles.dart';
 const _kCatalogLimitPresets = <int>[50, 100, 200, 300, 500, 1000];
 
 const _kCatalogCategories = <_CatalogCategory>[
-  _CatalogCategory(id: 'pharmacy', label: 'Farmacias', icon: Icons.medication),
-  _CatalogCategory(id: 'kiosk', label: 'Kioscos', icon: Icons.storefront),
+  _CatalogCategory(id: 'farmacia', label: 'Farmacias', icon: Icons.medication),
+  _CatalogCategory(id: 'kiosco', label: 'Kioscos', icon: Icons.storefront),
   _CatalogCategory(
-    id: 'grocery',
+    id: 'almacen',
     label: 'Almacenes',
     icon: Icons.shopping_basket,
   ),
-  _CatalogCategory(id: 'veterinary', label: 'Veterinarias', icon: Icons.pets),
+  _CatalogCategory(id: 'veterinaria', label: 'Veterinarias', icon: Icons.pets),
   _CatalogCategory(
-    id: 'prepared_food',
+    id: 'casa_de_comidas',
     label: 'Casas de comida / Rotiserías',
     icon: Icons.restaurant,
   ),
   _CatalogCategory(
-    id: 'fast_food',
+    id: 'comida_al_paso',
     label: 'Tiendas de comida al paso',
     icon: Icons.lunch_dining,
   ),
-  _CatalogCategory(id: 'tire_shop', label: 'Gomerías', icon: Icons.tire_repair),
+  _CatalogCategory(id: 'gomeria', label: 'Gomerías', icon: Icons.tire_repair),
 ];
 
 enum _CatalogSection { global, category, merchant }

@@ -211,6 +211,7 @@ class _WidgetFakeRepository implements ProductRepository {
   @override
   Stream<List<MerchantProduct>> watchOwnerProducts({
     required String merchantId,
+    int limit = 120,
   }) {
     return const Stream.empty();
   }

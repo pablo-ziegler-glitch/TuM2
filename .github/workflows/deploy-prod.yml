@@ -219,10 +219,12 @@ jobs:
         env:
           HOSTING_SITE_WEB: ${{ vars.HOSTING_SITE_WEB_PROD }}
           HOSTING_SITE_ADMIN: ${{ vars.HOSTING_SITE_ADMIN_PROD }}
+          ADMIN_WEB_APP_CHECK_SITE_KEY: ${{ vars.ADMIN_WEB_APP_CHECK_SITE_KEY_PROD }}
         run: |
           set -euo pipefail
           : "${HOSTING_SITE_WEB:?Set variable HOSTING_SITE_WEB_PROD in environment prod}"
           : "${HOSTING_SITE_ADMIN:?Set variable HOSTING_SITE_ADMIN_PROD in environment prod}"
+          : "${ADMIN_WEB_APP_CHECK_SITE_KEY:?Set variable ADMIN_WEB_APP_CHECK_SITE_KEY_PROD in environment prod}"
 
       - name: Auth with GCP service account
         if: steps.scope.outputs.should_deploy == 'true' && steps.auth_mode.outputs.mode == 'oidc'
@@ -320,7 +322,8 @@ jobs:
             --dart-define=FIREBASE_PROJECT_ID=${{ steps.admin_sdk.outputs.project_id }} \
             --dart-define=FIREBASE_AUTH_DOMAIN=${{ steps.admin_sdk.outputs.auth_domain }} \
             --dart-define=FIREBASE_STORAGE_BUCKET=${{ steps.admin_sdk.outputs.storage_bucket }} \
-            --dart-define=FIREBASE_MEASUREMENT_ID=${{ steps.admin_sdk.outputs.measurement_id }}
+            --dart-define=FIREBASE_MEASUREMENT_ID=${{ steps.admin_sdk.outputs.measurement_id }} \
+            --dart-define=FIREBASE_APP_CHECK_SITE_KEY=${{ vars.ADMIN_WEB_APP_CHECK_SITE_KEY_PROD }}
 
       - name: Apply Hosting targets
         if: steps.scope.outputs.deploy_hosting == 'true'

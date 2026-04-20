@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../pharmacy/repositories/zones_repository.dart';
 import '../data/merchant_claim_repository.dart';
+import '../models/merchant_claim_evidence_policy.dart';
 import '../models/merchant_claim_models.dart';
 
 final merchantClaimRepositoryProvider = Provider<MerchantClaimRepository>(
@@ -30,6 +31,7 @@ class MerchantClaimFlowState {
     this.searchResults = const [],
     this.selectedMerchant,
     this.claimId,
+    this.draftUpdatedAtMillis,
     this.phone,
     this.claimantDisplayName,
     this.claimantNote,
@@ -49,6 +51,7 @@ class MerchantClaimFlowState {
   final List<ClaimableMerchantCandidate> searchResults;
   final ClaimableMerchantCandidate? selectedMerchant;
   final String? claimId;
+  final int? draftUpdatedAtMillis;
   final String? phone;
   final String? claimantDisplayName;
   final String? claimantNote;
@@ -64,14 +67,9 @@ class MerchantClaimFlowState {
       searchQuery.trim().length >= 2;
 
   bool get hasRequiredEvidence {
-    final storefront = evidenceFiles.any(
-      (evidence) => evidence.kind == MerchantClaimEvidenceKind.storefrontPhoto,
-    );
-    final ownership = evidenceFiles.any(
-      (evidence) =>
-          evidence.kind == MerchantClaimEvidenceKind.ownershipDocument,
-    );
-    return storefront && ownership;
+    final policy =
+        resolveMerchantClaimEvidencePolicy(selectedMerchant?.categoryId);
+    return policy.isSatisfied(evidenceFiles);
   }
 
   bool get canSaveDraft =>
@@ -90,6 +88,8 @@ class MerchantClaimFlowState {
     bool clearSelectedMerchant = false,
     String? claimId,
     bool clearClaimId = false,
+    int? draftUpdatedAtMillis,
+    bool clearDraftUpdatedAtMillis = false,
     String? phone,
     bool clearPhone = false,
     String? claimantDisplayName,
@@ -116,6 +116,9 @@ class MerchantClaimFlowState {
           ? null
           : selectedMerchant ?? this.selectedMerchant,
       claimId: clearClaimId ? null : claimId ?? this.claimId,
+      draftUpdatedAtMillis: clearDraftUpdatedAtMillis
+          ? null
+          : draftUpdatedAtMillis ?? this.draftUpdatedAtMillis,
       phone: clearPhone ? null : phone ?? this.phone,
       claimantDisplayName: clearClaimantDisplayName
           ? null
@@ -181,6 +184,13 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
   }
 
   void selectMerchant(ClaimableMerchantCandidate merchant) {
+    if (!isAllowedMerchantClaimCategoryId(merchant.categoryId)) {
+      state = state.copyWith(
+        errorMessage:
+            'La categoría de este comercio no está habilitada para reclamo en el MVP.',
+      );
+      return;
+    }
     state = state.copyWith(
       selectedMerchant: merchant,
       clearError: true,
@@ -252,12 +262,20 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
       );
       return;
     }
+    if (!isAllowedMerchantClaimCategoryId(state.selectedMerchant!.categoryId)) {
+      state = state.copyWith(
+        errorMessage:
+            'La categoría de este comercio no está habilitada para reclamo en el MVP.',
+      );
+      return;
+    }
     state = state.copyWith(isBusy: true, clearError: true);
     try {
       final result = await _repository.upsertDraft(_buildDraftInput());
       state = state.copyWith(
         isBusy: false,
         claimId: result.claimId,
+        draftUpdatedAtMillis: result.updatedAtMillis,
       );
     } on MerchantClaimRepositoryException catch (error) {
       state = state.copyWith(
@@ -277,10 +295,24 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
       state = state.copyWith(errorMessage: 'Seleccioná un comercio.');
       return;
     }
-    if (!state.hasRequiredEvidence) {
+    if (!isAllowedMerchantClaimCategoryId(state.selectedMerchant!.categoryId)) {
       state = state.copyWith(
         errorMessage:
-            'Necesitás subir una foto de fachada y una prueba de vínculo.',
+            'La categoría de este comercio no está habilitada para reclamo en el MVP.',
+      );
+      return;
+    }
+    final policy =
+        resolveMerchantClaimEvidencePolicy(state.selectedMerchant?.categoryId);
+    if (!state.hasRequiredEvidence) {
+      final missingKinds = policy
+          .missingRequiredKinds(state.evidenceFiles)
+          .map((kind) => kind.label)
+          .join(', ');
+      state = state.copyWith(
+        errorMessage: missingKinds.isEmpty
+            ? 'Necesitás completar la evidencia requerida para tu categoría.'
+            : 'Falta evidencia obligatoria: $missingKinds.',
       );
       return;
     }
@@ -294,7 +326,10 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
     state = state.copyWith(isBusy: true, clearError: true);
     try {
       final claimId = await _ensureDraft();
-      final summary = await _repository.submitClaim(claimId: claimId);
+      final summary = await _repository.submitClaim(
+        claimId: claimId,
+        expectedUpdatedAtMillis: state.draftUpdatedAtMillis,
+      );
       state = state.copyWith(
         isBusy: false,
         statusSummary: summary,
@@ -333,34 +368,14 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
     }
   }
 
-  Future<void> cancelClaim({String? reason}) async {
-    final currentClaimId = state.claimId ?? state.statusSummary?.claimId;
-    if (currentClaimId == null || currentClaimId.isEmpty) return;
-    state = state.copyWith(isBusy: true, clearError: true);
-    try {
-      final summary = await _repository.cancelClaim(
-        claimId: currentClaimId,
-        reason: reason,
-      );
-      state = state.copyWith(
-        isBusy: false,
-        statusSummary: summary,
-      );
-    } on MerchantClaimRepositoryException catch (error) {
-      state = state.copyWith(
-        isBusy: false,
-        errorMessage: error.message,
-      );
-    }
-  }
-
   Future<String> _ensureDraft() async {
     final claimId = state.claimId;
     final result =
         await _repository.upsertDraft(_buildDraftInput(claimId: claimId));
-    if (state.claimId != result.claimId) {
-      state = state.copyWith(claimId: result.claimId);
-    }
+    state = state.copyWith(
+      claimId: result.claimId,
+      draftUpdatedAtMillis: result.updatedAtMillis,
+    );
     return result.claimId;
   }
 
@@ -374,6 +389,7 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
     }
     return MerchantClaimDraftInput(
       claimId: claimId,
+      expectedUpdatedAtMillis: state.draftUpdatedAtMillis,
       merchantId: merchant.merchantId,
       declaredRole: state.declaredRole,
       phone: state.phone,

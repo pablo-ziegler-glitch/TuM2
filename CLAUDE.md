@@ -11,6 +11,13 @@
 - En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
 - Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
 
+## Fuente de verdad de estado (obligatoria)
+
+- El único documento fuente de verdad para estado de tarjetas es **este `CLAUDE.md`**.
+- OpenSpec queda **discontinuado** en este repositorio para planificación/estado.
+- No usar artefactos de `openspec/` para decidir progreso ni para reportes ejecutivos.
+- Si hay diferencias entre `openspec/` y `CLAUDE.md`, **prevalece `CLAUDE.md`**.
+
 ---
 
 ## Convención de nombres de conversación y PR
@@ -52,6 +59,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0006]** Mantener actualizado PRD-MVP.md ✅ | Documentación maestra — PRD-MVP.md actualizado y vigente |
 | **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
 | **[0010]** Definir identidad visual base ✅ | Branding — paleta y tokens base definidos (color system inicial TuM2) |
+| **[0011]** Diseñar logo principal ✅ | Branding — sistema de logo y assets SVG base versionados (`design/branding_v1.json`, `mobile/assets/branding/*`) |
 | **[0014]** Definir tono de microcopy ✅ | Branding / UX/UI — guía de microcopy MVP Fase 3 documentada en docs/TuM2-0014-MICROCOPY.md |
 | **[0019]** Diseñar modelo de usuarios ✅ | Modelo de datos — modelo de usuarios definido con roles y atributos |
 | **[0020]** Diseñar modelo de comercios ✅ | Modelo de datos — modelo de comercios definido con campos públicos y operativos |
@@ -124,7 +132,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### ÉPICA 3: Branding de TuM2
 - [0010] **Definir identidad visual base** — P0 — `Branding, UX/UI, Fundacional` ✅
-- [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional`
+- [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional` ✅
 - [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional`
 - [0013] **Definir sistema de sellos** — P1 — `Branding, Producto, MVP`
 - [0014] **Definir tono de microcopy** — P1 — `Branding, UX/UI, MVP` ✅
@@ -282,15 +290,18 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - Costo: scans programados incrementales (`limit` fijo) para recordatorios/expiraciones, sin listeners globales.
 
 ### ÉPICA 18: Reclamo de titularidad de comercio
-- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP`
-- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP`
-- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP`
-- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP`
-- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP`
-- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP`
-- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP`
+- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP` `IN_PROGRESS`
+- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP` `IN_PROGRESS`
+- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP` `IN_PROGRESS`
+- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `IN_PROGRESS`
+- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `IN_PROGRESS`
+- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `IN_PROGRESS`
+- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `IN_PROGRESS`
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
-- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP`
+- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `IN_PROGRESS`
+
+### ÉPICA 19: Estacionalidad y campañas contextuales
+- [0134] **Modo Selección Argentina + tarjeta pineada de próximo partido** — P1 — `Producto, Branding, Mobile, Web, Admin, Backend, Analytics, MVP+`
 
 ---
 
@@ -422,7 +433,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Claramente Post-MVP:** TuM2-0026, 0108, 0109, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117, 0118, 0119, 0120
 
-**MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
+**MVP+ / opcionales si entra tiempo:** TuM2-0029, 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107, 0134 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
 
 ---
 
@@ -486,5 +497,11 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0124] Mitigación de guardias cerrada (PR #59, 2026-04-09): confirmación de guardia, reporte de incidente, selección de candidatas por zona/distancia y ronda de reasignación con primera aceptación ganadora.
 - [0124] Nuevas colecciones operativas (`pharmacy_duty_incidents`, `pharmacy_duty_reassignment_rounds`, `pharmacy_duty_reassignment_requests`) y jobs incrementales para recordatorios/expiraciones con límites de scan por ciclo.
 - [0126] Flujo claim en progreso (2026-04-14): implementado flujo mobile CLAIM-01..07 con Firebase real (draft, evidencia, consentimiento, submit, estado), sin listeners permanentes y con refresh por acción.
-- [0126] Backend inicial implementado: callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `cancelMerchantClaim`, `getMyMerchantClaimStatus`, `searchClaimableMerchants`; reglas Firestore/Storage endurecidas e índices `merchant_claims` actualizados a `claimStatus`.
+- [0126] Backend inicial implementado: callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `evaluateMerchantClaim`, `resolveMerchantClaim`, `revealMerchantClaimSensitiveData`, `getMyMerchantClaimStatus`, `listMerchantClaimsForReview`, `listMyMerchantClaims`, `searchClaimableMerchants`; reglas Firestore/Storage endurecidas e índices `merchant_claims` actualizados a `claimStatus`.
+- [0128] Admin Web claims endurecido (2026-04-17): rutas `/claims` + `/claims/:claimId`, listado paginado con scope geográfico obligatorio y `limit`, detalle servido por callable `getMerchantClaimReviewDetail` (sin lectura directa cliente), masking por defecto, timeline, filtros locales sin lecturas extra, reveal temporal auditado y stale handling backend/UI por `expectedUpdatedAtMillis`.
+- [0128] Seguridad/capabilities: reviewer/senior reviewer soportados vía claims finos opcionales (`claimsReviewLevel` / `capabilities`) con fallback compatible para `admin`/`super_admin`; resoluciones críticas y reveal quedan hard-gated por backend, nunca por cliente.
+- [0127] Auto-validación inicial implementada (2026-04-16): dominio puro + orquestador idempotente (`merchantClaimAutoValidation*`), precedencia cerrada (`rejected > conflict > duplicate > needs_more_info > under_review`) y reason codes estructurados.
+- [0127] Integración productiva: submit pasa por estado `submitted`, trigger fallback por transición real a `submitted`, hash `lastAutoValidationHash` para no-op writes, sync `owner_pending` backend-only y sin mutación de `merchant_public`.
+- [0127] Costos/seguridad: queries dedupe-conflict con `limit` bajo e índice compuesto `merchant_claims(userId, merchantId, claimStatus)`, logs estructurados sin PII, sin grants OWNER automáticos.
 - [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.
+- [0134] Alta documental inicial (2026-04-17): creadas `docs/storyscards/0134-modo-seleccion-argentina.md` y `docs/storyscards/0134-modo-seleccion-argentina.prompt.md`; estado canónico `TODO` (sin implementación).

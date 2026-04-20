@@ -502,15 +502,25 @@ final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
   if (user == null) return null;
 
   final result = await user.getIdTokenResult(true);
-  final role = (result.claims?['role'] as String?)?.toLowerCase();
+  final tokenRole = (result.claims?['role'] as String?)?.toLowerCase();
   final ownerPendingRaw = result.claims?['owner_pending'];
   final ownerPending = ownerPendingRaw == true ||
       (ownerPendingRaw is String && ownerPendingRaw.toLowerCase() == 'true');
+  final userDoc =
+      await FirebaseFirestore.instance.doc('users/${user.uid}').get();
+  final userData = userDoc.data();
+  final firestoreRole = (userData?['role'] as String?)?.toLowerCase();
+  final firestoreMerchantId = userData?['merchantId'] as String?;
+  // Firestore prevalece sobre claims obsoletos cuando el backend ya actualizó
+  // el documento `users/{uid}` pero el token todavía no se refrescó.
+  final role = (firestoreRole != null && firestoreRole.isNotEmpty)
+      ? firestoreRole
+      : tokenRole;
 
   return AuthClaimsSnapshot(
     role: role,
     ownerPending: ownerPending,
-    merchantId: result.claims?['merchantId'] as String?,
+    merchantId: firestoreMerchantId ?? result.claims?['merchantId'] as String?,
     onboardingComplete: result.claims?['onboardingComplete'] == true,
   );
 });

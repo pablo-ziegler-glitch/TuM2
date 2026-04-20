@@ -1,6 +1,6 @@
 # TuM2-0104 — Retención y acceso interno a datos sensibles
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: TODO  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la épica de claims sobre conservación de evidencia, acceso interno restringido, masking, reveal temporal, auditoría y límites de eliminación inmediata.
 

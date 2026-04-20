@@ -1,0 +1,17 @@
+epic_number,epic_name,total_mvp_cards,done,in_progress,todo,p0_pending,p1_pending,p2_pending,p3_pending,completion_pct
+1,"Dirección del producto",4,3,0,1,0,1,0,0,75.0
+2,"Documentación maestra",5,3,0,2,0,2,0,0,60.0
+3,"Branding de TuM2",5,2,0,3,2,1,0,0,40.0
+4,"Research funcional y operativo",4,0,0,4,3,1,0,0,0.0
+5,"Modelo de datos",7,6,0,1,0,1,0,0,85.71
+6,"UX / arquitectura de pantallas",15,9,0,6,3,3,0,0,60.0
+7,"Backend / Firebase / Infraestructura",9,9,0,0,0,0,0,0,100.0
+8,"Mobile app",18,11,1,6,2,2,3,0,61.11
+9,"Web pública",7,0,0,7,3,3,1,0,0.0
+10,"Admin / Moderación",6,2,0,4,0,2,2,0,33.33
+11,"Analytics",6,0,0,6,3,3,0,0,0.0
+12,"Seguridad / calidad / release readiness",5,0,0,5,3,2,0,0,0.0
+13,"Lanzamiento / piloto",2,0,0,2,2,0,0,0,0.0
+15,"Growth / comunidad",3,0,0,3,0,1,2,0,0.0
+17,"Post-MVP / escalamiento",3,3,0,0,0,0,0,0,100.0
+18,"Reclamo de titularidad de comercio",8,0,0,8,8,0,0,0,0.0

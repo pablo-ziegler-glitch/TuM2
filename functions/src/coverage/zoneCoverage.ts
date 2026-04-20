@@ -9,6 +9,7 @@ import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 const db = () => getFirestore();
 const ZONE_REFRESH_CURSOR_DOC = "system_jobs/scheduledRefreshZoneCoverage";
 const MAX_ZONES_PER_RUN = 10;
+const MERCHANTS_PER_ZONE_PAGE = 500;
 
 interface ZoneRefreshCursorDoc {
   lastZoneId?: string;
@@ -119,11 +120,6 @@ function parseCoverageBase(
  * Scheduled fallback (full recompute).
  */
 async function refreshZoneCoverage(zoneId: string): Promise<void> {
-  const byZoneIdSnap = await db()
-    .collection("merchant_public")
-    .where("zoneId", "==", zoneId)
-    .get();
-
   const metrics: ZoneCoverageMetrics = {
     merchantCount: 0,
     visibleMerchantCount: 0,
@@ -134,15 +130,48 @@ async function refreshZoneCoverage(zoneId: string): Promise<void> {
     usefulCoverageScore: 0,
   };
 
-  for (const doc of byZoneIdSnap.docs) {
-    const merchant = doc.data() as MerchantPublicDoc;
-    const contribution = metricContribution(merchant);
-    metrics.merchantCount += contribution.merchantCount;
-    metrics.visibleMerchantCount += contribution.visibleMerchantCount;
-    metrics.pharmacyCount += contribution.pharmacyCount;
-    metrics.verifiedCount += contribution.verifiedCount;
-    metrics.referentialCount += contribution.referentialCount;
-    metrics.communitySubmittedCount += contribution.communitySubmittedCount;
+  let lastDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null;
+  let hasMore = true;
+  while (hasMore) {
+    let query = db()
+      .collection("merchant_public")
+      .where("zoneId", "==", zoneId)
+      .orderBy(FieldPath.documentId())
+      .limit(MERCHANTS_PER_ZONE_PAGE);
+    if (lastDoc) {
+      query = query.startAfter(lastDoc);
+    }
+
+    const byZoneIdSnap = await query.get();
+    if (byZoneIdSnap.empty) {
+      hasMore = false;
+      continue;
+    }
+
+    for (const doc of byZoneIdSnap.docs) {
+      const merchant = doc.data() as MerchantPublicDoc;
+      const contribution = metricContribution(merchant);
+      metrics.merchantCount += contribution.merchantCount;
+      metrics.visibleMerchantCount += contribution.visibleMerchantCount;
+      metrics.pharmacyCount += contribution.pharmacyCount;
+      metrics.verifiedCount += contribution.verifiedCount;
+      metrics.referentialCount += contribution.referentialCount;
+      metrics.communitySubmittedCount += contribution.communitySubmittedCount;
+    }
+
+    lastDoc = byZoneIdSnap.docs[byZoneIdSnap.docs.length - 1] ?? null;
+    hasMore = byZoneIdSnap.size === MERCHANTS_PER_ZONE_PAGE && lastDoc != null;
+  }
+
+  if (
+    metrics.merchantCount === 0 &&
+    metrics.visibleMerchantCount === 0 &&
+    metrics.pharmacyCount === 0 &&
+    metrics.verifiedCount === 0 &&
+    metrics.referentialCount === 0 &&
+    metrics.communitySubmittedCount === 0
+  ) {
+    console.log(`[zoneCoverage] Zone ${zoneId}: no merchants found in merchant_public`);
   }
 
   metrics.usefulCoverageScore = computeUsefulCoverageScore(metrics);

@@ -1,16 +1,68 @@
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { getFirestore, FieldValue, WriteBatch } from "firebase-admin/firestore";
+import {
+  getFirestore,
+  FieldPath,
+  FieldValue,
+  QueryDocumentSnapshot,
+  WriteBatch,
+} from "firebase-admin/firestore";
 import { todayDateString } from "../lib/schedules";
 import { DutyStatus, normalizeDutyStatus } from "../lib/pharmacyDutyMitigation";
 import { shouldRunAutomaticFirestoreJob } from "../lib/automaticJobsGuard";
 
 const db = () => getFirestore();
 const BATCH_SIZE = 500;
+const DUTY_SCAN_PAGE_SIZE = 800;
 
 interface PharmacyDutyDoc {
   merchantId: string;
   date: string;
   status: DutyStatus | string;
+}
+
+async function readTodayDutyMerchantIds(today: string): Promise<{
+  merchantIds: Set<string>;
+  reads: number;
+}> {
+  const merchantIds = new Set<string>();
+  let reads = 0;
+  let cursor: QueryDocumentSnapshot | null = null;
+  let keepPaging = true;
+
+  while (keepPaging) {
+    let query = db()
+      .collection("pharmacy_duties")
+      .where("date", "==", today)
+      .orderBy(FieldPath.documentId())
+      .limit(DUTY_SCAN_PAGE_SIZE);
+
+    if (cursor) {
+      query = query.startAfter(cursor);
+    }
+
+    const pageSnap = await query.get();
+    if (pageSnap.empty) {
+      keepPaging = false;
+      continue;
+    }
+    reads += pageSnap.size;
+
+    for (const dutyDoc of pageSnap.docs) {
+      const duty = dutyDoc.data() as PharmacyDutyDoc;
+      const status = normalizeDutyStatus(duty.status);
+      if (duty.merchantId && status !== "cancelled") {
+        merchantIds.add(duty.merchantId);
+      }
+    }
+
+    if (pageSnap.size < DUTY_SCAN_PAGE_SIZE) {
+      keepPaging = false;
+    } else {
+      cursor = pageSnap.docs[pageSnap.docs.length - 1];
+    }
+  }
+
+  return { merchantIds, reads };
 }
 
 /**
@@ -43,20 +95,7 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
     }
 
     // Get today's duties (filtrado de estado se hace en memoria para evitar índices extra).
-    const dutiesSnap = await db()
-      .collection("pharmacy_duties")
-      .where("date", "==", today)
-      .get();
-
-    const todayMerchantIds = new Set<string>();
-
-    for (const dutyDoc of dutiesSnap.docs) {
-      const duty = dutyDoc.data() as PharmacyDutyDoc;
-      const status = normalizeDutyStatus(duty.status);
-      if (duty.merchantId && status !== "cancelled") {
-        todayMerchantIds.add(duty.merchantId);
-      }
-    }
+    const { merchantIds: todayMerchantIds, reads: dutyReads } = await readTodayDutyMerchantIds(today);
 
     const desiredFlagByMerchantId = new Map<string, boolean>();
     for (const merchantId of currentFlagByMerchantId.keys()) {
@@ -113,7 +152,7 @@ export const nightlyRefreshPharmacyDutyFlags = onSchedule(
       JSON.stringify({
         job: "nightlyRefreshPharmacyDutyFlags",
         signalReads: currentSignalsSnap.size,
-        dutyReads: dutiesSnap.size,
+        dutyReads,
         signalWrites: desiredFlagByMerchantId.size,
       })
     );

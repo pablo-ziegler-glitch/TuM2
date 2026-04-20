@@ -104,7 +104,7 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Import Management',
+                  'Importaciones',
                   style: AppTextStyles.bodySm.copyWith(
                     color: AppColors.neutral500,
                   ),
@@ -116,12 +116,12 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
         const SizedBox(width: 12),
         const Text('/', style: TextStyle(color: AppColors.neutral300)),
         const SizedBox(width: 12),
-        Text('Batch History', style: AppTextStyles.headingMd),
+        Text('Historial de batches', style: AppTextStyles.headingMd),
         const Spacer(),
         FilledButton.icon(
           onPressed: () => context.go('/imports/new'),
           icon: const Icon(Icons.add, size: 16),
-          label: const Text('New Import'),
+          label: const Text('Nueva importacion'),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary500,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -145,12 +145,12 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
           const Icon(Icons.filter_list, size: 16, color: AppColors.neutral400),
           const SizedBox(width: 8),
           Text(
-            'Filter by:',
+            'Filtrar por:',
             style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral500),
           ),
           const SizedBox(width: 16),
           _FilterChip(
-            label: 'Type',
+            label: 'Tipo',
             value: _typeFilter,
             options: ImportType.values.map((t) => t.label).toList(),
             onChanged: (v) => setState(() {
@@ -160,7 +160,7 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
           ),
           const SizedBox(width: 10),
           _FilterChip(
-            label: 'Status',
+            label: 'Estado',
             value: _statusFilter,
             options: const [
               'Completado',
@@ -190,7 +190,7 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
                 ),
                 textStyle: AppTextStyles.labelSm,
               ),
-              child: const Text('Clear filters'),
+              child: const Text('Limpiar filtros'),
             ),
           Text(
             '${_filtered(batches).length} batches',
@@ -216,13 +216,13 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
             child: Row(
               children: [
-                _headerCell('BATCH ID', flex: 1),
-                _headerCell('IMPORT TYPE', flex: 2),
-                _headerCell('SOURCE / FILE', flex: 3),
-                _headerCell('STATUS', flex: 2),
-                _headerCell('METRICS', flex: 2),
-                _headerCell('CREATED BY', flex: 2),
-                _headerCell('DATE', flex: 2),
+                _headerCell('BATCH', flex: 1),
+                _headerCell('TIPO DE IMPORTACION', flex: 2),
+                _headerCell('FUENTE / ARCHIVO', flex: 3),
+                _headerCell('ESTADO', flex: 2),
+                _headerCell('METRICAS', flex: 2),
+                _headerCell('CREADO POR', flex: 2),
+                _headerCell('FECHA', flex: 2),
                 _headerCell('', flex: 1),
               ],
             ),
@@ -233,7 +233,7 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
               padding: EdgeInsets.symmetric(vertical: 40),
               child: Center(
                 child: Text(
-                  'No batches match the selected filters.',
+                  'No hay batches para los filtros seleccionados.',
                   style: TextStyle(color: AppColors.neutral400, fontSize: 13),
                 ),
               ),
@@ -299,7 +299,7 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
         ),
         const SizedBox(width: 16),
         Text(
-          'Page $_currentPage of $totalPages · $filteredCount total',
+          'Pagina $_currentPage de $totalPages · $filteredCount en total',
           style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral400),
         ),
       ],
@@ -323,33 +323,33 @@ class _ImportBatchHistoryScreenState extends State<ImportBatchHistoryScreen> {
     return Row(
       children: [
         _AnalysisCard(
-          title: 'Completion Rate',
+          title: 'Tasa de finalizacion',
           value: '${(completed / batches.length * 100).toStringAsFixed(0)}%',
-          subtitle: '$completed completed / ${batches.length} total',
+          subtitle: '$completed completados / ${batches.length} en total',
           color: AppColors.successFg,
           icon: Icons.check_circle_outline,
         ),
         const SizedBox(width: 16),
         _AnalysisCard(
-          title: 'Total Rows Processed',
+          title: 'Filas procesadas',
           value: NumberFormat.decimalPattern().format(totalRows),
-          subtitle: 'Across all batches',
+          subtitle: 'En todos los batches',
           color: AppColors.primary500,
           icon: Icons.table_rows_outlined,
         ),
         const SizedBox(width: 16),
         _AnalysisCard(
-          title: 'Conflict Backlog',
+          title: 'Cola de conflictos',
           value: '$totalConflicts',
-          subtitle: 'Rows pending manual review',
+          subtitle: 'Filas pendientes de revision manual',
           color: AppColors.warningFg,
           icon: Icons.merge_type_outlined,
         ),
         const SizedBox(width: 16),
         _AnalysisCard(
-          title: 'Failed Batches',
+          title: 'Batches fallidos',
           value: '$failed',
-          subtitle: 'Require attention or retry',
+          subtitle: 'Requieren atencion o reintento',
           color: AppColors.errorFg,
           icon: Icons.error_outline,
         ),
@@ -395,7 +395,7 @@ class _FilterChip extends StatelessWidget {
       itemBuilder: (_) => [
         PopupMenuItem(
           value: null,
-          child: Text('All', style: AppTextStyles.bodySm),
+          child: Text('Todos', style: AppTextStyles.bodySm),
         ),
         ...options.map(
           (o) => PopupMenuItem(
@@ -520,11 +520,11 @@ class _HistoryTableRowState extends State<_HistoryTableRow> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${b.processedCount} rows',
+                            '${b.processedCount} filas',
                             style: AppTextStyles.bodyXs.copyWith(fontSize: 11),
                           ),
                           Text(
-                            '${b.createdCount} created · ${b.errorCount} errors',
+                            '${b.createdCount} creadas · ${b.errorCount} con error',
                             style: AppTextStyles.bodyXs.copyWith(
                               color: AppColors.neutral400,
                             ),
@@ -606,47 +606,47 @@ class _StatusBadge extends StatelessWidget {
       ImportBatchStatus.completed => (
           AppColors.successFg,
           AppColors.successFg.withValues(alpha: 0.1),
-          'Completed',
+          'Completado',
         ),
       ImportBatchStatus.running => (
           AppColors.primary500,
           AppColors.primary500.withValues(alpha: 0.1),
-          'Running',
+          'En proceso',
         ),
       ImportBatchStatus.failed => (
           AppColors.errorFg,
           AppColors.errorFg.withValues(alpha: 0.1),
-          'Failed',
+          'Fallido',
         ),
       ImportBatchStatus.hidden => (
           AppColors.neutral500,
           AppColors.neutral200,
-          'Staged',
+          'En staging',
         ),
       ImportBatchStatus.rolledBack => (
           AppColors.warningFg,
           AppColors.warningFg.withValues(alpha: 0.1),
-          'Rolled Back',
+          'Revertido',
         ),
       ImportBatchStatus.validated => (
           AppColors.secondary500,
           AppColors.secondary500.withValues(alpha: 0.1),
-          'Validated',
+          'Validado',
         ),
       ImportBatchStatus.partial => (
           AppColors.warningFg,
           AppColors.warningFg.withValues(alpha: 0.1),
-          'Partial',
+          'Parcial',
         ),
       ImportBatchStatus.draft => (
           AppColors.neutral500,
           AppColors.neutral100,
-          'Queued',
+          'En cola',
         ),
       ImportBatchStatus.archived => (
           AppColors.neutral400,
           AppColors.neutral100,
-          'Archived',
+          'Archivado',
         ),
     };
 

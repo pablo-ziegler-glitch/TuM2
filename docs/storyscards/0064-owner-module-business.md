@@ -1,8 +1,21 @@
 # TuM2-0064 — Implementar módulo OWNER
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: IN_PROGRESS  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad sobre Dashboard OWNER, incorporación formal de `owner_pending` y separación entre revisión de claim y ownership aprobado.
+
+## Estado real de implementación (corte 2026-04-16)
+### Hecho
+- Backend/Auth: existe sincronización de `owner_pending` en callables de claim y trigger fallback (`functions/src/callables/merchantClaims.ts`, `functions/src/triggers/claims.ts`).
+- Frontend: `OwnerPanelScreen` ya separa OWNER aprobado vs `owner_pending` con variante contextual y bloqueo operativo.
+- Routing: guards activos para que `owner_pending` quede restringido al carril dashboard/claim status y no navegue a módulos operativos (`mobile/lib/core/router/router_guards.dart`).
+- QA base: tests de owner pending y guards cubren estados críticos (`mobile/test/modules/owner/owner_panel_screen_test.dart`, `mobile/test/core/router/router_guards_test.dart`).
+
+### Falta para cerrar
+- UX/Producto: cerrar comportamiento final para cierre negativo de claim (sin residuos visuales en carril owner) y transición aprobada con refresh de token en sesión activa.
+- Frontend: completar cobertura de edge cases de transición `owner_pending -> owner` sin relogin manual y con navegación profunda abierta.
+- Backend: unificar limpieza de estados residuales para escenarios multi-claim/multi-merchant futuros.
+- QA E2E: ejecutar pruebas punta a punta claim/admin/owner con validación explícita de permisos y costo Firestore (sin listeners globales en carril owner).
 
 ## 1. Objetivo
 Actualizar el módulo OWNER para distinguir explícitamente:
@@ -208,6 +221,7 @@ Sin bypass cliente.
 3. conflicto/more-info no abren módulos operativos.
 4. dashboard pleno exclusivo de OWNER aprobado.
 5. UX no debe inducir permisos inexistentes.
+6. cuentas `CUSTOMER` con restricción activa por fraude/abuso no deben ver el carril OWNER como disponible ni como expectativa próxima sin revisión manual explícita.
 
 ## 27. UX / microcopy
 OWNER:

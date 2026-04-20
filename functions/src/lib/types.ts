@@ -59,6 +59,10 @@ export interface OperationalSignals {
   acceptsWhatsappOrders?: boolean;
   openNowManualOverride?: boolean;
   hasPharmacyDutyToday?: boolean;
+  is24h?: boolean;
+  twentyFourHourStrikeCount?: number;
+  twentyFourHourCooldownUntil?: FirebaseFirestore.Timestamp | null;
+  twentyFourHourBadgeRemovedAt?: FirebaseFirestore.Timestamp | null;
   manualOverrides?: Record<string, unknown>;
   updatedAt?: FirebaseFirestore.Timestamp;
 }
@@ -84,6 +88,7 @@ export interface MerchantDoc {
   completenessScore?: number;
   lastActivityAt?: FirebaseFirestore.Timestamp;
   externalPlaceId?: string;
+  is24h?: boolean;
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
 }
@@ -174,6 +179,9 @@ export interface MerchantPublicDoc {
   todayScheduleLabel?: string;
   hasPharmacyDutyToday?: boolean;
   isOnDutyToday?: boolean;
+  is24h?: boolean;
+  twentyFourHourCooldownUntil?: FirebaseFirestore.Timestamp | null;
+  twentyFourHourStrikeCount?: number;
   confidenceLevel?: "high" | "medium" | "low" | null;
   publicStatusLabel?:
     | "guardia_confirmada"
@@ -235,14 +243,31 @@ export interface MerchantClaimDoc {
   claimStatus:
     | "draft"
     | "submitted"
-    | "auto_validating"
     | "under_review"
     | "needs_more_info"
     | "approved"
     | "rejected"
     | "duplicate_claim"
-    | "conflict_detected"
-    | "cancelled";
+    | "conflict_detected";
+  userVisibleStatus?:
+    | "draft"
+    | "submitted"
+    | "under_review"
+    | "needs_more_info"
+    | "approved"
+    | "rejected"
+    | "duplicate_claim"
+    | "conflict_detected";
+  internalWorkflowStatus?:
+    | "draft_editing"
+    | "auto_validation_running"
+    | "auto_validation_passed"
+    | "auto_validation_blocked_rejected"
+    | "auto_validation_blocked_conflict"
+    | "auto_validation_blocked_duplicate"
+    | "auto_validation_needs_more_info"
+    | "manual_resolution_completed";
+  workflowManagedBy?: string;
   authenticatedEmail: string;
   declaredRole: "owner" | "co_owner" | "authorized_representative";
   categoryId: string;
@@ -252,8 +277,34 @@ export interface MerchantClaimDoc {
   hasAcceptedDataProcessingConsent: boolean;
   hasAcceptedLegitimacyDeclaration: boolean;
   submittedAt?: FirebaseFirestore.Timestamp | null;
+  autoValidationStatus?: "running" | "passed" | "blocked" | null;
+  autoValidationReasons?: string[];
+  autoValidationCompletedAt?: FirebaseFirestore.Timestamp | null;
   duplicateOfClaimId?: string | null;
   conflictType?: string | null;
+  hasConflict?: boolean;
+  hasDuplicate?: boolean;
+  requiresManualReview?: boolean;
+  missingEvidence?: boolean;
+  missingEvidenceTypes?: string[];
+  evidencePolicyVersion?: string | null;
+  evidencePolicyCategoryId?: string | null;
+  evidencePolicyStrictnessLevel?: string | null;
+  requiredEvidenceSatisfied?: boolean;
+  primaryVisualEvidenceType?: string | null;
+  relationshipEvidenceTypes?: string[];
+  sufficiencyLevel?: "insufficient" | "sufficient_manual_review" | "sufficient" | null;
+  manualReviewReasons?: string[];
+  riskHints?: string[];
+  riskFlags?: string[];
+  riskPriority?: "low" | "medium" | "high" | "critical" | null;
+  reviewQueuePriority?: number | null;
+  lastAutoValidationHash?: string | null;
+  processedBySystem?: boolean;
+  systemVersion?: string | null;
+  phoneMasked?: string | null;
+  claimantDisplayNameMasked?: string | null;
+  claimantNoteMasked?: string | null;
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
   reviewedAt?: FirebaseFirestore.Timestamp;

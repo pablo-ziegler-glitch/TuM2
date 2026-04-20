@@ -1,6 +1,6 @@
 # TuM2-0103 — Derechos del usuario sobre datos del claim
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: TODO  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la épica de claims sobre acceso, rectificación, actualización, desistimiento, limitación y eventual eliminación de datos/evidencia bajo límites legítimos de seguridad, auditoría, conflicto y antifraude.
 

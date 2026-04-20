@@ -1,9 +1,27 @@
 # TuM2-0130 — Seguridad y protección de datos sensibles en claims
 
-Estado propuesto: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0129
+
+## Sync 0129 (2026-04-19)
+- La policy de evidencia por categoría quedó en backend tipado/versionado sin mover adjuntos a colecciones públicas.
+- Se conserva separación: metadatos compactos en `merchant_claims` y binarios en Storage privado.
+## Estado real de implementación (corte 2026-04-17)
+### Hecho
+- Implementado vault sensible con cifrado reversible AES-GCM + fingerprints derivados (`functions/src/lib/claimSensitive.ts`).
+- Separación de datos aplicada: sensibles en `merchant_claim_private`, documento principal con campos enmascarados.
+- Reveal admin implementado con caducidad temporal y auditoría append-only (`revealMerchantClaimSensitiveData` + `merchant_claim_sensitive_reveals`).
+- Reglas de seguridad activas: cliente no puede leer/escribir `merchant_claims` ni `merchant_claim_private` directamente (`firestore.rules`).
+- Admin Web 0128 consume detalle seguro por callable (`getMerchantClaimReviewDetail`) en vez de lectura directa cliente; el payload devuelve email enmascarado, campos mínimos y capabilities.
+- Reveal admin ahora valida token de concurrencia (`expectedUpdatedAtMillis`) y deja resumen no sensible en `merchant_claims` (`lastSensitiveRevealAt`, actor/fields/reason`) para timeline sin fan-out de lecturas.
+
+### Falta para cerrar
+- Gestión de claves pendiente de endurecimiento (rotación formal/KMS y procedimiento operativo de key rollover).
+- Política de retención y borrado automatizado pendiente (alineada con TuM2-0104).
+- Completar despliegue operativo de permisos finos de reveal por tipo de revisor con custom claims reales fuera del fallback `admin`/`super_admin`.
+- Endurecer controles de exportación/descarga operativa de adjuntos sensibles en superficies admin futuras.
 
 ## 1. Objetivo
 Definir el modelo integral de protección, almacenamiento, exposición controlada y auditoría de datos sensibles del dominio `merchant_claims`.

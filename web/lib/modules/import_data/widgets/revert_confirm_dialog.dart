@@ -111,7 +111,7 @@ class RevertConfirmDialog extends StatelessWidget {
             const SizedBox(height: 16),
             // Nota de audit log
             Text(
-              'AUDIT LOG ENTRY WILL BE CREATED',
+              'SE REGISTRARA UNA ENTRADA DE AUDITORIA',
               style: AppTextStyles.bodyXs.copyWith(
                 letterSpacing: 0.8,
                 color: AppColors.neutral400,

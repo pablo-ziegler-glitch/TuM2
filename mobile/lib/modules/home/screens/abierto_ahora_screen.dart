@@ -6,6 +6,10 @@ import 'package:intl/intl.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../merchant_badges/domain/merchant_badge_resolver.dart';
+import '../../merchant_badges/domain/merchant_visual_models.dart';
+import '../../merchant_badges/domain/merchant_visual_state_mappers.dart';
+import '../../merchant_badges/widgets/merchant_badge_widgets.dart';
 import '../models/open_now_models.dart';
 import '../providers/open_now_notifier.dart';
 
@@ -355,12 +359,13 @@ class _OpenNowCompactCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final badgeColor = merchant.isSpecialOnDutyHealth
-        ? AppColors.primary500
-        : AppColors.secondary500;
-    final badgeLabel = merchant.isSpecialOnDutyHealth ? 'DE TURNO' : 'ABIERTO';
-    final operationalLabel = _operationalLabel(merchant);
-    final operationalColor = _operationalColor(merchant);
+    final resolution = MerchantBadgeResolver.resolve(
+      state: MerchantVisualStateMappers.fromOpenNowMerchant(merchant),
+      surface: MerchantSurface.compactCard,
+    );
+    final primaryBadge = resolution.primary;
+    final secondaryBadge =
+        resolution.secondary.isNotEmpty ? resolution.secondary.first : null;
 
     return InkWell(
       onTap: onTap,
@@ -393,34 +398,21 @@ class _OpenNowCompactCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _InlineStatusBadge(
-                        label: badgeLabel,
-                        color: badgeColor,
-                      ),
+                      if (primaryBadge != null)
+                        MerchantStatusBadge(
+                          badge: primaryBadge,
+                          compact: true,
+                        ),
                     ],
                   ),
                   const SizedBox(height: 3),
-                  if (operationalLabel != null) ...[
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: operationalColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        operationalLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodyXs.copyWith(
-                          color: operationalColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                  if (secondaryBadge != null) ...[
+                    const SizedBox(height: 4),
+                    MerchantStatusBadge(
+                      badge: secondaryBadge,
+                      compact: true,
                     ),
+                    const SizedBox(height: 4),
                   ],
                   Wrap(
                     spacing: 10,
@@ -474,34 +466,6 @@ class _OpenNowCompactCard extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes} min';
     if (diff.inHours < 24) return '${diff.inHours} h';
     return DateFormat('dd/MM').format(refreshAt);
-  }
-
-  String? _operationalLabel(OpenNowMerchant merchant) {
-    if (!merchant.hasOperationalSignal) return null;
-    final custom = merchant.operationalStatusLabel?.trim();
-    if (custom != null && custom.isNotEmpty) return custom;
-    switch (merchant.operationalSignalType) {
-      case 'vacation':
-        return 'Cerrado por vacaciones';
-      case 'temporary_closure':
-        return 'Cerrado temporalmente';
-      case 'delay':
-        return 'Abre más tarde';
-      default:
-        return null;
-    }
-  }
-
-  Color _operationalColor(OpenNowMerchant merchant) {
-    switch (merchant.operationalSignalType) {
-      case 'vacation':
-      case 'temporary_closure':
-        return AppColors.errorFg;
-      case 'delay':
-        return AppColors.tertiary700;
-      default:
-        return AppColors.primary600;
-    }
   }
 }
 
@@ -1229,35 +1193,6 @@ class _AvatarTile extends StatelessWidget {
     final first = parts.first.isEmpty ? '' : parts.first[0];
     final second = parts[1].isEmpty ? '' : parts[1][0];
     return '$first$second'.toUpperCase();
-  }
-}
-
-class _InlineStatusBadge extends StatelessWidget {
-  const _InlineStatusBadge({
-    required this.label,
-    required this.color,
-  });
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.bodyXs.copyWith(
-          color: AppColors.surface,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.35,
-        ),
-      ),
-    );
   }
 }
 

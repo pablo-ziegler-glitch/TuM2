@@ -24,7 +24,10 @@ export {
 } from "./triggers/ownerSchedules";
 export { onSignalsWriteSyncPublic } from "./triggers/signals";
 export { onPharmacyDutyWriteSyncMerchant } from "./triggers/duties";
-export { onClaimApprovedPromoteMerchant } from "./triggers/claims";
+export {
+  onClaimSubmittedRunAutoValidation,
+  onClaimApprovedPromoteMerchant,
+} from "./triggers/claims";
 export { onReportThresholdSuppressMerchant } from "./triggers/reports";
 export { onExternalPlaceCreateNormalize } from "./triggers/externalPlaces";
 
@@ -63,10 +66,20 @@ export {
   deactivateMerchantProduct,
 } from "./callables/catalogLimits";
 export {
+  listAdminCategories,
+  upsertAdminCategory,
+  toggleAdminCategoryActive,
+} from "./callables/adminCategories";
+export {
   upsertMerchantClaimDraft,
   submitMerchantClaim,
-  cancelMerchantClaim,
+  evaluateMerchantClaim,
+  resolveMerchantClaim,
+  revealMerchantClaimSensitiveData,
+  getMerchantClaimReviewDetail,
   getMyMerchantClaimStatus,
+  listMerchantClaimsForReview,
+  listMyMerchantClaims,
   searchClaimableMerchants,
 } from "./callables/merchantClaims";
 
@@ -83,3 +96,4 @@ export {
 export { runZoneBootstrapBatch } from "./jobs/bootstrap";
 export { adminRebuildMerchantPublic } from "./admin/rebuildPublic";
 export { backfillSearchKeywords } from "./admin/backfillKeywords";
+export { adminSanitizeMerchantClaimsSensitive } from "./admin/sanitizeMerchantClaims";

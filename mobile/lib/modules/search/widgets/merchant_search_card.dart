@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../merchant_badges/domain/merchant_badge_resolver.dart';
+import '../../merchant_badges/domain/merchant_marker_resolver.dart';
+import '../../merchant_badges/domain/merchant_visual_models.dart';
+import '../../merchant_badges/widgets/merchant_badge_widgets.dart';
 import '../models/merchant_search_item.dart';
 
 class MerchantSearchCard extends StatelessWidget {
@@ -20,18 +24,22 @@ class MerchantSearchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final openNow = item.isOpenNow == true;
     final distanceText = item.distanceMeters == null
         ? null
         : _distanceLabel(item.distanceMeters!);
+    final visualState = MerchantVisualStateMapper.fromSearchItem(item);
+    final resolution = MerchantBadgeResolver.resolve(
+      state: visualState,
+      surface: MerchantSurface.searchCard,
+    );
+    final primaryBadge = resolution.primary;
     final hasTrustedVerification =
-        _verificationRank(item.verificationStatus) >= 5;
+        resolution.confidence == MerchantBadgeKey.confidenceVerified ||
+            resolution.confidence == MerchantBadgeKey.confidenceValidated;
     final imageUrl = _imageForCard(item: item, seed: imageSeed);
     final address = item.address.trim();
-    final operationalBanner = _operationalBannerText(item);
-    final hasOperationalBanner = operationalBanner != null;
-    final operationalBannerText = operationalBanner ?? '';
-    final operationalBannerColor = _operationalBannerColor(item);
+    final rubricLabel = resolution.rubricLabel ??
+        (item.categoryLabel.isNotEmpty ? item.categoryLabel : item.categoryId);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -74,53 +82,13 @@ class MerchantSearchCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (openNow)
+                      if (primaryBadge != null)
                         Positioned(
                           top: 10,
                           left: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.secondary500,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'ABIERTO AHORA',
-                              style: AppTextStyles.bodyXs.copyWith(
-                                color: AppColors.surface,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (hasOperationalBanner)
-                        Positioned(
-                          left: 10,
-                          bottom: 10,
-                          child: Container(
-                            constraints: const BoxConstraints(maxWidth: 220),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: operationalBannerColor,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              operationalBannerText,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.bodyXs.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
+                          child: MerchantStatusBadge(
+                            badge: primaryBadge,
+                            compact: true,
                           ),
                         ),
                     ],
@@ -156,15 +124,7 @@ class MerchantSearchCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 5),
-                      Text(
-                        item.categoryLabel.isNotEmpty
-                            ? item.categoryLabel
-                            : item.categoryId,
-                        style: AppTextStyles.bodySm.copyWith(
-                          color: AppColors.neutral700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      MerchantRubricLabel(label: rubricLabel),
                       if (address.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Row(
@@ -186,16 +146,6 @@ class MerchantSearchCard extends StatelessWidget {
                               ),
                             ),
                           ],
-                        ),
-                      ],
-                      if (hasOperationalBanner) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Hoy opera con cambios',
-                          style: AppTextStyles.bodyXs.copyWith(
-                            color: AppColors.neutral700,
-                            fontWeight: FontWeight.w700,
-                          ),
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -235,23 +185,6 @@ class MerchantSearchCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  static int _verificationRank(String verificationStatus) {
-    switch (verificationStatus) {
-      case 'verified':
-        return 6;
-      case 'validated':
-        return 5;
-      case 'claimed':
-        return 4;
-      case 'referential':
-        return 3;
-      case 'community_submitted':
-        return 2;
-      default:
-        return 1;
-    }
   }
 
   static String _imageForCard({
@@ -294,34 +227,6 @@ class MerchantSearchCard extends StatelessWidget {
     if (meters < 1000) return 'A ${meters.round()}m';
     final km = meters / 1000.0;
     return 'A ${km.toStringAsFixed(1)}km';
-  }
-
-  static String? _operationalBannerText(MerchantSearchItem item) {
-    if (!item.hasOperationalSignal) return null;
-    final custom = item.operationalStatusLabel?.trim();
-    if (custom != null && custom.isNotEmpty) return custom;
-    switch (item.operationalSignalType) {
-      case 'vacation':
-        return 'Cerrado por vacaciones';
-      case 'temporary_closure':
-        return 'Cerrado temporalmente';
-      case 'delay':
-        return 'Abre más tarde';
-      default:
-        return null;
-    }
-  }
-
-  static Color _operationalBannerColor(MerchantSearchItem item) {
-    switch (item.operationalSignalType) {
-      case 'vacation':
-      case 'temporary_closure':
-        return AppColors.errorFg.withValues(alpha: 0.9);
-      case 'delay':
-        return AppColors.tertiary700.withValues(alpha: 0.9);
-      default:
-        return AppColors.primary700.withValues(alpha: 0.9);
-    }
   }
 }
 

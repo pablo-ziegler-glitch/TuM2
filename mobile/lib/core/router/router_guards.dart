@@ -100,7 +100,14 @@ abstract class RouterGuards {
         final isOwnerRole = role == 'owner';
         final canAccessAsAdmin = role == 'admin' || role == 'super_admin';
         if (isOwnerRoute && !isOwnerRole && !canAccessAsAdmin) {
-          return AppRoutes.profile;
+          final reason = path == AppRoutes.ownerDashboard
+              ? 'claim_closed'
+              : 'deep_route_access_changed';
+          return AppRoutes.accessUpdatedPath(
+            target: 'customer',
+            reason: reason,
+            from: path,
+          );
         }
         if (isOwnerRoute &&
             isOwnerRole &&

@@ -1,9 +1,23 @@
 # TuM2-0131 — Integración de claim con roles OWNER / owner_pending / aprobación
 
-Estado propuesto: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0130
+
+## Estado real de implementación (corte 2026-04-17)
+### Hecho
+- Sincronización de `owner_pending` activa en submit/evaluate/resolve de claims y trigger fallback legacy.
+- Promoción a OWNER implementada por backend autorizado: actualiza `merchants`, custom claims y `users/{uid}`.
+- Auth mobile consume `owner_pending` desde token con fallback controlado a Firestore y guards de ruta aplicados.
+- Dashboard OWNER ya diferencia `owner_pending` vs owner aprobado con estado contextual y bloqueo de operaciones.
+- Admin review 0128 ya opera con token de concurrencia y detalle seguro; la aprobación/rechazo manual no pisa silenciosamente cambios de claim y mantiene el puente a `owner_pending` / `owner` sólo en backend.
+
+### Falta para cerrar
+- Consolidar refresh de token/estado en sesión abierta inmediatamente después de resoluciones admin (evitar latencia perceptible de transición).
+- Definir y ejecutar estrategia multi-merchant/multi-claim para evitar ambigüedades en `merchantId` principal.
+- Integrar restricciones por fraude/abuso al ciclo de reingreso a carril owner con política explícita de rehabilitación.
+- Completar pruebas E2E cruzadas claim -> admin -> owner con navegación profunda y estados concurrentes.
 
 ## 1. Objetivo
 Definir la integración entre dominio de claim y sistema de roles para cerrar de forma explícita:
@@ -269,6 +283,7 @@ Guardrails:
 5. Transición a OWNER única y auditable.
 6. Cierre negativo limpia estados pending obsoletos.
 7. Conflicto/duplicado nunca elevan privilegios.
+8. Cuentas con restricción activa por fraude/abuso en claims/reportes no pueden ingresar, permanecer ni reingresar al carril owner sin revisión manual autorizada.
 
 ## 26. Guardrails de costo
 - Resolver acceso owner priorizando señal canónica resumida/token.
@@ -303,6 +318,7 @@ Datos clave:
 - Conflicto puede mantener pending sin acceso owner.
 - App debe refrescar token para reflejar cambios reales.
 - OWNER module distingue pending de aprobado sin ambigüedad.
+- Restricciones de seguridad sobre claims/reportes se modelan como limitación de capacidades sensibles manteniendo rol base `CUSTOMER`.
 
 ## 29. UX / microcopy
 Pending:

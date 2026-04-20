@@ -1,4 +1,3 @@
-import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { after, before, test } from "node:test";
@@ -44,11 +43,11 @@ after(async () => {
   await testEnv.cleanup();
 });
 
-test("usuario autenticado puede leer solo su claim", async () => {
+test("usuario autenticado no puede leer claims por acceso directo", async () => {
   const ctx = testEnv.authenticatedContext("owner-1", { role: "customer" });
   const db = ctx.firestore();
 
-  await assertSucceeds(getDoc(doc(db, "merchant_claims/claim-owner-1")));
+  await assertFails(getDoc(doc(db, "merchant_claims/claim-owner-1")));
 });
 
 test("usuario autenticado no puede leer claims ajenos", async () => {
@@ -79,19 +78,44 @@ test("usuario autenticado no puede crear ni actualizar claims por cliente", asyn
   );
 });
 
-test("admin puede leer y actualizar claims", async () => {
+test("admin puede leer claims pero no escribirlos por cliente", async () => {
   const ctx = testEnv.authenticatedContext("admin-1", { role: "admin" });
   const db = ctx.firestore();
 
   const ref = doc(db, "merchant_claims/claim-owner-1");
   await assertSucceeds(getDoc(ref));
-  await assertSucceeds(
+  await assertFails(
     updateDoc(ref, {
       claimStatus: "needs_more_info",
       reviewNotes: "Falta evidencia legible",
     })
   );
+});
 
-  const snap = await assertSucceeds(getDoc(ref));
-  assert.equal(snap.exists(), true);
+test("ningún cliente (incluyendo admin) puede leer claim private", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, "merchant_claim_private/claim-owner-1"), {
+      claimId: "claim-owner-1",
+      userId: "owner-1",
+      merchantId: "merchant-1",
+      sensitiveVault: {
+        keyVersion: "v1",
+        phoneCiphertext: "x.y.z",
+        phoneFingerprint: "abc",
+      },
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+  });
+
+  const ownerCtx = testEnv.authenticatedContext("owner-1", { role: "customer" });
+  await assertFails(
+    getDoc(doc(ownerCtx.firestore(), "merchant_claim_private/claim-owner-1"))
+  );
+
+  const adminCtx = testEnv.authenticatedContext("admin-1", { role: "admin" });
+  await assertFails(
+    getDoc(doc(adminCtx.firestore(), "merchant_claim_private/claim-owner-1"))
+  );
 });

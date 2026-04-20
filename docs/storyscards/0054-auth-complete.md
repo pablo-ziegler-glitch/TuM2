@@ -1,6 +1,6 @@
 # TuM2-0054 — Auth completa
 
-Estado propuesto: UPDATE REQUIRED  
+Estado: DONE  
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad sobre autenticación, resolución de claims, refresh de token y navegación post-login.
 
@@ -113,6 +113,8 @@ Secuencia canónica:
 
 Sin atajos paralelos.
 
+Si la cuenta tiene restricción activa por fraude o uso indebido en funciones sensibles, Auth debe resolver sesión autenticada con acceso general permitido pero bloqueo explícito de claims/reportes y carriles sensibles, sin bypass por navegación ni rehabilitación automática.
+
 ## 15. Resolución al reabrir app
 Con sesión persistida:
 - validar sesión,
@@ -183,6 +185,7 @@ Reglas críticas:
 4. guards sin bypass por navegación manual.
 5. `owner_pending` no mapea a permisos owner.
 6. conflictos no degradan seguridad por estado stale.
+7. restricciones de claims/reportes por fraude o abuso no crean rol nuevo y solo se levantan por revisión autorizada.
 
 ## 26. Guardrails de costo
 - Resolver estado de acceso con token + señal resumida, no fan-out.

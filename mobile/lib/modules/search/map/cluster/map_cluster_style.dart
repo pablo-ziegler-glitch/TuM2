@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../merchant_badges/domain/merchant_cluster_style_resolver.dart';
 import 'map_cluster_model.dart';
 
 abstract class MapClusterStyle {
@@ -15,15 +15,6 @@ abstract class MapClusterStyle {
   }
 
   static Color resolveColor(MapClusterPriority priority) {
-    switch (priority) {
-      case MapClusterPriority.guardia:
-        return AppColors.tertiary500;
-      case MapClusterPriority.open:
-        return AppColors.secondary500;
-      case MapClusterPriority.defaultState:
-        return AppColors.primary500;
-      case MapClusterPriority.closed:
-        return AppColors.neutral700;
-    }
+    return MerchantClusterStyleResolver.colorForPriority(priority);
   }
 }

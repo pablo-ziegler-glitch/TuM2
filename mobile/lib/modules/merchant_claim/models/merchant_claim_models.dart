@@ -3,14 +3,12 @@ import 'dart:typed_data';
 enum MerchantClaimStatus {
   draft,
   submitted,
-  autoValidating,
   underReview,
   needsMoreInfo,
   approved,
   rejected,
   duplicateClaim,
   conflictDetected,
-  cancelled,
 }
 
 enum MerchantClaimDeclaredRole {
@@ -22,6 +20,10 @@ enum MerchantClaimDeclaredRole {
 enum MerchantClaimEvidenceKind {
   storefrontPhoto,
   ownershipDocument,
+  regulatoryDocument,
+  reinforcedRelationshipEvidence,
+  operationalPointPhoto,
+  alternativeRelationshipEvidence,
 }
 
 class MerchantClaimEvidenceUpload {
@@ -102,6 +104,8 @@ class MerchantClaimStatusSummary {
     required this.needsMoreInfo,
     required this.conflictDetected,
     required this.duplicateDetected,
+    this.duplicateOfClaimId,
+    this.conflictType,
     this.merchantName,
   });
 
@@ -114,6 +118,8 @@ class MerchantClaimStatusSummary {
   final bool needsMoreInfo;
   final bool conflictDetected;
   final bool duplicateDetected;
+  final String? duplicateOfClaimId;
+  final String? conflictType;
 }
 
 class MerchantClaimDraftInput {
@@ -124,12 +130,14 @@ class MerchantClaimDraftInput {
     required this.hasAcceptedLegitimacyDeclaration,
     required this.evidenceFiles,
     this.claimId,
+    this.expectedUpdatedAtMillis,
     this.phone,
     this.claimantDisplayName,
     this.claimantNote,
   });
 
   final String? claimId;
+  final int? expectedUpdatedAtMillis;
   final String merchantId;
   final MerchantClaimDeclaredRole declaredRole;
   final String? phone;
@@ -147,8 +155,6 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
         return MerchantClaimStatus.draft;
       case 'submitted':
         return MerchantClaimStatus.submitted;
-      case 'auto_validating':
-        return MerchantClaimStatus.autoValidating;
       case 'under_review':
         return MerchantClaimStatus.underReview;
       case 'needs_more_info':
@@ -161,8 +167,6 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
         return MerchantClaimStatus.duplicateClaim;
       case 'conflict_detected':
         return MerchantClaimStatus.conflictDetected;
-      case 'cancelled':
-        return MerchantClaimStatus.cancelled;
       default:
         return MerchantClaimStatus.draft;
     }
@@ -174,8 +178,6 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
         return 'draft';
       case MerchantClaimStatus.submitted:
         return 'submitted';
-      case MerchantClaimStatus.autoValidating:
-        return 'auto_validating';
       case MerchantClaimStatus.underReview:
         return 'under_review';
       case MerchantClaimStatus.needsMoreInfo:
@@ -188,8 +190,6 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
         return 'duplicate_claim';
       case MerchantClaimStatus.conflictDetected:
         return 'conflict_detected';
-      case MerchantClaimStatus.cancelled:
-        return 'cancelled';
     }
   }
 }
@@ -225,6 +225,14 @@ extension MerchantClaimEvidenceKindX on MerchantClaimEvidenceKind {
         return 'storefront_photo';
       case MerchantClaimEvidenceKind.ownershipDocument:
         return 'ownership_document';
+      case MerchantClaimEvidenceKind.regulatoryDocument:
+        return 'regulatory_document';
+      case MerchantClaimEvidenceKind.reinforcedRelationshipEvidence:
+        return 'reinforced_relationship_evidence';
+      case MerchantClaimEvidenceKind.operationalPointPhoto:
+        return 'operational_point_photo';
+      case MerchantClaimEvidenceKind.alternativeRelationshipEvidence:
+        return 'alternative_relationship_evidence';
     }
   }
 
@@ -234,6 +242,14 @@ extension MerchantClaimEvidenceKindX on MerchantClaimEvidenceKind {
         return 'Foto de fachada';
       case MerchantClaimEvidenceKind.ownershipDocument:
         return 'Prueba de vínculo';
+      case MerchantClaimEvidenceKind.regulatoryDocument:
+        return 'Documento regulatorio';
+      case MerchantClaimEvidenceKind.reinforcedRelationshipEvidence:
+        return 'Evidencia reforzada';
+      case MerchantClaimEvidenceKind.operationalPointPhoto:
+        return 'Foto del puesto';
+      case MerchantClaimEvidenceKind.alternativeRelationshipEvidence:
+        return 'Vínculo alternativo';
     }
   }
 }

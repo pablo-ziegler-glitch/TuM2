@@ -4,6 +4,8 @@ TuM2 — Tu metro cuadrado
 
 **Implementar búsqueda de comercios**
 
+Estado: DONE
+
 Épica: Descubrimiento · Fase: MVP · Prioridad: P0 — Bloqueante
 
 *Roles involucrados: Product Ops Manager + Product Manager + Tech Lead*

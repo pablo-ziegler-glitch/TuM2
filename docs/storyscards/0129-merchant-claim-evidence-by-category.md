@@ -1,10 +1,32 @@
 # TuM2-0129 — Evidencia y documentación por categoría de comercio
 
-Estado: TODO  
+Estado: IN_PROGRESS  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Dependencia directa del flujo: TuM2-0126 — Flujo de claim del comercio  
 Actualización clave incorporada: criterio documental flexible para Tiendas de comida al paso / puestos móviles.
+
+## Estado real de implementación (corte 2026-04-19)
+### Hecho
+- Se implementó policy canónica versionada en backend (`functions/src/lib/merchantClaimEvidencePolicy.ts`) con `policyVersion` explícita y fallback seguro.
+- Se agregó allowlist MVP de categorías de claim (`pharmacy`, `kiosk`, `almacen`, `veterinary`, `fast_food`, `casa_de_comidas`, `gomeria`) y bloqueo explícito de categorías no MVP (`claim_category_not_allowed`).
+- `merchantClaimAutoValidation` consume policy centralizada y persiste snapshot de evaluación (`evidencePolicyVersion`, `requiredEvidenceSatisfied`, `sufficiencyLevel`, `manualReviewReasons`, `riskHints`).
+- El detalle admin (`getMerchantClaimReviewDetail`) expone policy aplicada + faltantes + suficiencia para revisión consistente.
+- Mobile claim consume policy por `categoryId` con copy y validación local contextual, incluyendo `fast_food` flexible y requerimientos reforzados para `pharmacy`/`veterinary`.
+- En mobile se habilitó carga de evidencia en **imagen o PDF** con tipos permitidos explícitos: `image/jpeg`, `image/jpg`, `image/png`, `image/webp`, `application/pdf` (máx 8MB por archivo).
+- Legal links (Términos, Privacidad, Consentimiento de evidencia) pasan a consumirse desde un único origen lógico (`legalDocumentsConfigProvider` con Remote Config + fallback estable).
+- Se agregó control de concurrencia optimistic-lock con `expectedUpdatedAtMillis` en `upsertMerchantClaimDraft` y `submitMerchantClaim` para evitar carreras multi-dispositivo.
+
+### Pendiente para cierre definitivo
+- QA E2E completa en emuladores para flujos cruzados mobile/admin con evidencia real.
+- Verificación manual operativa de copy final por producto/legal para todas las categorías MVP.
+- Ejecución operativa de migración de categorías legacy en datos existentes (dry-run + apply + rollback plan).
+
+## Sync 0127 implementado (2026-04-16)
+- El motor backend aplica validación mínima por categoría con `categoryId` canónico.
+- `pharmacy` exige `regulatory_document`.
+- `veterinary` exige `reinforced_relationship_evidence`.
+- `fast_food` acepta combinación flexible (`operational_point_photo` y/o `alternative_relationship_evidence`) con flag de revisión manual por ambigüedad.
 
 ## 1. Objetivo
 Definir la matriz canónica de evidencia y documentación por categoría de comercio para el dominio de claims de TuM2, estableciendo:

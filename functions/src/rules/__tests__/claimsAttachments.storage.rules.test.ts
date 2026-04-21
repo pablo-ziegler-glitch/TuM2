@@ -37,7 +37,9 @@ before(async () => {
 });
 
 after(async () => {
-  await testEnv.cleanup();
+  if (testEnv) {
+    await testEnv.cleanup();
+  }
 });
 
 test("cliente no puede leer binario de attachment por storage directo", async () => {

@@ -22,9 +22,8 @@ Depende de: TuM2-0126 — Flujo de claim del comercio, TuM2-0127 — Validación
 - Suite web agregada: tests de lógica local (filtros/sort/stale/gating) y widget tests del flujo de lista/detalle/reveal.
 
 ### Falta para cerrar
-- Preview/descarga segura de adjuntos sensibles todavía no cerrada; el panel expone metadata lazy y evita fetch binario por defecto.
-- Falta QA E2E real con emuladores/web runner sobre reveal temporal, stale conflict multi-admin y permisos diferenciados con custom claims finos reales.
-- Falta activar claims finos (`claimsReviewLevel` / `capabilities`) en operación real y completar política de asignación administrativa.
+- QA E2E real en `tum2-staging-45c83` con cuentas seed (`reviewer1@tum2.test`, `senior1@tum2.test`, `superadmin1@tum2.test`) y claims base (`under_review`, `needs_more_info`, `conflict_detected`, `duplicate_claim`).
+- Validación operativa final de política de asignación administrativa para claims finos en tokens productivos.
 
 ## 1. Objetivo
 Definir el módulo de revisión manual de claims en Admin Web para que el equipo administrador pueda evaluar, decidir y auditar reclamos de titularidad no resolubles de forma automática con seguridad suficiente.

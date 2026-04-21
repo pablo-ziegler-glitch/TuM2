@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/platform/open_url.dart';
 import '../../../core/theme/admin_semantic_assets.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../import_data/data/import_data_repository.dart';
@@ -45,15 +46,14 @@ class _MerchantClaimsReviewScreenState
   final TextEditingController _resolveReasonController =
       TextEditingController();
   final TextEditingController _resolveNotesController = TextEditingController();
-  final TextEditingController _revealReasonController = TextEditingController(
-    text: 'manual_review',
-  );
+  final TextEditingController _reasonDetailController = TextEditingController();
 
   final Set<MerchantClaimStatus> _selectedStatuses = {
     ..._defaultReviewStatuses,
   };
   final Set<SensitiveFieldKind> _revealFields = {
     SensitiveFieldKind.phone,
+    SensitiveFieldKind.email,
     SensitiveFieldKind.claimantDisplayName,
   };
 
@@ -81,6 +81,8 @@ class _MerchantClaimsReviewScreenState
   MerchantClaimStatus _resolveTargetStatus = MerchantClaimStatus.needsMoreInfo;
   Map<SensitiveFieldKind, String> _revealedValues = const {};
   DateTime? _revealExpiresAt;
+  SensitiveReasonCode _selectedReasonCode = SensitiveReasonCode.verifyIdentity;
+  Map<String, DateTime> _attachmentExpiry = const <String, DateTime>{};
   bool _detailStale = false;
   bool _showEvidenceMetadata = false;
 
@@ -98,7 +100,7 @@ class _MerchantClaimsReviewScreenState
     _searchController.dispose();
     _resolveReasonController.dispose();
     _resolveNotesController.dispose();
-    _revealReasonController.dispose();
+    _reasonDetailController.dispose();
     super.dispose();
   }
 
@@ -278,6 +280,7 @@ class _MerchantClaimsReviewScreenState
                     : MerchantClaimStatus.needsMoreInfo);
         _loadingDetail = false;
         _showEvidenceMetadata = false;
+        _attachmentExpiry = const <String, DateTime>{};
         if (!preserveRevealState || wasStale) {
           _revealedValues = const {};
           _revealExpiresAt = null;
@@ -392,9 +395,10 @@ class _MerchantClaimsReviewScreenState
       _setActionError('Seleccioná al menos un campo para revelar.');
       return;
     }
-    final reason = _revealReasonController.text.trim();
-    if (reason.isEmpty) {
-      _setActionError('El motivo de reveal es obligatorio.');
+    final reason = await _collectSensitiveReason(
+      title: 'Motivo de reveal sensible',
+    );
+    if (reason == null) {
       return;
     }
 
@@ -405,7 +409,8 @@ class _MerchantClaimsReviewScreenState
     try {
       final result = await widget.repository.revealSensitiveData(
         claimId: detail.claimId,
-        reasonCode: reason,
+        reasonCode: reason.reasonCode,
+        reasonDetail: reason.reasonDetail,
         fields: _revealFields.toList(growable: false),
         expectedUpdatedAtMillis: detail.updatedAtMillis,
       );
@@ -440,6 +445,130 @@ class _MerchantClaimsReviewScreenState
     } finally {
       if (mounted) setState(() => _runningAction = false);
     }
+  }
+
+  Future<void> _openAttachment({
+    required MerchantClaimDetail detail,
+    required MerchantClaimEvidenceFile file,
+    required bool download,
+  }) async {
+    final reason = await _collectSensitiveReason(
+      title: download ? 'Motivo de descarga' : 'Motivo de preview',
+    );
+    if (reason == null) return;
+
+    setState(() {
+      _runningAction = true;
+      _actionError = null;
+    });
+    try {
+      final result = download
+          ? await widget.repository.getAttachmentDownloadUrl(
+              claimId: detail.claimId,
+              attachmentId: file.id,
+              reasonCode: reason.reasonCode,
+              reasonDetail: reason.reasonDetail,
+            )
+          : await widget.repository.getAttachmentPreviewUrl(
+              claimId: detail.claimId,
+              attachmentId: file.id,
+              reasonCode: reason.reasonCode,
+              reasonDetail: reason.reasonDetail,
+            );
+      if (!mounted) return;
+      final expiry =
+          DateTime.fromMillisecondsSinceEpoch(result.expiresAtMillis);
+      setState(() {
+        _attachmentExpiry = {
+          ..._attachmentExpiry,
+          file.id: expiry,
+        };
+      });
+      await openUrlInNewTab(result.url);
+      _showSnack(
+        download ? 'Download temporal generado.' : 'Preview temporal generado.',
+      );
+    } on FirebaseFunctionsException catch (error) {
+      if (!mounted) return;
+      await _handleActionError(error);
+    } catch (_) {
+      if (!mounted) return;
+      _setActionError('No se pudo generar acceso seguro. Reintentá.');
+    } finally {
+      if (mounted) setState(() => _runningAction = false);
+    }
+  }
+
+  Future<({SensitiveReasonCode reasonCode, String? reasonDetail})?>
+      _collectSensitiveReason({
+    required String title,
+  }) async {
+    var selected = _selectedReasonCode;
+    _reasonDetailController.text = '';
+
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(title),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<SensitiveReasonCode>(
+                      initialValue: selected,
+                      decoration: const InputDecoration(
+                        labelText: 'Reason code',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: SensitiveReasonCode.values
+                          .map(
+                            (item) => DropdownMenuItem(
+                              value: item,
+                              child: Text(_reasonLabel(item)),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setDialogState(() => selected = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _reasonDetailController,
+                      maxLength: 140,
+                      decoration: const InputDecoration(
+                        labelText: 'Detalle opcional',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Confirmar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (accepted != true) return null;
+    setState(() => _selectedReasonCode = selected);
+    final detail = _reasonDetailController.text.trim();
+    return (reasonCode: selected, reasonDetail: detail.isEmpty ? null : detail);
   }
 
   Future<void> _handleActionError(FirebaseFunctionsException error) async {
@@ -1093,7 +1222,12 @@ class _MerchantClaimsReviewScreenState
       child: Column(
         children: [
           _kv('Usuario', detail.userIdMasked),
-          _kv('Email auth', detail.authenticatedEmailMasked ?? '-'),
+          _kv(
+            'Email auth',
+            _revealedValues[SensitiveFieldKind.email] ??
+                detail.authenticatedEmailMasked ??
+                '-',
+          ),
           _kv(
             'Teléfono',
             _revealedValues[SensitiveFieldKind.phone] ??
@@ -1177,9 +1311,57 @@ class _MerchantClaimsReviewScreenState
               ...detail.evidenceFiles.map(
                 (file) => Padding(
                   padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    '${file.kind} · ${file.originalFileName ?? file.id} · ${file.contentType} · ${file.sizeBytes} bytes',
-                    style: AppTextStyles.bodyXs,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${file.kind} · ${file.originalFileName ?? file.id} · ${file.contentType} · ${file.sizeBytes} bytes',
+                        style: AppTextStyles.bodyXs,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          OutlinedButton(
+                            onPressed: _runningAction
+                                ? null
+                                : () => _openAttachment(
+                                      detail: detail,
+                                      file: file,
+                                      download: false,
+                                    ),
+                            child: const Text('Ver documento'),
+                          ),
+                          const SizedBox(width: 8),
+                          if (detail
+                              .capabilities.canDownloadSensitiveAttachments)
+                            OutlinedButton(
+                              onPressed: _runningAction
+                                  ? null
+                                  : () => _openAttachment(
+                                        detail: detail,
+                                        file: file,
+                                        download: true,
+                                      ),
+                              child: const Text('Descargar'),
+                            )
+                          else
+                            Tooltip(
+                              message: 'No tenés permisos para descargar.',
+                              child: OutlinedButton(
+                                onPressed: null,
+                                child: const Text('Descargar'),
+                              ),
+                            ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'TTL: ${_formatAttachmentExpiry(file.id)}',
+                            style: AppTextStyles.bodyXs.copyWith(
+                              color: AppColors.neutral600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1394,14 +1576,28 @@ class _MerchantClaimsReviewScreenState
                 .toList(growable: false),
           ),
           const SizedBox(height: 8),
-          TextField(
-            controller: _revealReasonController,
-            enabled: enabled,
+          DropdownButtonFormField<SensitiveReasonCode>(
+            isExpanded: true,
+            initialValue: _selectedReasonCode,
             decoration: const InputDecoration(
-              labelText: 'Motivo de reveal',
+              labelText: 'Reason',
               border: OutlineInputBorder(),
               isDense: true,
             ),
+            items: SensitiveReasonCode.values
+                .map(
+                  (value) => DropdownMenuItem(
+                    value: value,
+                    child: Text(_reasonLabel(value)),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: enabled
+                ? (value) {
+                    if (value == null) return;
+                    setState(() => _selectedReasonCode = value);
+                  }
+                : null,
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
@@ -1424,9 +1620,28 @@ class _MerchantClaimsReviewScreenState
   String _sensitiveLabel(SensitiveFieldKind field) {
     return switch (field) {
       SensitiveFieldKind.phone => 'Teléfono',
+      SensitiveFieldKind.email => 'Email',
       SensitiveFieldKind.claimantDisplayName => 'Nombre',
       SensitiveFieldKind.claimantNote => 'Nota',
     };
+  }
+
+  String _reasonLabel(SensitiveReasonCode reason) {
+    return switch (reason) {
+      SensitiveReasonCode.verifyIdentity => 'Verificar identidad',
+      SensitiveReasonCode.validateRelationship => 'Validar vínculo',
+      SensitiveReasonCode.fraudInvestigation => 'Investigar fraude',
+      SensitiveReasonCode.duplicateResolution => 'Resolver duplicado',
+      SensitiveReasonCode.conflictResolution => 'Resolver conflicto',
+    };
+  }
+
+  String _formatAttachmentExpiry(String attachmentId) {
+    final expiresAt = _attachmentExpiry[attachmentId];
+    if (expiresAt == null) return '-';
+    final remaining = expiresAt.difference(DateTime.now()).inSeconds;
+    if (remaining <= 0) return 'expirado';
+    return '${remaining}s';
   }
 
   String _zoneLabel(String zoneId) {

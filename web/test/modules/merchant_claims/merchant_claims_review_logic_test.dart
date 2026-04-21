@@ -135,6 +135,8 @@ void main() {
         canResolveStandard: true,
         canResolveCritical: false,
         canRevealSensitive: false,
+        canApprove: false,
+        canDownloadSensitiveAttachments: false,
       ),
       allowedStatuses: [
         MerchantClaimStatus.rejected,

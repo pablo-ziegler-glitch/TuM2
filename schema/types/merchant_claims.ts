@@ -154,3 +154,80 @@ export interface MerchantClaimPrivateDocument {
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
+
+export type AdminRole = 'reviewer' | 'senior_reviewer' | 'admin' | 'super_admin';
+
+export type SensitiveRevealReasonCode =
+  | 'verify_identity'
+  | 'validate_relationship'
+  | 'fraud_investigation'
+  | 'duplicate_resolution'
+  | 'conflict_resolution';
+
+export type RevealableField =
+  | 'fullName'
+  | 'phone'
+  | 'email'
+  | 'claimNote'
+  | 'attachmentsMetadata';
+
+export type AttachmentAccessMode = 'preview' | 'download';
+
+export interface MerchantClaimSensitiveDocument {
+  claimId: string;
+  merchantId: string;
+  userId: string;
+  keyVersion: string;
+  phoneCiphertext?: string | null;
+  fullNameCiphertext?: string | null;
+  claimNoteCiphertext?: string | null;
+  fingerprintPrimary?: string | null;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+export interface MerchantClaimSensitiveRevealAuditDocument {
+  claimId: string;
+  merchantId: string | null;
+  actorUid: string;
+  actorRole: AdminRole;
+  actionType: 'reveal_sensitive';
+  reasonCode: SensitiveRevealReasonCode;
+  reasonDetail?: string | null;
+  revealedFields: RevealableField[];
+  createdAt: Timestamp;
+  expiresAtMillis: number;
+  requestId: string;
+  schemaVersion: number;
+  retentionUntil?: Timestamp;
+}
+
+export interface MerchantClaimAttachmentAccessAuditDocument {
+  claimId: string;
+  merchantId: string | null;
+  attachmentId: string;
+  actorUid: string;
+  actorRole: AdminRole;
+  accessMode: AttachmentAccessMode;
+  reasonCode: SensitiveRevealReasonCode;
+  reasonDetail?: string | null;
+  createdAt: Timestamp;
+  urlExpiresAt: Timestamp;
+  requestId: string;
+  schemaVersion: number;
+  retentionUntil?: Timestamp;
+}
+
+export interface RevealResponsePayload {
+  claimId: string;
+  expiresAtMillis: number;
+  revealed: Partial<Record<RevealableField, string>>;
+}
+
+export interface AttachmentSignedUrlResponse {
+  claimId: string;
+  attachmentId: string;
+  mode: AttachmentAccessMode;
+  url: string;
+  expiresAtMillis: number;
+}

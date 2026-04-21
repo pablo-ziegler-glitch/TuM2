@@ -594,6 +594,31 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // ─── merchant_claim_sensitive/{claimId} ──────────────────────────────────
+    // Alias canónico para vault sensible (backend only).
+    // Nunca exponer lectura/escritura directa a cliente.
+    match /merchant_claim_sensitive/{claimId} {
+      allow read, write: if false;
+    }
+
+    // ─── merchant_claim_sensitive_reveals/{revealId} ─────────────────────────
+    // Auditoría append-only de reveal sensible.
+    match /merchant_claim_sensitive_reveals/{revealId} {
+      allow read, write: if false;
+    }
+
+    // ─── merchant_claim_attachment_access_logs/{logId} ───────────────────────
+    // Auditoría append-only de preview/download firmado.
+    match /merchant_claim_attachment_access_logs/{logId} {
+      allow read, write: if false;
+    }
+
+    // ─── merchant_claim_review_actions/{actionId} ────────────────────────────
+    // Auditoría append-only de decisiones manuales.
+    match /merchant_claim_review_actions/{actionId} {
+      allow read, write: if false;
+    }
+
     // ─── reports/{reportId} ──────────────────────────────────────────────────
     // Authenticated users create reports. Admins read and update all.
 

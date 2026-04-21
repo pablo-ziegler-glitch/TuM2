@@ -171,6 +171,8 @@ MerchantClaimDetail _buildDetail({required bool canRevealSensitive}) {
       canResolveStandard: true,
       canResolveCritical: true,
       canRevealSensitive: canRevealSensitive,
+      canApprove: true,
+      canDownloadSensitiveAttachments: false,
     ),
     allowedStatuses: const [
       MerchantClaimStatus.approved,
@@ -249,9 +251,30 @@ class _FakeMerchantClaimsRepository implements MerchantClaimsAdminDataSource {
   @override
   Future<MerchantClaimRevealResult> revealSensitiveData({
     required String claimId,
-    required String reasonCode,
+    required SensitiveReasonCode reasonCode,
     required List<SensitiveFieldKind> fields,
+    String? reasonDetail,
     int? expectedUpdatedAtMillis,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<MerchantClaimAttachmentAccessResult> getAttachmentPreviewUrl({
+    required String claimId,
+    required String attachmentId,
+    required SensitiveReasonCode reasonCode,
+    String? reasonDetail,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<MerchantClaimAttachmentAccessResult> getAttachmentDownloadUrl({
+    required String claimId,
+    required String attachmentId,
+    required SensitiveReasonCode reasonCode,
+    String? reasonDetail,
   }) {
     throw UnimplementedError();
   }

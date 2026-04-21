@@ -36,6 +36,17 @@ before(async () => {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+    await setDoc(doc(db, "merchant_claim_sensitive_reveals/reveal-1"), {
+      claimId: "claim-owner-1",
+      actorUid: "admin-1",
+      createdAt: Timestamp.now(),
+    });
+    await setDoc(doc(db, "merchant_claim_attachment_access_logs/log-1"), {
+      claimId: "claim-owner-1",
+      attachmentId: "evidence-1",
+      actorUid: "admin-1",
+      createdAt: Timestamp.now(),
+    });
   });
 });
 
@@ -117,5 +128,23 @@ test("ningún cliente (incluyendo admin) puede leer claim private", async () => 
   const adminCtx = testEnv.authenticatedContext("admin-1", { role: "admin" });
   await assertFails(
     getDoc(doc(adminCtx.firestore(), "merchant_claim_private/claim-owner-1"))
+  );
+});
+
+test("auditorías sensibles quedan cerradas para lectura/escritura cliente", async () => {
+  const adminCtx = testEnv.authenticatedContext("admin-1", { role: "admin" });
+  const db = adminCtx.firestore();
+  await assertFails(
+    getDoc(doc(db, "merchant_claim_sensitive_reveals/reveal-1"))
+  );
+  await assertFails(
+    getDoc(doc(db, "merchant_claim_attachment_access_logs/log-1"))
+  );
+  await assertFails(
+    setDoc(doc(db, "merchant_claim_sensitive_reveals/reveal-2"), {
+      claimId: "claim-owner-1",
+      actorUid: "admin-1",
+      createdAt: Timestamp.now(),
+    })
   );
 });

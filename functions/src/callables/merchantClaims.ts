@@ -1,10 +1,20 @@
 import { FieldPath, FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
 import {
   SensitiveVault,
   buildSensitiveVault,
   revealSensitiveFields,
 } from "../lib/claimSensitive";
+import {
+  AdminRole,
+  ClaimResolutionAction,
+  canDownloadSensitiveAttachment,
+  canEvaluate,
+  canResolve,
+  canRevealSensitive,
+  getAdminRoleFromClaims,
+} from "../lib/claims/adminPermissions";
 import {
   isAllowedClaimCategoryId,
   normalizeClaimCategoryId,
@@ -12,6 +22,10 @@ import {
 } from "../lib/merchantClaimEvidencePolicy";
 import { runMerchantClaimAutoValidation } from "../lib/merchantClaimAutoValidationService";
 import { syncOwnerPendingAccess } from "../lib/merchantClaimOwnerPending";
+import {
+  generateDownloadSignedUrl,
+  generatePreviewSignedUrl,
+} from "../lib/storage/signedUrls";
 
 const db = () => getFirestore();
 
@@ -34,7 +48,14 @@ type EvidenceKind =
   | "reinforced_relationship_evidence"
   | "operational_point_photo"
   | "alternative_relationship_evidence";
-type SensitiveFieldKey = "phone" | "claimantDisplayName" | "claimantNote";
+type SensitiveFieldKey = "fullName" | "phone" | "email" | "claimNote";
+type SensitiveRevealReasonCode =
+  | "verify_identity"
+  | "validate_relationship"
+  | "fraud_investigation"
+  | "duplicate_resolution"
+  | "conflict_resolution";
+type AttachmentAccessMode = "preview" | "download";
 
 interface ClaimEvidenceInput {
   id?: unknown;
@@ -117,6 +138,7 @@ interface ResolveMerchantClaimResponse {
 interface RevealSensitiveClaimDataRequest {
   claimId?: unknown;
   reasonCode?: unknown;
+  reasonDetail?: unknown;
   fields?: unknown;
   expectedUpdatedAtMillis?: unknown;
 }
@@ -127,17 +149,35 @@ interface RevealSensitiveClaimDataResponse {
   revealed: Partial<Record<SensitiveFieldKey, string>>;
 }
 
+interface GetMerchantClaimAttachmentAccessRequest {
+  claimId?: unknown;
+  attachmentId?: unknown;
+  reasonCode?: unknown;
+  reasonDetail?: unknown;
+}
+
+interface GetMerchantClaimAttachmentAccessResponse {
+  claimId: string;
+  attachmentId: string;
+  mode: AttachmentAccessMode;
+  url: string;
+  expiresAtMillis: number;
+}
+
 interface GetMerchantClaimReviewDetailRequest {
   claimId?: unknown;
 }
 
 interface ClaimReviewCapabilitySet {
+  adminRole: AdminRole;
   canViewQueue: boolean;
   canViewDetail: boolean;
   canEvaluateClaim: boolean;
   canResolveStandard: boolean;
   canResolveCritical: boolean;
   canRevealSensitive: boolean;
+  canApprove: boolean;
+  canDownloadSensitiveAttachments: boolean;
 }
 
 interface ClaimReviewTimelineEvent {
@@ -709,19 +749,15 @@ function toUserVisibleStatus(raw: unknown): UserVisibleStatus {
   return USER_VISIBLE_STATUSES.has(normalized) ? normalized : "draft";
 }
 
-function parseRole(token: Record<string, unknown>): string {
-  const role = token.role;
-  return typeof role === "string" ? role.trim().toLowerCase() : "";
-}
-
-function assertAdmin(auth: CallableAuth): void {
-  const role = parseRole(auth.token);
-  if (role !== "admin" && role !== "super_admin") {
+function assertAdmin(auth: CallableAuth): AdminRole {
+  const role = getAdminRoleFromClaims(auth.token);
+  if (role == null) {
     throw new HttpsError(
       "permission-denied",
       "Solo administradores pueden ejecutar esta operación."
     );
   }
+  return role;
 }
 
 function normalizeExpectedUpdatedAtMillis(value: unknown): number | null {
@@ -758,76 +794,27 @@ function readStringArray(value: unknown): string[] {
     : [];
 }
 
-function hasExplicitClaimReviewCapabilities(token: Record<string, unknown>): boolean {
-  if (typeof token["claimsReviewLevel"] === "string") return true;
-  if (typeof token["claims_review_level"] === "string") return true;
-  if (token["claimsReviewer"] === true || token["claimsSeniorReviewer"] === true) {
-    return true;
-  }
-  const capabilities = readStringArray(token["capabilities"]).map((item) =>
-    item.trim().toLowerCase()
-  );
-  return capabilities.some((item) => item.startsWith("claims."));
-}
-
 function readClaimReviewCapabilities(auth: CallableAuth): ClaimReviewCapabilitySet {
-  const role = parseRole(auth.token);
-  if (role !== "admin" && role !== "super_admin") {
-    return {
-      canViewQueue: false,
-      canViewDetail: false,
-      canEvaluateClaim: false,
-      canResolveStandard: false,
-      canResolveCritical: false,
-      canRevealSensitive: false,
-    };
-  }
-
-  if (role === "super_admin" || !hasExplicitClaimReviewCapabilities(auth.token)) {
-    return {
-      canViewQueue: true,
-      canViewDetail: true,
-      canEvaluateClaim: true,
-      canResolveStandard: true,
-      canResolveCritical: true,
-      canRevealSensitive: true,
-    };
-  }
-
-  const capabilities = new Set(
-    readStringArray(auth.token["capabilities"]).map((item) =>
-      item.trim().toLowerCase()
-    )
-  );
-  const rawLevel =
-    typeof auth.token["claimsReviewLevel"] === "string"
-      ? auth.token["claimsReviewLevel"]
-      : typeof auth.token["claims_review_level"] === "string"
-      ? auth.token["claims_review_level"]
-      : auth.token["claimsSeniorReviewer"] === true
-      ? "senior"
-      : auth.token["claimsReviewer"] === true
-      ? "reviewer"
-      : "";
-  const level = rawLevel.trim().toLowerCase();
-  const senior =
-    level === "senior" ||
-    level === "senior_reviewer" ||
-    capabilities.has("claims.resolve_critical") ||
-    capabilities.has("claims.reveal_sensitive");
-  const reviewer =
-    senior ||
-    level === "reviewer" ||
-    capabilities.has("claims.review") ||
-    capabilities.has("claims.resolve_standard");
+  const role = assertAdmin(auth);
+  const canReveal = canRevealSensitive(role);
+  const canResolveStandard =
+    role === "reviewer" ||
+    role === "senior_reviewer" ||
+    role === "admin" ||
+    role === "super_admin";
+  const canResolveCritical =
+    role === "senior_reviewer" || role === "admin" || role === "super_admin";
 
   return {
-    canViewQueue: reviewer,
-    canViewDetail: reviewer,
-    canEvaluateClaim: reviewer,
-    canResolveStandard: reviewer,
-    canResolveCritical: senior,
-    canRevealSensitive: senior,
+    adminRole: role,
+    canViewQueue: true,
+    canViewDetail: true,
+    canEvaluateClaim: canEvaluate(role),
+    canResolveStandard,
+    canResolveCritical,
+    canRevealSensitive: canReveal,
+    canApprove: role === "senior_reviewer" || role === "admin" || role === "super_admin",
+    canDownloadSensitiveAttachments: canDownloadSensitiveAttachment(role),
   };
 }
 
@@ -858,6 +845,9 @@ function isCriticalResolutionStatus(status: UserVisibleStatus): boolean {
 }
 
 function allowedResolutionStatuses(capabilities: ClaimReviewCapabilitySet): UserVisibleStatus[] {
+  if (capabilities.adminRole === "reviewer") {
+    return ["needs_more_info"];
+  }
   const allowed: UserVisibleStatus[] = [];
   if (capabilities.canResolveStandard) {
     allowed.push("rejected", "needs_more_info");
@@ -997,6 +987,32 @@ function normalizeResolveStatus(value: unknown): UserVisibleStatus {
   );
 }
 
+function toResolutionAction(status: UserVisibleStatus): ClaimResolutionAction {
+  if (status === "approved") return "approve";
+  if (status === "rejected") return "reject";
+  if (status === "needs_more_info") return "needs_more_info";
+  if (status === "conflict_detected") return "conflict_detected";
+  return "duplicate_claim";
+}
+
+function normalizeSensitiveReasonCode(value: unknown): SensitiveRevealReasonCode {
+  const reason = normalizeRequiredString(value, "reasonCode").trim().toLowerCase();
+  if (
+    reason === "verify_identity" ||
+    reason === "validate_relationship" ||
+    reason === "fraud_investigation" ||
+    reason === "duplicate_resolution" ||
+    reason === "conflict_resolution"
+  ) {
+    return reason;
+  }
+  throw new HttpsError("invalid-argument", "reasonCode inválido.");
+}
+
+function normalizeReasonDetail(value: unknown): string | null {
+  return normalizeOptionalString(value, "reasonDetail", 140);
+}
+
 function assertClaimCategoryAllowed(categoryId: string): void {
   if (isAllowedClaimCategoryId(categoryId)) return;
   throw new HttpsError(
@@ -1010,12 +1026,8 @@ function assertClaimCategoryAllowed(categoryId: string): void {
 }
 
 function normalizeRevealFields(value: unknown): SensitiveFieldKey[] {
-  const allowed = new Set<SensitiveFieldKey>([
-    "phone",
-    "claimantDisplayName",
-    "claimantNote",
-  ]);
-  if (value == null) return ["phone", "claimantDisplayName", "claimantNote"];
+  const allowed = new Set<SensitiveFieldKey>(["fullName", "phone", "email", "claimNote"]);
+  if (value == null) return ["fullName", "phone", "email", "claimNote"];
   if (!Array.isArray(value)) {
     throw new HttpsError("invalid-argument", "fields debe ser un array.");
   }
@@ -1023,7 +1035,66 @@ function normalizeRevealFields(value: unknown): SensitiveFieldKey[] {
     .filter((item): item is string => typeof item === "string")
     .map((item) => item.trim())
     .filter((item): item is SensitiveFieldKey => allowed.has(item as SensitiveFieldKey));
-  return parsed.length > 0 ? [...new Set(parsed)] : ["phone", "claimantDisplayName"];
+  return parsed.length > 0 ? [...new Set(parsed)] : ["fullName", "phone"];
+}
+
+function normalizeAttachmentId(value: unknown): string {
+  const attachmentId = normalizeRequiredString(value, "attachmentId");
+  if (!/^[A-Za-z0-9_-]{3,90}$/.test(attachmentId)) {
+    throw new HttpsError("invalid-argument", "attachmentId inválido.");
+  }
+  return attachmentId;
+}
+
+function isSensitiveCategoryForResolution(categoryId: string | null): boolean {
+  if (categoryId == null) return false;
+  const normalized = categoryId.trim().toLowerCase();
+  return normalized === "pharmacy" || normalized === "veterinary";
+}
+
+function resolveAttachmentFromClaim(params: {
+  claimData: Record<string, unknown>;
+  attachmentId: string;
+}): {
+  attachmentId: string;
+  objectPath: string;
+  contentType: string | null;
+  fileName: string;
+} {
+  const evidence = Array.isArray(params.claimData.evidenceFiles)
+    ? params.claimData.evidenceFiles
+    : [];
+  for (const row of evidence) {
+    if (!row || typeof row !== "object") continue;
+    const item = row as Record<string, unknown>;
+    const id =
+      typeof item.id === "string" && item.id.trim().length > 0
+        ? item.id.trim()
+        : null;
+    if (id !== params.attachmentId) continue;
+
+    const storagePath =
+      typeof item.storagePath === "string" ? item.storagePath.trim() : "";
+    if (!storagePath) {
+      throw new HttpsError(
+        "failed-precondition",
+        "El adjunto no tiene storagePath válido."
+      );
+    }
+    const contentType =
+      typeof item.contentType === "string" ? item.contentType.trim() : null;
+    const fileNameSource =
+      typeof item.originalFileName === "string" && item.originalFileName.trim().length > 0
+        ? item.originalFileName.trim()
+        : `${params.attachmentId}`;
+    return {
+      attachmentId: params.attachmentId,
+      objectPath: storagePath,
+      contentType,
+      fileName: fileNameSource.replace(/["\\]/g, ""),
+    };
+  }
+  throw new HttpsError("not-found", "No encontramos el adjunto solicitado.");
 }
 
 function resolveMerchantName(data: Record<string, unknown>): string | null {
@@ -1502,7 +1573,6 @@ export const evaluateMerchantClaim = onCall<
   Promise<EvaluateMerchantClaimResponse>
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
-  assertAdmin(auth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
   if (!capabilities.canEvaluateClaim) {
@@ -1559,7 +1629,6 @@ export const resolveMerchantClaim = onCall<
   Promise<ResolveMerchantClaimResponse>
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
-  assertAdmin(auth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
   const reviewerUid = auth.uid;
@@ -1584,6 +1653,7 @@ export const resolveMerchantClaim = onCall<
   const claimRef = db().collection("merchant_claims").doc(claimId);
   let userId = "";
   let merchantId = "";
+  let currentStatusAtResolve: UserVisibleStatus = "draft";
   await db().runTransaction(async (tx) => {
     const claimSnap = await tx.get(claimRef);
     if (!claimSnap.exists) {
@@ -1595,11 +1665,29 @@ export const resolveMerchantClaim = onCall<
     const currentStatus = toUserVisibleStatus(
       claimData.userVisibleStatus ?? claimData.claimStatus
     );
+    currentStatusAtResolve = currentStatus;
     assertClaimFreshness({
       expectedUpdatedAtMillis,
       currentUpdatedAtMillis: readTimestampMillis(claimData.updatedAt),
       currentStatus,
     });
+
+    const resolutionAllowed = canResolve(capabilities.adminRole, toResolutionAction(targetStatus), {
+      claimStatus: currentStatus,
+      hasConflict: claimData.hasConflict === true,
+      hasDuplicate: claimData.hasDuplicate === true,
+      isSensitiveCategory: isSensitiveCategoryForResolution(
+        typeof claimData.categoryId === "string" ? claimData.categoryId : null
+      ),
+      riskLevel:
+        typeof claimData.riskPriority === "string" ? claimData.riskPriority : null,
+    });
+    if (!resolutionAllowed) {
+      throw new HttpsError(
+        "permission-denied",
+        "Tu sesión no tiene permisos para aplicar esa resolución."
+      );
+    }
 
     if (currentStatus !== targetStatus) {
       tx.set(
@@ -1639,6 +1727,28 @@ export const resolveMerchantClaim = onCall<
     }
   });
 
+  await db().collection("merchant_claim_review_actions").add({
+    claimId,
+    merchantId,
+    actorUid: reviewerUid,
+    actorRole: capabilities.adminRole,
+    actionType: "resolve_claim",
+    previousStatus: currentStatusAtResolve,
+    targetStatus,
+    reviewReasonCode: reviewReasonCode ?? null,
+    reviewNotes: reviewNotes ?? null,
+    createdAt: FieldValue.serverTimestamp(),
+    schemaVersion: 1,
+  });
+  logger.info("claims.resolve", {
+    claimId,
+    merchantId,
+    actorUid: reviewerUid,
+    adminRole: capabilities.adminRole,
+    targetStatus,
+    success: true,
+  });
+
   if (targetStatus === "approved") {
     await db().doc(`merchants/${merchantId}`).set(
       {
@@ -1671,7 +1781,6 @@ export const revealMerchantClaimSensitiveData = onCall<
   Promise<RevealSensitiveClaimDataResponse>
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
-  assertAdmin(auth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
   if (!capabilities.canRevealSensitive) {
@@ -1682,7 +1791,8 @@ export const revealMerchantClaimSensitiveData = onCall<
   }
 
   const claimId = normalizeClaimId(request.data.claimId);
-  const reasonCode = normalizeRequiredString(request.data.reasonCode, "reasonCode");
+  const reasonCode = normalizeSensitiveReasonCode(request.data.reasonCode);
+  const reasonDetail = normalizeReasonDetail(request.data.reasonDetail);
   const fields = normalizeRevealFields(request.data.fields);
   const expectedUpdatedAtMillis = normalizeExpectedUpdatedAtMillis(
     request.data.expectedUpdatedAtMillis
@@ -1717,22 +1827,52 @@ export const revealMerchantClaimSensitiveData = onCall<
   }
 
   const vault = vaultRaw as SensitiveVault;
-  const revealed = revealSensitiveFields({
+  const requestedLegacyFields: Array<"phone" | "claimantDisplayName" | "claimantNote"> = [];
+  if (fields.includes("phone")) requestedLegacyFields.push("phone");
+  if (fields.includes("fullName")) requestedLegacyFields.push("claimantDisplayName");
+  if (fields.includes("claimNote")) requestedLegacyFields.push("claimantNote");
+  const decrypted = revealSensitiveFields({
     vault,
-    requestedFields: fields,
+    requestedFields: requestedLegacyFields,
   });
-  const expiresAtMillis = Date.now() + 5 * 60 * 1000;
+  const revealed: Partial<Record<SensitiveFieldKey, string>> = {};
+  if (decrypted.phone != null) revealed.phone = decrypted.phone;
+  if (decrypted.claimantDisplayName != null) {
+    revealed.fullName = decrypted.claimantDisplayName;
+  }
+  if (decrypted.claimantNote != null) {
+    revealed.claimNote = decrypted.claimantNote;
+  }
+  if (fields.includes("email")) {
+    const emailValue =
+      typeof claimData.authenticatedEmail === "string"
+        ? claimData.authenticatedEmail.trim()
+        : null;
+    if (emailValue != null && emailValue.length > 0) {
+      revealed.email = emailValue;
+    }
+  }
+  const expiresAtMillis = Date.now() + 90 * 1000;
+  const requestId = `reveal_${claimId}_${auth.uid}_${Date.now()}`;
 
   await db()
     .collection("merchant_claim_sensitive_reveals")
     .add({
       claimId,
+      merchantId:
+        typeof claimData.merchantId === "string" ? claimData.merchantId.trim() : null,
       actorUid: auth.uid,
+      actorRole: capabilities.adminRole,
+      actionType: "reveal_sensitive",
       reasonCode,
+      reasonDetail: reasonDetail ?? null,
       revealedFields: Object.keys(revealed),
       keyVersion: vault.keyVersion ?? "unknown",
       expiresAtMillis,
       createdAt: FieldValue.serverTimestamp(),
+      requestId,
+      schemaVersion: 1,
+      retentionUntil: Timestamp.fromMillis(Date.now() + 180 * 24 * 60 * 60 * 1000),
     });
   await claimRef.set(
     {
@@ -1744,6 +1884,14 @@ export const revealMerchantClaimSensitiveData = onCall<
     },
     { merge: true }
   );
+  logger.info("claims.reveal_sensitive", {
+    claimId,
+    actorUid: auth.uid,
+    adminRole: capabilities.adminRole,
+    reasonCode,
+    fieldCount: Object.keys(revealed).length,
+    success: true,
+  });
 
   return {
     claimId,
@@ -1752,12 +1900,141 @@ export const revealMerchantClaimSensitiveData = onCall<
   };
 });
 
+async function issueMerchantClaimAttachmentUrl(params: {
+  auth: CallableAuth;
+  capabilities: ClaimReviewCapabilitySet;
+  data: GetMerchantClaimAttachmentAccessRequest;
+  mode: AttachmentAccessMode;
+}): Promise<GetMerchantClaimAttachmentAccessResponse> {
+  const claimId = normalizeClaimId(params.data.claimId);
+  const attachmentId = normalizeAttachmentId(params.data.attachmentId);
+  const reasonCode = normalizeSensitiveReasonCode(params.data.reasonCode);
+  const reasonDetail = normalizeReasonDetail(params.data.reasonDetail);
+
+  if (params.mode === "download" && !params.capabilities.canDownloadSensitiveAttachments) {
+    throw new HttpsError(
+      "permission-denied",
+      "Tu sesión no tiene permisos para descargar adjuntos sensibles."
+    );
+  }
+  if (!params.capabilities.canRevealSensitive) {
+    throw new HttpsError(
+      "permission-denied",
+      "Tu sesión no tiene permisos para acceder adjuntos sensibles."
+    );
+  }
+
+  const claimSnap = await db().collection("merchant_claims").doc(claimId).get();
+  if (!claimSnap.exists) {
+    throw new HttpsError("not-found", "No encontramos el claim.");
+  }
+  const claimData = claimSnap.data() ?? {};
+  const attachment = resolveAttachmentFromClaim({
+    claimData,
+    attachmentId,
+  });
+
+  let signed;
+  try {
+    signed =
+      params.mode === "preview"
+        ? await generatePreviewSignedUrl({
+            objectPath: attachment.objectPath,
+            expiresInSeconds: 60,
+            contentType: attachment.contentType ?? undefined,
+            fileName: attachment.fileName,
+          })
+        : await generateDownloadSignedUrl({
+            objectPath: attachment.objectPath,
+            expiresInSeconds: 30,
+            contentType: attachment.contentType ?? undefined,
+            fileName: attachment.fileName,
+          });
+  } catch (error) {
+    logger.error("claims.attachment_signed_url_error", {
+      claimId,
+      attachmentId,
+      mode: params.mode,
+      actorUid: params.auth.uid,
+      adminRole: params.capabilities.adminRole,
+    });
+    throw new HttpsError(
+      "failed-precondition",
+      "No se pudo generar acceso temporal al adjunto."
+    );
+  }
+
+  const requestId = `${params.mode}_${claimId}_${params.auth.uid}_${Date.now()}`;
+  await db().collection("merchant_claim_attachment_access_logs").add({
+    claimId,
+    merchantId:
+      typeof claimData.merchantId === "string" ? claimData.merchantId.trim() : null,
+    attachmentId,
+    actorUid: params.auth.uid,
+    actorRole: params.capabilities.adminRole,
+    accessMode: params.mode,
+    reasonCode,
+    reasonDetail: reasonDetail ?? null,
+    createdAt: FieldValue.serverTimestamp(),
+    urlExpiresAt: Timestamp.fromMillis(signed.expiresAtMillis),
+    requestId,
+    schemaVersion: 1,
+    retentionUntil: Timestamp.fromMillis(Date.now() + 180 * 24 * 60 * 60 * 1000),
+  });
+
+  logger.info("claims.attachment_access", {
+    claimId,
+    attachmentId,
+    actorUid: params.auth.uid,
+    adminRole: params.capabilities.adminRole,
+    mode: params.mode,
+    reasonCode,
+    success: true,
+  });
+  return {
+    claimId,
+    attachmentId,
+    mode: params.mode,
+    url: signed.url,
+    expiresAtMillis: signed.expiresAtMillis,
+  };
+}
+
+export const getMerchantClaimAttachmentPreviewUrl = onCall<
+  GetMerchantClaimAttachmentAccessRequest,
+  Promise<GetMerchantClaimAttachmentAccessResponse>
+>({ enforceAppCheck: true }, async (request) => {
+  const auth = assertAuthenticated(request.auth as CallableAuth);
+  const capabilities = readClaimReviewCapabilities(auth);
+  assertCanViewClaimDetail(capabilities);
+  return issueMerchantClaimAttachmentUrl({
+    auth,
+    capabilities,
+    data: request.data,
+    mode: "preview",
+  });
+});
+
+export const getMerchantClaimAttachmentDownloadUrl = onCall<
+  GetMerchantClaimAttachmentAccessRequest,
+  Promise<GetMerchantClaimAttachmentAccessResponse>
+>({ enforceAppCheck: true }, async (request) => {
+  const auth = assertAuthenticated(request.auth as CallableAuth);
+  const capabilities = readClaimReviewCapabilities(auth);
+  assertCanViewClaimDetail(capabilities);
+  return issueMerchantClaimAttachmentUrl({
+    auth,
+    capabilities,
+    data: request.data,
+    mode: "download",
+  });
+});
+
 export const getMerchantClaimReviewDetail = onCall<
   GetMerchantClaimReviewDetailRequest,
   Promise<GetMerchantClaimReviewDetailResponse>
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
-  assertAdmin(auth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
 
@@ -1924,6 +2201,9 @@ export const getMerchantClaimReviewDetail = onCall<
   };
 });
 
+export const getMerchantClaimDetailForReview = getMerchantClaimReviewDetail;
+export const revealMerchantClaimSensitive = revealMerchantClaimSensitiveData;
+
 export const getMyMerchantClaimStatus = onCall<
   GetMyMerchantClaimStatusRequest,
   Promise<GetMyMerchantClaimStatusResponse>
@@ -1993,7 +2273,6 @@ export const listMerchantClaimsForReview = onCall<
   Promise<ListMerchantClaimsForReviewResponse>
 >({ enforceAppCheck: true }, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
-  assertAdmin(auth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimQueue(capabilities);
 

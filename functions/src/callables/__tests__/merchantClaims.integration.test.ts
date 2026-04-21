@@ -545,8 +545,8 @@ if (!emulatorHost) {
         role: "admin",
         data: {
           claimId,
-          reasonCode: "manual_review",
-          fields: ["phone", "claimantDisplayName"],
+          reasonCode: "verify_identity",
+          fields: ["phone", "fullName"],
         },
       })
     )) as Record<string, unknown>;
@@ -554,8 +554,8 @@ if (!emulatorHost) {
     assert.equal(revealResponse.claimId, claimId);
     const revealed = (revealResponse.revealed ?? {}) as Record<string, unknown>;
     assert.equal(typeof revealed.phone, "string");
-    assert.equal(typeof revealed.claimantDisplayName, "string");
-    assert.equal(revealed.claimantNote, undefined);
+    assert.equal(typeof revealed.fullName, "string");
+    assert.equal(revealed.claimNote, undefined);
 
     const auditSnap = await firestore
       .collection("merchant_claim_sensitive_reveals")
@@ -564,7 +564,7 @@ if (!emulatorHost) {
       .get();
     assert.equal(auditSnap.empty, false);
     const audit = auditSnap.docs[0].data();
-    assert.equal(audit.reasonCode, "manual_review");
+    assert.equal(audit.reasonCode, "verify_identity");
   });
 
   test("cola admin de claims filtra por zone/status y pagina por cursor", async () => {
@@ -930,6 +930,152 @@ if (!emulatorHost) {
     );
   });
 
+  test("reviewer no puede aprobar claims", async () => {
+    assert.ok(resolveClaimRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-reviewer-approve-01";
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Comercio Reviewer",
+      categoryId: "kiosk",
+      zoneId: "zone-reviewer-1",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await firestore.collection("merchant_claims").doc(claimId).set({
+      claimId,
+      merchantId,
+      userId: "user-reviewer-approve",
+      zoneId: "zone-reviewer-1",
+      categoryId: "kiosk",
+      claimStatus: "under_review",
+      userVisibleStatus: "under_review",
+      updatedAt: Timestamp.fromMillis(1_710_000_300_000),
+      createdAt: Timestamp.fromMillis(1_710_000_100_000),
+    });
+
+    await assert.rejects(
+      async () =>
+        resolveClaimRun!(
+          buildRequest({
+            uid: "admin-reviewer-approve",
+            email: "reviewer-approve@example.com",
+            role: "admin",
+            tokenExtras: { claimsReviewLevel: "reviewer" },
+            data: {
+              claimId,
+              userVisibleStatus: "approved",
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string };
+        assert.equal(err.code, "permission-denied");
+        return true;
+      }
+    );
+  });
+
+  test("senior reviewer no puede aprobar claims conflictivos", async () => {
+    assert.ok(resolveClaimRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-senior-conflict-01";
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Comercio Senior",
+      categoryId: "kiosk",
+      zoneId: "zone-senior-1",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "claimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await firestore.collection("merchant_claims").doc(claimId).set({
+      claimId,
+      merchantId,
+      userId: "user-senior-approve",
+      zoneId: "zone-senior-1",
+      categoryId: "kiosk",
+      claimStatus: "conflict_detected",
+      userVisibleStatus: "conflict_detected",
+      hasConflict: true,
+      updatedAt: Timestamp.fromMillis(1_710_000_300_000),
+      createdAt: Timestamp.fromMillis(1_710_000_100_000),
+    });
+
+    await assert.rejects(
+      async () =>
+        resolveClaimRun!(
+          buildRequest({
+            uid: "admin-senior-approve",
+            email: "senior-approve@example.com",
+            role: "admin",
+            tokenExtras: { claimsReviewLevel: "senior_reviewer" },
+            data: {
+              claimId,
+              userVisibleStatus: "approved",
+            },
+          })
+        ),
+      (error: unknown) => {
+        const err = error as { code?: string };
+        assert.equal(err.code, "permission-denied");
+        return true;
+      }
+    );
+  });
+
+  test("senior reviewer puede aprobar caso simple sin riesgo alto", async () => {
+    assert.ok(resolveClaimRun);
+    const firestore = getFirestore();
+    const merchantId = `merchant-${randomUUID()}`;
+    const claimId = "claim-senior-simple-01";
+    const ownerUid = "user-senior-simple";
+    await firestore.collection("merchants").doc(merchantId).set({
+      name: "Comercio Simple Senior",
+      categoryId: "kiosk",
+      zoneId: "zone-senior-2",
+      status: "active",
+      visibilityStatus: "visible",
+      ownershipStatus: "unclaimed",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await firestore.collection("merchant_claims").doc(claimId).set({
+      claimId,
+      merchantId,
+      userId: ownerUid,
+      zoneId: "zone-senior-2",
+      categoryId: "kiosk",
+      claimStatus: "under_review",
+      userVisibleStatus: "under_review",
+      hasConflict: false,
+      hasDuplicate: false,
+      riskPriority: "medium",
+      updatedAt: Timestamp.fromMillis(1_710_000_300_000),
+      createdAt: Timestamp.fromMillis(1_710_000_100_000),
+    });
+
+    const response = (await resolveClaimRun!(
+      buildRequest({
+        uid: "admin-senior-simple",
+        email: "senior-simple@example.com",
+        role: "admin",
+        tokenExtras: { claimsReviewLevel: "senior_reviewer" },
+        data: {
+          claimId,
+          userVisibleStatus: "approved",
+          reviewReasonCode: "manual_ok",
+        },
+      })
+    )) as { claimStatus?: string };
+    assert.equal(response.claimStatus, "approved");
+  });
+
   test("reveal sensible exige capability senior cuando viene explicitada", async () => {
     assert.ok(upsertDraftRun && revealSensitiveRun);
     const firestore = getFirestore();
@@ -977,7 +1123,7 @@ if (!emulatorHost) {
             },
             data: {
               claimId,
-              reasonCode: "manual_review",
+              reasonCode: "verify_identity",
             },
           })
         ),

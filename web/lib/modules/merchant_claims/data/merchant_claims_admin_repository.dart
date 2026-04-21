@@ -54,14 +54,35 @@ extension MerchantClaimStatusX on MerchantClaimStatus {
   }
 }
 
-enum SensitiveFieldKind { phone, claimantDisplayName, claimantNote }
+enum SensitiveFieldKind { phone, email, claimantDisplayName, claimantNote }
+
+enum SensitiveReasonCode {
+  verifyIdentity,
+  validateRelationship,
+  fraudInvestigation,
+  duplicateResolution,
+  conflictResolution,
+}
 
 extension SensitiveFieldKindX on SensitiveFieldKind {
   String get apiValue {
     return switch (this) {
       SensitiveFieldKind.phone => 'phone',
-      SensitiveFieldKind.claimantDisplayName => 'claimantDisplayName',
-      SensitiveFieldKind.claimantNote => 'claimantNote',
+      SensitiveFieldKind.email => 'email',
+      SensitiveFieldKind.claimantDisplayName => 'fullName',
+      SensitiveFieldKind.claimantNote => 'claimNote',
+    };
+  }
+}
+
+extension SensitiveReasonCodeX on SensitiveReasonCode {
+  String get apiValue {
+    return switch (this) {
+      SensitiveReasonCode.verifyIdentity => 'verify_identity',
+      SensitiveReasonCode.validateRelationship => 'validate_relationship',
+      SensitiveReasonCode.fraudInvestigation => 'fraud_investigation',
+      SensitiveReasonCode.duplicateResolution => 'duplicate_resolution',
+      SensitiveReasonCode.conflictResolution => 'conflict_resolution',
     };
   }
 }
@@ -186,6 +207,8 @@ class MerchantClaimCapabilities {
     required this.canResolveStandard,
     required this.canResolveCritical,
     required this.canRevealSensitive,
+    required this.canApprove,
+    required this.canDownloadSensitiveAttachments,
   });
 
   final bool canViewQueue;
@@ -194,6 +217,8 @@ class MerchantClaimCapabilities {
   final bool canResolveStandard;
   final bool canResolveCritical;
   final bool canRevealSensitive;
+  final bool canApprove;
+  final bool canDownloadSensitiveAttachments;
 }
 
 class MerchantClaimDetail {
@@ -356,6 +381,22 @@ class MerchantClaimRevealResult {
   final Map<SensitiveFieldKind, String> revealed;
 }
 
+class MerchantClaimAttachmentAccessResult {
+  const MerchantClaimAttachmentAccessResult({
+    required this.claimId,
+    required this.attachmentId,
+    required this.mode,
+    required this.url,
+    required this.expiresAtMillis,
+  });
+
+  final String claimId;
+  final String attachmentId;
+  final String mode;
+  final String url;
+  final int expiresAtMillis;
+}
+
 abstract class MerchantClaimsAdminDataSource {
   Future<MerchantClaimReviewPage> listForReview({
     required MerchantClaimReviewFilters filters,
@@ -378,9 +419,24 @@ abstract class MerchantClaimsAdminDataSource {
 
   Future<MerchantClaimRevealResult> revealSensitiveData({
     required String claimId,
-    required String reasonCode,
+    required SensitiveReasonCode reasonCode,
     required List<SensitiveFieldKind> fields,
+    String? reasonDetail,
     int? expectedUpdatedAtMillis,
+  });
+
+  Future<MerchantClaimAttachmentAccessResult> getAttachmentPreviewUrl({
+    required String claimId,
+    required String attachmentId,
+    required SensitiveReasonCode reasonCode,
+    String? reasonDetail,
+  });
+
+  Future<MerchantClaimAttachmentAccessResult> getAttachmentDownloadUrl({
+    required String claimId,
+    required String attachmentId,
+    required SensitiveReasonCode reasonCode,
+    String? reasonDetail,
   });
 }
 
@@ -619,6 +675,9 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
         canResolveStandard: _readBool(capabilitiesRaw['canResolveStandard']),
         canResolveCritical: _readBool(capabilitiesRaw['canResolveCritical']),
         canRevealSensitive: _readBool(capabilitiesRaw['canRevealSensitive']),
+        canApprove: _readBool(capabilitiesRaw['canApprove']),
+        canDownloadSensitiveAttachments:
+            _readBool(capabilitiesRaw['canDownloadSensitiveAttachments']),
       ),
       allowedStatuses: allowedStatuses,
       canTakeAction: _readBool(data['canTakeAction']),
@@ -683,16 +742,19 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
 
   Future<MerchantClaimRevealResult> revealSensitiveData({
     required String claimId,
-    required String reasonCode,
+    required SensitiveReasonCode reasonCode,
     required List<SensitiveFieldKind> fields,
+    String? reasonDetail,
     int? expectedUpdatedAtMillis,
   }) async {
     final response = await _callWithAuthRetry(
       callableName: 'revealMerchantClaimSensitiveData',
       payload: <String, dynamic>{
         'claimId': claimId,
-        'reasonCode': reasonCode,
+        'reasonCode': reasonCode.apiValue,
         'fields': fields.map((field) => field.apiValue).toList(growable: false),
+        if (reasonDetail != null && reasonDetail.trim().isNotEmpty)
+          'reasonDetail': reasonDetail.trim(),
         if (expectedUpdatedAtMillis != null)
           'expectedUpdatedAtMillis': expectedUpdatedAtMillis,
       },
@@ -708,6 +770,10 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
         revealed[SensitiveFieldKind.phone] = value;
         continue;
       }
+      if (key == SensitiveFieldKind.email.apiValue) {
+        revealed[SensitiveFieldKind.email] = value;
+        continue;
+      }
       if (key == SensitiveFieldKind.claimantDisplayName.apiValue) {
         revealed[SensitiveFieldKind.claimantDisplayName] = value;
         continue;
@@ -720,6 +786,65 @@ class MerchantClaimsAdminRepository implements MerchantClaimsAdminDataSource {
       claimId: _readString(data['claimId']) ?? claimId,
       expiresAtMillis: _readInt(data['expiresAtMillis']) ?? 0,
       revealed: revealed,
+    );
+  }
+
+  Future<MerchantClaimAttachmentAccessResult> _getAttachmentAccess({
+    required String callableName,
+    required String claimId,
+    required String attachmentId,
+    required SensitiveReasonCode reasonCode,
+    String? reasonDetail,
+  }) async {
+    final response = await _callWithAuthRetry(
+      callableName: callableName,
+      payload: <String, dynamic>{
+        'claimId': claimId,
+        'attachmentId': attachmentId,
+        'reasonCode': reasonCode.apiValue,
+        if (reasonDetail != null && reasonDetail.trim().isNotEmpty)
+          'reasonDetail': reasonDetail.trim(),
+      },
+    );
+    final data = _asMap(response.data);
+    return MerchantClaimAttachmentAccessResult(
+      claimId: _readString(data['claimId']) ?? claimId,
+      attachmentId: _readString(data['attachmentId']) ?? attachmentId,
+      mode: _readString(data['mode']) ?? 'preview',
+      url: _readString(data['url']) ?? '',
+      expiresAtMillis: _readInt(data['expiresAtMillis']) ?? 0,
+    );
+  }
+
+  @override
+  Future<MerchantClaimAttachmentAccessResult> getAttachmentPreviewUrl({
+    required String claimId,
+    required String attachmentId,
+    required SensitiveReasonCode reasonCode,
+    String? reasonDetail,
+  }) {
+    return _getAttachmentAccess(
+      callableName: 'getMerchantClaimAttachmentPreviewUrl',
+      claimId: claimId,
+      attachmentId: attachmentId,
+      reasonCode: reasonCode,
+      reasonDetail: reasonDetail,
+    );
+  }
+
+  @override
+  Future<MerchantClaimAttachmentAccessResult> getAttachmentDownloadUrl({
+    required String claimId,
+    required String attachmentId,
+    required SensitiveReasonCode reasonCode,
+    String? reasonDetail,
+  }) {
+    return _getAttachmentAccess(
+      callableName: 'getMerchantClaimAttachmentDownloadUrl',
+      claimId: claimId,
+      attachmentId: attachmentId,
+      reasonCode: reasonCode,
+      reasonDetail: reasonDetail,
     );
   }
 }

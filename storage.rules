@@ -104,12 +104,8 @@ service firebase.storage {
     // Evidencias de claims de titularidad (privadas).
     // Path canónico: merchant-claims/{userId}/{claimId}/{fileName}
     match /merchant-claims/{userId}/{claimId}/{allPaths=**} {
-      allow read: if isAdminRole()
-        || (
-          isAuthenticated()
-          && request.auth.uid == userId
-          && claimBelongsToUser(claimId, userId)
-        );
+      // Lectura directa siempre denegada: acceso temporal sólo por signed URLs V4.
+      allow read: if false;
       allow write: if isAdminRole()
         || (
           isAuthenticated()

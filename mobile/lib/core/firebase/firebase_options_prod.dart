@@ -70,7 +70,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '57567901381',
     projectId: 'tum2-prod-bc9b4',
     storageBucket: 'tum2-prod-bc9b4.firebasestorage.app',
-    iosClientId: '57567901381-odvgplb0o1a9r0jv1uljdig4gfj1jihp.apps.googleusercontent.com',
+    iosClientId:
+        '57567901381-odvgplb0o1a9r0jv1uljdig4gfj1jihp.apps.googleusercontent.com',
     iosBundleId: 'com.floki.tum2',
   );
 }

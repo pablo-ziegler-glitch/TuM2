@@ -4,6 +4,7 @@
   "environments": {
     "dev": {
       "readOps": { "warn": 250000, "critical": 450000 },
+      "readOpsPerDau": { "warn": 2100, "critical": 3200 },
       "writeOps": { "warn": 80000, "critical": 140000 },
       "deleteOps": { "warn": 30000, "critical": 50000 },
       "snapshotListeners": { "warn": 250, "critical": 450 },
@@ -11,6 +12,7 @@
     },
     "staging": {
       "readOps": { "warn": 500000, "critical": 850000 },
+      "readOpsPerDau": { "warn": 1300, "critical": 1900 },
       "writeOps": { "warn": 160000, "critical": 280000 },
       "deleteOps": { "warn": 60000, "critical": 100000 },
       "snapshotListeners": { "warn": 500, "critical": 900 },
@@ -18,6 +20,7 @@
     },
     "prod": {
       "readOps": { "warn": 4000000, "critical": 6000000 },
+      "readOpsPerDau": { "warn": 160, "critical": 240 },
       "writeOps": { "warn": 1000000, "critical": 1500000 },
       "deleteOps": { "warn": 300000, "critical": 450000 },
       "snapshotListeners": { "warn": 3000, "critical": 4500 },

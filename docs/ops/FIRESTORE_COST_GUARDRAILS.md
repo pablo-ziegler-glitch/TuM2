@@ -21,6 +21,8 @@ Script implementado:
 Umbrales por ambiente:
 
 - [docs/ops/firestore_cost_thresholds.json](/home/pablo/IdeaProjects/TuM2/docs/ops/firestore_cost_thresholds.json)
+- Baseline DAU para métrica `R/DAU`:
+  [docs/ops/firestore_activity_baselines.json](/home/pablo/IdeaProjects/TuM2/docs/ops/firestore_activity_baselines.json)
 
 Ejemplos de ejecución:
 
@@ -40,6 +42,13 @@ npm run cost:guard -- \
   --window-hours 24 \
   --fail-on-warn \
   --out ../docs/ops/generated/cost-guard-prod.json
+
+# override opcional de DAU real del día para R/DAU
+npm run cost:guard -- \
+  --project tum2-prod-bc9b4 \
+  --env prod \
+  --window-hours 24 \
+  --active-users 27310
 ```
 
 Política recomendada:
@@ -53,6 +62,7 @@ Política recomendada:
 Configurar alertas sobre estas métricas:
 
 - `firestore.googleapis.com/document/read_ops_count`
+- `derived/read_ops_per_dau` (desde output del guardrail)
 - `firestore.googleapis.com/document/write_ops_count`
 - `firestore.googleapis.com/document/delete_ops_count`
 - `firestore.googleapis.com/network/snapshot_listeners`
@@ -92,20 +102,32 @@ Validación mensual:
 Widgets obligatorios:
 
 1. Read ops (sum 1h y 24h).
-2. Write ops (sum 1h y 24h).
-3. Delete ops (sum 1h y 24h).
-4. Snapshot listeners (max 15m / 1h).
-5. Rules evaluations (sum 1h y 24h).
-6. Top Cloud Functions por invocación y error.
-7. Logs estructurados de jobs nocturnos:
+2. R/DAU (read ops / DAU diario).
+3. Write ops (sum 1h y 24h).
+4. Delete ops (sum 1h y 24h).
+5. Snapshot listeners (max 15m / 1h).
+6. Rules evaluations (sum 1h y 24h).
+7. Top Cloud Functions por invocación y error.
+8. Logs estructurados de jobs nocturnos:
 - `nightlyRefreshOpenStatuses`
 - `nightlyRefreshPharmacyDutyFlags`
 - `nightlyCleanupExpiredDrafts`
-8. Logs FinOps estructurados (`logType = finops.cost.v1`) por módulo:
+9. Logs FinOps estructurados (`logType = finops.cost.v1`) por módulo:
 - `jobs.refreshOpenStatuses`
 - `coverage.zoneCoverage`
 - `triggers.duties`
 - `triggers.reports`
+
+## 4.1) Eventos y logs concretos a seguir
+
+- `guardrail.firestore_cost.readOps` (resultado métrica base `readOps`).
+- `guardrail.firestore_cost.readOpsPerDau` (resultado métrica derivada `readOpsPerDau`).
+- `guardrail.firestore_cost.snapshotListeners` (resultado métrica base `snapshotListeners`).
+- `finops.cost.v1 / trigger_signals_projection` (deduplicación de eventos y writes evitados).
+- `finops.cost.v1 / trigger_reports_threshold_eval` (evaluación de suppress thresholds).
+- `finops.cost.v1 / trigger_duties_sync` (sync de proyección duty por evento).
+- `finops.cost.v1 / job_refresh_open_statuses_window` (batch nocturno y drift control).
+- `finops.cost.v1 / job_zone_coverage_window` (refresh por ventana de cobertura).
 
 ## 5) Gate de release (checklist)
 
@@ -116,6 +138,7 @@ Antes de promover `staging -> prod`:
 - [ ] Sin alertas `critical` abiertas en Monitoring.
 - [ ] Sin desvío >20% de read ops vs baseline semanal.
 - [ ] Sin query amplia no scopeada (`zoneId`, `visibilityStatus`, `limit/paginación`).
+- [ ] `readOpsPerDau` en `OK` para el ambiente objetivo.
 
 ## 6) Integración CI
 

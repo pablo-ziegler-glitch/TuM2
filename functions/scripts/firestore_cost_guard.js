@@ -26,6 +26,10 @@ const DEFAULT_THRESHOLDS_PATH = path.resolve(
   __dirname,
   "../../docs/ops/firestore_cost_thresholds.json"
 );
+const DEFAULT_ACTIVITY_BASELINES_PATH = path.resolve(
+  __dirname,
+  "../../docs/ops/firestore_activity_baselines.json"
+);
 
 const METRICS = [
   {
@@ -71,6 +75,8 @@ function parseArgs(argv) {
     env: "",
     windowHours: 24,
     thresholdsPath: DEFAULT_THRESHOLDS_PATH,
+    activityBaselinesPath: DEFAULT_ACTIVITY_BASELINES_PATH,
+    activeUsers: null,
     out: "",
     failOnWarn: false,
   };
@@ -102,6 +108,12 @@ function parseArgs(argv) {
       case "thresholds":
         parsed.thresholdsPath = path.resolve(process.cwd(), value);
         break;
+      case "activity-baselines":
+        parsed.activityBaselinesPath = path.resolve(process.cwd(), value);
+        break;
+      case "active-users":
+        parsed.activeUsers = Number.parseFloat(value);
+        break;
       case "out":
         parsed.out = path.resolve(process.cwd(), value);
         break;
@@ -115,6 +127,12 @@ function parseArgs(argv) {
   }
   if (!Number.isFinite(parsed.windowHours) || parsed.windowHours <= 0) {
     throw new Error("window-hours inválido. Debe ser un entero > 0.");
+  }
+  if (
+    parsed.activeUsers != null &&
+    (!Number.isFinite(parsed.activeUsers) || parsed.activeUsers <= 0)
+  ) {
+    throw new Error("active-users inválido. Debe ser un número > 0.");
   }
 
   if (!parsed.env) {
@@ -144,6 +162,58 @@ function loadThresholds(thresholdsPath, env) {
     );
   }
   return envConfig;
+}
+
+function loadActivityBaselines(activityBaselinesPath) {
+  if (!fs.existsSync(activityBaselinesPath)) {
+    return null;
+  }
+  const raw = fs.readFileSync(activityBaselinesPath, "utf8");
+  return JSON.parse(raw);
+}
+
+function resolveActiveUsers({
+  env,
+  project,
+  explicitActiveUsers,
+  activityBaselines,
+}) {
+  if (typeof explicitActiveUsers === "number" && explicitActiveUsers > 0) {
+    return {
+      value: explicitActiveUsers,
+      source: "cli",
+    };
+  }
+
+  const envValue = Number.parseFloat(process.env.FINOPS_ACTIVE_USERS || "");
+  if (Number.isFinite(envValue) && envValue > 0) {
+    return {
+      value: envValue,
+      source: "env",
+    };
+  }
+
+  const fromProject = Number.parseFloat(
+    String(activityBaselines?.projects?.[project]?.dailyActiveUsers ?? "")
+  );
+  if (Number.isFinite(fromProject) && fromProject > 0) {
+    return {
+      value: fromProject,
+      source: "baseline.project",
+    };
+  }
+
+  const fromEnv = Number.parseFloat(
+    String(activityBaselines?.environments?.[env]?.dailyActiveUsers ?? "")
+  );
+  if (Number.isFinite(fromEnv) && fromEnv > 0) {
+    return {
+      value: fromEnv,
+      source: "baseline.env",
+    };
+  }
+
+  return null;
 }
 
 function gcloudAccessToken() {
@@ -337,6 +407,12 @@ function formatNumber(value) {
   return new Intl.NumberFormat("es-AR").format(Math.round(value));
 }
 
+function formatThreshold(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  if (value >= 100) return formatNumber(value);
+  return value.toFixed(2);
+}
+
 function printSummary({
   project,
   env,
@@ -358,8 +434,8 @@ function printSummary({
     "|---|---:|---:|---:|---|";
   console.log(header);
   for (const row of results) {
-    const warn = row.threshold?.warn ?? "-";
-    const critical = row.threshold?.critical ?? "-";
+    const warn = formatThreshold(row.threshold?.warn);
+    const critical = formatThreshold(row.threshold?.critical);
     const statusEmoji =
       row.status === "critical"
         ? "CRITICAL"
@@ -373,9 +449,37 @@ function printSummary({
   console.log("");
 }
 
+function emitMetricLogs({ project, env, windowHours, startedAtIso, endedAtIso, results }) {
+  for (const row of results) {
+    console.log(
+      JSON.stringify({
+        logType: "finops.cost.guardrail.v1",
+        event: `guardrail.firestore_cost.${row.key}`,
+        project,
+        env,
+        windowHours,
+        startedAtIso,
+        endedAtIso,
+        value: row.value,
+        unit: row.unit,
+        status: row.status,
+        warnThreshold: row.threshold?.warn ?? null,
+        criticalThreshold: row.threshold?.critical ?? null,
+      })
+    );
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const thresholds = loadThresholds(args.thresholdsPath, args.env);
+  const activityBaselines = loadActivityBaselines(args.activityBaselinesPath);
+  const activeUsers = resolveActiveUsers({
+    env: args.env,
+    project: args.project,
+    explicitActiveUsers: args.activeUsers,
+    activityBaselines,
+  });
 
   const endTime = new Date();
   const startTime = new Date(
@@ -411,6 +515,26 @@ async function main() {
     });
   }
 
+  const readOps = results.find((row) => row.key === "readOps");
+  if (readOps && activeUsers && activeUsers.value > 0) {
+    const value = readOps.value / activeUsers.value;
+    const threshold = thresholds?.readOpsPerDau || null;
+    const status = classifyStatus(value, threshold);
+    results.push({
+      key: "readOpsPerDau",
+      label: "Read ops por DAU (R/DAU)",
+      metricType: "derived/read_ops_per_dau",
+      value,
+      unit: "reads/DAU",
+      threshold,
+      status,
+      seriesCount: 1,
+      activeUsers: activeUsers.value,
+      activeUsersSource: activeUsers.source,
+      derived: true,
+    });
+  }
+
   printSummary({
     project: args.project,
     env: args.env,
@@ -418,6 +542,14 @@ async function main() {
     results,
     startedAtIso,
     endedAtIso,
+  });
+  emitMetricLogs({
+    project: args.project,
+    env: args.env,
+    windowHours: args.windowHours,
+    startedAtIso,
+    endedAtIso,
+    results,
   });
 
   const payload = {
@@ -427,6 +559,8 @@ async function main() {
     startedAtIso,
     endedAtIso,
     generatedAt: new Date().toISOString(),
+    activeUsers: activeUsers?.value ?? null,
+    activeUsersSource: activeUsers?.source ?? null,
     results,
   };
 

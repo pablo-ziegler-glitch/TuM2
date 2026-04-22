@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "notes": "Baseline inicial de DAU para cálculo de R/DAU (readOpsPerDau). Recalibrar semanalmente con Analytics.",
+  "environments": {
+    "dev": { "dailyActiveUsers": 120 },
+    "staging": { "dailyActiveUsers": 400 },
+    "prod": { "dailyActiveUsers": 25000 }
+  },
+  "projects": {
+    "tum2-dev-6283d": { "dailyActiveUsers": 120 },
+    "tum2-staging-45c83": { "dailyActiveUsers": 400 },
+    "tum2-prod-bc9b4": { "dailyActiveUsers": 25000 }
+  }
+}

@@ -47,7 +47,7 @@ tum2-XXXX — PR#YY — descripción corta
 
 ## Estado del backlog
 
-El backlog maestro de TuM2 está estructurado en 17 épicas (ver sección abajo).
+El backlog maestro de TuM2 está estructurado en 20 épicas (ver sección abajo).
 El usuario pasa las tarjetas de a una. Estado actual:
 
 | Definición ✅ | Actividad completada |
@@ -303,6 +303,20 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 19: Estacionalidad y campañas contextuales
 - [0134] **Modo Selección Argentina + tarjeta pineada de próximo partido** — P1 — `Producto, Branding, Mobile, Web, Admin, Backend, Analytics, MVP+`
 
+### ÉPICA 20: Optimización estructural de costo, lecturas y serving
+- [0135] **Épica transversal de costo/performance del MVP** — P0 — `Producto, Backend, Mobile, Web, Admin, Operaciones, MVP` `TODO`
+- [0136] **Catálogos estáticos versionados y serving barato** — P0 — `Backend, Mobile, Web, Data, MVP` `TODO`
+- [0137] **Framework de cache y `CachePolicy` canónica en Flutter** — P0 — `Mobile, Web, Arquitectura, MVP` `TODO`
+- [0138] **Optimización de corpus público de búsqueda por zona** — P0 — `Backend, Mobile, Web, Data, MVP` `TODO`
+- [0139] **Optimización de datasets diarios y semiestáticos** — P0 — `Backend, Admin, Operaciones, Data, MVP` `TODO`
+- [0140] **Hardening de Auth/Rules con JWT claims y eliminación de reads extra** — P0 — `Seguridad, Backend, Mobile, Web, MVP` `TODO`
+- [0141] **Hardening de queries admin: paginación, filtros obligatorios y refresh manual** — P0 — `Admin, Web, Backend, MVP` `TODO`
+- [0142] **Reducción de write amplification en triggers y proyecciones públicas** — P0 — `Backend, Data, Operaciones, MVP` `TODO`
+- [0143] **Escalado de jobs programados y recomputes operativos** — P1 — `Backend, Operaciones, Data, MVP` `TODO`
+- [0144] **App Check, rate limiting y protección anti-abuso orientada a costo** — P0 — `Seguridad, Backend, Operaciones, MVP` `TODO`
+- [0145] **Observabilidad, budgets y telemetría de consumo por feature** — P1 — `Operaciones, Analytics, Backend, MVP` `TODO`
+- [0146] **Performance contract y QA de costo del MVP** — P0 — `QA, Operaciones, Backend, Mobile, Web, MVP` `TODO`
+
 ---
 
 ## Orden real de ejecución recomendado
@@ -505,3 +519,4 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0127] Costos/seguridad: queries dedupe-conflict con `limit` bajo e índice compuesto `merchant_claims(userId, merchantId, claimStatus)`, logs estructurados sin PII, sin grants OWNER automáticos.
 - [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.
 - [0134] Alta documental inicial (2026-04-17): creadas `docs/storyscards/0134-modo-seleccion-argentina.md` y `docs/storyscards/0134-modo-seleccion-argentina.prompt.md`; estado canónico `TODO` (sin implementación).
+- [0135-0146] Alta documental de optimización de costo (2026-04-23): incorporadas 12 storycards nuevas en `docs/storyscards/0135-*.md` a `0146-*.md` y actualización de backlog en `CLAUDE.md` (ÉPICA 20).

@@ -1,4 +1,4 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import '../../../core/analytics/analytics_runtime.dart';
 
 abstract interface class OpenNowAnalyticsSink {
   Future<void> logViewOpened({
@@ -44,10 +44,7 @@ abstract interface class OpenNowAnalyticsSink {
 }
 
 class FirebaseOpenNowAnalytics implements OpenNowAnalyticsSink {
-  FirebaseOpenNowAnalytics({FirebaseAnalytics? analytics})
-      : _analytics = analytics ?? FirebaseAnalytics.instance;
-
-  final FirebaseAnalytics _analytics;
+  FirebaseOpenNowAnalytics();
 
   @override
   Future<void> logViewOpened({
@@ -133,7 +130,10 @@ class FirebaseOpenNowAnalytics implements OpenNowAnalyticsSink {
 
   Future<void> _safeLog(String name, Map<String, Object?> parameters) async {
     try {
-      await _analytics.logEvent(name: name, parameters: parameters);
+      await AnalyticsRuntime.service.track(
+        event: name,
+        parameters: parameters,
+      );
     } catch (_) {
       // Analytics nunca debe romper el flujo de la pantalla.
     }

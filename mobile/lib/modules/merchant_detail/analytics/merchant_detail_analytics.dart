@@ -1,56 +1,49 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/providers/analytics_provider.dart';
+import '../../../core/analytics/analytics_service.dart';
 
 abstract interface class MerchantDetailAnalyticsSink {
   Future<void> logDetailView({
-    required String merchantId,
     required String categoryId,
     required bool hasPharmacyDutyToday,
   });
 
   Future<void> logCallClick({
-    required String merchantId,
+    required String entityZoneId,
     required bool launchSucceeded,
   });
 
   Future<void> logDirectionsClick({
-    required String merchantId,
+    required String entityZoneId,
     required bool launchSucceeded,
   });
 
-  Future<void> logShareClick({
-    required String merchantId,
-    required bool launchSucceeded,
-  });
+  Future<void> logShareClick({required bool launchSucceeded});
 
-  Future<void> logDutyBannerView({
-    required String merchantId,
-    required bool hasEndsAt,
-  });
+  Future<void> logDutyBannerView({required bool hasEndsAt});
 
   Future<void> logError({
-    required String merchantId,
     required String stage,
     required String errorType,
   });
 }
 
-class FirebaseMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
-  FirebaseMerchantDetailAnalytics({FirebaseAnalytics? analytics})
-      : _analytics = analytics ?? FirebaseAnalytics.instance;
+class AnalyticsServiceMerchantDetailAnalytics
+    implements MerchantDetailAnalyticsSink {
+  AnalyticsServiceMerchantDetailAnalytics(this._analyticsService);
 
-  final FirebaseAnalytics _analytics;
+  final AnalyticsService _analyticsService;
 
   @override
   Future<void> logDetailView({
-    required String merchantId,
     required String categoryId,
     required bool hasPharmacyDutyToday,
   }) {
-    return _analytics.logEvent(
-      name: 'merchant_detail_view',
+    return _analyticsService.track(
+      event: 'merchant_detail_view',
       parameters: {
-        'merchant_id': merchantId,
+        'surface': 'merchant_detail',
         'category_id': categoryId,
         'has_pharmacy_duty_today': hasPharmacyDutyToday,
       },
@@ -59,13 +52,17 @@ class FirebaseMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
 
   @override
   Future<void> logCallClick({
-    required String merchantId,
+    required String entityZoneId,
     required bool launchSucceeded,
   }) {
-    return _analytics.logEvent(
-      name: 'merchant_detail_call_click',
+    return _analyticsService.track(
+      event: 'operator_call_click',
       parameters: {
-        'merchant_id': merchantId,
+        'surface': 'merchant_detail',
+        'entity_type': 'merchant',
+        'active_zone_id': entityZoneId,
+        'entity_zone_id': entityZoneId,
+        'distance_bucket': 'unknown',
         'launch_succeeded': launchSucceeded,
       },
     );
@@ -73,41 +70,39 @@ class FirebaseMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
 
   @override
   Future<void> logDirectionsClick({
-    required String merchantId,
+    required String entityZoneId,
     required bool launchSucceeded,
   }) {
-    return _analytics.logEvent(
-      name: 'merchant_detail_directions_click',
+    return _analyticsService.track(
+      event: 'directions_opened',
       parameters: {
-        'merchant_id': merchantId,
+        'surface': 'merchant_detail',
+        'entity_type': 'merchant',
+        'active_zone_id': entityZoneId,
+        'entity_zone_id': entityZoneId,
+        'distance_bucket': 'unknown',
         'launch_succeeded': launchSucceeded,
       },
     );
   }
 
   @override
-  Future<void> logShareClick({
-    required String merchantId,
-    required bool launchSucceeded,
-  }) {
-    return _analytics.logEvent(
-      name: 'merchant_detail_share_click',
+  Future<void> logShareClick({required bool launchSucceeded}) {
+    return _analyticsService.track(
+      event: 'merchant_detail_share_click',
       parameters: {
-        'merchant_id': merchantId,
+        'surface': 'merchant_detail',
         'launch_succeeded': launchSucceeded,
       },
     );
   }
 
   @override
-  Future<void> logDutyBannerView({
-    required String merchantId,
-    required bool hasEndsAt,
-  }) {
-    return _analytics.logEvent(
-      name: 'merchant_detail_duty_banner_view',
+  Future<void> logDutyBannerView({required bool hasEndsAt}) {
+    return _analyticsService.track(
+      event: 'merchant_detail_duty_banner_view',
       parameters: {
-        'merchant_id': merchantId,
+        'surface': 'merchant_detail',
         'has_ends_at': hasEndsAt,
       },
     );
@@ -115,14 +110,13 @@ class FirebaseMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
 
   @override
   Future<void> logError({
-    required String merchantId,
     required String stage,
     required String errorType,
   }) {
-    return _analytics.logEvent(
-      name: 'merchant_detail_error',
+    return _analyticsService.track(
+      event: 'merchant_detail_error',
       parameters: {
-        'merchant_id': merchantId,
+        'surface': 'merchant_detail',
         'stage': stage,
         'error_type': errorType,
       },
@@ -131,5 +125,7 @@ class FirebaseMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
 }
 
 final merchantDetailAnalyticsProvider = Provider<MerchantDetailAnalyticsSink>(
-  (ref) => FirebaseMerchantDetailAnalytics(),
+  (ref) => AnalyticsServiceMerchantDetailAnalytics(
+    ref.watch(analyticsServiceProvider),
+  ),
 );

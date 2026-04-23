@@ -34,45 +34,52 @@ class _FakeZoneRepository implements ZoneSearchDataSource {
 
 class _NoopSearchAnalytics implements SearchAnalyticsSink {
   @override
-  Future<void> logEmptyStateSeen({
-    required String reason,
-    required String zoneId,
-    required bool hasQuery,
+  Future<void> logCategoryFiltered({
+    required String surface,
+    required String categoryId,
+    required String activeZoneId,
+    required int resultCount,
+    required bool usedOpenNowFilter,
+    required bool usedDistanceSort,
   }) async {}
 
   @override
-  Future<void> logFilterApplied({
-    required bool isOpenNow,
-    required bool hasCategory,
-    required bool hasMinVerification,
-    required String sortBy,
+  Future<void> logMapPinSelected({
+    required String surface,
+    required String activeZoneId,
+    required String entityZoneId,
+    required String distanceBucket,
   }) async {}
 
   @override
-  Future<void> logMapToggled({
-    required bool mapEnabled,
-    required int resultsCount,
+  Future<void> logMapRecenterTapped({
+    required String surface,
+    required String activeZoneId,
   }) async {}
 
   @override
-  Future<void> logQuerySubmitted({
+  Future<void> logMapSearchThisAreaTapped({
+    required String surface,
+    required String activeZoneId,
+  }) async {}
+
+  @override
+  Future<void> logMapViewed({
+    required String surface,
+    required String activeZoneId,
+    required int resultCount,
+  }) async {}
+
+  @override
+  Future<void> logSearchPerformed({
+    required String surface,
+    required String activeZoneId,
     required int queryLength,
-    required String zoneId,
-    required bool hasFilters,
     required int resultsCount,
-  }) async {}
-
-  @override
-  Future<void> logResultOpened({
-    required String merchantId,
-    required bool fromMap,
-    required int rank,
-  }) async {}
-
-  @override
-  Future<void> logZoneChanged({
-    required String fromZoneId,
-    required String toZoneId,
+    required bool usedCategoryFilter,
+    required bool usedOpenNowFilter,
+    required bool usedDistanceSort,
+    required bool resolvedLocally,
   }) async {}
 }
 

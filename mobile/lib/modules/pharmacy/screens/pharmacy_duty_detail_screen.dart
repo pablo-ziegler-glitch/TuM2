@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../models/pharmacy_duty_item.dart';
@@ -36,7 +38,7 @@ class PharmacyDutyDetailScreen extends StatelessWidget {
   }
 }
 
-class _DetailScaffold extends StatelessWidget {
+class _DetailScaffold extends ConsumerWidget {
   const _DetailScaffold({
     required this.duty,
   });
@@ -44,7 +46,7 @@ class _DetailScaffold extends StatelessWidget {
   final PharmacyDutyItem duty;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: SafeArea(
@@ -82,7 +84,19 @@ class _DetailScaffold extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () => _launchMaps(duty),
+                          onPressed: () async {
+                            await ref.read(analyticsServiceProvider).track(
+                              event: 'directions_opened',
+                              parameters: {
+                                'surface': 'pharmacy_duty_detail',
+                                'entity_type': 'pharmacy',
+                                'active_zone_id': duty.zoneId,
+                                'entity_zone_id': duty.zoneId,
+                                'distance_bucket': 'unknown',
+                              },
+                            );
+                            await _launchMaps(duty);
+                          },
                           icon: const Icon(Icons.directions_outlined, size: 18),
                           label: const Text('Cómo llegar'),
                           style: ElevatedButton.styleFrom(
@@ -97,7 +111,19 @@ class _DetailScaffold extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
-                          onPressed: () => _launchPhone(duty.phone!),
+                          onPressed: () async {
+                            await ref.read(analyticsServiceProvider).track(
+                              event: 'operator_call_click',
+                              parameters: {
+                                'surface': 'pharmacy_duty_detail',
+                                'entity_type': 'pharmacy',
+                                'active_zone_id': duty.zoneId,
+                                'entity_zone_id': duty.zoneId,
+                                'distance_bucket': 'unknown',
+                              },
+                            );
+                            await _launchPhone(duty.phone!);
+                          },
                           icon: const Icon(Icons.phone_outlined, size: 18),
                           label: const Text('Llamar'),
                           style: OutlinedButton.styleFrom(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/firebase/app_environment.dart';
 import 'core/firebase/firebase_options.dart';
+import 'core/providers/analytics_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/router/deep_link_listener.dart';
 import 'core/theme/app_theme.dart';
@@ -42,6 +43,8 @@ class TuM2App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     ref.watch(deepLinkListenerProvider);
+    ref.watch(syncAnalyticsUserPropertiesProvider);
+    ref.watch(webAnalyticsConsentBootstrapProvider);
 
     return MaterialApp.router(
       title: 'TuM2',

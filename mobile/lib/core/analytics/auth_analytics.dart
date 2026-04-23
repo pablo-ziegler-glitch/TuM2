@@ -1,4 +1,4 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import 'analytics_runtime.dart';
 
 /// Eventos de analítica del flujo de autenticación TuM2.
 ///
@@ -8,14 +8,6 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 /// Para verificar en desarrollo: Firebase DebugView con `--dart-define=FIREBASE_DEBUG=true`
 /// o `adb shell setprop debug.firebase.analytics.app com.floki.tum2.staging`.
 abstract class AuthAnalytics {
-  static FirebaseAnalytics? get _analytics {
-    try {
-      return FirebaseAnalytics.instance;
-    } catch (_) {
-      return null;
-    }
-  }
-
   // ── Nombres de eventos ──────────────────────────────────────────────────────
 
   static const _kMagicLinkSent = 'auth_magic_link_sent';
@@ -89,10 +81,11 @@ abstract class AuthAnalytics {
     required String name,
     Map<String, Object>? parameters,
   }) async {
-    final analytics = _analytics;
-    if (analytics == null) return;
     try {
-      await analytics.logEvent(name: name, parameters: parameters);
+      await AnalyticsRuntime.service.track(
+        event: name,
+        parameters: parameters ?? const <String, Object?>{},
+      );
     } catch (_) {
       // No-op: analytics nunca debe romper flujos de auth.
     }

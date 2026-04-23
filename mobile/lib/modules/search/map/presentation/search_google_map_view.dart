@@ -15,6 +15,8 @@ class SearchGoogleMapView extends StatefulWidget {
     required this.onMerchantSelected,
     required this.onMerchantOpen,
     required this.onListTap,
+    required this.onRecenterTap,
+    required this.onSearchThisAreaTap,
   });
 
   final List<MerchantSearchItem> merchants;
@@ -22,6 +24,8 @@ class SearchGoogleMapView extends StatefulWidget {
   final ValueChanged<String> onMerchantSelected;
   final ValueChanged<String> onMerchantOpen;
   final VoidCallback onListTap;
+  final VoidCallback onRecenterTap;
+  final VoidCallback onSearchThisAreaTap;
 
   @override
   State<SearchGoogleMapView> createState() => _SearchGoogleMapViewState();
@@ -90,6 +94,36 @@ class _SearchGoogleMapViewState extends State<SearchGoogleMapView> {
               icon: const Icon(Icons.list),
               label: const Text('Ver lista'),
             ),
+          ),
+        ),
+        Positioned(
+          top: 64,
+          right: 16,
+          child: Column(
+            children: [
+              FloatingActionButton.small(
+                heroTag: 'map_recenter_btn',
+                onPressed: () async {
+                  widget.onRecenterTap();
+                  final target = selected != null &&
+                          selected.lat != null &&
+                          selected.lng != null
+                      ? LatLng(selected.lat!, selected.lng!)
+                      : _resolveInitialCamera(widget.merchants).target;
+                  await _googleMapController?.animateCamera(
+                    CameraUpdate.newCameraPosition(
+                      CameraPosition(target: target, zoom: 14),
+                    ),
+                  );
+                },
+                child: const Icon(Icons.my_location),
+              ),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: widget.onSearchThisAreaTap,
+                child: const Text('Buscar aquí'),
+              ),
+            ],
           ),
         ),
         if (selected != null)

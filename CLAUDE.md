@@ -225,7 +225,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0081] **Implementar revisión de señales operativas reportadas** — P1 — `Admin, Operaciones, MVP`
 
 ### ÉPICA 11: Analytics
-- [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP`
+- [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `IN_PROGRESS`
 - [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP`
 - [0084] **Crear dashboard MVP** — P1 — `Analytics, MVP`
 - [0085] **Medir activación OWNER** — P1 — `Analytics, Operaciones, MVP`
@@ -296,7 +296,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `IN_PROGRESS`
 - [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `IN_PROGRESS`
 - [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `IN_PROGRESS`
-- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `IN_PROGRESS`
+- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` ✅
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
 - [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `IN_PROGRESS`
 
@@ -415,7 +415,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Backend:** TuM2-0042, 0043, 0044, 0045, 0046, 0048, 0049, 0050, 0123 ✅, 0124 ✅
 
-**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅, 0126, 0131
+**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅, 0126, 0131 ✅
 
 **Web:** TuM2-0070, 0071, 0072, 0074, 0075
 
@@ -473,6 +473,15 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - En cada avance de tarjeta, actualizar siempre `docs/storyscards/<tarjeta>.md` y `CLAUDE.md` con estado real.
 
 ## Registro operativo reciente
+- [0082] Redefinición técnica aplicada (2026-04-22): contrato canónico en `docs/storyscards/0082-analytics-technical.md` con bootstrap geolocalizado, taxonomía oficial MVP, reglas de no-PII/query crudo/coordenadas finas y política de copy desacoplada (`Me sirvió`/`Messirve` -> mismo evento).
+- [0082] Implementación base en mobile: `AnalyticsService` único con sanitización, validación de buckets/enums, dedupe, gating por ambiente (`prod` real / dev-staging debug sanitizado), gating de consentimiento web y cola offline restringida a eventos críticos permitidos.
+- [0082] Integraciones cruzadas: 0056/0057/0061/0083 cableadas a nueva taxonomía (`search_performed`, `category_filtered`, `nearby_bootstrap_*`, `map_*`, `operator_call_click`, `directions_opened`, `pharmacy_duty_feedback_*`, `report_*`, `claim_*`) priorizando `entity_zone_id` para acciones sobre entidad.
+- [0082] Hardening de seguridad analytics (2026-04-23): allowlist estricta de eventos/parámetros, bloqueo por fragmentos sensibles en keys/values, bloqueo de URLs y descarte por defecto de payload fuera de contrato para reducir superficie de exfiltración.
+- [0082] Migración legacy complementaria (2026-04-23): wrappers de auth/onboarding/open-now/owner/claim migrados a `AnalyticsService` central; `firebase_analytics` directo queda encapsulado en backend único.
+- [0082] Hardening adicional (2026-04-23): bloqueo explícito de identificadores directos en payload (`merchant_id`, `product_id`, `merchant_ref`, `user_id`, `uid`, `device_id`, `session_id`) y test unitario dedicado.
+- [0082] Cobertura adicional de acciones core en detalle de farmacia (`operator_call_click`, `directions_opened`) sin listeners ni lecturas extra.
+- [0082] Merchant Detail migrado a capa segura: acciones core pasan por `AnalyticsService` y se elimina emisión de `merchant_id` en payload analytics.
+- [0082] Impacto documental sincronizado para 0035/0100/0101 y seguimiento explícito de dependencias 0035/0056/0057/0061/0100/0101/0083.
 - [0056] Implementar búsqueda de comercios: estado final DONE (cerrada el 2026-04-07).
 - [0056] Mobile quedó recompuesto y compilable: modelos/repositorios de búsqueda, notifier con ranking y filtros MVP, exclusión de panadería/confitería, rutas de búsqueda activas y analytics safe.
 - [0056] Se agregó cobertura unitaria en Flutter para SearchNotifier (inicialización, normalización, filtros open-now, ranking, y consistencia lista/mapa).
@@ -504,4 +513,5 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0127] Integración productiva: submit pasa por estado `submitted`, trigger fallback por transición real a `submitted`, hash `lastAutoValidationHash` para no-op writes, sync `owner_pending` backend-only y sin mutación de `merchant_public`.
 - [0127] Costos/seguridad: queries dedupe-conflict con `limit` bajo e índice compuesto `merchant_claims(userId, merchantId, claimStatus)`, logs estructurados sin PII, sin grants OWNER automáticos.
 - [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.
+- [0131] Cierre técnico (2026-04-21): `ownerAccessSummary` canónico en `users/{uid}`, claims mínimas (`role`, `owner_pending`, `access_version`), estrategia multi-merchant sin `merchantId` principal en JWT, restricciones antifraude (`none/cooldown/manual_review_only/blocked`) con rehabilitación admin auditada, refresh de sesión en foreground claim/owner y tests ampliados backend/mobile.
 - [0134] Alta documental inicial (2026-04-17): creadas `docs/storyscards/0134-modo-seleccion-argentina.md` y `docs/storyscards/0134-modo-seleccion-argentina.prompt.md`; estado canónico `TODO` (sin implementación).

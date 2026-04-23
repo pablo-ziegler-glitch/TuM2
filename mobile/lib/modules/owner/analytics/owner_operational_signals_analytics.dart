@@ -1,16 +1,7 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
-
 import '../models/operational_signals.dart';
+import '../../../core/analytics/analytics_runtime.dart';
 
 abstract class OwnerOperationalSignalsAnalytics {
-  static FirebaseAnalytics? get _analytics {
-    try {
-      return FirebaseAnalytics.instance;
-    } catch (_) {
-      return null;
-    }
-  }
-
   static Future<void> logOpened({
     required String merchantId,
   }) =>
@@ -85,10 +76,11 @@ abstract class OwnerOperationalSignalsAnalytics {
     String name, {
     Map<String, Object>? parameters,
   }) async {
-    final analytics = _analytics;
-    if (analytics == null) return;
     try {
-      await analytics.logEvent(name: name, parameters: parameters);
+      await AnalyticsRuntime.service.track(
+        event: name,
+        parameters: parameters ?? const <String, Object?>{},
+      );
     } catch (_) {
       // Analytics no debe romper el flujo principal.
     }

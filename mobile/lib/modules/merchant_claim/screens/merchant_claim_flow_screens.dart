@@ -13,7 +13,6 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_text_input.dart';
-import '../analytics/merchant_claim_analytics.dart';
 import '../application/merchant_claim_flow_controller.dart';
 import '../models/merchant_claim_models.dart';
 
@@ -41,8 +40,9 @@ class ClaimIntroScreen extends ConsumerWidget {
               onPressed: !claimEnabled
                   ? null
                   : () {
-                      MerchantClaimAnalytics.logStarted().ignore();
-                      MerchantClaimAnalytics.logStepViewed('claim_01_intro')
+                      ref
+                          .read(merchantClaimFlowControllerProvider.notifier)
+                          .startClaim()
                           .ignore();
                       context.push(AppRoutes.claimSelect);
                     },
@@ -120,12 +120,7 @@ class ClaimSelectMerchantScreen extends ConsumerWidget {
         child: FilledButton(
           onPressed: state.selectedMerchant == null
               ? null
-              : () {
-                  MerchantClaimAnalytics.logStepCompleted(
-                    'claim_02_select_merchant',
-                  ).ignore();
-                  context.push(AppRoutes.claimApplicant);
-                },
+              : () => context.push(AppRoutes.claimApplicant),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary500,
             foregroundColor: Colors.white,
@@ -283,12 +278,7 @@ class _ClaimApplicantDataScreenState
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () {
-                MerchantClaimAnalytics.logStepCompleted(
-                  'claim_03_applicant_data',
-                ).ignore();
-                context.push(AppRoutes.claimEvidence);
-              },
+              onPressed: () => context.push(AppRoutes.claimEvidence),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary500,
                 foregroundColor: Colors.white,
@@ -411,12 +401,7 @@ class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
         width: double.infinity,
         child: FilledButton(
           onPressed: state.hasRequiredEvidence
-              ? () {
-                  MerchantClaimAnalytics.logStepCompleted(
-                    'claim_04_evidence',
-                  ).ignore();
-                  context.push(AppRoutes.claimConsent);
-                }
+              ? () => context.push(AppRoutes.claimConsent)
               : null,
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary500,
@@ -514,7 +499,6 @@ class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
       await ref
           .read(merchantClaimFlowControllerProvider.notifier)
           .uploadEvidence(upload);
-      MerchantClaimAnalytics.logEvidenceUploaded(kind.apiValue).ignore();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -570,15 +554,8 @@ class ClaimConsentScreen extends ConsumerWidget {
                       final currentState =
                           ref.read(merchantClaimFlowControllerProvider);
                       if (currentState.errorMessage != null) {
-                        MerchantClaimAnalytics.logSubmissionFailed(
-                          'submit_failed',
-                        ).ignore();
                         return;
                       }
-                      final status =
-                          currentState.statusSummary?.claimStatus.apiValue ??
-                              MerchantClaimStatus.submitted.apiValue;
-                      MerchantClaimAnalytics.logSubmitted(status).ignore();
                       if (!context.mounted) return;
                       context.go(AppRoutes.claimSuccess);
                     },
@@ -721,20 +698,44 @@ class ClaimStatusScreen extends ConsumerStatefulWidget {
 
 class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
   bool _handledApprovedTransition = false;
+  DateTime? _lastAccessRefreshAt;
+  late final _ClaimLifecycleObserver _lifecycleObserver;
 
   @override
   void initState() {
     super.initState();
-    scheduleMicrotask(() async {
-      await ref.read(merchantClaimFlowControllerProvider.notifier).loadStatus();
-      final summary =
-          ref.read(merchantClaimFlowControllerProvider).statusSummary;
-      if (summary != null) {
-        MerchantClaimAnalytics.logStatusViewed(
-          summary.claimStatus.apiValue,
-        ).ignore();
-      }
-    });
+    _lifecycleObserver = _ClaimLifecycleObserver(_handleResume);
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+    scheduleMicrotask(() => _syncClaimStatusAndSession(forceRefresh: true));
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    super.dispose();
+  }
+
+  Future<void> _handleResume() async {
+    await _syncClaimStatusAndSession(forceRefresh: false);
+  }
+
+  Future<void> _syncClaimStatusAndSession({
+    required bool forceRefresh,
+  }) async {
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _lastAccessRefreshAt != null &&
+        now.difference(_lastAccessRefreshAt!) < const Duration(seconds: 6)) {
+      return;
+    }
+    _lastAccessRefreshAt = now;
+
+    try {
+      await ref.read(authNotifierProvider).refreshSession();
+    } catch (_) {
+      // Si falla refresh de token, igualmente intentamos refrescar estado de claim.
+    }
+    await ref.read(merchantClaimFlowControllerProvider.notifier).loadStatus();
   }
 
   @override
@@ -847,9 +848,7 @@ class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
           FilledButton(
             onPressed: state.isBusy
                 ? null
-                : () => ref
-                    .read(merchantClaimFlowControllerProvider.notifier)
-                    .loadStatus(),
+                : () => _syncClaimStatusAndSession(forceRefresh: true),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary500,
               foregroundColor: Colors.white,
@@ -864,6 +863,18 @@ class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
         ],
       ),
     );
+  }
+}
+
+class _ClaimLifecycleObserver extends WidgetsBindingObserver {
+  _ClaimLifecycleObserver(this.onResumed);
+
+  final Future<void> Function() onResumed;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    unawaited(onResumed());
   }
 }
 

@@ -1,14 +1,6 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import '../../../core/analytics/analytics_runtime.dart';
 
 abstract class MerchantClaimAnalytics {
-  static FirebaseAnalytics? get _analytics {
-    try {
-      return FirebaseAnalytics.instance;
-    } catch (_) {
-      return null;
-    }
-  }
-
   static Future<void> logStarted() => _safeLog('merchant_claim_started');
 
   static Future<void> logStepViewed(String stepId) => _safeLog(
@@ -102,10 +94,11 @@ abstract class MerchantClaimAnalytics {
     String eventName, {
     Map<String, Object>? parameters,
   }) async {
-    final analytics = _analytics;
-    if (analytics == null) return;
     try {
-      await analytics.logEvent(name: eventName, parameters: parameters);
+      await AnalyticsRuntime.service.track(
+        event: eventName,
+        parameters: parameters ?? const <String, Object?>{},
+      );
     } catch (_) {
       // Analytics no bloquea el flujo de claim.
     }

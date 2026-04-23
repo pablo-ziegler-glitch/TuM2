@@ -67,12 +67,10 @@ class RecordingMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
 
   @override
   Future<void> logDetailView({
-    required String merchantId,
     required String categoryId,
     required bool hasPharmacyDutyToday,
   }) async {
     detailViewEvents.add({
-      'merchantId': merchantId,
       'categoryId': categoryId,
       'hasPharmacyDutyToday': hasPharmacyDutyToday,
     });
@@ -80,56 +78,50 @@ class RecordingMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
 
   @override
   Future<void> logCallClick({
-    required String merchantId,
+    required String entityZoneId,
     required bool launchSucceeded,
   }) async {
     callEvents.add({
-      'merchantId': merchantId,
+      'entityZoneId': entityZoneId,
       'launchSucceeded': launchSucceeded,
     });
   }
 
   @override
   Future<void> logDirectionsClick({
-    required String merchantId,
+    required String entityZoneId,
     required bool launchSucceeded,
   }) async {
     directionsEvents.add({
-      'merchantId': merchantId,
+      'entityZoneId': entityZoneId,
       'launchSucceeded': launchSucceeded,
     });
   }
 
   @override
   Future<void> logShareClick({
-    required String merchantId,
     required bool launchSucceeded,
   }) async {
     shareEvents.add({
-      'merchantId': merchantId,
       'launchSucceeded': launchSucceeded,
     });
   }
 
   @override
   Future<void> logDutyBannerView({
-    required String merchantId,
     required bool hasEndsAt,
   }) async {
     dutyBannerEvents.add({
-      'merchantId': merchantId,
       'hasEndsAt': hasEndsAt,
     });
   }
 
   @override
   Future<void> logError({
-    required String merchantId,
     required String stage,
     required String errorType,
   }) async {
     errorEvents.add({
-      'merchantId': merchantId,
       'stage': stage,
       'errorType': errorType,
     });

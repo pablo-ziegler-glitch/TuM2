@@ -52,6 +52,11 @@ MerchantPublicViewData mapCoreDtoToViewData(MerchantCoreDto dto) {
 
   return MerchantPublicViewData(
     merchantId: dto.id,
+    zoneId: _firstNonEmpty(
+      _stringValue(dto.data['zoneId']),
+      _stringValue(dto.data['zone']),
+      'unknown',
+    ),
     name: _firstNonEmpty(_stringValue(dto.data['name']), dto.id),
     categoryId: categoryId,
     categoryLabel: _firstNonEmpty(

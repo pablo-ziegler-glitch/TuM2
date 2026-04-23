@@ -200,46 +200,84 @@ class _FakeGeoLocationService extends GeoLocationService {
 
 class _FakeAnalytics implements PharmacyDutyAnalyticsSink {
   @override
-  Future<void> logCallTap({
-    required String merchantId,
-    required String zoneId,
-    required String date,
-    required int positionIndex,
+  Future<void> logDirectionsOpened({
+    required String activeZoneId,
+    required String entityZoneId,
+    required String distanceBucket,
   }) async {}
 
   @override
-  Future<void> logDateChanged({
-    required String fromDate,
-    required String toDate,
-    required String zoneId,
+  Future<void> logFeedbackNegativeReasonSelected({
+    required String activeZoneId,
+    required String entityZoneId,
+    required String reasonCode,
+    required bool hasFreeText,
+    required bool hasAttachment,
   }) async {}
 
   @override
-  Future<void> logDirectionsTap({
-    required String merchantId,
-    required String zoneId,
-    required String date,
-    required int positionIndex,
+  Future<void> logFeedbackNegativeStarted({
+    required String activeZoneId,
+    required String entityZoneId,
   }) async {}
 
   @override
-  Future<void> logEmptyStateShown({
-    required String zoneId,
-    required String date,
+  Future<void> logFeedbackPositive({
+    required String activeZoneId,
+    required String entityZoneId,
+    required String copyVariant,
   }) async {}
 
   @override
-  Future<void> logResultsLoaded({
-    required String zoneId,
-    required String date,
-    required int resultsCount,
-    required int loadMs,
+  Future<void> logNearbyBootstrapCompleted({
+    required String source,
+    required String activeZoneId,
+    required String resultCountBucket,
   }) async {}
 
   @override
-  Future<void> logViewOpened({
-    required String zoneId,
-    required String date,
-    required bool hasLocationPermission,
+  Future<void> logNearbyBootstrapFailed({
+    required String source,
+    required String activeZoneId,
+    required String reasonCode,
+    required String permissionState,
+    required String networkState,
+  }) async {}
+
+  @override
+  Future<void> logNearbyBootstrapStarted({
+    required String source,
+    required String permissionState,
+    required String networkState,
+    required String activeZoneId,
+  }) async {}
+
+  @override
+  Future<void> logOperatorCallClick({
+    required String activeZoneId,
+    required String entityZoneId,
+    required String distanceBucket,
+  }) async {}
+
+  @override
+  Future<void> logPharmacyDutyView({
+    required String activeZoneId,
+    required String resultCountBucket,
+  }) async {}
+
+  @override
+  Future<void> logReportStarted({
+    required String activeZoneId,
+    required String entityZoneId,
+    required String reasonCode,
+  }) async {}
+
+  @override
+  Future<void> logReportSubmitted({
+    required String activeZoneId,
+    required String entityZoneId,
+    required String reasonCode,
+    required bool hasFreeText,
+    required bool hasAttachment,
   }) async {}
 }

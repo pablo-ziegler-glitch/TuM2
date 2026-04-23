@@ -24,6 +24,7 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
     Future.microtask(() async {
       final notifier = ref.read(searchNotifierProvider.notifier);
       await notifier.ensureInitialized();
+      notifier.logMapViewed();
     });
   }
 
@@ -95,6 +96,12 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
                           : state.corpus,
                       selectedMerchantId: selectedMerchantId,
                       onMerchantSelected: (merchantId) {
+                        if (merchantId.isNotEmpty) {
+                          notifier.logResultOpened(
+                            merchantId: merchantId,
+                            fromMap: true,
+                          );
+                        }
                         setState(() {
                           _selectedMerchantId =
                               merchantId.isEmpty ? null : merchantId;
@@ -114,6 +121,8 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
                             : '${AppRoutes.searchResults}?q=${Uri.encodeComponent(query)}';
                         context.go(route);
                       },
+                      onRecenterTap: notifier.logMapRecenterTapped,
+                      onSearchThisAreaTap: notifier.logMapSearchThisAreaTapped,
                     ),
             ),
           ],

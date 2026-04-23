@@ -6,6 +6,7 @@ import '../../merchant_badges/domain/merchant_visual_models.dart';
 class MerchantPublicViewData {
   const MerchantPublicViewData({
     required this.merchantId,
+    required this.zoneId,
     required this.name,
     required this.categoryId,
     required this.categoryLabel,
@@ -31,6 +32,7 @@ class MerchantPublicViewData {
   });
 
   final String merchantId;
+  final String zoneId;
   final String name;
   final String categoryId;
   final String categoryLabel;

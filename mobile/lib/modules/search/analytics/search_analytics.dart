@@ -1,138 +1,216 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import '../../../core/analytics/analytics_service.dart';
 
-/// Eventos de busqueda para TuM2-0056 / 0082-0083.
-/// Evita PII: no envia texto de query ni datos personales.
 abstract interface class SearchAnalyticsSink {
-  Future<void> logQuerySubmitted({
+  Future<void> logSearchPerformed({
+    required String surface,
+    required String activeZoneId,
     required int queryLength,
-    required String zoneId,
-    required bool hasFilters,
     required int resultsCount,
+    required bool usedCategoryFilter,
+    required bool usedOpenNowFilter,
+    required bool usedDistanceSort,
+    required bool resolvedLocally,
   });
 
-  Future<void> logFilterApplied({
-    required bool isOpenNow,
-    required bool hasCategory,
-    required bool hasMinVerification,
-    required String sortBy,
+  Future<void> logCategoryFiltered({
+    required String surface,
+    required String categoryId,
+    required String activeZoneId,
+    required int resultCount,
+    required bool usedOpenNowFilter,
+    required bool usedDistanceSort,
   });
 
-  Future<void> logMapToggled({
-    required bool mapEnabled,
-    required int resultsCount,
+  Future<void> logMapViewed({
+    required String surface,
+    required String activeZoneId,
+    required int resultCount,
   });
 
-  Future<void> logResultOpened({
-    required String merchantId,
-    required bool fromMap,
-    required int rank,
+  Future<void> logMapPinSelected({
+    required String surface,
+    required String activeZoneId,
+    required String entityZoneId,
+    required String distanceBucket,
   });
 
-  Future<void> logZoneChanged({
-    required String fromZoneId,
-    required String toZoneId,
+  Future<void> logMapRecenterTapped({
+    required String surface,
+    required String activeZoneId,
   });
 
-  Future<void> logEmptyStateSeen({
-    required String reason,
-    required String zoneId,
-    required bool hasQuery,
+  Future<void> logMapSearchThisAreaTapped({
+    required String surface,
+    required String activeZoneId,
   });
 }
 
-class FirebaseSearchAnalytics implements SearchAnalyticsSink {
-  FirebaseSearchAnalytics({FirebaseAnalytics? analytics})
-      : _analytics = analytics ?? FirebaseAnalytics.instance;
+class AnalyticsServiceSearchAnalytics implements SearchAnalyticsSink {
+  AnalyticsServiceSearchAnalytics(this._analyticsService);
 
-  final FirebaseAnalytics _analytics;
+  final AnalyticsService _analyticsService;
 
   @override
-  Future<void> logQuerySubmitted({
+  Future<void> logSearchPerformed({
+    required String surface,
+    required String activeZoneId,
     required int queryLength,
-    required String zoneId,
-    required bool hasFilters,
     required int resultsCount,
-  }) =>
-      _analytics.logEvent(
-        name: 'search_query_submitted',
-        parameters: {
-          'query_length': queryLength,
-          'zone_id': zoneId,
-          'has_filters': hasFilters,
-          'results_count': resultsCount,
-        },
-      );
+    required bool usedCategoryFilter,
+    required bool usedOpenNowFilter,
+    required bool usedDistanceSort,
+    required bool resolvedLocally,
+  }) {
+    return _analyticsService.track(
+      event: 'search_performed',
+      parameters: {
+        'surface': surface,
+        'search_mode': 'explicit',
+        'query_length_bucket': _analyticsService.queryLengthBucket(queryLength),
+        'result_count_bucket':
+            _analyticsService.resultCountBucket(resultsCount),
+        'used_category_filter': usedCategoryFilter,
+        'used_open_now_filter': usedOpenNowFilter,
+        'used_distance_sort': usedDistanceSort,
+        'active_zone_id': activeZoneId,
+        'resolved_locally': resolvedLocally,
+      },
+    );
+  }
 
   @override
-  Future<void> logFilterApplied({
-    required bool isOpenNow,
-    required bool hasCategory,
-    required bool hasMinVerification,
-    required String sortBy,
-  }) =>
-      _analytics.logEvent(
-        name: 'search_filter_applied',
-        parameters: {
-          'open_now': isOpenNow,
-          'has_category': hasCategory,
-          'has_min_verification': hasMinVerification,
-          'sort_by': sortBy,
-        },
-      );
+  Future<void> logCategoryFiltered({
+    required String surface,
+    required String categoryId,
+    required String activeZoneId,
+    required int resultCount,
+    required bool usedOpenNowFilter,
+    required bool usedDistanceSort,
+  }) {
+    return _analyticsService.track(
+      event: 'category_filtered',
+      parameters: {
+        'surface': surface,
+        'category_id': categoryId,
+        'active_zone_id': activeZoneId,
+        'result_count_bucket': _analyticsService.resultCountBucket(resultCount),
+        'used_open_now_filter': usedOpenNowFilter,
+        'used_distance_sort': usedDistanceSort,
+      },
+    );
+  }
 
   @override
-  Future<void> logMapToggled({
-    required bool mapEnabled,
+  Future<void> logMapViewed({
+    required String surface,
+    required String activeZoneId,
+    required int resultCount,
+  }) {
+    return _analyticsService.track(
+      event: 'map_viewed',
+      parameters: {
+        'surface': surface,
+        'active_zone_id': activeZoneId,
+        'result_count_bucket': _analyticsService.resultCountBucket(resultCount),
+      },
+      dedupeWindow: const Duration(seconds: 4),
+    );
+  }
+
+  @override
+  Future<void> logMapPinSelected({
+    required String surface,
+    required String activeZoneId,
+    required String entityZoneId,
+    required String distanceBucket,
+  }) {
+    return _analyticsService.track(
+      event: 'map_pin_selected',
+      parameters: {
+        'surface': surface,
+        'active_zone_id': activeZoneId,
+        'entity_zone_id': entityZoneId,
+        'distance_bucket': distanceBucket,
+      },
+    );
+  }
+
+  @override
+  Future<void> logMapRecenterTapped({
+    required String surface,
+    required String activeZoneId,
+  }) {
+    return _analyticsService.track(
+      event: 'map_recenter_tapped',
+      parameters: {
+        'surface': surface,
+        'active_zone_id': activeZoneId,
+      },
+    );
+  }
+
+  @override
+  Future<void> logMapSearchThisAreaTapped({
+    required String surface,
+    required String activeZoneId,
+  }) {
+    return _analyticsService.track(
+      event: 'map_search_this_area_tapped',
+      parameters: {
+        'surface': surface,
+        'active_zone_id': activeZoneId,
+      },
+    );
+  }
+}
+
+class NoopSearchAnalytics implements SearchAnalyticsSink {
+  @override
+  Future<void> logCategoryFiltered({
+    required String surface,
+    required String categoryId,
+    required String activeZoneId,
+    required int resultCount,
+    required bool usedOpenNowFilter,
+    required bool usedDistanceSort,
+  }) async {}
+
+  @override
+  Future<void> logMapPinSelected({
+    required String surface,
+    required String activeZoneId,
+    required String entityZoneId,
+    required String distanceBucket,
+  }) async {}
+
+  @override
+  Future<void> logMapRecenterTapped({
+    required String surface,
+    required String activeZoneId,
+  }) async {}
+
+  @override
+  Future<void> logMapSearchThisAreaTapped({
+    required String surface,
+    required String activeZoneId,
+  }) async {}
+
+  @override
+  Future<void> logMapViewed({
+    required String surface,
+    required String activeZoneId,
+    required int resultCount,
+  }) async {}
+
+  @override
+  Future<void> logSearchPerformed({
+    required String surface,
+    required String activeZoneId,
+    required int queryLength,
     required int resultsCount,
-  }) =>
-      _analytics.logEvent(
-        name: 'search_map_toggled',
-        parameters: {
-          'map_enabled': mapEnabled,
-          'results_count': resultsCount,
-        },
-      );
-
-  @override
-  Future<void> logResultOpened({
-    required String merchantId,
-    required bool fromMap,
-    required int rank,
-  }) =>
-      _analytics.logEvent(
-        name: 'search_result_opened',
-        parameters: {
-          'merchant_id': merchantId,
-          'from_map': fromMap,
-          'rank': rank,
-        },
-      );
-
-  @override
-  Future<void> logZoneChanged({
-    required String fromZoneId,
-    required String toZoneId,
-  }) =>
-      _analytics.logEvent(
-        name: 'search_zone_changed',
-        parameters: {
-          'from_zone_id': fromZoneId,
-          'to_zone_id': toZoneId,
-        },
-      );
-
-  @override
-  Future<void> logEmptyStateSeen({
-    required String reason,
-    required String zoneId,
-    required bool hasQuery,
-  }) =>
-      _analytics.logEvent(
-        name: 'search_empty_state_seen',
-        parameters: {
-          'reason': reason,
-          'zone_id': zoneId,
-          'has_query': hasQuery,
-        },
-      );
+    required bool usedCategoryFilter,
+    required bool usedOpenNowFilter,
+    required bool usedDistanceSort,
+    required bool resolvedLocally,
+  }) async {}
 }

@@ -1,14 +1,6 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import '../../../core/analytics/analytics_runtime.dart';
 
 abstract class OwnerDashboardAnalytics {
-  static FirebaseAnalytics? get _analytics {
-    try {
-      return FirebaseAnalytics.instance;
-    } catch (_) {
-      return null;
-    }
-  }
-
   static Future<void> logViewed({
     required String merchantId,
   }) =>
@@ -47,14 +39,31 @@ abstract class OwnerDashboardAnalytics {
   static Future<void> logErrorViewed() =>
       _safeLog('owner_dashboard_error_viewed');
 
+  static Future<void> logRestrictedViewed({
+    required String restrictionState,
+  }) =>
+      _safeLog(
+        'owner_dashboard_restricted_viewed',
+        parameters: {'restriction_state': restrictionState},
+      );
+
+  static Future<void> logMerchantSwitched({
+    required String merchantId,
+  }) =>
+      _safeLog(
+        'owner_dashboard_merchant_switched',
+        parameters: {'merchant_id': merchantId},
+      );
+
   static Future<void> _safeLog(
     String eventName, {
     Map<String, Object>? parameters,
   }) async {
-    final analytics = _analytics;
-    if (analytics == null) return;
     try {
-      await analytics.logEvent(name: eventName, parameters: parameters);
+      await AnalyticsRuntime.service.track(
+        event: eventName,
+        parameters: parameters ?? const <String, Object?>{},
+      );
     } catch (_) {
       // Analytics nunca debe romper el flujo OWNER.
     }

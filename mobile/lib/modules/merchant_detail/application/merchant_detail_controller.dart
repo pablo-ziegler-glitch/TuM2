@@ -73,7 +73,6 @@ class MerchantDetailController
 
     unawaited(
       _analytics.logDetailView(
-        merchantId: merchantId,
         categoryId: core.categoryId,
         hasPharmacyDutyToday: core.hasPharmacyDutyToday,
       ),
@@ -116,7 +115,7 @@ class MerchantDetailController
     final opened = await _actions.openCall(phone);
     unawaited(
       _analytics.logCallClick(
-        merchantId: current.merchantId,
+        entityZoneId: current.merchant.zoneId,
         launchSucceeded: opened,
       ),
     );
@@ -135,7 +134,7 @@ class MerchantDetailController
 
     unawaited(
       _analytics.logDirectionsClick(
-        merchantId: current.merchantId,
+        entityZoneId: current.merchant.zoneId,
         launchSucceeded: opened,
       ),
     );
@@ -151,10 +150,7 @@ class MerchantDetailController
     );
 
     unawaited(
-      _analytics.logShareClick(
-        merchantId: current.merchantId,
-        launchSucceeded: success,
-      ),
+      _analytics.logShareClick(launchSucceeded: success),
     );
   }
 
@@ -230,10 +226,7 @@ class MerchantDetailController
         ),
       );
       unawaited(
-        _analytics.logDutyBannerView(
-          merchantId: merchantId,
-          hasEndsAt: duty.endsAt != null,
-        ),
+        _analytics.logDutyBannerView(hasEndsAt: duty.endsAt != null),
       );
     } catch (error) {
       _updateLoadedState(
@@ -244,10 +237,7 @@ class MerchantDetailController
         ),
       );
       unawaited(
-        _analytics.logDutyBannerView(
-          merchantId: merchantId,
-          hasEndsAt: false,
-        ),
+        _analytics.logDutyBannerView(hasEndsAt: false),
       );
       _logError('pharmacy_duties', error);
     }
@@ -282,7 +272,6 @@ class MerchantDetailController
         : 'generic';
     unawaited(
       _analytics.logError(
-        merchantId: _merchantId,
         stage: stage,
         errorType: errorType,
       ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../pharmacy/repositories/zones_repository.dart';
 import '../data/merchant_claim_repository.dart';
@@ -143,6 +144,26 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
 
   MerchantClaimRepository get _repository =>
       ref.read(merchantClaimRepositoryProvider);
+  Future<void> _track({
+    required String event,
+    Map<String, Object?> parameters = const {},
+  }) {
+    return ref.read(analyticsServiceProvider).track(
+          event: event,
+          parameters: parameters,
+        );
+  }
+
+  Future<void> startClaim() {
+    return _track(
+      event: 'claim_started',
+      parameters: {
+        'surface': 'claim_flow',
+        'entry_point': 'profile',
+        'active_zone_id': state.selectedZoneId ?? 'unknown',
+      },
+    );
+  }
 
   void setZoneId(String zoneId) {
     state = state.copyWith(
@@ -242,6 +263,20 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
         isBusy: false,
         evidenceFiles: nextEvidence,
       );
+      unawaited(
+        _track(
+          event: 'claim_evidence_uploaded',
+          parameters: {
+            'surface': 'claim_flow',
+            'active_zone_id': state.selectedZoneId ?? 'unknown',
+            'entity_zone_id': state.selectedMerchant?.zoneId ?? 'unknown',
+            'entity_type': 'merchant',
+            'evidence_count_bucket': ref
+                .read(analyticsServiceProvider)
+                .evidenceCountBucket(nextEvidence.length),
+          },
+        ),
+      );
     } on MerchantClaimRepositoryException catch (error) {
       state = state.copyWith(
         isBusy: false,
@@ -333,6 +368,18 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
       state = state.copyWith(
         isBusy: false,
         statusSummary: summary,
+      );
+      unawaited(
+        _track(
+          event: 'claim_submitted',
+          parameters: {
+            'surface': 'claim_flow',
+            'active_zone_id': state.selectedZoneId ?? 'unknown',
+            'entity_zone_id': state.selectedMerchant?.zoneId ?? 'unknown',
+            'entity_type': 'merchant',
+            'reason_code': summary.claimStatus.apiValue,
+          },
+        ),
       );
     } on MerchantClaimRepositoryException catch (error) {
       state = state.copyWith(

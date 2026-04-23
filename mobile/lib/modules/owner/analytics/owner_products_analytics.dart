@@ -1,16 +1,7 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
-
 import '../models/merchant_product.dart';
+import '../../../core/analytics/analytics_runtime.dart';
 
 abstract class OwnerProductsAnalytics {
-  static FirebaseAnalytics? get _analytics {
-    try {
-      return FirebaseAnalytics.instance;
-    } catch (_) {
-      return null;
-    }
-  }
-
   static Future<void> logCreated({
     required String merchantId,
     required String productId,
@@ -198,10 +189,11 @@ abstract class OwnerProductsAnalytics {
     String eventName, {
     Map<String, Object>? parameters,
   }) async {
-    final analytics = _analytics;
-    if (analytics == null) return;
     try {
-      await analytics.logEvent(name: eventName, parameters: parameters);
+      await AnalyticsRuntime.service.track(
+        event: eventName,
+        parameters: parameters ?? const <String, Object?>{},
+      );
     } catch (_) {
       // Analytics nunca debe romper el flujo principal.
     }

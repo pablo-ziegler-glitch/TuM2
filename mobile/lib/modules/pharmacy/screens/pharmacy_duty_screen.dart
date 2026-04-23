@@ -15,6 +15,11 @@ import '../providers/pharmacy_duty_notifier.dart';
 import '../services/business_date.dart';
 import '../services/distance_calculator.dart';
 
+const _kSeasonalMessirveEnabled = bool.fromEnvironment(
+  'PHARMACY_FEEDBACK_MESSIRVE_ENABLED',
+  defaultValue: false,
+);
+
 class PharmacyDutyScreen extends ConsumerStatefulWidget {
   const PharmacyDutyScreen({super.key});
 
@@ -84,8 +89,6 @@ class _PharmacyDutyScreenState extends ConsumerState<PharmacyDutyScreen> {
                       selectedDate: state.selectedDate,
                       openCount: openCount,
                       items: state.items,
-                      selectedDateKey: state.selectedDateKey,
-                      selectedZoneId: state.selectedZoneId,
                       isUsingCache: state.isUsingCachedData,
                       onChangeZone: () => _showZoneSheet(
                         context,
@@ -284,8 +287,6 @@ class _ResultsList extends ConsumerWidget {
     required this.selectedDate,
     required this.openCount,
     required this.items,
-    required this.selectedDateKey,
-    required this.selectedZoneId,
     required this.isUsingCache,
     required this.onChangeZone,
   });
@@ -294,8 +295,6 @@ class _ResultsList extends ConsumerWidget {
   final DateTime selectedDate;
   final int openCount;
   final List<PharmacyDutyItem> items;
-  final String selectedDateKey;
-  final String selectedZoneId;
   final bool isUsingCache;
   final VoidCallback onChangeZone;
 
@@ -413,9 +412,6 @@ class _ResultsList extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: _PharmacyCard(
               item: items[i],
-              positionIndex: i,
-              zoneId: selectedZoneId,
-              dateKey: selectedDateKey,
             ),
           ),
         const SizedBox(height: 8),
@@ -481,19 +477,13 @@ class _FilterPill extends StatelessWidget {
 class _PharmacyCard extends ConsumerWidget {
   const _PharmacyCard({
     required this.item,
-    required this.positionIndex,
-    required this.zoneId,
-    required this.dateKey,
   });
 
   final PharmacyDutyItem item;
-  final int positionIndex;
-  final String zoneId;
-  final String dateKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final analytics = ref.read(pharmacyDutyAnalyticsProvider);
+    final notifier = ref.read(pharmacyDutyProvider.notifier);
     final badgeResolution = MerchantBadgeResolver.resolve(
       state: MerchantVisualStateMappers.fromPharmacyDutyItem(item),
       surface: MerchantSurface.pharmacyPublic,
@@ -508,12 +498,7 @@ class _PharmacyCard extends ConsumerWidget {
         _CircleActionButton(
           icon: Icons.call,
           onTap: () async {
-            await analytics.logCallTap(
-              merchantId: item.merchantId,
-              zoneId: zoneId,
-              date: dateKey,
-              positionIndex: positionIndex,
-            );
+            await notifier.logCallClick(item);
             await _launchPhone(item.phone!);
           },
         ),
@@ -524,12 +509,7 @@ class _PharmacyCard extends ConsumerWidget {
         _CircleActionButton(
           icon: Icons.directions,
           onTap: () async {
-            await analytics.logDirectionsTap(
-              merchantId: item.merchantId,
-              zoneId: zoneId,
-              date: dateKey,
-              positionIndex: positionIndex,
-            );
+            await notifier.logDirectionsClick(item);
             await _launchMaps(item);
           },
         ),
@@ -625,8 +605,84 @@ class _PharmacyCard extends ConsumerWidget {
                 ),
             ],
           ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await notifier.logFeedbackPositive(
+                      item: item,
+                      copyVariant: _kSeasonalMessirveEnabled
+                          ? 'seasonal_messirve'
+                          : 'default_me_sirvio',
+                    );
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          _kSeasonalMessirveEnabled
+                              ? 'Messirve ✅'
+                              : 'Me sirvió ✅',
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.thumb_up_alt_outlined, size: 18),
+                  label: const Text(
+                    _kSeasonalMessirveEnabled ? 'Messirve' : 'Me sirvió',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await notifier.logFeedbackNegativeStarted(item);
+                    if (!context.mounted) return;
+                    await _showReportFlow(context, ref, item);
+                  },
+                  icon: const Icon(Icons.report_problem_outlined, size: 18),
+                  label: const Text('Informar un problema'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showReportFlow(
+    BuildContext context,
+    WidgetRef ref,
+    PharmacyDutyItem item,
+  ) async {
+    final notifier = ref.read(pharmacyDutyProvider.notifier);
+    final result = await showModalBottomSheet<
+        ({String reasonCode, bool hasFreeText, bool hasAttachment})>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const _NegativeFeedbackSheet(),
+    );
+    if (result == null) return;
+    final (:reasonCode, :hasFreeText, :hasAttachment) = result;
+    await notifier.logFeedbackNegativeReasonSelected(
+      item: item,
+      reasonCode: reasonCode,
+      hasFreeText: hasFreeText,
+      hasAttachment: hasAttachment,
+    );
+    await notifier.logReportStarted(item: item, reasonCode: reasonCode);
+    await notifier.logReportSubmitted(
+      item: item,
+      reasonCode: reasonCode,
+      hasFreeText: hasFreeText,
+      hasAttachment: hasAttachment,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Gracias por reportar. Lo revisamos.')),
     );
   }
 
@@ -754,6 +810,101 @@ class _CircleActionButton extends StatelessWidget {
           ],
         ),
         child: Icon(icon, color: Colors.white, size: 20),
+      ),
+    );
+  }
+}
+
+class _NegativeFeedbackSheet extends StatefulWidget {
+  const _NegativeFeedbackSheet();
+
+  @override
+  State<_NegativeFeedbackSheet> createState() => _NegativeFeedbackSheetState();
+}
+
+class _NegativeFeedbackSheetState extends State<_NegativeFeedbackSheet> {
+  static const _reasons = <(String code, String label)>[
+    ('wrong_schedule', 'Horario incorrecto'),
+    ('closed_on_duty', 'Figuraba de turno pero estaba cerrada'),
+    ('not_found', 'No encontramos la farmacia'),
+    ('other', 'Otro'),
+  ];
+
+  String _selectedReason = 'wrong_schedule';
+  bool _hasFreeText = false;
+  bool _hasAttachment = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Informar un problema',
+            style:
+                AppTextStyles.headingSm.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          RadioGroup<String>(
+            groupValue: _selectedReason,
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedReason = value;
+              });
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final reason in _reasons)
+                  RadioListTile<String>(
+                    value: reason.$1,
+                    title: Text(reason.$2, style: AppTextStyles.bodySm),
+                  ),
+              ],
+            ),
+          ),
+          if (_selectedReason == 'other') ...[
+            CheckboxListTile(
+              value: _hasFreeText,
+              onChanged: (value) =>
+                  setState(() => _hasFreeText = value == true),
+              title: const Text('Voy a escribir texto breve'),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+            CheckboxListTile(
+              value: _hasAttachment,
+              onChanged: (value) =>
+                  setState(() => _hasAttachment = value == true),
+              title: const Text('Voy a adjuntar una foto'),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+          ],
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () {
+                Navigator.of(context).pop(
+                  (
+                    reasonCode: _selectedReason,
+                    hasFreeText: _selectedReason == 'other' && _hasFreeText,
+                    hasAttachment: _selectedReason == 'other' && _hasAttachment,
+                  ),
+                );
+              },
+              child: const Text('Enviar reporte'),
+            ),
+          ),
+        ],
       ),
     );
   }

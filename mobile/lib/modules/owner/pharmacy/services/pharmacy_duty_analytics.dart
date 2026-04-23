@@ -1,14 +1,6 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import '../../../../core/analytics/analytics_runtime.dart';
 
 abstract class PharmacyDutyFlowAnalytics {
-  static FirebaseAnalytics? get _analytics {
-    try {
-      return FirebaseAnalytics.instance;
-    } catch (_) {
-      return null;
-    }
-  }
-
   static Future<void> logConfirmationPromptSeen({
     required String zoneId,
     required String merchantRef,
@@ -130,10 +122,11 @@ abstract class PharmacyDutyFlowAnalytics {
     required String name,
     required Map<String, Object> parameters,
   }) async {
-    final analytics = _analytics;
-    if (analytics == null) return;
     try {
-      await analytics.logEvent(name: name, parameters: parameters);
+      await AnalyticsRuntime.service.track(
+        event: name,
+        parameters: parameters,
+      );
     } catch (_) {
       // Analytics nunca debe romper el flujo operativo.
     }

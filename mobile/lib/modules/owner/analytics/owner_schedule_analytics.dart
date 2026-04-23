@@ -1,14 +1,6 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+import '../../../core/analytics/analytics_runtime.dart';
 
 abstract class OwnerScheduleAnalytics {
-  static FirebaseAnalytics? get _analytics {
-    try {
-      return FirebaseAnalytics.instance;
-    } catch (_) {
-      return null;
-    }
-  }
-
   static Future<void> logScreenView() => _safeLog('owner_schedule_screen_view');
 
   static Future<void> logModeSelected({
@@ -67,10 +59,11 @@ abstract class OwnerScheduleAnalytics {
     String name, {
     Map<String, Object>? parameters,
   }) async {
-    final analytics = _analytics;
-    if (analytics == null) return;
     try {
-      await analytics.logEvent(name: name, parameters: parameters);
+      await AnalyticsRuntime.service.track(
+        event: name,
+        parameters: parameters ?? const <String, Object?>{},
+      );
     } catch (_) {
       // Analytics nunca debe romper el flujo.
     }

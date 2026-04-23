@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../analytics/search_analytics.dart';
 import '../models/merchant_search_item.dart';
 import '../models/search_filters.dart';
@@ -119,7 +120,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
     Duration debounceDuration = const Duration(milliseconds: 250),
   })  : _repository = repository ?? MerchantSearchRepository(),
         _zoneRepository = zoneRepository ?? ZoneSearchRepository(),
-        _analytics = analytics ?? FirebaseSearchAnalytics(),
+        _analytics = analytics ?? NoopSearchAnalytics(),
         _userPositionResolver = userPositionResolver ?? _resolveUserPosition,
         _debounceDuration = debounceDuration,
         super(SearchState.initial());
@@ -154,6 +155,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       await _bestEffortLoadPosition();
       if (activeZoneId.isNotEmpty) {
         await _loadZoneCorpus(zoneId: activeZoneId, forceRefresh: false);
+        unawaited(_setActiveZonePropertyBestEffort(activeZoneId));
       } else {
         _applyDerivedState(
           state.copyWith(
@@ -175,7 +177,6 @@ class SearchNotifier extends StateNotifier<SearchState> {
     if (nextZoneId.isEmpty) return;
     if (nextZoneId == state.activeZoneId && state.corpus.isNotEmpty) return;
 
-    final previousZoneId = state.activeZoneId;
     if (state.zones.isEmpty) {
       await _refreshZonesBestEffort();
     }
@@ -186,13 +187,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       clearSelectedMerchant: true,
     );
     await _loadZoneCorpus(zoneId: nextZoneId, forceRefresh: false);
-
-    if (previousZoneId.isNotEmpty && previousZoneId != nextZoneId) {
-      unawaited(_analytics.logZoneChanged(
-        fromZoneId: previousZoneId,
-        toZoneId: nextZoneId,
-      ));
-    }
+    unawaited(_setActiveZonePropertyBestEffort(nextZoneId));
   }
 
   Future<void> loadCorpus() async {
@@ -221,11 +216,15 @@ class SearchNotifier extends StateNotifier<SearchState> {
     _applySearch();
 
     await _ref.read(searchHistoryProvider.notifier).add(query);
-    unawaited(_analytics.logQuerySubmitted(
+    unawaited(_analytics.logSearchPerformed(
+      surface: state.showMap ? 'search_map' : 'search_results',
+      activeZoneId: state.activeZoneId,
       queryLength: _normalize(query).length,
-      zoneId: state.activeZoneId,
-      hasFilters: _hasAnyFilter(state.filters),
       resultsCount: state.results.length,
+      usedCategoryFilter: (state.filters.categoryId ?? '').isNotEmpty,
+      usedOpenNowFilter: state.filters.isOpenNow,
+      usedDistanceSort: state.filters.sortBy == SearchSortBy.distance,
+      resolvedLocally: state.results.isNotEmpty,
     ));
   }
 
@@ -234,23 +233,28 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 
   void setFilters(SearchFilters filters) {
+    final previousCategoryId = state.filters.categoryId;
     state = state.copyWith(filters: filters, clearError: true);
     _applySearch();
-    unawaited(_analytics.logFilterApplied(
-      isOpenNow: filters.isOpenNow,
-      hasCategory: (filters.categoryId ?? '').isNotEmpty,
-      hasMinVerification: (filters.minVerificationStatus ?? '').isNotEmpty,
-      sortBy: filters.sortBy.name,
-    ));
+    final categoryId = (filters.categoryId ?? '').trim();
+    if (categoryId.isNotEmpty &&
+        categoryId != (previousCategoryId ?? '').trim()) {
+      unawaited(
+        _analytics.logCategoryFiltered(
+          surface: state.showMap ? 'search_map' : 'search_results',
+          categoryId: categoryId,
+          activeZoneId: state.activeZoneId,
+          resultCount: state.results.length,
+          usedOpenNowFilter: filters.isOpenNow,
+          usedDistanceSort: filters.sortBy == SearchSortBy.distance,
+        ),
+      );
+    }
   }
 
   void setShowMap(bool value) {
     if (state.showMap == value) return;
     state = state.copyWith(showMap: value);
-    unawaited(_analytics.logMapToggled(
-      mapEnabled: value,
-      resultsCount: state.results.length,
-    ));
   }
 
   void toggleMap() {
@@ -269,14 +273,50 @@ class SearchNotifier extends StateNotifier<SearchState> {
     required String merchantId,
     required bool fromMap,
   }) {
-    final index =
-        state.results.indexWhere((item) => item.merchantId == merchantId);
-    final rank = index < 0 ? -1 : index + 1;
-    unawaited(_analytics.logResultOpened(
-      merchantId: merchantId,
-      fromMap: fromMap,
-      rank: rank,
-    ));
+    if (!fromMap) return;
+    final item = state.results
+        .where((candidate) => candidate.merchantId == merchantId)
+        .cast<MerchantSearchItem?>()
+        .firstWhere((candidate) => candidate != null, orElse: () => null);
+    if (item == null) return;
+    unawaited(
+      _analytics.logMapPinSelected(
+        surface: 'search_map',
+        activeZoneId: state.activeZoneId,
+        entityZoneId: item.zoneId,
+        distanceBucket: _ref
+            .read(analyticsServiceProvider)
+            .distanceBucket(item.distanceMeters),
+      ),
+    );
+  }
+
+  void logMapViewed() {
+    unawaited(
+      _analytics.logMapViewed(
+        surface: 'search_map',
+        activeZoneId: state.activeZoneId,
+        resultCount: state.results.length,
+      ),
+    );
+  }
+
+  void logMapRecenterTapped() {
+    unawaited(
+      _analytics.logMapRecenterTapped(
+        surface: 'search_map',
+        activeZoneId: state.activeZoneId,
+      ),
+    );
+  }
+
+  void logMapSearchThisAreaTapped() {
+    unawaited(
+      _analytics.logMapSearchThisAreaTapped(
+        surface: 'search_map',
+        activeZoneId: state.activeZoneId,
+      ),
+    );
   }
 
   Future<void> _refreshZonesBestEffort() async {
@@ -363,7 +403,6 @@ class SearchNotifier extends StateNotifier<SearchState> {
       selectedMerchantId: selected,
       clearSelectedMerchant: selected == null,
     );
-    _trackEmptyState();
   }
 
   List<MerchantSearchItem> _filterAndRankResults({
@@ -504,40 +543,17 @@ class SearchNotifier extends StateNotifier<SearchState> {
     }).toList(growable: false);
   }
 
-  void _trackEmptyState() {
-    if (state.isLoading || state.error != null || state.results.isNotEmpty) {
-      return;
-    }
-    final reason = _emptyReason();
-    final signature =
-        '${state.activeZoneId}|${state.query.trim().isNotEmpty}|$reason';
-    if (signature == state.lastEmptyStateSignature) return;
-
-    state = state.copyWith(lastEmptyStateSignature: signature);
-    unawaited(_analytics.logEmptyStateSeen(
-      reason: reason,
-      zoneId: state.activeZoneId,
-      hasQuery: state.query.trim().isNotEmpty,
-    ));
-  }
-
-  String _emptyReason() {
-    if (state.corpus.isEmpty) return 'zone_without_data';
-    if (state.filters.isOpenNow) return 'open_now_filter';
-    if (state.query.trim().isEmpty) return 'cold_start';
-    return 'no_results';
-  }
-
-  bool _hasAnyFilter(SearchFilters filters) {
-    return filters.isOpenNow ||
-        (filters.categoryId ?? '').isNotEmpty ||
-        (filters.minVerificationStatus ?? '').isNotEmpty ||
-        filters.sortBy != SearchSortBy.distance;
-  }
-
   bool _isVisibleStatus(String visibilityStatus) {
     return visibilityStatus == 'visible' ||
         visibilityStatus == 'review_pending';
+  }
+
+  Future<void> _setActiveZonePropertyBestEffort(String zoneId) async {
+    try {
+      await _ref.read(analyticsServiceProvider).setActiveZoneId(zoneId);
+    } catch (_) {
+      // En tests/sandbox sin Firebase inicializado no bloqueamos búsqueda.
+    }
   }
 
   List<MerchantSearchItem> _fallbackCorpus(String zoneId) {
@@ -661,7 +677,7 @@ final zoneSearchRepositoryProvider = Provider<ZoneSearchDataSource>(
 );
 
 final searchAnalyticsProvider = Provider<SearchAnalyticsSink>(
-  (ref) => FirebaseSearchAnalytics(),
+  (ref) => AnalyticsServiceSearchAnalytics(ref.watch(analyticsServiceProvider)),
 );
 
 final searchNotifierProvider =

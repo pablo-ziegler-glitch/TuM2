@@ -619,7 +619,7 @@ class _PharmacyCard extends ConsumerWidget {
                     );
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
+                      const SnackBar(
                         content: Text(
                           _kSeasonalMessirveEnabled
                               ? 'Messirve ✅'
@@ -629,7 +629,7 @@ class _PharmacyCard extends ConsumerWidget {
                     );
                   },
                   icon: const Icon(Icons.thumb_up_alt_outlined, size: 18),
-                  label: Text(
+                  label: const Text(
                     _kSeasonalMessirveEnabled ? 'Messirve' : 'Me sirvió',
                   ),
                 ),
@@ -853,18 +853,25 @@ class _NegativeFeedbackSheetState extends State<_NegativeFeedbackSheet> {
                 AppTextStyles.headingSm.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          for (final reason in _reasons)
-            RadioListTile<String>(
-              value: reason.$1,
-              groupValue: _selectedReason,
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() {
-                  _selectedReason = value;
-                });
-              },
-              title: Text(reason.$2, style: AppTextStyles.bodySm),
+          RadioGroup<String>(
+            groupValue: _selectedReason,
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _selectedReason = value;
+              });
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final reason in _reasons)
+                  RadioListTile<String>(
+                    value: reason.$1,
+                    title: Text(reason.$2, style: AppTextStyles.bodySm),
+                  ),
+              ],
             ),
+          ),
           if (_selectedReason == 'other') ...[
             CheckboxListTile(
               value: _hasFreeText,

@@ -24,33 +24,10 @@ class OwnerRepository {
     String ownerUserId, {
     String? preferredMerchantId,
   }) async {
-    final normalizedPreferredId = preferredMerchantId?.trim();
-    if (normalizedPreferredId != null && normalizedPreferredId.isNotEmpty) {
-      final preferredDoc = await _firestore
-          .collection('merchants')
-          .doc(normalizedPreferredId)
-          .get();
-      if (preferredDoc.exists) {
-        final preferredData = preferredDoc.data() ?? const <String, dynamic>{};
-        final preferredOwnerUserId =
-            (preferredData['ownerUserId'] as String?)?.trim();
-        if (preferredOwnerUserId == ownerUserId) {
-          final merchant = OwnerMerchantSummary.fromFirestore(
-            preferredDoc.id,
-            preferredData,
-          );
-          return OwnerMerchantResolution(
-            primaryMerchant: merchant,
-            allMerchants: [merchant],
-          );
-        }
-      }
-    }
-
     final snapshot = await _firestore
         .collection('merchants')
         .where('ownerUserId', isEqualTo: ownerUserId)
-        .limit(3)
+        .limit(10)
         .get();
 
     final merchants = snapshot.docs
@@ -70,8 +47,20 @@ class OwnerRepository {
       );
     }
 
+    final normalizedPreferredId = preferredMerchantId?.trim();
+    OwnerMerchantSummary? preferred;
+    if (normalizedPreferredId != null && normalizedPreferredId.isNotEmpty) {
+      for (final merchant in merchants) {
+        if (merchant.id == normalizedPreferredId) {
+          preferred = merchant;
+          break;
+        }
+      }
+    }
+    final primary = preferred ?? merchants.first;
+
     return OwnerMerchantResolution(
-      primaryMerchant: merchants.first,
+      primaryMerchant: primary,
       allMerchants: merchants,
     );
   }

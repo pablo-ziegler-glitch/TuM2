@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { applyUserAccessClaims } from "../lib/accessClaims";
 
 const db = () => getFirestore();
 
@@ -48,38 +49,35 @@ export const assignOwnerRole = onCall<void, Promise<AssignOwnerRoleResponse>>(
       );
     }
 
-    const currentClaims = userRecord.customClaims ?? {};
-    const claimMerchantId =
-      typeof currentClaims["merchantId"] === "string" &&
-      currentClaims["merchantId"].trim().length > 0
-        ? currentClaims["merchantId"].trim()
-        : null;
-    const claimMerchantIds = Array.isArray(currentClaims["merchantIds"])
-      ? currentClaims["merchantIds"]
-          .filter((value): value is string => typeof value === "string")
-          .map((value) => value.trim())
-          .filter((value) => value.length > 0)
-      : [];
-    const normalizedMerchantIds = claimMerchantId == null
-      ? [...new Set(claimMerchantIds)]
-      : [...new Set([claimMerchantId, ...claimMerchantIds])];
-
-    // Preservar claims existentes y elevar el rol
-    const updatedClaims = {
-      ...currentClaims,
-      role: "owner",
-      merchantIds: normalizedMerchantIds,
-    };
+    const userRef = db().doc(`users/${uid}`);
+    const userSnap = await userRef.get();
+    const userData = (userSnap.data() ?? {}) as Record<string, unknown>;
+    const currentAccessVersionRaw = userData["accessVersion"];
+    const currentAccessVersion =
+      typeof currentAccessVersionRaw === "number" && Number.isFinite(currentAccessVersionRaw)
+        ? Math.max(0, Math.trunc(currentAccessVersionRaw))
+        : 0;
+    const nextAccessVersion = currentAccessVersion + 1;
 
     await Promise.all([
-      // Actualizar custom claim via Admin SDK
-      adminAuth.setCustomUserClaims(uid, updatedClaims),
-
-      // Actualizar campo role en Firestore
-      db().doc(`users/${uid}`).update({
+      // Actualizar custom claims canónicas vía Admin SDK.
+      applyUserAccessClaims({
+        uid,
         role: "owner",
-        updatedAt: FieldValue.serverTimestamp(),
+        ownerPending: false,
+        accessVersion: nextAccessVersion,
+        reason: "assign_owner_role_callable",
+        actorType: "user",
+        actorUid: uid,
       }),
+
+      // Actualizar campos de acceso en Firestore.
+      userRef.set({
+        role: "owner",
+        ownerPending: false,
+        accessVersion: nextAccessVersion,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true }),
     ]);
 
     console.log(`[assignOwnerRole] Usuario ${uid} elevado a rol 'owner'`);

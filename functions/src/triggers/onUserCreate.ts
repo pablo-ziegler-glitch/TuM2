@@ -1,6 +1,6 @@
 import { auth } from "firebase-functions/v1";
-import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { applyUserAccessClaims } from "../lib/accessClaims";
 
 const db = () => getFirestore();
 
@@ -17,8 +17,6 @@ const db = () => getFirestore();
  * Las Firestore Rules deniegan explícitamente ese campo en escrituras de cliente.
  */
 export const onUserCreate = auth.user().onCreate(async (user) => {
-  const adminAuth = getAuth();
-
   // Detectar proveedor de autenticación (Google vs. magic link)
   const providerId = user.providerData[0]?.providerId ?? "";
   const provider = providerId === "google.com" ? "google" : "email_link";
@@ -32,6 +30,8 @@ export const onUserCreate = auth.user().onCreate(async (user) => {
         .set({
           uid: user.uid,
           role: "customer",
+          ownerPending: false,
+          accessVersion: 0,
           displayName: user.displayName ?? null,
           email: user.email ?? null,
           provider,
@@ -45,8 +45,15 @@ export const onUserCreate = auth.user().onCreate(async (user) => {
           },
         }),
 
-      // 2. Asignar custom claim rol=customer
-      adminAuth.setCustomUserClaims(user.uid, { role: "customer" }),
+      // 2. Asignar custom claims canónicas vía Admin SDK.
+      applyUserAccessClaims({
+        uid: user.uid,
+        role: "customer",
+        ownerPending: false,
+        accessVersion: 0,
+        reason: "user_created",
+        actorType: "system",
+      }),
     ]);
 
     console.log(

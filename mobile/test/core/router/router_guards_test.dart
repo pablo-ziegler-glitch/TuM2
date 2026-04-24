@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tum2/core/auth/auth_state.dart';
+import 'package:tum2/core/auth/owner_access_summary.dart';
 import 'package:tum2/core/router/app_routes.dart';
 import 'package:tum2/core/router/router_guards.dart';
 
@@ -304,6 +305,32 @@ void main() {
       expect(result, equals(AppRoutes.ownerDashboard));
     });
 
+    test(
+        'owner con pending concurrente y comercio aprobado desde /login va a /owner/resolve',
+        () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(
+          user: fakeUser,
+          role: 'owner',
+          ownerPending: true,
+          merchantId: 'merchant-1',
+          ownerAccessSummary: const OwnerAccessSummary(
+            summaryVersion: 1,
+            defaultMerchantId: 'merchant-1',
+            approvedMerchantIdsCount: 1,
+            pendingClaimMerchantIdsCount: 1,
+            hasConcurrentPendingClaims: false,
+            primaryContextMode: OwnerPrimaryContextMode.ownerWithPending,
+            restrictionState: OwnerRestrictionState.none,
+            restrictionReasonCode: null,
+            blockedUntil: null,
+          ),
+        ),
+        location: AppRoutes.login,
+      );
+      expect(result, equals(AppRoutes.ownerResolve));
+    });
+
     test('owner desde splash va a /owner/resolve', () {
       final result = RouterGuards.evaluate(
         authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
@@ -463,6 +490,57 @@ void main() {
           user: fakeUser,
           role: 'owner',
           ownerPending: true,
+        ),
+        location: '/owner/products',
+      );
+      expect(result, equals(AppRoutes.ownerDashboard));
+    });
+
+    test(
+        'owner con claim pending concurrente puede entrar a /owner/products si ya tiene comercio aprobado',
+        () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(
+          user: fakeUser,
+          role: 'owner',
+          ownerPending: true,
+          merchantId: 'merchant-1',
+          ownerAccessSummary: const OwnerAccessSummary(
+            summaryVersion: 1,
+            defaultMerchantId: 'merchant-1',
+            approvedMerchantIdsCount: 1,
+            pendingClaimMerchantIdsCount: 2,
+            hasConcurrentPendingClaims: true,
+            primaryContextMode: OwnerPrimaryContextMode.ownerWithPending,
+            restrictionState: OwnerRestrictionState.none,
+            restrictionReasonCode: null,
+            blockedUntil: null,
+          ),
+        ),
+        location: '/owner/products',
+      );
+      expect(result, isNull);
+    });
+
+    test(
+        'owner restringido redirige a dashboard aunque deep link apunte a subruta owner',
+        () {
+      final result = RouterGuards.evaluate(
+        authState: AuthAuthenticated(
+          user: fakeUser,
+          role: 'owner',
+          merchantId: 'merchant-1',
+          ownerAccessSummary: const OwnerAccessSummary(
+            summaryVersion: 1,
+            defaultMerchantId: 'merchant-1',
+            approvedMerchantIdsCount: 1,
+            pendingClaimMerchantIdsCount: 0,
+            hasConcurrentPendingClaims: false,
+            primaryContextMode: OwnerPrimaryContextMode.restricted,
+            restrictionState: OwnerRestrictionState.blocked,
+            restrictionReasonCode: 'fraud_confirmed',
+            blockedUntil: null,
+          ),
         ),
         location: '/owner/products',
       );

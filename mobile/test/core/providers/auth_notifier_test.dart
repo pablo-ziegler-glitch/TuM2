@@ -238,7 +238,7 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('pending_email_link'), isNull);
       expect(prefs.getString('onboarding_owner_draft'), isNull);
-      expect(prefs.getBool('onboarding_seen'), isTrue);
+      expect(prefs.getBool('onboarding_seen'), isNull);
 
       expect(container.read(displayNameSkippedProvider), isFalse);
       expect(container.read(pendingMagicLinkProvider), isNull);

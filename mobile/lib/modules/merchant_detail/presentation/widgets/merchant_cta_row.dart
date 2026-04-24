@@ -8,6 +8,7 @@ class MerchantCtaRow extends StatelessWidget {
     super.key,
     required this.hasPhone,
     required this.onCallTap,
+    required this.onWhatsAppTap,
     required this.onDirectionsTap,
     required this.onShareTap,
     required this.isDutyVariant,
@@ -15,6 +16,7 @@ class MerchantCtaRow extends StatelessWidget {
 
   final bool hasPhone;
   final Future<void> Function() onCallTap;
+  final Future<void> Function() onWhatsAppTap;
   final Future<void> Function() onDirectionsTap;
   final Future<void> Function() onShareTap;
   final bool isDutyVariant;
@@ -63,6 +65,16 @@ class MerchantCtaRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
+        IconButton.filledTonal(
+          key: const Key('merchant_cta_whatsapp'),
+          onPressed: hasPhone ? () => onWhatsAppTap() : null,
+          icon: const Icon(Icons.chat_outlined),
+          style: IconButton.styleFrom(
+            backgroundColor: AppColors.merchantSurfaceHighest,
+            foregroundColor: AppColors.neutral700,
+          ),
+        ),
+        const SizedBox(width: 6),
         IconButton.filledTonal(
           key: const Key('merchant_cta_share'),
           onPressed: () => onShareTap(),

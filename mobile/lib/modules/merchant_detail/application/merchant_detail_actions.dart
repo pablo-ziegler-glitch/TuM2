@@ -7,6 +7,8 @@ import '../domain/merchant_maps.dart';
 abstract interface class MerchantDetailActions {
   Future<bool> openCall(String phone);
 
+  Future<bool> openWhatsApp(String phone);
+
   Future<bool> openDirections({
     required String address,
     double? lat,
@@ -32,6 +34,17 @@ class DefaultMerchantDetailActions implements MerchantDetailActions {
     final cleaned = _normalizePhone(phone);
     if (cleaned.isEmpty) return false;
     final uri = Uri.parse('tel:$cleaned');
+    if (!await canLaunchUrl(uri)) return false;
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Future<bool> openWhatsApp(String phone) async {
+    final cleaned = _normalizePhone(phone);
+    if (cleaned.isEmpty) return false;
+    final digitsOnly = cleaned.replaceAll('+', '');
+    if (digitsOnly.isEmpty) return false;
+    final uri = Uri.parse('https://wa.me/$digitsOnly');
     if (!await canLaunchUrl(uri)) return false;
     return launchUrl(uri, mode: LaunchMode.externalApplication);
   }

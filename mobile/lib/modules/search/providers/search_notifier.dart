@@ -187,7 +187,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
       clearError: true,
       clearSelectedMerchant: true,
     );
-    unawaited(_logZoneResolved(zoneId: nextZoneId, source: 'search_zone_switch'));
+    unawaited(
+        _logZoneResolved(zoneId: nextZoneId, source: 'search_zone_switch'));
     await _loadZoneCorpus(zoneId: nextZoneId, forceRefresh: false);
     unawaited(_setActiveZonePropertyBestEffort(nextZoneId));
   }
@@ -361,14 +362,14 @@ class SearchNotifier extends StateNotifier<SearchState> {
     if (zoneId.trim().isEmpty) return Future<void>.value();
     try {
       return _ref.read(analyticsServiceProvider).track(
-        event: 'zone_resolved',
-        parameters: {
-          'surface': 'search',
-          'zoneId': zoneId,
-          'source': source,
-        },
-        dedupeWindow: const Duration(seconds: 10),
-      );
+            event: 'zone_resolved',
+            parameters: {
+              'surface': 'search',
+              'zoneId': zoneId,
+              'source': source,
+            },
+            dedupeWindow: const Duration(seconds: 10),
+          );
     } catch (_) {
       return Future<void>.value();
     }

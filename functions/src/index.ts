@@ -101,15 +101,5 @@ export { runZoneBootstrapBatch } from "./jobs/bootstrap";
 export { adminRebuildMerchantPublic } from "./admin/rebuildPublic";
 export { backfillSearchKeywords } from "./admin/backfillKeywords";
 export { adminSanitizeMerchantClaimsSensitive } from "./admin/sanitizeMerchantClaims";
-export { getUsageDashboard } from "./admin/getUsageDashboard";
-export { evaluateUsageLimits } from "./scheduled/evaluateUsageLimits";
 
-// ─── Free Tier Guardian protected core callables ──────────────────────────
-export {
-  searchMerchants,
-  getMerchant,
-  getPharmacyShifts,
-  submitReport,
-  claimMerchant,
-} from "./callables/freeTierGuardedCore";
 export { submitOutdatedInfoReport } from "./callables/outdatedInfoReports";

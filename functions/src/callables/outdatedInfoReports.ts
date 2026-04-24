@@ -1,9 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { FieldValue, Timestamp, Transaction, getFirestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { CallableRequest, HttpsError, onCall } from "firebase-functions/v2/https";
 import { formatDateInArgentina, isPharmacyCategory, isValidDateKey } from "../lib/pharmacyDuties";
-import { withUsageGuard } from "../middleware/usageGuard";
-import { trackUsage } from "../utils/usageTracker";
 
 const db = () => getFirestore();
 const RATE_LIMIT_COLLECTION = "outdated_info_report_rate_limits";
@@ -132,8 +130,9 @@ async function assertOutdatedInfoRateLimit(params: {
 
 export const submitOutdatedInfoReport = onCall(
   { enforceAppCheck: true, maxInstances: 20 },
-  withUsageGuard(
-    async (request): Promise<SubmitOutdatedInfoReportResponse> => {
+  async (
+    request: CallableRequest<SubmitOutdatedInfoReportRequest>
+  ): Promise<SubmitOutdatedInfoReportResponse> => {
       const payload = request.data as SubmitOutdatedInfoReportRequest;
       const merchantId = normalizeString(payload.merchantId);
       const zoneId = normalizeString(payload.zoneId);
@@ -195,8 +194,6 @@ export const submitOutdatedInfoReport = onCall(
       let reportId: string | null = null;
       let created = false;
       let deduped = false;
-      const usage = { reads: 3, writes: 1 };
-
       await db().runTransaction(async (tx) => {
         await assertOutdatedInfoRateLimit({
           tx,
@@ -227,8 +224,6 @@ export const submitOutdatedInfoReport = onCall(
 
         reportId = reportRef.id;
         created = true;
-        usage.writes += 2;
-
         tx.set(reportRef, {
           reportId: reportRef.id,
           targetType: "merchant",
@@ -267,13 +262,10 @@ export const submitOutdatedInfoReport = onCall(
           { merge: true }
         );
       });
-
-      await trackUsage(usage);
       return {
         reportId,
         created,
         deduped,
       };
     }
-  )
 );

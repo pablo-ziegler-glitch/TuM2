@@ -748,9 +748,7 @@ class _ClaimStatusScreenState extends ConsumerState<ClaimStatusScreen> {
     _lastAccessRefreshAt = now;
 
     try {
-      await ref.read(authNotifierProvider).refreshSession(
-            reason: AuthSessionRefreshReason.claimStatus,
-          );
+      await ref.read(authNotifierProvider).refreshSession();
     } catch (_) {
       // Si falla refresh de token, igualmente intentamos refrescar estado de claim.
     }

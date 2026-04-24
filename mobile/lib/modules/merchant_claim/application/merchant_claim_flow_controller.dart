@@ -160,7 +160,29 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
       parameters: {
         'surface': 'claim_flow',
         'entry_point': 'profile',
-        'active_zone_id': state.selectedZoneId ?? 'unknown',
+        'zoneId': state.selectedZoneId ?? 'unknown',
+      },
+    );
+  }
+
+  Future<void> trackStepCompleted(String stepId) {
+    return _track(
+      event: 'claim_step_completed',
+      parameters: {
+        'surface': 'claim_flow',
+        'step_id': stepId,
+        'zoneId': state.selectedZoneId ?? 'unknown',
+      },
+    );
+  }
+
+  Future<void> trackAbandoned({required String stepId}) {
+    return _track(
+      event: 'claim_abandoned',
+      parameters: {
+        'surface': 'claim_flow',
+        'step_id': stepId,
+        'zoneId': state.selectedZoneId ?? 'unknown',
       },
     );
   }
@@ -263,20 +285,6 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
         isBusy: false,
         evidenceFiles: nextEvidence,
       );
-      unawaited(
-        _track(
-          event: 'claim_evidence_uploaded',
-          parameters: {
-            'surface': 'claim_flow',
-            'active_zone_id': state.selectedZoneId ?? 'unknown',
-            'entity_zone_id': state.selectedMerchant?.zoneId ?? 'unknown',
-            'entity_type': 'merchant',
-            'evidence_count_bucket': ref
-                .read(analyticsServiceProvider)
-                .evidenceCountBucket(nextEvidence.length),
-          },
-        ),
-      );
     } on MerchantClaimRepositoryException catch (error) {
       state = state.copyWith(
         isBusy: false,
@@ -374,9 +382,9 @@ class MerchantClaimFlowController extends Notifier<MerchantClaimFlowState> {
           event: 'claim_submitted',
           parameters: {
             'surface': 'claim_flow',
-            'active_zone_id': state.selectedZoneId ?? 'unknown',
-            'entity_zone_id': state.selectedMerchant?.zoneId ?? 'unknown',
-            'entity_type': 'merchant',
+            'zoneId': state.selectedZoneId ?? 'unknown',
+            'merchantId': state.selectedMerchant?.merchantId ?? 'unknown',
+            'categoryId': state.selectedMerchant?.categoryId ?? 'unknown',
             'reason_code': summary.claimStatus.apiValue,
           },
         ),

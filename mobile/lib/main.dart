@@ -43,6 +43,7 @@ class TuM2App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
     ref.watch(deepLinkListenerProvider);
+    ref.watch(analyticsSessionBootstrapProvider);
     ref.watch(syncAnalyticsUserPropertiesProvider);
     ref.watch(webAnalyticsConsentBootstrapProvider);
 

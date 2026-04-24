@@ -151,6 +151,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
         zones: zones,
         activeZoneId: activeZoneId,
       );
+      unawaited(_logZoneResolved(zoneId: activeZoneId, source: 'search_init'));
 
       await _bestEffortLoadPosition();
       if (activeZoneId.isNotEmpty) {
@@ -186,6 +187,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       clearError: true,
       clearSelectedMerchant: true,
     );
+    unawaited(_logZoneResolved(zoneId: nextZoneId, source: 'search_zone_switch'));
     await _loadZoneCorpus(zoneId: nextZoneId, forceRefresh: false);
     unawaited(_setActiveZonePropertyBestEffort(nextZoneId));
   }
@@ -216,15 +218,18 @@ class SearchNotifier extends StateNotifier<SearchState> {
     _applySearch();
 
     await _ref.read(searchHistoryProvider.notifier).add(query);
-    unawaited(_analytics.logSearchPerformed(
+    unawaited(_analytics.logSearchExecuted(
       surface: state.showMap ? 'search_map' : 'search_results',
-      activeZoneId: state.activeZoneId,
+      zoneId: state.activeZoneId,
       queryLength: _normalize(query).length,
       resultsCount: state.results.length,
-      usedCategoryFilter: (state.filters.categoryId ?? '').isNotEmpty,
-      usedOpenNowFilter: state.filters.isOpenNow,
-      usedDistanceSort: state.filters.sortBy == SearchSortBy.distance,
-      resolvedLocally: state.results.isNotEmpty,
+    ));
+    unawaited(_analytics.logSearchResultsViewed(
+      surface: state.showMap ? 'search_map' : 'search_results',
+      zoneId: state.activeZoneId,
+      resultsCount: state.results.length,
+      isOpenNowShown: state.results.any((item) => item.isOpenNow == true),
+      isOnDutyShown: state.results.any((item) => item.isOnDutyToday == true),
     ));
   }
 
@@ -233,6 +238,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 
   void setFilters(SearchFilters filters) {
+    final previousFilters = state.filters;
     final previousCategoryId = state.filters.categoryId;
     state = state.copyWith(filters: filters, clearError: true);
     _applySearch();
@@ -240,13 +246,22 @@ class SearchNotifier extends StateNotifier<SearchState> {
     if (categoryId.isNotEmpty &&
         categoryId != (previousCategoryId ?? '').trim()) {
       unawaited(
-        _analytics.logCategoryFiltered(
+        _analytics.logSearchFilterApplied(
           surface: state.showMap ? 'search_map' : 'search_results',
+          zoneId: state.activeZoneId,
           categoryId: categoryId,
-          activeZoneId: state.activeZoneId,
           resultCount: state.results.length,
-          usedOpenNowFilter: filters.isOpenNow,
-          usedDistanceSort: filters.sortBy == SearchSortBy.distance,
+        ),
+      );
+    }
+    if (filters.isOpenNow != previousFilters.isOpenNow ||
+        filters.sortBy != previousFilters.sortBy) {
+      unawaited(
+        _analytics.logSearchFilterApplied(
+          surface: state.showMap ? 'search_map' : 'search_results',
+          zoneId: state.activeZoneId,
+          categoryId: categoryId,
+          resultCount: state.results.length,
         ),
       );
     }
@@ -273,29 +288,49 @@ class SearchNotifier extends StateNotifier<SearchState> {
     required String merchantId,
     required bool fromMap,
   }) {
-    if (!fromMap) return;
     final item = state.results
         .where((candidate) => candidate.merchantId == merchantId)
         .cast<MerchantSearchItem?>()
         .firstWhere((candidate) => candidate != null, orElse: () => null);
     if (item == null) return;
     unawaited(
-      _analytics.logMapPinSelected(
-        surface: 'search_map',
-        activeZoneId: state.activeZoneId,
-        entityZoneId: item.zoneId,
+      _analytics.logMerchantDetailOpened(
+        surface: fromMap ? 'search_map' : 'search_results',
+        zoneId: state.activeZoneId,
+        merchantId: item.merchantId,
+        categoryId: item.categoryId,
         distanceBucket: _ref
             .read(analyticsServiceProvider)
             .distanceBucket(item.distanceMeters),
+        source: fromMap ? 'search_map' : 'search_results',
       ),
     );
+  }
+
+  void logVisibleImpressions({
+    required List<MerchantSearchItem> visibleItems,
+    required String surface,
+  }) {
+    final zoneId = state.activeZoneId;
+    for (final item in visibleItems.take(8)) {
+      unawaited(
+        _analytics.logMerchantCardImpression(
+          surface: surface,
+          zoneId: zoneId,
+          merchantId: item.merchantId,
+          categoryId: item.categoryId,
+          isOpenNowShown: item.isOpenNow == true,
+          isOnDutyShown: item.isOnDutyToday == true,
+          source: surface,
+        ),
+      );
+    }
   }
 
   void logMapViewed() {
     unawaited(
       _analytics.logMapViewed(
-        surface: 'search_map',
-        activeZoneId: state.activeZoneId,
+        zoneId: state.activeZoneId,
         resultCount: state.results.length,
       ),
     );
@@ -305,7 +340,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
     unawaited(
       _analytics.logMapRecenterTapped(
         surface: 'search_map',
-        activeZoneId: state.activeZoneId,
+        zoneId: state.activeZoneId,
       ),
     );
   }
@@ -314,9 +349,29 @@ class SearchNotifier extends StateNotifier<SearchState> {
     unawaited(
       _analytics.logMapSearchThisAreaTapped(
         surface: 'search_map',
-        activeZoneId: state.activeZoneId,
+        zoneId: state.activeZoneId,
       ),
     );
+  }
+
+  Future<void> _logZoneResolved({
+    required String zoneId,
+    required String source,
+  }) {
+    if (zoneId.trim().isEmpty) return Future<void>.value();
+    try {
+      return _ref.read(analyticsServiceProvider).track(
+        event: 'zone_resolved',
+        parameters: {
+          'surface': 'search',
+          'zoneId': zoneId,
+          'source': source,
+        },
+        dedupeWindow: const Duration(seconds: 10),
+      );
+    } catch (_) {
+      return Future<void>.value();
+    }
   }
 
   Future<void> _refreshZonesBestEffort() async {

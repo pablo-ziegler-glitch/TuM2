@@ -46,13 +46,24 @@ final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   return AnalyticsRuntime.service;
 });
 
+final analyticsSessionBootstrapProvider = FutureProvider<void>((ref) async {
+  final analytics = ref.read(analyticsServiceProvider);
+  await analytics.track(
+    event: 'session_started',
+    parameters: {
+      'platform': analytics.platform,
+      'role': 'unknown',
+      'surface': 'app_bootstrap',
+    },
+    dedupe: false,
+  );
+});
+
 final syncAnalyticsUserPropertiesProvider = FutureProvider<void>((ref) async {
   final claims = await ref.watch(authClaimsProvider.future);
-  if (claims == null) return;
-
-  final role = (claims.role ?? 'customer').trim().toLowerCase();
+  final role = (claims?.role ?? 'customer').trim().toLowerCase();
   const activeZoneId = 'unknown';
-  final verifiedOwner = role == 'owner' && claims.merchantId != null;
+  final verifiedOwner = role == 'owner' && claims?.merchantId != null;
 
   await ref.read(analyticsServiceProvider).setUserContext(
         role: role,

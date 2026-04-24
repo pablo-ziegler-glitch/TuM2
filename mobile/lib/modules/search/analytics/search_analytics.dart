@@ -1,47 +1,60 @@
 import '../../../core/analytics/analytics_service.dart';
 
 abstract interface class SearchAnalyticsSink {
-  Future<void> logSearchPerformed({
+  Future<void> logSearchExecuted({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
     required int queryLength,
     required int resultsCount,
-    required bool usedCategoryFilter,
-    required bool usedOpenNowFilter,
-    required bool usedDistanceSort,
-    required bool resolvedLocally,
   });
 
-  Future<void> logCategoryFiltered({
+  Future<void> logSearchResultsViewed({
     required String surface,
+    required String zoneId,
+    required int resultsCount,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+  });
+
+  Future<void> logSearchFilterApplied({
+    required String surface,
+    required String zoneId,
     required String categoryId,
-    required String activeZoneId,
     required int resultCount,
-    required bool usedOpenNowFilter,
-    required bool usedDistanceSort,
   });
 
   Future<void> logMapViewed({
-    required String surface,
-    required String activeZoneId,
+    required String zoneId,
     required int resultCount,
   });
 
-  Future<void> logMapPinSelected({
+  Future<void> logMerchantCardImpression({
     required String surface,
-    required String activeZoneId,
-    required String entityZoneId,
+    required String zoneId,
+    required String merchantId,
+    required String categoryId,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+    required String source,
+  });
+
+  Future<void> logMerchantDetailOpened({
+    required String surface,
+    required String zoneId,
+    required String merchantId,
+    required String categoryId,
     required String distanceBucket,
+    required String source,
   });
 
   Future<void> logMapRecenterTapped({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
   });
 
   Future<void> logMapSearchThisAreaTapped({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
   });
 }
 
@@ -51,86 +64,125 @@ class AnalyticsServiceSearchAnalytics implements SearchAnalyticsSink {
   final AnalyticsService _analyticsService;
 
   @override
-  Future<void> logSearchPerformed({
+  Future<void> logSearchExecuted({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
     required int queryLength,
     required int resultsCount,
-    required bool usedCategoryFilter,
-    required bool usedOpenNowFilter,
-    required bool usedDistanceSort,
-    required bool resolvedLocally,
   }) {
     return _analyticsService.track(
-      event: 'search_performed',
+      event: 'search_executed',
       parameters: {
         'surface': surface,
-        'search_mode': 'explicit',
+        'zoneId': zoneId,
         'query_length_bucket': _analyticsService.queryLengthBucket(queryLength),
-        'result_count_bucket':
+        'results_count_bucket':
             _analyticsService.resultCountBucket(resultsCount),
-        'used_category_filter': usedCategoryFilter,
-        'used_open_now_filter': usedOpenNowFilter,
-        'used_distance_sort': usedDistanceSort,
-        'active_zone_id': activeZoneId,
-        'resolved_locally': resolvedLocally,
       },
     );
   }
 
   @override
-  Future<void> logCategoryFiltered({
+  Future<void> logSearchResultsViewed({
     required String surface,
-    required String categoryId,
-    required String activeZoneId,
-    required int resultCount,
-    required bool usedOpenNowFilter,
-    required bool usedDistanceSort,
+    required String zoneId,
+    required int resultsCount,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
   }) {
     return _analyticsService.track(
-      event: 'category_filtered',
+      event: 'search_results_viewed',
       parameters: {
         'surface': surface,
-        'category_id': categoryId,
-        'active_zone_id': activeZoneId,
-        'result_count_bucket': _analyticsService.resultCountBucket(resultCount),
-        'used_open_now_filter': usedOpenNowFilter,
-        'used_distance_sort': usedDistanceSort,
-      },
-    );
-  }
-
-  @override
-  Future<void> logMapViewed({
-    required String surface,
-    required String activeZoneId,
-    required int resultCount,
-  }) {
-    return _analyticsService.track(
-      event: 'map_viewed',
-      parameters: {
-        'surface': surface,
-        'active_zone_id': activeZoneId,
-        'result_count_bucket': _analyticsService.resultCountBucket(resultCount),
+        'zoneId': zoneId,
+        'results_count_bucket':
+            _analyticsService.resultCountBucket(resultsCount),
+        'is_open_now_shown': isOpenNowShown,
+        'is_on_duty_shown': isOnDutyShown,
       },
       dedupeWindow: const Duration(seconds: 4),
     );
   }
 
   @override
-  Future<void> logMapPinSelected({
+  Future<void> logSearchFilterApplied({
     required String surface,
-    required String activeZoneId,
-    required String entityZoneId,
-    required String distanceBucket,
+    required String zoneId,
+    required String categoryId,
+    required int resultCount,
   }) {
     return _analyticsService.track(
-      event: 'map_pin_selected',
+      event: 'search_filter_applied',
       parameters: {
         'surface': surface,
-        'active_zone_id': activeZoneId,
-        'entity_zone_id': entityZoneId,
+        'zoneId': zoneId,
+        'categoryId': categoryId,
+        'results_count_bucket':
+            _analyticsService.resultCountBucket(resultCount),
+      },
+    );
+  }
+
+  @override
+  Future<void> logMapViewed({
+    required String zoneId,
+    required int resultCount,
+  }) {
+    return _analyticsService.track(
+      event: 'surface_viewed',
+      parameters: {
+        'surface': 'search_map',
+        'zoneId': zoneId,
+        'results_count_bucket':
+            _analyticsService.resultCountBucket(resultCount),
+      },
+      dedupeWindow: const Duration(seconds: 4),
+    );
+  }
+
+  @override
+  Future<void> logMerchantCardImpression({
+    required String surface,
+    required String zoneId,
+    required String merchantId,
+    required String categoryId,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+    required String source,
+  }) {
+    return _analyticsService.track(
+      event: 'merchant_card_impression',
+      parameters: {
+        'surface': surface,
+        'zoneId': zoneId,
+        'merchantId': merchantId,
+        'categoryId': categoryId,
+        'is_open_now_shown': isOpenNowShown,
+        'is_on_duty_shown': isOnDutyShown,
+        'source': source,
+      },
+      dedupeWindow: const Duration(seconds: 30),
+    );
+  }
+
+  @override
+  Future<void> logMerchantDetailOpened({
+    required String surface,
+    required String zoneId,
+    required String merchantId,
+    required String categoryId,
+    required String distanceBucket,
+    required String source,
+  }) {
+    return _analyticsService.track(
+      event: 'merchant_detail_opened',
+      parameters: {
+        'surface': surface,
+        'zoneId': zoneId,
+        'merchantId': merchantId,
+        'categoryId': categoryId,
         'distance_bucket': distanceBucket,
+        'source': source,
       },
     );
   }
@@ -138,79 +190,82 @@ class AnalyticsServiceSearchAnalytics implements SearchAnalyticsSink {
   @override
   Future<void> logMapRecenterTapped({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
   }) {
-    return _analyticsService.track(
-      event: 'map_recenter_tapped',
-      parameters: {
-        'surface': surface,
-        'active_zone_id': activeZoneId,
-      },
-    );
+    return Future<void>.value();
   }
 
   @override
   Future<void> logMapSearchThisAreaTapped({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
   }) {
-    return _analyticsService.track(
-      event: 'map_search_this_area_tapped',
-      parameters: {
-        'surface': surface,
-        'active_zone_id': activeZoneId,
-      },
-    );
+    return Future<void>.value();
   }
 }
 
 class NoopSearchAnalytics implements SearchAnalyticsSink {
   @override
-  Future<void> logCategoryFiltered({
-    required String surface,
-    required String categoryId,
-    required String activeZoneId,
-    required int resultCount,
-    required bool usedOpenNowFilter,
-    required bool usedDistanceSort,
-  }) async {}
-
-  @override
-  Future<void> logMapPinSelected({
-    required String surface,
-    required String activeZoneId,
-    required String entityZoneId,
-    required String distanceBucket,
-  }) async {}
-
-  @override
   Future<void> logMapRecenterTapped({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
   }) async {}
 
   @override
   Future<void> logMapSearchThisAreaTapped({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
   }) async {}
 
   @override
   Future<void> logMapViewed({
-    required String surface,
-    required String activeZoneId,
+    required String zoneId,
     required int resultCount,
   }) async {}
 
   @override
-  Future<void> logSearchPerformed({
+  Future<void> logMerchantCardImpression({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
+    required String merchantId,
+    required String categoryId,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+    required String source,
+  }) async {}
+
+  @override
+  Future<void> logMerchantDetailOpened({
+    required String surface,
+    required String zoneId,
+    required String merchantId,
+    required String categoryId,
+    required String distanceBucket,
+    required String source,
+  }) async {}
+
+  @override
+  Future<void> logSearchExecuted({
+    required String surface,
+    required String zoneId,
     required int queryLength,
     required int resultsCount,
-    required bool usedCategoryFilter,
-    required bool usedOpenNowFilter,
-    required bool usedDistanceSort,
-    required bool resolvedLocally,
+  }) async {}
+
+  @override
+  Future<void> logSearchFilterApplied({
+    required String surface,
+    required String zoneId,
+    required String categoryId,
+    required int resultCount,
+  }) async {}
+
+  @override
+  Future<void> logSearchResultsViewed({
+    required String surface,
+    required String zoneId,
+    required int resultsCount,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
   }) async {}
 }

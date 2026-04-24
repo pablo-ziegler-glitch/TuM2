@@ -34,52 +34,67 @@ class _FakeZoneRepository implements ZoneSearchDataSource {
 
 class _NoopSearchAnalytics implements SearchAnalyticsSink {
   @override
-  Future<void> logCategoryFiltered({
-    required String surface,
-    required String categoryId,
-    required String activeZoneId,
-    required int resultCount,
-    required bool usedOpenNowFilter,
-    required bool usedDistanceSort,
-  }) async {}
-
-  @override
-  Future<void> logMapPinSelected({
-    required String surface,
-    required String activeZoneId,
-    required String entityZoneId,
-    required String distanceBucket,
-  }) async {}
-
-  @override
   Future<void> logMapRecenterTapped({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
   }) async {}
 
   @override
   Future<void> logMapSearchThisAreaTapped({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
   }) async {}
 
   @override
   Future<void> logMapViewed({
-    required String surface,
-    required String activeZoneId,
+    required String zoneId,
     required int resultCount,
   }) async {}
 
   @override
-  Future<void> logSearchPerformed({
+  Future<void> logMerchantCardImpression({
     required String surface,
-    required String activeZoneId,
+    required String zoneId,
+    required String merchantId,
+    required String categoryId,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+    required String source,
+  }) async {}
+
+  @override
+  Future<void> logMerchantDetailOpened({
+    required String surface,
+    required String zoneId,
+    required String merchantId,
+    required String categoryId,
+    required String distanceBucket,
+    required String source,
+  }) async {}
+
+  @override
+  Future<void> logSearchExecuted({
+    required String surface,
+    required String zoneId,
     required int queryLength,
     required int resultsCount,
-    required bool usedCategoryFilter,
-    required bool usedOpenNowFilter,
-    required bool usedDistanceSort,
-    required bool resolvedLocally,
+  }) async {}
+
+  @override
+  Future<void> logSearchFilterApplied({
+    required String surface,
+    required String zoneId,
+    required String categoryId,
+    required int resultCount,
+  }) async {}
+
+  @override
+  Future<void> logSearchResultsViewed({
+    required String surface,
+    required String zoneId,
+    required int resultsCount,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
   }) async {}
 }
 

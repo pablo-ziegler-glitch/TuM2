@@ -112,7 +112,12 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
                           merchantId: merchantId,
                           fromMap: true,
                         );
-                        context.push(AppRoutes.commerceDetailPath(merchantId));
+                        context.push(
+                          AppRoutes.commerceDetailPath(
+                            merchantId,
+                            source: 'search_map',
+                          ),
+                        );
                       },
                       onListTap: () {
                         final query = state.query.trim();

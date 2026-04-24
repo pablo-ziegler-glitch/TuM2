@@ -80,8 +80,12 @@ abstract class AppRoutes {
   static const pharmacyDutyDetail = '/pharmacy/:id';
 
   /// Construye la ruta concreta de detalle de un comercio.
-  static String commerceDetailPath(String merchantId) =>
-      '/commerce/$merchantId';
+  static String commerceDetailPath(String merchantId, {String? source}) {
+    final path = '/commerce/$merchantId';
+    final normalized = source?.trim();
+    if (normalized == null || normalized.isEmpty) return path;
+    return Uri(path: path, queryParameters: {'source': normalized}).toString();
+  }
 
   /// Construye la ruta concreta de detalle de un producto del comercio.
   static String commerceProductDetailPath({

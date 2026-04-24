@@ -4,18 +4,35 @@ import '../../../core/providers/analytics_provider.dart';
 import '../../../core/analytics/analytics_service.dart';
 
 abstract interface class MerchantDetailAnalyticsSink {
-  Future<void> logDetailView({
+  Future<void> logDetailOpened({
+    required String merchantId,
+    required String zoneId,
     required String categoryId,
     required bool hasPharmacyDutyToday,
+    required String source,
   });
 
   Future<void> logCallClick({
-    required String entityZoneId,
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
     required bool launchSucceeded,
   });
 
   Future<void> logDirectionsClick({
-    required String entityZoneId,
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
+    required bool launchSucceeded,
+  });
+
+  Future<void> logWhatsAppClick({
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
     required bool launchSucceeded,
   });
 
@@ -36,54 +53,132 @@ class AnalyticsServiceMerchantDetailAnalytics
   final AnalyticsService _analyticsService;
 
   @override
-  Future<void> logDetailView({
+  Future<void> logDetailOpened({
+    required String merchantId,
+    required String zoneId,
     required String categoryId,
     required bool hasPharmacyDutyToday,
+    required String source,
   }) {
     return _analyticsService.track(
-      event: 'merchant_detail_view',
+      event: 'merchant_detail_opened',
       parameters: {
         'surface': 'merchant_detail',
-        'category_id': categoryId,
-        'has_pharmacy_duty_today': hasPharmacyDutyToday,
+        'merchantId': merchantId,
+        'zoneId': zoneId,
+        'categoryId': categoryId,
+        'is_on_duty_shown': hasPharmacyDutyToday,
+        'source': source,
       },
     );
   }
 
   @override
   Future<void> logCallClick({
-    required String entityZoneId,
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
     required bool launchSucceeded,
-  }) {
-    return _analyticsService.track(
-      event: 'operator_call_click',
+  }) async {
+    await _analyticsService.track(
+      event: 'useful_action_clicked',
       parameters: {
         'surface': 'merchant_detail',
-        'entity_type': 'merchant',
-        'active_zone_id': entityZoneId,
-        'entity_zone_id': entityZoneId,
-        'distance_bucket': 'unknown',
-        'launch_succeeded': launchSucceeded,
+        'merchantId': merchantId,
+        'zoneId': zoneId,
+        'categoryId': categoryId,
+        'action_type': 'call',
+        'source': source,
+        'elapsed_time_bucket': _analyticsService.elapsedTimeBucketNow(),
       },
     );
+    if (source == 'open_now' || source == 'open_now_fallback') {
+      await _analyticsService.track(
+        event: 'open_now_useful_action_clicked',
+        parameters: {
+          'surface': 'open_now',
+          'merchantId': merchantId,
+          'zoneId': zoneId,
+          'categoryId': categoryId,
+          'action_type': 'call',
+          'source': source,
+          'elapsed_time_bucket': _analyticsService.elapsedTimeBucketNow(),
+        },
+      );
+    }
   }
 
   @override
   Future<void> logDirectionsClick({
-    required String entityZoneId,
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
     required bool launchSucceeded,
-  }) {
-    return _analyticsService.track(
-      event: 'directions_opened',
+  }) async {
+    await _analyticsService.track(
+      event: 'useful_action_clicked',
       parameters: {
         'surface': 'merchant_detail',
-        'entity_type': 'merchant',
-        'active_zone_id': entityZoneId,
-        'entity_zone_id': entityZoneId,
-        'distance_bucket': 'unknown',
-        'launch_succeeded': launchSucceeded,
+        'merchantId': merchantId,
+        'zoneId': zoneId,
+        'categoryId': categoryId,
+        'action_type': 'directions',
+        'source': source,
+        'elapsed_time_bucket': _analyticsService.elapsedTimeBucketNow(),
       },
     );
+    if (source == 'open_now' || source == 'open_now_fallback') {
+      await _analyticsService.track(
+        event: 'open_now_useful_action_clicked',
+        parameters: {
+          'surface': 'open_now',
+          'merchantId': merchantId,
+          'zoneId': zoneId,
+          'categoryId': categoryId,
+          'action_type': 'directions',
+          'source': source,
+          'elapsed_time_bucket': _analyticsService.elapsedTimeBucketNow(),
+        },
+      );
+    }
+  }
+
+  @override
+  Future<void> logWhatsAppClick({
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
+    required bool launchSucceeded,
+  }) async {
+    await _analyticsService.track(
+      event: 'useful_action_clicked',
+      parameters: {
+        'surface': 'merchant_detail',
+        'merchantId': merchantId,
+        'zoneId': zoneId,
+        'categoryId': categoryId,
+        'action_type': 'whatsapp',
+        'source': source,
+        'elapsed_time_bucket': _analyticsService.elapsedTimeBucketNow(),
+      },
+    );
+    if (source == 'open_now' || source == 'open_now_fallback') {
+      await _analyticsService.track(
+        event: 'open_now_useful_action_clicked',
+        parameters: {
+          'surface': 'open_now',
+          'merchantId': merchantId,
+          'zoneId': zoneId,
+          'categoryId': categoryId,
+          'action_type': 'whatsapp',
+          'source': source,
+          'elapsed_time_bucket': _analyticsService.elapsedTimeBucketNow(),
+        },
+      );
+    }
   }
 
   @override

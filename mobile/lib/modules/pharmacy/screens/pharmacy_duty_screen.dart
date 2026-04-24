@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../merchant_badges/domain/merchant_badge_resolver.dart';
@@ -14,6 +15,7 @@ import '../models/pharmacy_zone.dart';
 import '../providers/pharmacy_duty_notifier.dart';
 import '../services/business_date.dart';
 import '../services/distance_calculator.dart';
+import '../services/outdated_info_report_service.dart';
 
 const _kSeasonalMessirveEnabled = bool.fromEnvironment(
   'PHARMACY_FEEDBACK_MESSIRVE_ENABLED',
@@ -33,6 +35,10 @@ class _PharmacyDutyScreenState extends ConsumerState<PharmacyDutyScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(pharmacyDutyProvider.notifier).initialize();
+      ref.read(analyticsServiceProvider).track(
+        event: 'surface_viewed',
+        parameters: {'surface': 'pharmacy_duty'},
+      );
     });
   }
 
@@ -611,12 +617,6 @@ class _PharmacyCard extends ConsumerWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    await notifier.logFeedbackPositive(
-                      item: item,
-                      copyVariant: _kSeasonalMessirveEnabled
-                          ? 'seasonal_messirve'
-                          : 'default_me_sirvio',
-                    );
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -638,7 +638,7 @@ class _PharmacyCard extends ConsumerWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    await notifier.logFeedbackNegativeStarted(item);
+                    await notifier.logOutdatedInfoTapped(item);
                     if (!context.mounted) return;
                     await _showReportFlow(context, ref, item);
                   },
@@ -659,31 +659,36 @@ class _PharmacyCard extends ConsumerWidget {
     PharmacyDutyItem item,
   ) async {
     final notifier = ref.read(pharmacyDutyProvider.notifier);
-    final result = await showModalBottomSheet<
-        ({String reasonCode, bool hasFreeText, bool hasAttachment})>(
+    final result = await showModalBottomSheet<({String reasonCode})>(
       context: context,
       isScrollControlled: true,
       builder: (context) => const _NegativeFeedbackSheet(),
     );
     if (result == null) return;
-    final (:reasonCode, :hasFreeText, :hasAttachment) = result;
-    await notifier.logFeedbackNegativeReasonSelected(
-      item: item,
-      reasonCode: reasonCode,
-      hasFreeText: hasFreeText,
-      hasAttachment: hasAttachment,
-    );
-    await notifier.logReportStarted(item: item, reasonCode: reasonCode);
-    await notifier.logReportSubmitted(
-      item: item,
-      reasonCode: reasonCode,
-      hasFreeText: hasFreeText,
-      hasAttachment: hasAttachment,
-    );
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Gracias por reportar. Lo revisamos.')),
-    );
+    final reasonCode = result.reasonCode;
+    try {
+      final submitStatus = await notifier.submitOutdatedInfoReport(
+        item: item,
+        reasonCode: reasonCode,
+      );
+      if (!context.mounted) return;
+      final message = submitStatus == OutdatedInfoReportSubmitStatus.deduped
+          ? 'Ya teníamos un reporte similar. Gracias por avisar.'
+          : 'Gracias por reportar. Lo revisamos.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } on OutdatedInfoReportServiceException catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No pudimos registrar el reporte.')),
+      );
+    }
   }
 
   MerchantBadgeKey? _confidenceBadgeForVerification(String raw) {
@@ -827,12 +832,10 @@ class _NegativeFeedbackSheetState extends State<_NegativeFeedbackSheet> {
     ('wrong_schedule', 'Horario incorrecto'),
     ('closed_on_duty', 'Figuraba de turno pero estaba cerrada'),
     ('not_found', 'No encontramos la farmacia'),
-    ('other', 'Otro'),
+    ('data_mismatch', 'Datos desactualizados'),
   ];
 
   String _selectedReason = 'wrong_schedule';
-  bool _hasFreeText = false;
-  bool _hasAttachment = false;
 
   @override
   Widget build(BuildContext context) {
@@ -872,33 +875,13 @@ class _NegativeFeedbackSheetState extends State<_NegativeFeedbackSheet> {
               ],
             ),
           ),
-          if (_selectedReason == 'other') ...[
-            CheckboxListTile(
-              value: _hasFreeText,
-              onChanged: (value) =>
-                  setState(() => _hasFreeText = value == true),
-              title: const Text('Voy a escribir texto breve'),
-              controlAffinity: ListTileControlAffinity.leading,
-            ),
-            CheckboxListTile(
-              value: _hasAttachment,
-              onChanged: (value) =>
-                  setState(() => _hasAttachment = value == true),
-              title: const Text('Voy a adjuntar una foto'),
-              controlAffinity: ListTileControlAffinity.leading,
-            ),
-          ],
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
               onPressed: () {
                 Navigator.of(context).pop(
-                  (
-                    reasonCode: _selectedReason,
-                    hasFreeText: _selectedReason == 'other' && _hasFreeText,
-                    hasAttachment: _selectedReason == 'other' && _hasAttachment,
-                  ),
+                  (reasonCode: _selectedReason,),
                 );
               },
               child: const Text('Enviar reporte'),

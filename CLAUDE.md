@@ -47,7 +47,7 @@ tum2-XXXX — PR#YY — descripción corta
 
 ## Estado del backlog
 
-El backlog maestro de TuM2 está estructurado en 20 épicas (ver sección abajo).
+El backlog maestro de TuM2 está estructurado en 17 épicas (ver sección abajo).
 El usuario pasa las tarjetas de a una. Estado actual:
 
 | Definición ✅ | Actividad completada |
@@ -225,7 +225,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0081] **Implementar revisión de señales operativas reportadas** — P1 — `Admin, Operaciones, MVP`
 
 ### ÉPICA 11: Analytics
-- [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP`
+- [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `IN_PROGRESS`
 - [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP`
 - [0084] **Crear dashboard MVP** — P1 — `Analytics, MVP`
 - [0085] **Medir activación OWNER** — P1 — `Analytics, Operaciones, MVP`
@@ -296,26 +296,13 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `IN_PROGRESS`
 - [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `IN_PROGRESS`
 - [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `IN_PROGRESS`
-- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `IN_PROGRESS`
+- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` ✅
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
 - [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `IN_PROGRESS`
+- [0140] **Hardening de Auth/Rules con JWT claims y eliminación de reads extra** — P0 — `Seguridad, Backend, Mobile, MVP` ✅
 
 ### ÉPICA 19: Estacionalidad y campañas contextuales
 - [0134] **Modo Selección Argentina + tarjeta pineada de próximo partido** — P1 — `Producto, Branding, Mobile, Web, Admin, Backend, Analytics, MVP+`
-
-### ÉPICA 20: Optimización estructural de costo, lecturas y serving
-- [0135] **Épica transversal de costo/performance del MVP** — P0 — `Producto, Backend, Mobile, Web, Admin, Operaciones, MVP` `TODO`
-- [0136] **Catálogos estáticos versionados y serving barato** — P0 — `Backend, Mobile, Web, Data, MVP` `TODO`
-- [0137] **Framework de cache y `CachePolicy` canónica en Flutter** — P0 — `Mobile, Web, Arquitectura, MVP` `TODO`
-- [0138] **Optimización de corpus público de búsqueda por zona** — P0 — `Backend, Mobile, Web, Data, MVP` `TODO`
-- [0139] **Optimización de datasets diarios y semiestáticos** — P0 — `Backend, Admin, Operaciones, Data, MVP` `TODO`
-- [0140] **Hardening de Auth/Rules con JWT claims y eliminación de reads extra** — P0 — `Seguridad, Backend, Mobile, Web, MVP` `TODO`
-- [0141] **Hardening de queries admin: paginación, filtros obligatorios y refresh manual** — P0 — `Admin, Web, Backend, MVP` `TODO`
-- [0142] **Reducción de write amplification en triggers y proyecciones públicas** — P0 — `Backend, Data, Operaciones, MVP` `TODO`
-- [0143] **Escalado de jobs programados y recomputes operativos** — P1 — `Backend, Operaciones, Data, MVP` `TODO`
-- [0144] **App Check, rate limiting y protección anti-abuso orientada a costo** — P0 — `Seguridad, Backend, Operaciones, MVP` `TODO`
-- [0145] **Observabilidad, budgets y telemetría de consumo por feature** — P1 — `Operaciones, Analytics, Backend, MVP` `TODO`
-- [0146] **Performance contract y QA de costo del MVP** — P0 — `QA, Operaciones, Backend, Mobile, Web, MVP` `TODO`
 
 ---
 
@@ -429,7 +416,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Backend:** TuM2-0042, 0043, 0044, 0045, 0046, 0048, 0049, 0050, 0123 ✅, 0124 ✅
 
-**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅, 0126, 0131
+**Mobile:** TuM2-0052, 0053, 0054, 0056, 0057, 0058, 0060, 0061, 0064, 0065, 0066, 0067, 0068, 0124 ✅, 0126, 0131 ✅
 
 **Web:** TuM2-0070, 0071, 0072, 0074, 0075
 
@@ -487,6 +474,15 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - En cada avance de tarjeta, actualizar siempre `docs/storyscards/<tarjeta>.md` y `CLAUDE.md` con estado real.
 
 ## Registro operativo reciente
+- [0082] Redefinición técnica aplicada (2026-04-22): contrato canónico en `docs/storyscards/0082-analytics-technical.md` con bootstrap geolocalizado, taxonomía oficial MVP, reglas de no-PII/query crudo/coordenadas finas y política de copy desacoplada (`Me sirvió`/`Messirve` -> mismo evento).
+- [0082] Implementación base en mobile: `AnalyticsService` único con sanitización, validación de buckets/enums, dedupe, gating por ambiente (`prod` real / dev-staging debug sanitizado), gating de consentimiento web y cola offline restringida a eventos críticos permitidos.
+- [0082] Integraciones cruzadas: 0056/0057/0061/0083 cableadas a nueva taxonomía (`search_performed`, `category_filtered`, `nearby_bootstrap_*`, `map_*`, `operator_call_click`, `directions_opened`, `pharmacy_duty_feedback_*`, `report_*`, `claim_*`) priorizando `entity_zone_id` para acciones sobre entidad.
+- [0082] Hardening de seguridad analytics (2026-04-23): allowlist estricta de eventos/parámetros, bloqueo por fragmentos sensibles en keys/values, bloqueo de URLs y descarte por defecto de payload fuera de contrato para reducir superficie de exfiltración.
+- [0082] Migración legacy complementaria (2026-04-23): wrappers de auth/onboarding/open-now/owner/claim migrados a `AnalyticsService` central; `firebase_analytics` directo queda encapsulado en backend único.
+- [0082] Hardening adicional (2026-04-23): bloqueo explícito de identificadores directos en payload (`merchant_id`, `product_id`, `merchant_ref`, `user_id`, `uid`, `device_id`, `session_id`) y test unitario dedicado.
+- [0082] Cobertura adicional de acciones core en detalle de farmacia (`operator_call_click`, `directions_opened`) sin listeners ni lecturas extra.
+- [0082] Merchant Detail migrado a capa segura: acciones core pasan por `AnalyticsService` y se elimina emisión de `merchant_id` en payload analytics.
+- [0082] Impacto documental sincronizado para 0035/0100/0101 y seguimiento explícito de dependencias 0035/0056/0057/0061/0100/0101/0083.
 - [0056] Implementar búsqueda de comercios: estado final DONE (cerrada el 2026-04-07).
 - [0056] Mobile quedó recompuesto y compilable: modelos/repositorios de búsqueda, notifier con ranking y filtros MVP, exclusión de panadería/confitería, rutas de búsqueda activas y analytics safe.
 - [0056] Se agregó cobertura unitaria en Flutter para SearchNotifier (inicialización, normalización, filtros open-now, ranking, y consistencia lista/mapa).
@@ -518,5 +514,6 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0127] Integración productiva: submit pasa por estado `submitted`, trigger fallback por transición real a `submitted`, hash `lastAutoValidationHash` para no-op writes, sync `owner_pending` backend-only y sin mutación de `merchant_public`.
 - [0127] Costos/seguridad: queries dedupe-conflict con `limit` bajo e índice compuesto `merchant_claims(userId, merchantId, claimStatus)`, logs estructurados sin PII, sin grants OWNER automáticos.
 - [Claims docs] Actualización integral de storycards del dominio claim (2026-04-15): 0004, 0053, 0054, 0064, 0100, 0101, 0102, 0103, 0104, 0127, 0128, 0129, 0130, 0131, 0132, 0133.
+- [0131] Cierre técnico (2026-04-21): `ownerAccessSummary` canónico en `users/{uid}`, claims mínimas (`role`, `owner_pending`, `access_version`), estrategia multi-merchant sin `merchantId` principal en JWT, restricciones antifraude (`none/cooldown/manual_review_only/blocked`) con rehabilitación admin auditada, refresh de sesión en foreground claim/owner y tests ampliados backend/mobile.
+- [0140] Hardening Auth/Rules (2026-04-23): claims canónicas centralizadas en `applyUserAccessClaims` (Admin SDK only, no-op avoidance, trazabilidad), Rules sin dependencia de rol en `users`, eliminación de claims legacy `merchantId/merchantIds/onboardingComplete`, refresh móvil por motivo con telemetría de transición y matriz de tests rules/auth ampliada.
 - [0134] Alta documental inicial (2026-04-17): creadas `docs/storyscards/0134-modo-seleccion-argentina.md` y `docs/storyscards/0134-modo-seleccion-argentina.prompt.md`; estado canónico `TODO` (sin implementación).
-- [0135-0146] Alta documental de optimización de costo (2026-04-23): incorporadas 12 storycards nuevas en `docs/storyscards/0135-*.md` a `0146-*.md` y actualización de backlog en `CLAUDE.md` (ÉPICA 20).

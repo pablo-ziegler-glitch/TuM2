@@ -85,11 +85,19 @@ abstract class RouterGuards {
         return AppRoutes.login;
 
       case AuthAuthenticated(:final role, :final ownerPending):
+        final approvedCount =
+            authState.ownerAccessSummary?.approvedMerchantIdsCount ??
+                ((role == 'owner' && authState.merchantId != null) ? 1 : 0);
+        final hasApprovedMerchants = approvedCount > 0;
+        final restrictionActive =
+            authState.ownerAccessSummary?.restrictionActive ?? false;
         // Desde ruta de auth → navegar al destino autenticado
         if (isAuthPath(path)) {
           return _authenticatedHome(
             role: role,
             ownerPending: ownerPending,
+            hasApprovedMerchants: hasApprovedMerchants,
+            restrictionActive: restrictionActive,
             pendingRoute: pendingRoute,
             consumePendingRoute: consumePendingRoute,
           );
@@ -109,15 +117,20 @@ abstract class RouterGuards {
             from: path,
           );
         }
+        if (isOwnerRoute && isOwnerRole && restrictionActive) {
+          return AppRoutes.ownerDashboard;
+        }
         if (isOwnerRoute &&
             isOwnerRole &&
             ownerPending &&
+            !hasApprovedMerchants &&
             path == AppRoutes.ownerResolve) {
           return AppRoutes.ownerDashboard;
         }
         if (isOwnerRoute &&
             isOwnerRole &&
             ownerPending &&
+            !hasApprovedMerchants &&
             path != AppRoutes.owner &&
             path != AppRoutes.ownerDashboard) {
           return AppRoutes.ownerDashboard;
@@ -137,6 +150,8 @@ abstract class RouterGuards {
   static String _authenticatedHome({
     required String role,
     required bool ownerPending,
+    required bool hasApprovedMerchants,
+    required bool restrictionActive,
     String? pendingRoute,
     void Function()? consumePendingRoute,
   }) {
@@ -144,11 +159,17 @@ abstract class RouterGuards {
     if (pendingRoute != null &&
         !isAuthPath(pendingRoute) &&
         canAccessRoute(pendingRoute, role) &&
-        !(ownerPending && _pathOnly(pendingRoute).startsWith('/owner'))) {
+        !(restrictionActive && _pathOnly(pendingRoute).startsWith('/owner')) &&
+        !(!hasApprovedMerchants &&
+            ownerPending &&
+            _pathOnly(pendingRoute).startsWith('/owner'))) {
       consumePendingRoute?.call();
       return pendingRoute;
     }
-    if (isOwner && ownerPending) return AppRoutes.ownerDashboard;
+    if (isOwner && restrictionActive) return AppRoutes.ownerDashboard;
+    if (isOwner && ownerPending && !hasApprovedMerchants) {
+      return AppRoutes.ownerDashboard;
+    }
     if (isOwner) return AppRoutes.ownerResolve;
     return AppRoutes.home;
   }

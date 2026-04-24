@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../auth/auth_notifier.dart';
+import '../auth/auth_state.dart';
+import '../auth/owner_access_summary.dart';
 import '../analytics/auth_analytics.dart';
 import '../firebase/app_environment.dart';
 import '../router/pending_route_provider.dart';
@@ -13,7 +16,6 @@ import '../router/pending_route_provider.dart';
 
 const _kOnboardingSeenKey = 'onboarding_seen';
 const _kPendingEmailLinkKey = 'pending_email_link';
-const _kOnboardingOwnerDraftKey = 'onboarding_owner_draft';
 
 /// URL base para magic links. En producción apunta al dominio real.
 /// En desarrollo se puede usar el emulador de Auth.
@@ -309,6 +311,13 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
       // Programar toast de bienvenida
       _scheduleAuthToast(credential.user);
 
+      // Refresh obligatorio post-login para sincronizar claims de acceso.
+      if (credential.user != null) {
+        await ref.read(authNotifierProvider).refreshSession(
+              reason: AuthSessionRefreshReason.postLogin,
+            );
+      }
+
       AuthAnalytics.logMagicLinkVerified(
         isNewUser: _isNewUser(credential.user),
         isCrossDevice: emailOverride != null,
@@ -361,6 +370,13 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
       // Programar toast de bienvenida
       _scheduleAuthToast(result.user);
 
+      // Refresh obligatorio post-login para sincronizar claims de acceso.
+      if (result.user != null) {
+        await ref.read(authNotifierProvider).refreshSession(
+              reason: AuthSessionRefreshReason.postLogin,
+            );
+      }
+
       AuthAnalytics.logGoogleSignIn(
         isNewUser: _isNewUser(result.user),
       ).ignore();
@@ -398,13 +414,10 @@ class AuthOpNotifier extends Notifier<AuthOpState> {
       print('[AuthNotifier.signOut] Error en Firebase signOut: $e');
     }
 
-    // Acción 2: limpiar SharedPreferences (no limpiar onboarding_seen)
+    // Acción 2: limpiar SharedPreferences completo por seguridad de sesión
     try {
       final prefs = await ref.read(sharedPreferencesProvider);
-      await Future.wait([
-        prefs.remove(_kPendingEmailLinkKey),
-        prefs.remove(_kOnboardingOwnerDraftKey),
-      ]);
+      await prefs.clear();
     } catch (e) {
       // ignore: avoid_print
       print('[AuthNotifier.signOut] Error limpiando SharedPreferences: $e');
@@ -486,74 +499,87 @@ class AuthClaimsSnapshot {
   const AuthClaimsSnapshot({
     required this.role,
     required this.ownerPending,
+    required this.isAdmin,
+    required this.isSuperAdmin,
     required this.merchantId,
     required this.onboardingComplete,
+    required this.accessVersion,
+    required this.claimsUpdatedAtSeconds,
+    required this.ownerAccessSummary,
   });
 
   final String? role;
   final bool ownerPending;
+  final bool isAdmin;
+  final bool isSuperAdmin;
   final String? merchantId;
   final bool onboardingComplete;
+  final int accessVersion;
+  final int? claimsUpdatedAtSeconds;
+  final OwnerAccessSummary? ownerAccessSummary;
 }
 
-/// Claims de autenticación leídos desde el ID token con force refresh.
+/// Snapshot auth reutilizable desde [AuthNotifier] sin lecturas adicionales.
+///
+/// Política costo-first:
+/// - no fuerza refresh de token en cada consulta de UI,
+/// - no relee `users/{uid}` desde este provider.
 final authClaimsProvider = FutureProvider<AuthClaimsSnapshot?>((ref) async {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return null;
-
-  final result = await user.getIdTokenResult(true);
-  final tokenRole = (result.claims?['role'] as String?)?.toLowerCase();
-  final ownerPendingRaw = result.claims?['owner_pending'];
-  final ownerPending = ownerPendingRaw == true ||
-      (ownerPendingRaw is String && ownerPendingRaw.toLowerCase() == 'true');
-  final userDoc =
-      await FirebaseFirestore.instance.doc('users/${user.uid}').get();
-  final userData = userDoc.data();
-  final firestoreRole = (userData?['role'] as String?)?.toLowerCase();
-  final firestoreMerchantId = userData?['merchantId'] as String?;
-  // Firestore prevalece sobre claims obsoletos cuando el backend ya actualizó
-  // el documento `users/{uid}` pero el token todavía no se refrescó.
-  final role = (firestoreRole != null && firestoreRole.isNotEmpty)
-      ? firestoreRole
-      : tokenRole;
+  final authState = ref.watch(authNotifierProvider).authState;
+  if (authState is! AuthAuthenticated) return null;
+  final ownerAccessSummary = authState.ownerAccessSummary;
+  final role = authState.role;
+  final merchantId = authState.merchantId;
+  final ownerPending = authState.ownerPending;
+  final isAdmin = authState.isAdmin;
+  final isSuperAdmin = authState.isSuperAdmin;
+  final onboardingComplete = authState.onboardingComplete;
+  final accessVersion = authState.accessVersion;
+  final claimsUpdatedAtSeconds = authState.claimsUpdatedAtSeconds;
 
   return AuthClaimsSnapshot(
     role: role,
     ownerPending: ownerPending,
-    merchantId: firestoreMerchantId ?? result.claims?['merchantId'] as String?,
-    onboardingComplete: result.claims?['onboardingComplete'] == true,
+    isAdmin: isAdmin,
+    isSuperAdmin: isSuperAdmin,
+    merchantId: merchantId,
+    onboardingComplete: onboardingComplete,
+    accessVersion: accessVersion,
+    claimsUpdatedAtSeconds: claimsUpdatedAtSeconds,
+    ownerAccessSummary: ownerAccessSummary,
   );
 });
 
 /// true si el usuario autenticado tiene el claim role='owner' en Firebase Auth.
-/// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
+/// Usa snapshot de [AuthNotifier] para evitar lecturas redundantes.
 final isOwnerProvider = FutureProvider<bool>((ref) async {
   final claims = await ref.watch(authClaimsProvider.future);
   if (claims == null) return false;
-  return claims.role == 'owner' && !claims.ownerPending;
+  final approvedCount = claims.ownerAccessSummary?.approvedMerchantIdsCount ??
+      (claims.merchantId != null ? 1 : 0);
+  return claims.role == 'owner' && approvedCount > 0;
 });
 
 /// true si el usuario autenticado tiene el claim role='admin' o 'super_admin'.
-/// Usa forceRefresh: true para garantizar datos actualizados tras asignación de rol.
+/// Usa snapshot de [AuthNotifier] para evitar lecturas redundantes.
 final isAdminProvider = FutureProvider<bool>((ref) async {
   final claims = await ref.watch(authClaimsProvider.future);
   if (claims == null) return false;
-  final role = claims.role;
-  return role == 'admin' || role == 'super_admin';
+  return claims.isAdmin || claims.isSuperAdmin;
 });
 
 // ── Provider de merchantId del owner ─────────────────────────────────────────
 
 /// merchantId del comercio del owner autenticado.
-/// Prioriza custom claims (sin lecturas Firestore).
-/// Solo usa fallback a Firestore merchants por ownerUserId si el claim no está.
-/// Null si el usuario no es owner o aún no completó el onboarding.
+/// Prioriza `ownerAccessSummary.defaultMerchantId` y evita scans amplios.
 final ownerMerchantIdProvider = FutureProvider<String?>((ref) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return null;
 
   final claims = await ref.watch(authClaimsProvider.future);
-  final merchantIdFromClaims = claims?.merchantId?.trim();
+  final merchantIdFromClaims =
+      claims?.ownerAccessSummary?.defaultMerchantId?.trim() ??
+          claims?.merchantId?.trim();
   if (merchantIdFromClaims != null && merchantIdFromClaims.isNotEmpty) {
     return merchantIdFromClaims;
   }

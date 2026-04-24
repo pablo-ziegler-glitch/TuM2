@@ -42,6 +42,14 @@ class AnalyticsService {
   static const _maxRawQueueBytes = 60000;
 
   static const Set<String> _offlineAllowedEvents = {
+    // Canonical 0083 critical actions
+    'useful_action_clicked',
+    'open_now_useful_action_clicked',
+    'pharmacy_duty_useful_action_clicked',
+    'outdated_info_report_submitted',
+    'claim_step_completed',
+    'claim_abandoned',
+    // Canonical 0082 compatibility
     'operator_call_click',
     'whatsapp_chat_started',
     'directions_opened',
@@ -54,6 +62,27 @@ class AnalyticsService {
   };
 
   static const Set<String> _allowedEventNames = {
+    // Canonical 0083
+    'session_started',
+    'zone_resolved',
+    'surface_viewed',
+    'search_executed',
+    'search_results_viewed',
+    'search_filter_applied',
+    'merchant_card_impression',
+    'merchant_detail_opened',
+    'useful_action_clicked',
+    'open_now_viewed',
+    'open_now_merchant_opened',
+    'open_now_useful_action_clicked',
+    'pharmacy_duty_list_viewed',
+    'pharmacy_duty_detail_opened',
+    'pharmacy_duty_useful_action_clicked',
+    'outdated_info_tapped',
+    'outdated_info_confirmed',
+    'outdated_info_report_submitted',
+    'claim_step_completed',
+    'claim_abandoned',
     // Canonical 0082
     'search_performed',
     'category_filtered',
@@ -152,6 +181,11 @@ class AnalyticsService {
     'owner_operational_signal_disabled',
     'senal_desactivada',
     'owner_operational_signal_save_failed',
+    'token_force_refresh_started',
+    'token_force_refresh_succeeded',
+    'token_force_refresh_failed',
+    'role_transition_detected',
+    'owner_access_unlocked',
     'pharmacy_duty_confirmation_prompt_seen',
     'pharmacy_duty_confirmed',
     'pharmacy_duty_incident_reported',
@@ -164,6 +198,17 @@ class AnalyticsService {
   };
 
   static const Set<String> _allowedParameterKeys = {
+    // Canonical 0083
+    'zoneId',
+    'categoryId',
+    'merchantId',
+    'action_type',
+    'role',
+    'platform',
+    'is_open_now_shown',
+    'is_on_duty_shown',
+    'results_count_bucket',
+    'elapsed_time_bucket',
     // Canonical 0082
     'surface',
     'entry_point',
@@ -223,6 +268,12 @@ class AnalyticsService {
     'force_closed',
     'save_result',
     'source_screen',
+    'refresh_reason',
+    'previous_role',
+    'new_role',
+    'owner_pending_before',
+    'owner_pending_after',
+    'result',
     'has_image',
     'stock_status',
     'visibility_status',
@@ -264,28 +315,6 @@ class AnalyticsService {
     'raw_coordinates',
   };
 
-  static const Set<String> _blockedKeyFragments = {
-    'email',
-    'phone',
-    'query',
-    'text',
-    'message',
-    'note',
-    'attachment',
-    'file',
-    'coord',
-    'lat',
-    'lng',
-    'street',
-    'address',
-    'postal',
-    'zipcode',
-    'dni',
-    'document',
-    'token',
-    'secret',
-  };
-
   static const Map<String, Set<String>> _enumAllowList = {
     'distance_bucket': {
       '0_500m',
@@ -299,6 +328,11 @@ class AnalyticsService {
     'query_length_bucket': {'0', '1_3', '4_8', '9_plus'},
     'evidence_count_bucket': {'1', '2', '3_plus'},
     'copy_variant': {'default_me_sirvio', 'seasonal_messirve'},
+    'action_type': {'whatsapp', 'call', 'directions'},
+    'results_count_bucket': {'0', '1_3', '4_10', '11_plus'},
+    'elapsed_time_bucket': {'lt_1m', '1_3m', '3_10m', '10m_plus'},
+    'platform': {'mobile', 'web'},
+    'role': {'customer', 'owner', 'admin', 'super_admin', 'guest', 'unknown'},
   };
 
   final Map<String, DateTime> _recentDedupes = <String, DateTime>{};
@@ -306,6 +340,7 @@ class AnalyticsService {
   String? _lastRole;
   String? _lastActiveZoneId;
   String? _lastVerifiedOwner;
+  late final DateTime _sessionStartedAt = _now();
 
   Future<void> setUserContext({
     required String role,
@@ -423,6 +458,16 @@ class AnalyticsService {
     return '3_plus';
   }
 
+  String elapsedTimeBucketNow() {
+    final elapsed = _now().difference(_sessionStartedAt);
+    if (elapsed.inSeconds < 60) return 'lt_1m';
+    if (elapsed.inMinutes < 3) return '1_3m';
+    if (elapsed.inMinutes < 10) return '3_10m';
+    return '10m_plus';
+  }
+
+  String get platform => _isWeb ? 'web' : 'mobile';
+
   bool get _isTrackingEnabled {
     if (_environment != AppEnvironment.prod) return false;
     if (_isWeb && !_isWebConsentGranted()) return false;
@@ -462,7 +507,6 @@ class AnalyticsService {
       if (key.isEmpty) continue;
       if (!_allowedParameterKeys.contains(key)) continue;
       if (_blockedParameterKeys.contains(key)) continue;
-      if (_containsBlockedFragment(key)) continue;
       final value = entry.value;
       if (value == null) continue;
 
@@ -505,14 +549,6 @@ class AnalyticsService {
     final hasCoordinates =
         RegExp(r'^-?\d{1,2}\.\d+,\s*-?\d{1,3}\.\d+$').hasMatch(input);
     return hasCoordinates;
-  }
-
-  bool _containsBlockedFragment(String key) {
-    final normalized = key.toLowerCase();
-    for (final fragment in _blockedKeyFragments) {
-      if (normalized.contains(fragment)) return true;
-    }
-    return false;
   }
 
   bool _looksSensitiveNumber(String key, num value) {

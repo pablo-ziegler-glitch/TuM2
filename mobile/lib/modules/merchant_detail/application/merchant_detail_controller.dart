@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../pharmacy/services/distance_calculator.dart';
 import '../analytics/merchant_detail_analytics.dart';
 import 'merchant_detail_actions.dart';
@@ -21,12 +22,18 @@ final merchantDetailControllerProvider = AsyncNotifierProvider.autoDispose
 class MerchantDetailController
     extends AutoDisposeFamilyAsyncNotifier<MerchantDetailState, String> {
   late String _merchantId;
+  String _source = 'unknown';
 
   MerchantDetailDataSource get _repository =>
       ref.read(merchantDetailRepositoryProvider);
   MerchantDetailAnalyticsSink get _analytics =>
       ref.read(merchantDetailAnalyticsProvider);
   MerchantDetailActions get _actions => ref.read(merchantDetailActionsProvider);
+
+  void setSource(String source) {
+    final normalized = source.trim();
+    _source = normalized.isEmpty ? 'unknown' : normalized;
+  }
 
   @override
   Future<MerchantDetailState> build(String merchantId) async {
@@ -72,10 +79,16 @@ class MerchantDetailController
     }
 
     unawaited(
-      _analytics.logDetailView(
+      _analytics.logDetailOpened(
+        merchantId: merchantId,
+        zoneId: core.zoneId,
         categoryId: core.categoryId,
         hasPharmacyDutyToday: core.hasPharmacyDutyToday,
+        source: _source,
       ),
+    );
+    unawaited(
+      _trackSurfaceViewed(zoneId: core.zoneId),
     );
 
     unawaited(_loadFeaturedProducts(merchantId, core.featuredProductIds));
@@ -115,7 +128,10 @@ class MerchantDetailController
     final opened = await _actions.openCall(phone);
     unawaited(
       _analytics.logCallClick(
-        entityZoneId: current.merchant.zoneId,
+        merchantId: current.merchantId,
+        zoneId: current.merchant.zoneId,
+        categoryId: current.merchant.categoryId,
+        source: _source,
         launchSucceeded: opened,
       ),
     );
@@ -134,7 +150,28 @@ class MerchantDetailController
 
     unawaited(
       _analytics.logDirectionsClick(
-        entityZoneId: current.merchant.zoneId,
+        merchantId: current.merchantId,
+        zoneId: current.merchant.zoneId,
+        categoryId: current.merchant.categoryId,
+        source: _source,
+        launchSucceeded: opened,
+      ),
+    );
+  }
+
+  Future<void> onWhatsAppTap() async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final phone = current.merchant.phonePrimary;
+    if (phone == null || phone.trim().isEmpty) return;
+
+    final opened = await _actions.openWhatsApp(phone);
+    unawaited(
+      _analytics.logWhatsAppClick(
+        merchantId: current.merchantId,
+        zoneId: current.merchant.zoneId,
+        categoryId: current.merchant.categoryId,
+        source: _source,
         launchSucceeded: opened,
       ),
     );
@@ -284,5 +321,20 @@ class MerchantDetailController
     final current = state.valueOrNull;
     if (current == null) return;
     state = AsyncValue<MerchantDetailState>.data(transform(current));
+  }
+
+  Future<void> _trackSurfaceViewed({required String zoneId}) async {
+    try {
+      await ref.read(analyticsServiceProvider).track(
+        event: 'surface_viewed',
+        parameters: {
+          'surface': 'merchant_detail',
+          'source': _source,
+          'zoneId': zoneId,
+        },
+      );
+    } catch (_) {
+      // Best effort.
+    }
   }
 }

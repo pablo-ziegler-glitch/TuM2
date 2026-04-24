@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../pharmacy/services/distance_calculator.dart';
 import '../analytics/open_now_analytics.dart';
 import '../models/open_now_models.dart';
@@ -146,14 +147,17 @@ class OpenNowState {
 
 class OpenNowNotifier extends StateNotifier<OpenNowState> {
   OpenNowNotifier({
+    Ref? ref,
     required OpenNowDataSource repository,
     required OpenNowAnalyticsSink analytics,
     required OpenNowLocationReader locationReader,
-  })  : _repository = repository,
+  })  : _ref = ref,
+        _repository = repository,
         _analytics = analytics,
         _locationReader = locationReader,
         super(const OpenNowState());
 
+  final Ref? _ref;
   final OpenNowDataSource _repository;
   final OpenNowAnalyticsSink _analytics;
   final OpenNowLocationReader _locationReader;
@@ -179,6 +183,8 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
       }
 
       final selectedZoneId = zones.first.zoneId;
+      unawaited(
+          _logZoneResolved(zoneId: selectedZoneId, source: 'open_now_init'));
       final locationResult = await locationFuture;
       final userPosition = _handleLocationResult(locationResult);
 
@@ -193,8 +199,7 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
         clearError: true,
       );
 
-      unawaited(_analytics.logViewOpened(zoneId: selectedZoneId));
-      await _loadForZone(zoneId: selectedZoneId, isRefresh: false);
+      await _loadForZone(zoneId: selectedZoneId);
     } catch (error) {
       state = state.copyWith(
         isLoading: false,
@@ -212,7 +217,8 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
       isLoading: true,
       clearError: true,
     );
-    await _loadForZone(zoneId: zoneId, isRefresh: false);
+    unawaited(_logZoneResolved(zoneId: zoneId, source: 'open_now_zone_switch'));
+    await _loadForZone(zoneId: zoneId);
   }
 
   Future<void> refresh() async {
@@ -222,7 +228,7 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
       isLoading: true,
       clearError: true,
     );
-    await _loadForZone(zoneId: zoneId, isRefresh: true);
+    await _loadForZone(zoneId: zoneId);
   }
 
   void logCardClicked({
@@ -230,23 +236,20 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
     required bool isFallback,
     required int rank,
   }) {
-    unawaited(_analytics.logCardClicked(
+    unawaited(_analytics.logOpenNowMerchantOpened(
       zoneId: state.activeZoneId,
       merchantId: merchant.merchantId,
-      isFallback: isFallback,
-      rank: rank,
+      categoryId: merchant.categoryId,
+      isOpenNowShown: merchant.isOpenNow,
+      isOnDutyShown: merchant.isOnDutyToday,
+      source: isFallback ? 'open_now_fallback' : 'open_now_results',
     ));
   }
 
   Future<void> _loadForZone({
     required String zoneId,
-    required bool isRefresh,
   }) async {
     try {
-      if (isRefresh) {
-        unawaited(_analytics.logPullToRefresh(zoneId: zoneId));
-      }
-
       final openNow = await _repository.fetchOpenNow(zoneId: zoneId);
       final rankedOpenNow = _rankMerchants(
         openNow,
@@ -261,14 +264,7 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
           userPosition: state.userPosition,
         ).take(6).toList(growable: false);
 
-        if (fallback.isEmpty) {
-          unawaited(_analytics.logEmptyStateShown(zoneId: zoneId));
-        } else {
-          unawaited(_analytics.logFallbackShown(
-            zoneId: zoneId,
-            fallbackCount: fallback.length,
-          ));
-        }
+        // El fallback se refleja en open_now_viewed con is_open_now_shown=false.
       }
 
       state = state.copyWith(
@@ -279,14 +275,11 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
       );
 
       final corpus = rankedOpenNow.isNotEmpty ? rankedOpenNow : fallback;
-      unawaited(_analytics.logResultsLoaded(
+      unawaited(_analytics.logOpenNowViewed(
         zoneId: zoneId,
         resultsCount: rankedOpenNow.length,
-        fallbackCount: fallback.length,
-        hasLocation: state.hasLocation,
-        dataFreshnessBucket: _freshnessBucket(corpus),
-        topResultVerificationStatus:
-            corpus.isEmpty ? 'none' : corpus.first.verificationStatus,
+        isOpenNowShown: rankedOpenNow.isNotEmpty,
+        isOnDutyShown: corpus.any((item) => item.isOnDutyToday),
       ));
     } catch (error) {
       state = state.copyWith(
@@ -304,17 +297,11 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
         return result.position;
       case OpenNowLocationStatus.denied:
       case OpenNowLocationStatus.deniedForever:
-        unawaited(_analytics.logDistancePermissionDenied(
-          status: result.status.name,
-        ));
         return null;
       case OpenNowLocationStatus.serviceDisabled:
       case OpenNowLocationStatus.timeout:
       case OpenNowLocationStatus.error:
       case OpenNowLocationStatus.unavailable:
-        unawaited(_analytics.logLocationUnavailable(
-          reason: result.status.name,
-        ));
         return null;
     }
   }
@@ -367,23 +354,21 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
   int _verificationScore(String status) =>
       _verificationRank[status.trim().toLowerCase()] ?? 0;
 
-  String _freshnessBucket(List<OpenNowMerchant> merchants) {
-    DateTime? latest;
-    for (final merchant in merchants) {
-      final refreshAt = merchant.lastDataRefreshAt;
-      if (refreshAt == null) continue;
-      if (latest == null || refreshAt.isAfter(latest)) {
-        latest = refreshAt;
-      }
-    }
-    if (latest == null) return 'unknown';
-
-    final minutes = DateTime.now().difference(latest).inMinutes;
-    if (minutes < 5) return 'lt_5m';
-    if (minutes < 15) return 'lt_15m';
-    if (minutes < 60) return 'lt_60m';
-    if (minutes < 180) return 'lt_3h';
-    return 'gte_3h';
+  Future<void> _logZoneResolved({
+    required String zoneId,
+    required String source,
+  }) {
+    final ref = _ref;
+    if (ref == null) return Future<void>.value();
+    return ref.read(analyticsServiceProvider).track(
+          event: 'zone_resolved',
+          parameters: {
+            'surface': 'open_now',
+            'zoneId': zoneId,
+            'source': source,
+          },
+          dedupeWindow: const Duration(seconds: 10),
+        );
   }
 }
 
@@ -419,6 +404,7 @@ final openNowNotifierProvider =
     });
 
     return OpenNowNotifier(
+      ref: ref,
       repository: ref.watch(openNowRepositoryProvider),
       analytics: ref.watch(openNowAnalyticsProvider),
       locationReader: ref.watch(openNowLocationReaderProvider),

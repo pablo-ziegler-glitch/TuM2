@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -26,6 +27,10 @@ class _AbiertoAhoraScreenState extends ConsumerState<AbiertoAhoraScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(openNowNotifierProvider.notifier).ensureInitialized();
+      ref.read(analyticsServiceProvider).track(
+        event: 'surface_viewed',
+        parameters: {'surface': 'open_now'},
+      );
     });
   }
 
@@ -72,7 +77,10 @@ class _AbiertoAhoraScreenState extends ConsumerState<AbiertoAhoraScreen> {
                           isFallback: isFallback,
                         );
                         context.push(
-                          AppRoutes.commerceDetailPath(merchant.merchantId),
+                          AppRoutes.commerceDetailPath(
+                            merchant.merchantId,
+                            source: 'open_now',
+                          ),
                         );
                       },
                     )
@@ -87,7 +95,10 @@ class _AbiertoAhoraScreenState extends ConsumerState<AbiertoAhoraScreen> {
                           isFallback: true,
                         );
                         context.push(
-                          AppRoutes.commerceDetailPath(merchant.merchantId),
+                          AppRoutes.commerceDetailPath(
+                            merchant.merchantId,
+                            source: 'open_now_fallback',
+                          ),
                         );
                       },
                     ),

@@ -120,7 +120,11 @@ class ClaimSelectMerchantScreen extends ConsumerWidget {
         child: FilledButton(
           onPressed: state.selectedMerchant == null
               ? null
-              : () => context.push(AppRoutes.claimApplicant),
+              : () async {
+                  await controller.trackStepCompleted('select_merchant');
+                  if (!context.mounted) return;
+                  context.push(AppRoutes.claimApplicant);
+                },
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary500,
             foregroundColor: Colors.white,
@@ -278,7 +282,11 @@ class _ClaimApplicantDataScreenState
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => context.push(AppRoutes.claimEvidence),
+              onPressed: () async {
+                await controller.trackStepCompleted('applicant_data');
+                if (!context.mounted) return;
+                context.push(AppRoutes.claimEvidence);
+              },
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary500,
                 foregroundColor: Colors.white,
@@ -293,6 +301,7 @@ class _ClaimApplicantDataScreenState
                 ? null
                 : () async {
                     await controller.saveDraft();
+                    await controller.trackAbandoned(stepId: 'applicant_data');
                     if (!context.mounted) return;
                     final hasError = ref
                             .read(merchantClaimFlowControllerProvider)
@@ -401,7 +410,13 @@ class _ClaimEvidenceScreenState extends ConsumerState<ClaimEvidenceScreen> {
         width: double.infinity,
         child: FilledButton(
           onPressed: state.hasRequiredEvidence
-              ? () => context.push(AppRoutes.claimConsent)
+              ? () async {
+                  await ref
+                      .read(merchantClaimFlowControllerProvider.notifier)
+                      .trackStepCompleted('evidence');
+                  if (!context.mounted) return;
+                  context.push(AppRoutes.claimConsent);
+                }
               : null,
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.primary500,
@@ -529,6 +544,7 @@ class ClaimConsentScreen extends ConsumerWidget {
                   ? null
                   : () async {
                       await controller.saveDraft();
+                      await controller.trackAbandoned(stepId: 'consent');
                       if (!context.mounted) return;
                       final hasError = ref
                               .read(merchantClaimFlowControllerProvider)
@@ -550,6 +566,7 @@ class ClaimConsentScreen extends ConsumerWidget {
               onPressed: state.isBusy
                   ? null
                   : () async {
+                      await controller.trackStepCompleted('consent');
                       await controller.submitClaim();
                       final currentState =
                           ref.read(merchantClaimFlowControllerProvider);

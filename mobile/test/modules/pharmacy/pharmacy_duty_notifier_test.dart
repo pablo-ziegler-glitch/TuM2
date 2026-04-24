@@ -7,6 +7,7 @@ import 'package:tum2/modules/pharmacy/repositories/pharmacy_duty_repository.dart
 import 'package:tum2/modules/pharmacy/repositories/zones_repository.dart';
 import 'package:tum2/modules/pharmacy/services/business_date.dart';
 import 'package:tum2/modules/pharmacy/services/geo_location_service.dart';
+import 'package:tum2/modules/pharmacy/services/outdated_info_report_service.dart';
 
 void main() {
   final todayKey = businessDateKey(businessTodayUtcMinus3());
@@ -130,6 +131,52 @@ void main() {
         expect(notifier.state.errorType, PharmacyDutyErrorType.none);
       },
     );
+
+    test('submitOutdatedInfoReport confirma, persiste y registra analytics',
+        () async {
+      final analytics = _FakeAnalytics();
+      final reportService = _FakeOutdatedInfoReportService();
+      final notifier = PharmacyDutyNotifier(
+        dutyRepository: _FakeDutySource(
+          itemsByDate: {
+            todayKey: [
+              const PharmacyDutyItem(
+                dutyId: '1',
+                merchantId: 'm-1',
+                merchantName: 'Farmacia',
+                addressLine: 'Dir',
+                phone: '1155551111',
+                latitude: -34.60,
+                longitude: -58.40,
+                zoneId: 'z1',
+                dutyDate: '2026-04-07',
+                isOnDuty: true,
+                isOpenNow: true,
+                is24Hours: false,
+                verificationStatus: 'verified',
+                sortBoost: 0,
+              ),
+            ],
+          },
+        ),
+        zonesRepository: _FakeZonesSource(),
+        geoLocationService: _FakeGeoLocationService.denied(),
+        analytics: analytics,
+        outdatedInfoReportService: reportService,
+      );
+
+      await notifier.initialize();
+      final item = notifier.state.items.first;
+      final status = await notifier.submitOutdatedInfoReport(
+        item: item,
+        reasonCode: 'wrong_schedule',
+      );
+
+      expect(status, OutdatedInfoReportSubmitStatus.created);
+      expect(reportService.calls, 1);
+      expect(analytics.outdatedInfoConfirmedCount, 1);
+      expect(analytics.outdatedInfoSubmittedCount, 1);
+    });
   });
 }
 
@@ -199,85 +246,73 @@ class _FakeGeoLocationService extends GeoLocationService {
 }
 
 class _FakeAnalytics implements PharmacyDutyAnalyticsSink {
+  int outdatedInfoConfirmedCount = 0;
+  int outdatedInfoSubmittedCount = 0;
+
   @override
-  Future<void> logDirectionsOpened({
-    required String activeZoneId,
-    required String entityZoneId,
+  Future<void> logOutdatedInfoConfirmed({
+    required String zoneId,
+    required String merchantId,
+    required String source,
+    required String reasonCode,
+  }) async {
+    outdatedInfoConfirmedCount++;
+  }
+
+  @override
+  Future<void> logOutdatedInfoReportSubmitted({
+    required String zoneId,
+    required String merchantId,
+    required String source,
+    required String reasonCode,
+  }) async {
+    outdatedInfoSubmittedCount++;
+  }
+
+  @override
+  Future<void> logOutdatedInfoTapped({
+    required String zoneId,
+    required String merchantId,
+    required String source,
+  }) async {}
+
+  @override
+  Future<void> logPharmacyDutyDetailOpened({
+    required String zoneId,
+    required String merchantId,
+    required String source,
+  }) async {}
+
+  @override
+  Future<void> logPharmacyDutyListViewed({
+    required String zoneId,
+    required int resultsCount,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+  }) async {}
+
+  @override
+  Future<void> logPharmacyDutyUsefulActionClicked({
+    required String zoneId,
+    required String merchantId,
+    required String actionType,
     required String distanceBucket,
-  }) async {}
-
-  @override
-  Future<void> logFeedbackNegativeReasonSelected({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
-  }) async {}
-
-  @override
-  Future<void> logFeedbackNegativeStarted({
-    required String activeZoneId,
-    required String entityZoneId,
-  }) async {}
-
-  @override
-  Future<void> logFeedbackPositive({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String copyVariant,
-  }) async {}
-
-  @override
-  Future<void> logNearbyBootstrapCompleted({
     required String source,
-    required String activeZoneId,
-    required String resultCountBucket,
   }) async {}
+}
+
+class _FakeOutdatedInfoReportService implements OutdatedInfoReportService {
+  int calls = 0;
 
   @override
-  Future<void> logNearbyBootstrapFailed({
+  Future<OutdatedInfoReportSubmitStatus> submit({
+    required String merchantId,
+    required String zoneId,
+    required String reasonCode,
     required String source,
-    required String activeZoneId,
-    required String reasonCode,
-    required String permissionState,
-    required String networkState,
-  }) async {}
-
-  @override
-  Future<void> logNearbyBootstrapStarted({
-    required String source,
-    required String permissionState,
-    required String networkState,
-    required String activeZoneId,
-  }) async {}
-
-  @override
-  Future<void> logOperatorCallClick({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String distanceBucket,
-  }) async {}
-
-  @override
-  Future<void> logPharmacyDutyView({
-    required String activeZoneId,
-    required String resultCountBucket,
-  }) async {}
-
-  @override
-  Future<void> logReportStarted({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String reasonCode,
-  }) async {}
-
-  @override
-  Future<void> logReportSubmitted({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
-  }) async {}
+    required String dateKey,
+  }) async {
+    calls++;
+    return OutdatedInfoReportSubmitStatus.created;
+  }
 }

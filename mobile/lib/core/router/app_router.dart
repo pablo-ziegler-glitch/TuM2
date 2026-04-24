@@ -562,7 +562,12 @@ List<RouteBase> _buildRoutes() {
       path: AppRoutes.commerceDetail,
       builder: (context, state) {
         final merchantId = state.pathParameters['merchantId']!;
-        return MerchantDetailPage(merchantId: merchantId);
+        final source =
+            (state.uri.queryParameters['source'] ?? 'unknown').trim();
+        return MerchantDetailPage(
+          merchantId: merchantId,
+          source: source.isEmpty ? 'unknown' : source,
+        );
       },
     ),
 

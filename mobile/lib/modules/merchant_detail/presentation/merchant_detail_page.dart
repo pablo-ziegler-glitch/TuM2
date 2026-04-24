@@ -19,15 +19,18 @@ class MerchantDetailPage extends ConsumerWidget {
   const MerchantDetailPage({
     super.key,
     required this.merchantId,
+    this.source = 'unknown',
   });
 
   final String merchantId;
+  final String source;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncState = ref.watch(merchantDetailControllerProvider(merchantId));
     final controller =
         ref.read(merchantDetailControllerProvider(merchantId).notifier);
+    controller.setSource(source);
     final state = asyncState.valueOrNull;
     final isDutyVariant = state?.merchant.hasPharmacyDutyToday ?? false;
 
@@ -63,6 +66,7 @@ class MerchantDetailPage extends ConsumerWidget {
         data: (state) => _MerchantDetailReady(
           state: state,
           onCallTap: controller.onCallTap,
+          onWhatsAppTap: controller.onWhatsAppTap,
           onDirectionsTap: controller.onDirectionsTap,
           onShareTap: controller.onShareTap,
         ),
@@ -75,12 +79,14 @@ class _MerchantDetailReady extends StatelessWidget {
   const _MerchantDetailReady({
     required this.state,
     required this.onCallTap,
+    required this.onWhatsAppTap,
     required this.onDirectionsTap,
     required this.onShareTap,
   });
 
   final MerchantDetailState state;
   final Future<void> Function() onCallTap;
+  final Future<void> Function() onWhatsAppTap;
   final Future<void> Function() onDirectionsTap;
   final Future<void> Function() onShareTap;
 
@@ -116,6 +122,7 @@ class _MerchantDetailReady extends StatelessWidget {
           MerchantCtaRow(
             hasPhone: state.merchant.hasPhone,
             onCallTap: onCallTap,
+            onWhatsAppTap: onWhatsAppTap,
             onDirectionsTap: onDirectionsTap,
             onShareTap: onShareTap,
             isDutyVariant: isDutyVariant,

@@ -117,15 +117,18 @@ void main() {
       await tester.pumpAndSettle();
 
       final callCta = find.byKey(const Key('merchant_cta_call'));
+      final whatsappCta = find.byKey(const Key('merchant_cta_whatsapp'));
       await tester.scrollUntilVisible(
         callCta,
         200,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.tap(callCta);
+      await tester.tap(whatsappCta);
       await tester.pumpAndSettle();
 
       expect(actions.callCount, 0);
+      expect(actions.whatsappCount, 0);
     });
 
     testWidgets('comercio no visible/no encontrado', (tester) async {

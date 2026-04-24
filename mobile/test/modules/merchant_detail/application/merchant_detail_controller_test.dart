@@ -145,8 +145,42 @@ void main() {
       await container
           .read(merchantDetailControllerProvider('merchant-1').notifier)
           .onCallTap();
+      await container
+          .read(merchantDetailControllerProvider('merchant-1').notifier)
+          .onWhatsAppTap();
 
       expect(actions.callCount, 0);
+      expect(actions.whatsappCount, 0);
+    });
+
+    test('comercio con telefono dispara accion de whatsapp', () async {
+      final repository = FakeMerchantDetailRepository();
+      repository.fetchCoreHandler = (_) async => buildCoreDto(
+            phonePrimary: '+54 11 5555-9999',
+          );
+      repository.fetchProductsHandler = (_, __, ___) async => [];
+      repository.fetchScheduleHandler = (_) async => null;
+      repository.fetchSignalsHandler = (_) async => null;
+      final actions = FakeMerchantDetailActions();
+      final analytics = RecordingMerchantDetailAnalytics();
+
+      final container = buildContainer(
+        repository: repository,
+        actions: actions,
+        analytics: analytics,
+      );
+      addTearDown(container.dispose);
+
+      await container.read(
+        merchantDetailControllerProvider('merchant-1').future,
+      );
+      await container
+          .read(merchantDetailControllerProvider('merchant-1').notifier)
+          .onWhatsAppTap();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(actions.whatsappCount, 1);
+      expect(analytics.whatsappEvents, isNotEmpty);
     });
 
     test('comercio no visible/no encontrado', () async {

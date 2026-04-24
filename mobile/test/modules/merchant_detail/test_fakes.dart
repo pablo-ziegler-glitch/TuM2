@@ -61,39 +61,75 @@ class RecordingMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
   final List<Map<String, Object>> detailViewEvents = [];
   final List<Map<String, Object>> callEvents = [];
   final List<Map<String, Object>> directionsEvents = [];
+  final List<Map<String, Object>> whatsappEvents = [];
   final List<Map<String, Object>> shareEvents = [];
   final List<Map<String, Object>> dutyBannerEvents = [];
   final List<Map<String, Object>> errorEvents = [];
 
   @override
-  Future<void> logDetailView({
+  Future<void> logDetailOpened({
+    required String merchantId,
+    required String zoneId,
     required String categoryId,
     required bool hasPharmacyDutyToday,
+    required String source,
   }) async {
     detailViewEvents.add({
+      'merchantId': merchantId,
+      'zoneId': zoneId,
       'categoryId': categoryId,
       'hasPharmacyDutyToday': hasPharmacyDutyToday,
+      'source': source,
     });
   }
 
   @override
   Future<void> logCallClick({
-    required String entityZoneId,
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
     required bool launchSucceeded,
   }) async {
     callEvents.add({
-      'entityZoneId': entityZoneId,
+      'merchantId': merchantId,
+      'zoneId': zoneId,
+      'categoryId': categoryId,
+      'source': source,
       'launchSucceeded': launchSucceeded,
     });
   }
 
   @override
   Future<void> logDirectionsClick({
-    required String entityZoneId,
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
     required bool launchSucceeded,
   }) async {
     directionsEvents.add({
-      'entityZoneId': entityZoneId,
+      'merchantId': merchantId,
+      'zoneId': zoneId,
+      'categoryId': categoryId,
+      'source': source,
+      'launchSucceeded': launchSucceeded,
+    });
+  }
+
+  @override
+  Future<void> logWhatsAppClick({
+    required String merchantId,
+    required String zoneId,
+    required String categoryId,
+    required String source,
+    required bool launchSucceeded,
+  }) async {
+    whatsappEvents.add({
+      'merchantId': merchantId,
+      'zoneId': zoneId,
+      'categoryId': categoryId,
+      'source': source,
       'launchSucceeded': launchSucceeded,
     });
   }
@@ -131,14 +167,17 @@ class RecordingMerchantDetailAnalytics implements MerchantDetailAnalyticsSink {
 class FakeMerchantDetailActions implements MerchantDetailActions {
   FakeMerchantDetailActions({
     this.callResult = true,
+    this.whatsAppResult = true,
     this.directionsResult = true,
     this.shareResult = true,
   });
 
   bool callResult;
+  bool whatsAppResult;
   bool directionsResult;
   bool shareResult;
   int callCount = 0;
+  int whatsappCount = 0;
   int directionsCount = 0;
   int shareCount = 0;
 
@@ -146,6 +185,12 @@ class FakeMerchantDetailActions implements MerchantDetailActions {
   Future<bool> openCall(String phone) async {
     callCount += 1;
     return callResult;
+  }
+
+  @override
+  Future<bool> openWhatsApp(String phone) async {
+    whatsappCount += 1;
+    return whatsAppResult;
   }
 
   @override

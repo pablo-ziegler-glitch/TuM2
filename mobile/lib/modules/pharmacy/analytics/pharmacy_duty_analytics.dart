@@ -1,75 +1,45 @@
 import '../../../core/analytics/analytics_service.dart';
 
 abstract interface class PharmacyDutyAnalyticsSink {
-  Future<void> logNearbyBootstrapStarted({
+  Future<void> logPharmacyDutyListViewed({
+    required String zoneId,
+    required int resultsCount,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+  });
+
+  Future<void> logPharmacyDutyDetailOpened({
+    required String zoneId,
+    required String merchantId,
     required String source,
-    required String permissionState,
-    required String networkState,
-    required String activeZoneId,
   });
 
-  Future<void> logNearbyBootstrapCompleted({
-    required String source,
-    required String activeZoneId,
-    required String resultCountBucket,
-  });
-
-  Future<void> logNearbyBootstrapFailed({
-    required String source,
-    required String activeZoneId,
-    required String reasonCode,
-    required String permissionState,
-    required String networkState,
-  });
-
-  Future<void> logPharmacyDutyView({
-    required String activeZoneId,
-    required String resultCountBucket,
-  });
-
-  Future<void> logOperatorCallClick({
-    required String activeZoneId,
-    required String entityZoneId,
+  Future<void> logPharmacyDutyUsefulActionClicked({
+    required String zoneId,
+    required String merchantId,
+    required String actionType,
     required String distanceBucket,
+    required String source,
   });
 
-  Future<void> logDirectionsOpened({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String distanceBucket,
+  Future<void> logOutdatedInfoTapped({
+    required String zoneId,
+    required String merchantId,
+    required String source,
   });
 
-  Future<void> logFeedbackPositive({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String copyVariant,
-  });
-
-  Future<void> logFeedbackNegativeStarted({
-    required String activeZoneId,
-    required String entityZoneId,
-  });
-
-  Future<void> logFeedbackNegativeReasonSelected({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
-  });
-
-  Future<void> logReportStarted({
-    required String activeZoneId,
-    required String entityZoneId,
+  Future<void> logOutdatedInfoConfirmed({
+    required String zoneId,
+    required String merchantId,
+    required String source,
     required String reasonCode,
   });
 
-  Future<void> logReportSubmitted({
-    required String activeZoneId,
-    required String entityZoneId,
+  Future<void> logOutdatedInfoReportSubmitted({
+    required String zoneId,
+    required String merchantId,
+    required String source,
     required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
   });
 }
 
@@ -80,201 +50,128 @@ class AnalyticsServicePharmacyDutyAnalytics
   final AnalyticsService _analyticsService;
 
   @override
-  Future<void> logNearbyBootstrapStarted({
+  Future<void> logPharmacyDutyListViewed({
+    required String zoneId,
+    required int resultsCount,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+  }) {
+    return _analyticsService.track(
+      event: 'pharmacy_duty_list_viewed',
+      parameters: {
+        'surface': 'pharmacy_duty',
+        'zoneId': zoneId,
+        'results_count_bucket':
+            _analyticsService.resultCountBucket(resultsCount),
+        'is_open_now_shown': isOpenNowShown,
+        'is_on_duty_shown': isOnDutyShown,
+      },
+      dedupeWindow: const Duration(seconds: 4),
+    );
+  }
+
+  @override
+  Future<void> logPharmacyDutyDetailOpened({
+    required String zoneId,
+    required String merchantId,
     required String source,
-    required String permissionState,
-    required String networkState,
-    required String activeZoneId,
   }) {
     return _analyticsService.track(
-      event: 'nearby_bootstrap_started',
+      event: 'pharmacy_duty_detail_opened',
       parameters: {
-        'surface': 'pharmacy_duty',
+        'surface': 'pharmacy_duty_detail',
+        'zoneId': zoneId,
+        'merchantId': merchantId,
         'source': source,
-        'permission_state': permissionState,
-        'network_state': networkState,
-        'active_zone_id': activeZoneId,
       },
     );
   }
 
   @override
-  Future<void> logNearbyBootstrapCompleted({
-    required String source,
-    required String activeZoneId,
-    required String resultCountBucket,
-  }) {
-    return _analyticsService.track(
-      event: 'nearby_bootstrap_completed',
-      parameters: {
-        'surface': 'pharmacy_duty',
-        'source': source,
-        'active_zone_id': activeZoneId,
-        'result_count_bucket': resultCountBucket,
-      },
-    );
-  }
-
-  @override
-  Future<void> logNearbyBootstrapFailed({
-    required String source,
-    required String activeZoneId,
-    required String reasonCode,
-    required String permissionState,
-    required String networkState,
-  }) {
-    return _analyticsService.track(
-      event: 'nearby_bootstrap_failed',
-      parameters: {
-        'surface': 'pharmacy_duty',
-        'source': source,
-        'active_zone_id': activeZoneId,
-        'reason_code': reasonCode,
-        'permission_state': permissionState,
-        'network_state': networkState,
-      },
-    );
-  }
-
-  @override
-  Future<void> logPharmacyDutyView({
-    required String activeZoneId,
-    required String resultCountBucket,
-  }) {
-    return _analyticsService.track(
-      event: 'pharmacy_duty_view',
-      parameters: {
-        'surface': 'pharmacy_duty',
-        'entry_point': 'home',
-        'active_zone_id': activeZoneId,
-        'result_count_bucket': resultCountBucket,
-      },
-    );
-  }
-
-  @override
-  Future<void> logOperatorCallClick({
-    required String activeZoneId,
-    required String entityZoneId,
+  Future<void> logPharmacyDutyUsefulActionClicked({
+    required String zoneId,
+    required String merchantId,
+    required String actionType,
     required String distanceBucket,
-  }) {
-    return _analyticsService.track(
-      event: 'operator_call_click',
+    required String source,
+  }) async {
+    await _analyticsService.track(
+      event: 'pharmacy_duty_useful_action_clicked',
       parameters: {
         'surface': 'pharmacy_duty',
-        'entity_type': 'pharmacy',
-        'active_zone_id': activeZoneId,
-        'entity_zone_id': entityZoneId,
+        'zoneId': zoneId,
+        'merchantId': merchantId,
+        'action_type': actionType,
         'distance_bucket': distanceBucket,
+        'source': source,
+        'elapsed_time_bucket': _analyticsService.elapsedTimeBucketNow(),
       },
     );
-  }
-
-  @override
-  Future<void> logDirectionsOpened({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String distanceBucket,
-  }) {
-    return _analyticsService.track(
-      event: 'directions_opened',
+    await _analyticsService.track(
+      event: 'useful_action_clicked',
       parameters: {
         'surface': 'pharmacy_duty',
-        'entity_type': 'pharmacy',
-        'active_zone_id': activeZoneId,
-        'entity_zone_id': entityZoneId,
+        'zoneId': zoneId,
+        'merchantId': merchantId,
+        'action_type': actionType,
         'distance_bucket': distanceBucket,
+        'source': source,
+        'elapsed_time_bucket': _analyticsService.elapsedTimeBucketNow(),
       },
     );
   }
 
   @override
-  Future<void> logFeedbackPositive({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String copyVariant,
+  Future<void> logOutdatedInfoTapped({
+    required String zoneId,
+    required String merchantId,
+    required String source,
   }) {
     return _analyticsService.track(
-      event: 'pharmacy_duty_feedback_positive',
+      event: 'outdated_info_tapped',
       parameters: {
         'surface': 'pharmacy_duty',
-        'active_zone_id': activeZoneId,
-        'entity_zone_id': entityZoneId,
-        'copy_variant': copyVariant,
+        'zoneId': zoneId,
+        'merchantId': merchantId,
+        'source': source,
       },
     );
   }
 
   @override
-  Future<void> logFeedbackNegativeStarted({
-    required String activeZoneId,
-    required String entityZoneId,
-  }) {
-    return _analyticsService.track(
-      event: 'pharmacy_duty_feedback_negative_started',
-      parameters: {
-        'surface': 'pharmacy_duty',
-        'active_zone_id': activeZoneId,
-        'entity_zone_id': entityZoneId,
-      },
-    );
-  }
-
-  @override
-  Future<void> logFeedbackNegativeReasonSelected({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
-  }) {
-    return _analyticsService.track(
-      event: 'pharmacy_duty_feedback_negative_reason_selected',
-      parameters: {
-        'surface': 'pharmacy_duty',
-        'active_zone_id': activeZoneId,
-        'entity_zone_id': entityZoneId,
-        'reason_code': reasonCode,
-        'has_free_text': hasFreeText,
-        'has_attachment': hasAttachment,
-      },
-    );
-  }
-
-  @override
-  Future<void> logReportStarted({
-    required String activeZoneId,
-    required String entityZoneId,
+  Future<void> logOutdatedInfoConfirmed({
+    required String zoneId,
+    required String merchantId,
+    required String source,
     required String reasonCode,
   }) {
     return _analyticsService.track(
-      event: 'report_started',
+      event: 'outdated_info_confirmed',
       parameters: {
         'surface': 'pharmacy_duty',
-        'active_zone_id': activeZoneId,
-        'entity_zone_id': entityZoneId,
+        'zoneId': zoneId,
+        'merchantId': merchantId,
+        'source': source,
         'reason_code': reasonCode,
       },
     );
   }
 
   @override
-  Future<void> logReportSubmitted({
-    required String activeZoneId,
-    required String entityZoneId,
+  Future<void> logOutdatedInfoReportSubmitted({
+    required String zoneId,
+    required String merchantId,
+    required String source,
     required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
   }) {
     return _analyticsService.track(
-      event: 'report_submitted',
+      event: 'outdated_info_report_submitted',
       parameters: {
         'surface': 'pharmacy_duty',
-        'active_zone_id': activeZoneId,
-        'entity_zone_id': entityZoneId,
+        'zoneId': zoneId,
+        'merchantId': merchantId,
+        'source': source,
         'reason_code': reasonCode,
-        'has_free_text': hasFreeText,
-        'has_attachment': hasAttachment,
       },
     );
   }
@@ -282,84 +179,49 @@ class AnalyticsServicePharmacyDutyAnalytics
 
 class NoopPharmacyDutyAnalytics implements PharmacyDutyAnalyticsSink {
   @override
-  Future<void> logDirectionsOpened({
-    required String activeZoneId,
-    required String entityZoneId,
+  Future<void> logOutdatedInfoConfirmed({
+    required String zoneId,
+    required String merchantId,
+    required String source,
+    required String reasonCode,
+  }) async {}
+
+  @override
+  Future<void> logOutdatedInfoReportSubmitted({
+    required String zoneId,
+    required String merchantId,
+    required String source,
+    required String reasonCode,
+  }) async {}
+
+  @override
+  Future<void> logOutdatedInfoTapped({
+    required String zoneId,
+    required String merchantId,
+    required String source,
+  }) async {}
+
+  @override
+  Future<void> logPharmacyDutyDetailOpened({
+    required String zoneId,
+    required String merchantId,
+    required String source,
+  }) async {}
+
+  @override
+  Future<void> logPharmacyDutyListViewed({
+    required String zoneId,
+    required int resultsCount,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+  }) async {}
+
+  @override
+  Future<void> logPharmacyDutyUsefulActionClicked({
+    required String zoneId,
+    required String merchantId,
+    required String actionType,
     required String distanceBucket,
-  }) async {}
-
-  @override
-  Future<void> logFeedbackNegativeReasonSelected({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
-  }) async {}
-
-  @override
-  Future<void> logFeedbackNegativeStarted({
-    required String activeZoneId,
-    required String entityZoneId,
-  }) async {}
-
-  @override
-  Future<void> logFeedbackPositive({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String copyVariant,
-  }) async {}
-
-  @override
-  Future<void> logNearbyBootstrapCompleted({
     required String source,
-    required String activeZoneId,
-    required String resultCountBucket,
-  }) async {}
-
-  @override
-  Future<void> logNearbyBootstrapFailed({
-    required String source,
-    required String activeZoneId,
-    required String reasonCode,
-    required String permissionState,
-    required String networkState,
-  }) async {}
-
-  @override
-  Future<void> logNearbyBootstrapStarted({
-    required String source,
-    required String permissionState,
-    required String networkState,
-    required String activeZoneId,
-  }) async {}
-
-  @override
-  Future<void> logOperatorCallClick({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String distanceBucket,
-  }) async {}
-
-  @override
-  Future<void> logPharmacyDutyView({
-    required String activeZoneId,
-    required String resultCountBucket,
-  }) async {}
-
-  @override
-  Future<void> logReportStarted({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String reasonCode,
-  }) async {}
-
-  @override
-  Future<void> logReportSubmitted({
-    required String activeZoneId,
-    required String entityZoneId,
-    required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
   }) async {}
 }

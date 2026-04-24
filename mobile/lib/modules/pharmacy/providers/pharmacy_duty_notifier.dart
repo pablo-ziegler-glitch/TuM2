@@ -11,6 +11,7 @@ import '../repositories/zones_repository.dart';
 import '../services/business_date.dart';
 import '../services/distance_calculator.dart';
 import '../services/geo_location_service.dart';
+import '../services/outdated_info_report_service.dart';
 
 enum PharmacyDutyErrorType { none, technical }
 
@@ -96,36 +97,33 @@ class PharmacyDutyState {
 
 class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
   PharmacyDutyNotifier({
+    Ref? ref,
     PharmacyDutySource? dutyRepository,
     ZonesSource? zonesRepository,
     GeoLocationService? geoLocationService,
     PharmacyDutyAnalyticsSink? analytics,
-  })  : _dutyRepository = dutyRepository ?? PharmacyDutyRepository(),
+    OutdatedInfoReportService? outdatedInfoReportService,
+  })  : _ref = ref,
+        _dutyRepository = dutyRepository ?? PharmacyDutyRepository(),
         _zonesRepository = zonesRepository ?? ZonesRepository(),
         _geoLocationService = geoLocationService ?? GeoLocationService(),
         _analytics = analytics ?? NoopPharmacyDutyAnalytics(),
+        _outdatedInfoReportService =
+            outdatedInfoReportService ?? const NoopOutdatedInfoReportService(),
         super(PharmacyDutyState.initial());
 
+  final Ref? _ref;
   final PharmacyDutySource _dutyRepository;
   final ZonesSource _zonesRepository;
   final GeoLocationService _geoLocationService;
   final PharmacyDutyAnalyticsSink _analytics;
+  final OutdatedInfoReportService _outdatedInfoReportService;
 
   final Map<String, List<PharmacyDutyItem>> _cache = {};
   int _requestSerial = 0;
-  bool _hasLoggedOpenedEvent = false;
 
   Future<void> initialize({bool force = false}) async {
     if (!force && (state.zones.isNotEmpty || !state.isLoadingInitial)) return;
-
-    unawaited(
-      _analytics.logNearbyBootstrapStarted(
-        source: 'home_bootstrap',
-        permissionState: 'unknown',
-        networkState: 'unknown',
-        activeZoneId: state.selectedZoneId,
-      ),
-    );
 
     final positionResult = await _geoLocationService.getPosition();
     if (positionResult is GeoPositionOk) {
@@ -148,32 +146,20 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
         selectedZoneId: resolvedZone?.zoneId ?? '',
       );
       if (state.selectedZoneId.isNotEmpty) {
+        unawaited(
+          _logZoneResolved(
+            zoneId: state.selectedZoneId,
+            source: 'pharmacy_duty_init',
+          ),
+        );
         await _loadForCurrentSelection(forceRefresh: true, isInitial: true);
       } else {
         state = state.copyWith(isLoadingInitial: false);
-        unawaited(
-          _analytics.logNearbyBootstrapFailed(
-            source: 'home_bootstrap',
-            activeZoneId: state.selectedZoneId,
-            reasonCode: 'zone_unresolved',
-            permissionState: state.hasLocationPermission ? 'granted' : 'denied',
-            networkState: 'unknown',
-          ),
-        );
       }
     } catch (_) {
       state = state.copyWith(
         isLoadingInitial: false,
         errorType: PharmacyDutyErrorType.technical,
-      );
-      unawaited(
-        _analytics.logNearbyBootstrapFailed(
-          source: 'home_bootstrap',
-          activeZoneId: state.selectedZoneId,
-          reasonCode: 'zones_load_failed',
-          permissionState: state.hasLocationPermission ? 'granted' : 'denied',
-          networkState: 'unknown',
-        ),
       );
     }
   }
@@ -181,6 +167,7 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
   Future<void> setZone(String zoneId) async {
     if (zoneId.isEmpty || zoneId == state.selectedZoneId) return;
     state = state.copyWith(selectedZoneId: zoneId);
+    unawaited(_logZoneResolved(zoneId: zoneId, source: 'pharmacy_duty_switch'));
     await _loadForCurrentSelection(forceRefresh: true);
   }
 
@@ -248,11 +235,6 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
       return;
     }
 
-    if (!_hasLoggedOpenedEvent) {
-      _hasLoggedOpenedEvent = true;
-    }
-
-    final stopwatch = Stopwatch()..start();
     try {
       final fetched = await _dutyRepository.getPublishedDuties(
         zoneId: state.selectedZoneId,
@@ -261,7 +243,6 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
       if (requestId != _requestSerial) return;
       final sorted = _sortItems(fetched);
       _cache[cacheKey] = sorted;
-      stopwatch.stop();
       state = state.copyWith(
         items: sorted,
         isLoadingInitial: false,
@@ -271,16 +252,12 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
         isUsingCachedData: false,
       );
       unawaited(
-        _analytics.logNearbyBootstrapCompleted(
-          source: 'home_bootstrap',
-          activeZoneId: state.selectedZoneId,
-          resultCountBucket: _resultCountBucket(sorted.length),
-        ),
-      );
-      unawaited(
-        _analytics.logPharmacyDutyView(
-          activeZoneId: state.selectedZoneId,
-          resultCountBucket: _resultCountBucket(sorted.length),
+        _analytics.logPharmacyDutyListViewed(
+          zoneId: state.selectedZoneId,
+          resultsCount: sorted.length,
+          isOpenNowShown:
+              sorted.any((item) => item.isOpenNow || item.is24Hours),
+          isOnDutyShown: sorted.isNotEmpty,
         ),
       );
     } catch (_) {
@@ -303,91 +280,64 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
           isUsingCachedData: false,
         );
       }
-      unawaited(
-        _analytics.logNearbyBootstrapFailed(
-          source: 'home_bootstrap',
-          activeZoneId: state.selectedZoneId,
-          reasonCode: 'duty_fetch_failed',
-          permissionState: state.hasLocationPermission ? 'granted' : 'denied',
-          networkState: 'unknown',
-        ),
-      );
     }
   }
 
   Future<void> logCallClick(PharmacyDutyItem item) {
-    return _analytics.logOperatorCallClick(
-      activeZoneId: state.selectedZoneId,
-      entityZoneId: item.zoneId,
+    return _analytics.logPharmacyDutyUsefulActionClicked(
+      zoneId: state.selectedZoneId,
+      merchantId: item.merchantId,
+      actionType: 'call',
       distanceBucket: _distanceBucket(item.distanceMeters?.toDouble()),
+      source: 'pharmacy_duty_list',
     );
   }
 
   Future<void> logDirectionsClick(PharmacyDutyItem item) {
-    return _analytics.logDirectionsOpened(
-      activeZoneId: state.selectedZoneId,
-      entityZoneId: item.zoneId,
+    return _analytics.logPharmacyDutyUsefulActionClicked(
+      zoneId: state.selectedZoneId,
+      merchantId: item.merchantId,
+      actionType: 'directions',
       distanceBucket: _distanceBucket(item.distanceMeters?.toDouble()),
+      source: 'pharmacy_duty_list',
     );
   }
 
-  Future<void> logFeedbackPositive({
-    required PharmacyDutyItem item,
-    required String copyVariant,
-  }) {
-    return _analytics.logFeedbackPositive(
-      activeZoneId: state.selectedZoneId,
-      entityZoneId: item.zoneId,
-      copyVariant: copyVariant,
+  Future<void> logOutdatedInfoTapped(PharmacyDutyItem item) {
+    return _analytics.logOutdatedInfoTapped(
+      zoneId: state.selectedZoneId,
+      merchantId: item.merchantId,
+      source: 'pharmacy_duty_list',
     );
   }
 
-  Future<void> logFeedbackNegativeStarted(PharmacyDutyItem item) {
-    return _analytics.logFeedbackNegativeStarted(
-      activeZoneId: state.selectedZoneId,
-      entityZoneId: item.zoneId,
-    );
-  }
-
-  Future<void> logFeedbackNegativeReasonSelected({
+  Future<OutdatedInfoReportSubmitStatus> submitOutdatedInfoReport({
     required PharmacyDutyItem item,
     required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
-  }) {
-    return _analytics.logFeedbackNegativeReasonSelected(
-      activeZoneId: state.selectedZoneId,
-      entityZoneId: item.zoneId,
-      reasonCode: reasonCode,
-      hasFreeText: hasFreeText,
-      hasAttachment: hasAttachment,
-    );
-  }
-
-  Future<void> logReportStarted({
-    required PharmacyDutyItem item,
-    required String reasonCode,
-  }) {
-    return _analytics.logReportStarted(
-      activeZoneId: state.selectedZoneId,
-      entityZoneId: item.zoneId,
+  }) async {
+    final zoneId = state.selectedZoneId.trim().isNotEmpty
+        ? state.selectedZoneId
+        : item.zoneId;
+    await _analytics.logOutdatedInfoConfirmed(
+      zoneId: zoneId,
+      merchantId: item.merchantId,
+      source: 'pharmacy_duty_list',
       reasonCode: reasonCode,
     );
-  }
-
-  Future<void> logReportSubmitted({
-    required PharmacyDutyItem item,
-    required String reasonCode,
-    required bool hasFreeText,
-    required bool hasAttachment,
-  }) {
-    return _analytics.logReportSubmitted(
-      activeZoneId: state.selectedZoneId,
-      entityZoneId: item.zoneId,
+    final status = await _outdatedInfoReportService.submit(
+      merchantId: item.merchantId,
+      zoneId: zoneId,
       reasonCode: reasonCode,
-      hasFreeText: hasFreeText,
-      hasAttachment: hasAttachment,
+      source: 'pharmacy_duty_list',
+      dateKey: state.selectedDateKey,
     );
+    await _analytics.logOutdatedInfoReportSubmitted(
+      zoneId: zoneId,
+      merchantId: item.merchantId,
+      source: 'pharmacy_duty_list',
+      reasonCode: reasonCode,
+    );
+    return status;
   }
 
   List<PharmacyDutyItem> _sortItems(List<PharmacyDutyItem> input) {
@@ -447,11 +397,22 @@ class PharmacyDutyNotifier extends StateNotifier<PharmacyDutyState> {
     return nearest ?? zones.first;
   }
 
-  String _resultCountBucket(int count) {
-    if (count <= 0) return '0';
-    if (count <= 3) return '1_3';
-    if (count <= 10) return '4_10';
-    return '11_plus';
+  Future<void> _logZoneResolved({
+    required String zoneId,
+    required String source,
+  }) {
+    if (zoneId.trim().isEmpty) return Future<void>.value();
+    final ref = _ref;
+    if (ref == null) return Future<void>.value();
+    return ref.read(analyticsServiceProvider).track(
+          event: 'zone_resolved',
+          parameters: {
+            'surface': 'pharmacy_duty',
+            'zoneId': zoneId,
+            'source': source,
+          },
+          dedupeWindow: const Duration(seconds: 10),
+        );
   }
 
   String _distanceBucket(double? meters) {
@@ -477,6 +438,10 @@ final pharmacyZonesRepositoryProvider = Provider<ZonesRepository>((ref) {
 final pharmacyGeoLocationServiceProvider = Provider<GeoLocationService>((ref) {
   return GeoLocationService();
 });
+
+final outdatedInfoReportServiceProvider = Provider<OutdatedInfoReportService>(
+  (ref) => CallableOutdatedInfoReportService(),
+);
 
 final pharmacyDutyAnalyticsProvider =
     Provider<PharmacyDutyAnalyticsSink>((ref) {
@@ -504,10 +469,12 @@ final pharmacyDutyProvider =
     });
 
     return PharmacyDutyNotifier(
+      ref: ref,
       dutyRepository: ref.watch(pharmacyDutyRepositoryProvider),
       zonesRepository: ref.watch(pharmacyZonesRepositoryProvider),
       geoLocationService: ref.watch(pharmacyGeoLocationServiceProvider),
       analytics: ref.watch(pharmacyDutyAnalyticsProvider),
+      outdatedInfoReportService: ref.watch(outdatedInfoReportServiceProvider),
     );
   },
 );

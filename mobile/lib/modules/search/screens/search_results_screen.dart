@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers/analytics_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -29,6 +30,7 @@ class SearchResultsScreen extends ConsumerStatefulWidget {
 
 class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
   final _controller = TextEditingController();
+  String? _lastImpressionSignature;
 
   @override
   void initState() {
@@ -36,6 +38,10 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
     Future.microtask(() async {
       final notifier = ref.read(searchNotifierProvider.notifier);
       await notifier.ensureInitialized();
+      await ref.read(analyticsServiceProvider).track(
+        event: 'surface_viewed',
+        parameters: {'surface': 'search_results'},
+      );
 
       final initialQuery = widget.query.trim();
       if (initialQuery.isNotEmpty) {
@@ -94,6 +100,7 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
         .length;
     final isColdStart = visibleCount < 3 && pendingCount > 0;
     final verifiedOnly = state.filters.minVerificationStatus == 'verified';
+    _logImpressionsIfNeeded(state);
 
     return Scaffold(
       backgroundColor: AppColors.neutral50,
@@ -268,7 +275,10 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                                   fromMap: false,
                                 );
                                 context.push(
-                                  AppRoutes.commerceDetailPath(item.merchantId),
+                                  AppRoutes.commerceDetailPath(
+                                    item.merchantId,
+                                    source: 'search_results',
+                                  ),
                                 );
                               },
                               onMapTap: () {
@@ -300,6 +310,20 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
+  }
+
+  void _logImpressionsIfNeeded(SearchState state) {
+    final visibleItems = state.results.take(8).toList(growable: false);
+    final signature = visibleItems.map((item) => item.merchantId).join('|');
+    if (signature.isEmpty || signature == _lastImpressionSignature) return;
+    _lastImpressionSignature = signature;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(searchNotifierProvider.notifier).logVisibleImpressions(
+            visibleItems: visibleItems,
+            surface: 'search_results',
+          );
+    });
   }
 }
 

@@ -38,7 +38,7 @@ class PharmacyDutyDetailScreen extends StatelessWidget {
   }
 }
 
-class _DetailScaffold extends ConsumerWidget {
+class _DetailScaffold extends ConsumerStatefulWidget {
   const _DetailScaffold({
     required this.duty,
   });
@@ -46,7 +46,36 @@ class _DetailScaffold extends ConsumerWidget {
   final PharmacyDutyItem duty;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DetailScaffold> createState() => _DetailScaffoldState();
+}
+
+class _DetailScaffoldState extends ConsumerState<_DetailScaffold> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(analyticsServiceProvider).track(
+        event: 'surface_viewed',
+        parameters: {
+          'surface': 'pharmacy_duty_detail',
+          'zoneId': widget.duty.zoneId,
+        },
+      );
+      ref.read(analyticsServiceProvider).track(
+        event: 'pharmacy_duty_detail_opened',
+        parameters: {
+          'surface': 'pharmacy_duty_detail',
+          'zoneId': widget.duty.zoneId,
+          'merchantId': widget.duty.merchantId,
+          'source': 'pharmacy_duty_detail',
+        },
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final duty = widget.duty;
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       body: SafeArea(
@@ -86,13 +115,31 @@ class _DetailScaffold extends ConsumerWidget {
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             await ref.read(analyticsServiceProvider).track(
-                              event: 'directions_opened',
+                              event: 'pharmacy_duty_useful_action_clicked',
                               parameters: {
                                 'surface': 'pharmacy_duty_detail',
-                                'entity_type': 'pharmacy',
-                                'active_zone_id': duty.zoneId,
-                                'entity_zone_id': duty.zoneId,
+                                'zoneId': duty.zoneId,
+                                'merchantId': duty.merchantId,
+                                'action_type': 'directions',
                                 'distance_bucket': 'unknown',
+                                'source': 'pharmacy_duty_detail',
+                                'elapsed_time_bucket': ref
+                                    .read(analyticsServiceProvider)
+                                    .elapsedTimeBucketNow(),
+                              },
+                            );
+                            await ref.read(analyticsServiceProvider).track(
+                              event: 'useful_action_clicked',
+                              parameters: {
+                                'surface': 'pharmacy_duty_detail',
+                                'zoneId': duty.zoneId,
+                                'merchantId': duty.merchantId,
+                                'action_type': 'directions',
+                                'distance_bucket': 'unknown',
+                                'source': 'pharmacy_duty_detail',
+                                'elapsed_time_bucket': ref
+                                    .read(analyticsServiceProvider)
+                                    .elapsedTimeBucketNow(),
                               },
                             );
                             await _launchMaps(duty);
@@ -113,13 +160,31 @@ class _DetailScaffold extends ConsumerWidget {
                         child: OutlinedButton.icon(
                           onPressed: () async {
                             await ref.read(analyticsServiceProvider).track(
-                              event: 'operator_call_click',
+                              event: 'pharmacy_duty_useful_action_clicked',
                               parameters: {
                                 'surface': 'pharmacy_duty_detail',
-                                'entity_type': 'pharmacy',
-                                'active_zone_id': duty.zoneId,
-                                'entity_zone_id': duty.zoneId,
+                                'zoneId': duty.zoneId,
+                                'merchantId': duty.merchantId,
+                                'action_type': 'call',
                                 'distance_bucket': 'unknown',
+                                'source': 'pharmacy_duty_detail',
+                                'elapsed_time_bucket': ref
+                                    .read(analyticsServiceProvider)
+                                    .elapsedTimeBucketNow(),
+                              },
+                            );
+                            await ref.read(analyticsServiceProvider).track(
+                              event: 'useful_action_clicked',
+                              parameters: {
+                                'surface': 'pharmacy_duty_detail',
+                                'zoneId': duty.zoneId,
+                                'merchantId': duty.merchantId,
+                                'action_type': 'call',
+                                'distance_bucket': 'unknown',
+                                'source': 'pharmacy_duty_detail',
+                                'elapsed_time_bucket': ref
+                                    .read(analyticsServiceProvider)
+                                    .elapsedTimeBucketNow(),
                               },
                             );
                             await _launchPhone(duty.phone!);

@@ -104,7 +104,7 @@ void main() {
           notifier.state.merchants.map((item) => item.merchantId).toList();
       expect(ids, ['alfa', 'beta']);
       expect(notifier.state.hasLocation, isFalse);
-      expect(analytics.distancePermissionDeniedStatuses, ['denied']);
+      expect(analytics.resultsLoadedCount, 1);
     });
 
     test('si no hay abiertos muestra fallback y registra evento', () async {
@@ -140,8 +140,7 @@ void main() {
 
       expect(notifier.state.merchants, isEmpty);
       expect(notifier.state.fallbackMerchants.length, 1);
-      expect(analytics.fallbackShownCount, 1);
-      expect(analytics.emptyShownCount, 0);
+      expect(analytics.resultsLoadedCount, 1);
     });
 
     test('setZone recarga resultados para la nueva zona', () async {
@@ -252,64 +251,27 @@ class _FakeLocationReader implements OpenNowLocationReader {
 
 class _FakeOpenNowAnalytics implements OpenNowAnalyticsSink {
   int resultsLoadedCount = 0;
-  int fallbackShownCount = 0;
-  int emptyShownCount = 0;
-  final List<String> distancePermissionDeniedStatuses = [];
+  int merchantOpenedCount = 0;
 
   @override
-  Future<void> logCardClicked({
+  Future<void> logOpenNowMerchantOpened({
     required String zoneId,
     required String merchantId,
-    required bool isFallback,
-    required int rank,
-  }) async {}
-
-  @override
-  Future<void> logDistancePermissionDenied({
-    required String status,
+    required String categoryId,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
+    required String source,
   }) async {
-    distancePermissionDeniedStatuses.add(status);
+    merchantOpenedCount++;
   }
 
   @override
-  Future<void> logEmptyStateShown({
-    required String zoneId,
-  }) async {
-    emptyShownCount++;
-  }
-
-  @override
-  Future<void> logFallbackShown({
-    required String zoneId,
-    required int fallbackCount,
-  }) async {
-    fallbackShownCount++;
-  }
-
-  @override
-  Future<void> logLocationUnavailable({
-    required String reason,
-  }) async {}
-
-  @override
-  Future<void> logPullToRefresh({
-    required String zoneId,
-  }) async {}
-
-  @override
-  Future<void> logResultsLoaded({
+  Future<void> logOpenNowViewed({
     required String zoneId,
     required int resultsCount,
-    required int fallbackCount,
-    required bool hasLocation,
-    required String dataFreshnessBucket,
-    required String topResultVerificationStatus,
+    required bool isOpenNowShown,
+    required bool isOnDutyShown,
   }) async {
     resultsLoadedCount++;
   }
-
-  @override
-  Future<void> logViewOpened({
-    required String zoneId,
-  }) async {}
 }

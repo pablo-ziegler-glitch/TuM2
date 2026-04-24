@@ -1,10 +1,10 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
 import {
   OnboardingOwnerProgress,
   OnboardingStep3Data,
 } from "../lib/types";
+import { applyUserAccessClaims } from "../lib/accessClaims";
 
 const db = () => getFirestore();
 
@@ -212,13 +212,14 @@ export const onboardingOwnerSubmit = onCall(
       });
     });
 
-    // Set custom claims so the client can detect onboarding completion
-    // without an extra Firestore read on next token refresh.
-    await getAuth().setCustomUserClaims(uid, {
+    // Claims canónicas de acceso OWNER (sin merchantId en JWT).
+    await applyUserAccessClaims({
+      uid,
       role: "owner",
-      merchantId: draftMerchantId,
-      merchantIds: [draftMerchantId],
-      onboardingComplete: true,
+      ownerPending: false,
+      reason: "onboarding_owner_submit",
+      actorType: "user",
+      actorUid: uid,
     });
 
     console.log(`[onboardingOwnerSubmit] Created merchant=${draftMerchantId} for uid=${uid}`);

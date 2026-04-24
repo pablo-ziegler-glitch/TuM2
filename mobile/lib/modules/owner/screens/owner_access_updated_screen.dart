@@ -40,6 +40,7 @@ class _OwnerAccessUpdatedScreenState
   Timer? _redirectTimer;
   bool _navigated = false;
   bool _syncingOwner = false;
+  bool _refreshFailed = false;
 
   @override
   void initState() {
@@ -62,8 +63,20 @@ class _OwnerAccessUpdatedScreenState
   Future<void> _startOwnerApprovedFlow() async {
     setState(() {
       _syncingOwner = true;
+      _refreshFailed = false;
     });
-    await ref.read(authNotifierProvider).refreshSession();
+    try {
+      await ref.read(authNotifierProvider).refreshSession(
+            reason: AuthSessionRefreshReason.ownerAccessUpdate,
+          );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _syncingOwner = false;
+        _refreshFailed = true;
+      });
+      return;
+    }
     if (!mounted) return;
     setState(() {
       _syncingOwner = false;
@@ -76,7 +89,15 @@ class _OwnerAccessUpdatedScreenState
     _navigated = true;
 
     if (widget.target == OwnerAccessUpdatedTarget.owner) {
-      context.go(AppRoutes.ownerResolve);
+      final authState = ref.read(authNotifierProvider).authState;
+      final hasOwnerAccess = authState is AuthAuthenticated &&
+          authState.role == 'owner' &&
+          !authState.ownerPending;
+      if (hasOwnerAccess) {
+        context.go(AppRoutes.ownerResolve);
+      } else {
+        context.go(AppRoutes.claimStatus);
+      }
       return;
     }
     context.go(AppRoutes.home);
@@ -145,6 +166,21 @@ class _OwnerAccessUpdatedScreenState
                     const LinearProgressIndicator(
                       color: AppColors.primary500,
                       backgroundColor: AppColors.neutral200,
+                    ),
+                  ],
+                  if (_refreshFailed) ...[
+                    const SizedBox(height: 14),
+                    Text(
+                      'No pudimos sincronizar tu token todavía. Reintentá para evitar accesos desactualizados.',
+                      style: AppTextStyles.bodySm.copyWith(
+                        color: AppColors.warningFg,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _startOwnerApprovedFlow,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reintentar sincronización'),
                     ),
                   ],
                   const SizedBox(height: 16),

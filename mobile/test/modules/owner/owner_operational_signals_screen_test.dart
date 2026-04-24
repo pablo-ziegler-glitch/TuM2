@@ -20,7 +20,10 @@ class _FakeAuthNotifier extends ChangeNotifier implements AuthNotifier {
   }
 
   @override
-  Future<void> refreshSession() async {}
+  Future<void> refreshSession({
+    AuthSessionRefreshReason reason = AuthSessionRefreshReason.manualRetry,
+    bool forceUserDocRead = false,
+  }) async {}
 }
 
 void main() {

@@ -55,7 +55,7 @@ class _OwnerAccessGuardState extends ConsumerState<OwnerAccessGuardPage> {
       ),
       data: (result) {
         if (!result.hasMerchant) {
-          _redirectToOnboarding(context);
+          _redirectWhenMissingMerchant(context, authState);
           return _GuardScaffold(
             title: widget.title,
             child: const Center(child: CircularProgressIndicator()),
@@ -73,6 +73,33 @@ class _OwnerAccessGuardState extends ConsumerState<OwnerAccessGuardPage> {
       if (!mounted) return;
       context.go(AppRoutes.onboardingOwner);
     });
+  }
+
+  void _redirectToOwnerDashboard(BuildContext context) {
+    if (_redirectedToOnboarding) return;
+    _redirectedToOnboarding = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.go(AppRoutes.ownerDashboard);
+    });
+  }
+
+  void _redirectWhenMissingMerchant(BuildContext context, AuthState authState) {
+    if (authState is! AuthAuthenticated || authState.role != 'owner') {
+      _redirectToOnboarding(context);
+      return;
+    }
+    final accessSummary = authState.ownerAccessSummary;
+    final hasApprovedMerchants =
+        (accessSummary?.approvedMerchantIdsCount ?? 0) > 0 ||
+            authState.merchantId != null;
+    if (accessSummary?.restrictionActive == true ||
+        authState.ownerPending ||
+        !hasApprovedMerchants) {
+      _redirectToOwnerDashboard(context);
+      return;
+    }
+    _redirectToOnboarding(context);
   }
 }
 

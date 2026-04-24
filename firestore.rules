@@ -13,36 +13,59 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function roleFromClaims() {
-      return isAuthenticated() ? request.auth.token.role : null;
+    function tokenRole() {
+      return isAuthenticated()
+        && request.auth.token.role is string
+        ? request.auth.token.role
+        : '';
     }
 
-    function isAdmin() {
-      return isAuthenticated() && roleFromClaims() in ['admin', 'super_admin'];
+    function isOwnerPending() {
+      return isAuthenticated()
+        && (
+          request.auth.token.owner_pending == true
+          || request.auth.token.owner_pending == 'true'
+        );
     }
 
-    function isSuperAdmin() {
-      return isAuthenticated() && roleFromClaims() == 'super_admin';
+    function isAdminRole() {
+      return tokenRole() in ['admin', 'ADMIN', 'super_admin', 'SUPER_ADMIN'];
+    }
+
+    function isSuperAdminRole() {
+      return tokenRole() in ['super_admin', 'SUPER_ADMIN'];
     }
 
     function isOwnerRole() {
-      return isAuthenticated() && roleFromClaims() == 'owner';
+      return tokenRole() in ['owner', 'OWNER'];
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && (
+          (
+            'admin' in request.auth.token
+            && request.auth.token.admin == true
+          )
+          || isAdminRole()
+        );
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated()
+        && (
+          (
+            'super_admin' in request.auth.token
+            && request.auth.token.super_admin == true
+          )
+          || isSuperAdminRole()
+        );
     }
 
     function merchantBelongsToUser(merchantId) {
-      let claimMerchantId = isAuthenticated()
-        && request.auth.token.merchantId is string
-        ? request.auth.token.merchantId
-        : null;
-      let claimMerchantIds = isAuthenticated()
-        && request.auth.token.merchantIds is list
-        ? request.auth.token.merchantIds
-        : [];
       return isAuthenticated()
-        && (
-          (claimMerchantId != null && claimMerchantId == merchantId)
-          || (merchantId in claimMerchantIds)
-        );
+        && exists(/databases/$(database)/documents/merchants/$(merchantId))
+        && get(/databases/$(database)/documents/merchants/$(merchantId)).data.ownerUserId == request.auth.uid;
     }
 
     function merchantOwnedByAuthenticatedUser(merchantId) {
@@ -616,6 +639,24 @@ service cloud.firestore {
     // ─── merchant_claim_review_actions/{actionId} ────────────────────────────
     // Auditoría append-only de decisiones manuales.
     match /merchant_claim_review_actions/{actionId} {
+      allow read, write: if false;
+    }
+
+    // ─── _usage_counters/{doc=**} ──────────────────────────────────────────
+    // Totalmente bloqueada desde cliente.
+    match /_usage_counters/{document=**} {
+      allow read, write: if false;
+    }
+
+    // ─── _usage_monthly/{doc=**} ───────────────────────────────────────────
+    // Totalmente bloqueada desde cliente.
+    match /_usage_monthly/{document=**} {
+      allow read, write: if false;
+    }
+
+    // ─── _circuit_breaker_events/{doc=**} ──────────────────────────────────
+    // Totalmente bloqueada desde cliente.
+    match /_circuit_breaker_events/{document=**} {
       allow read, write: if false;
     }
 

@@ -11,9 +11,10 @@
 - En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
 - Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
 
-## Actualización técnica reciente (2026-04-25)
+## Actualización técnica reciente (2026-04-26)
 
-- **[0065] Alta/edición de productos OWNER**: estado real actualizado a `IN_PROGRESS`.
+- **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `IN_PROGRESS` (implementado y en condición `READY_FOR_QA` según storycard).
+- **[0065] Alta/edición de productos OWNER**: estado real confirmado en `IN_PROGRESS` (implementado y en condición `READY_FOR_QA` según storycard).
 - Se implementó flujo mobile de alta en 3 pasos con precio/foto opcionales, revisión previa y publicación.
 - Se incorporaron `description` + `priceMode` en dominio de producto OWNER (`none|fixed|consult`) y validaciones asociadas.
 - Se agregaron acciones rápidas en listado para disponibilidad (`marcar agotado/disponible`) y filtros `Activos/Agotados/Ocultos`.
@@ -25,6 +26,7 @@
 - Pendiente para cierre de 0065:
   - QA manual end-to-end en dev/staging con roles reales.
   - Definición final de hard-delete irreversible (actualmente se prioriza ocultamiento/baja lógica).
+- **[0083] Tracking base analytics**: estado real actualizado a `IN_PROGRESS` con base operativa implementada y validada; queda pendiente cierre de outputs de consumo (0084/0085/0086).
 - **[0147] Honeypot defensivo**: implementado `securityTrap` HTTP v2 (Functions), clasificación de rutas trampa, redacción segura, HMAC de `ip` y `user-agent`, detección de honeytokens y logging estructurado `security_honeypot_hit`.
 - Hosting: rewrites de honeypot agregadas en targets `web` y `admin`, ubicadas antes del catch-all.
 - FinOps/Seguridad: `securityTrap` sin reads/writes Firestore por hit, sin Auth lookup, sin llamadas externas, respuesta uniforme 404.
@@ -79,7 +81,7 @@ tum2-XXXX — PR#YY — descripción corta
 
 ## Estado del backlog
 
-El backlog maestro de TuM2 está estructurado en 17 épicas (ver sección abajo).
+El backlog maestro de TuM2 está estructurado en 19 épicas + 1 épica transversal (ver sección abajo).
 El usuario pasa las tarjetas de a una. Estado actual:
 
 | Definición ✅ | Actividad completada |
@@ -199,7 +201,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0035] **Diseñar vista Farmacias de turno** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0036] **Diseñar vista Abierto ahora** — P0 — `UX/UI, MVP` ✅
 - [0037] **Diseñar panel Mi comercio** — P0 — `UX/UI, Operaciones, MVP` ✅
-- [0038] **Diseñar flujo carga de productos** — P0 — `UX/UI, Operaciones, MVP`
+- [0038] **Diseñar flujo carga de productos** — P0 — `UX/UI, Operaciones, MVP` `IN_PROGRESS`
 - [0039] **Diseñar flujo carga de horarios y señales** — P0 — `UX/UI, Operaciones, MVP`
 - [0040] **Diseñar flujo carga de turnos de farmacia** — P0 — `UX/UI, Operaciones, MVP`
 - [0041] **Diseñar board de propuestas y votos** — P1 — `UX/UI, Growth, Admin, MVP`
@@ -231,7 +233,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
 - [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `IN_PROGRESS`
-- [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP`
+- [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP` `IN_PROGRESS`
 - [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` ✅
 - [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP` ✅
 - [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP` ✅
@@ -259,7 +261,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### ÉPICA 11: Analytics
 - [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `IN_PROGRESS`
-- [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP`
+- [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP` `IN_PROGRESS`
 - [0084] **Crear dashboard MVP** — P1 — `Analytics, MVP`
 - [0085] **Medir activación OWNER** — P1 — `Analytics, Operaciones, MVP`
 - [0086] **Medir activación CUSTOMER** — P1 — `Analytics, MVP`
@@ -272,6 +274,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0091] **Testear permisos por rol** — P0 — `QA, Seguridad, MVP`
 - [0092] **Testear edge cases operativos** — P0 — `QA, Operaciones, MVP`
 - [0093] **Configurar alertas técnicas mínimas** — P1 — `Seguridad, Operaciones, Lanzamiento`
+- [0147] **Honeypot defensivo y detección temprana de abuso** — P0 — `Seguridad, Backend, Operaciones, MVP` `IN_PROGRESS`
 
 ### ÉPICA 13: Lanzamiento / piloto
 - [0094] **Definir piloto geográfico** — P0 — `Lanzamiento, Producto, MVP`
@@ -321,6 +324,9 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0124] **Mitigar guardias de farmacia con reasignación operativa** — P0 — `Backend, Mobile, Operaciones, MVP` ✅
   - PR #59: incidente → candidatas por `zoneId` + distancia + `limit` → ronda abierta con requests paralelos y cierre por primera aceptación.
   - Costo: scans programados incrementales (`limit` fijo) para recordatorios/expiraciones, sin listeners globales.
+- [0136] **Catálogos estáticos versionados y serving barato** — P0 — `Mobile, Web Admin, Tooling, Costos, MVP` ✅
+  - `zones` fuera del hot path de Firestore en runtime (seed + manifest + JSON versionado + cache persistente/memoria + rollback por versión).
+  - Costo: elimina lecturas runtime de catálogo en selector de zonas y agrega controles de publicación con guardrails por ambiente.
 
 ### ÉPICA 18: Reclamo de titularidad de comercio
 - [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP` `IN_PROGRESS`

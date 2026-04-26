@@ -6,8 +6,7 @@ import 'package:tum2/modules/owner/repositories/product_repository.dart';
 
 void main() {
   group('ProductMutationController', () {
-    test('toggleVisibility llama repositorio y limpia estado en éxito',
-        () async {
+    test('setStockStatus llama repositorio y limpia estado en éxito', () async {
       final repository = _MutationFakeRepository();
       final container = ProviderContainer(
         overrides: [
@@ -16,20 +15,19 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final product =
-          _buildProduct(visibilityStatus: ProductVisibilityStatus.visible);
-      final success = await container
-          .read(productMutationProvider.notifier)
-          .toggleVisibility(
-            product: product,
-            actorUserId: 'owner-1',
-          );
+      final product = _buildProduct();
+      final success =
+          await container.read(productMutationProvider.notifier).setStockStatus(
+                product: product,
+                stockStatus: ProductStockStatus.outOfStock,
+                actorUserId: 'owner-1',
+              );
 
       expect(success, isTrue);
-      expect(repository.visibilityCalls, 1);
-      expect(repository.lastVisibility, ProductVisibilityStatus.hidden);
+      expect(repository.stockCalls, 1);
+      expect(repository.lastStockStatus, ProductStockStatus.outOfStock);
       expect(
-        container.read(productMutationProvider).visibilityInFlightIds,
+        container.read(productMutationProvider).stockInFlightIds,
         isEmpty,
       );
     });
@@ -54,7 +52,7 @@ void main() {
       expect(container.read(productMutationProvider).errorMessage, isNotNull);
     });
 
-    test('toggleVisibility evita cambios en productos inactivos', () async {
+    test('setStockStatus evita cambios en productos ocultos', () async {
       final repository = _MutationFakeRepository();
       final container = ProviderContainer(
         overrides: [
@@ -63,18 +61,17 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final success = await container
-          .read(productMutationProvider.notifier)
-          .toggleVisibility(
-            product: _buildProduct(
-              visibilityStatus: ProductVisibilityStatus.visible,
-              status: ProductStatus.inactive,
-            ),
-            actorUserId: 'owner-1',
-          );
+      final success =
+          await container.read(productMutationProvider.notifier).setStockStatus(
+                product: _buildProduct(
+                  status: ProductStatus.inactive,
+                ),
+                stockStatus: ProductStockStatus.outOfStock,
+                actorUserId: 'owner-1',
+              );
 
       expect(success, isFalse);
-      expect(repository.visibilityCalls, 0);
+      expect(repository.stockCalls, 0);
       expect(container.read(productMutationProvider).errorMessage, isNotNull);
     });
   });
@@ -84,19 +81,19 @@ class _MutationFakeRepository implements ProductRepository {
   _MutationFakeRepository({this.throwOnDeactivate = false});
 
   final bool throwOnDeactivate;
-  int visibilityCalls = 0;
+  int stockCalls = 0;
   int deactivateCalls = 0;
-  ProductVisibilityStatus? lastVisibility;
+  ProductStockStatus? lastStockStatus;
 
   @override
-  Future<String> createProduct({
+  Future<ProductCreateResult> createProduct({
     required String merchantId,
     required String ownerUserId,
     required String actorUserId,
     required ProductDraftInput input,
     ProductImageUploadData? image,
   }) async {
-    return 'new-product';
+    return const ProductCreateResult(productId: 'new-product');
   }
 
   @override
@@ -140,8 +137,17 @@ class _MutationFakeRepository implements ProductRepository {
     required ProductVisibilityStatus visibilityStatus,
     required String actorUserId,
   }) async {
-    visibilityCalls += 1;
-    lastVisibility = visibilityStatus;
+    // unused in tests
+  }
+
+  @override
+  Future<void> setStockStatus({
+    required MerchantProduct product,
+    required ProductStockStatus stockStatus,
+    required String actorUserId,
+  }) async {
+    stockCalls += 1;
+    lastStockStatus = stockStatus;
   }
 
   @override
@@ -178,6 +184,12 @@ class _MutationFakeRepository implements ProductRepository {
   }) {
     return const Stream.empty();
   }
+
+  @override
+  Future<void> reactivateProduct({
+    required MerchantProduct product,
+    required String actorUserId,
+  }) async {}
 }
 
 MerchantProduct _buildProduct({
@@ -190,7 +202,9 @@ MerchantProduct _buildProduct({
     ownerUserId: 'owner-1',
     name: 'Yerba',
     normalizedName: 'yerba',
+    description: '',
     priceLabel: '\$2.500',
+    priceMode: ProductPriceMode.fixed,
     stockStatus: ProductStockStatus.available,
     visibilityStatus: visibilityStatus,
     status: status,

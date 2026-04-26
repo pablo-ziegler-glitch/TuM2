@@ -40,10 +40,13 @@ class ProductFormScreen extends ConsumerStatefulWidget {
 
 class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
   late final TextEditingController _priceController;
   final FocusNode _nameFocusNode = FocusNode();
+  final FocusNode _descriptionFocusNode = FocusNode();
   final FocusNode _priceFocusNode = FocusNode();
   final ImagePicker _imagePicker = ImagePicker();
+  int _createStep = 0;
 
   bool _seededControllers = false;
 
@@ -51,14 +54,17 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController();
+    _descriptionController = TextEditingController();
     _priceController = TextEditingController();
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     _priceController.dispose();
     _nameFocusNode.dispose();
+    _descriptionFocusNode.dispose();
     _priceFocusNode.dispose();
     super.dispose();
   }
@@ -138,12 +144,26 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         final formState = ref.watch(productFormNotifierProvider(scope));
         final notifier = ref.read(productFormNotifierProvider(scope).notifier);
         final uploadState = ref.watch(productImageUploadStateProvider(scope));
+        final merchantProductsAsync = widget.isEditing
+            ? const AsyncValue<List<MerchantProduct>>.data(<MerchantProduct>[])
+            : ref.watch(merchantProductsProvider(merchant.id));
+        final duplicateCandidate = _findPotentialDuplicate(
+          incomingName: formState.name,
+          products: merchantProductsAsync.valueOrNull ?? const [],
+        );
 
         _seedTextControllers(formState);
         final imageProvider = _resolveImageProvider(formState);
+        final isCreateFlow = !widget.isEditing;
+        const stepTotal = 3;
+        final stepLabel = isCreateFlow
+            ? 'Paso ${_createStep + 1} de $stepTotal'
+            : 'Editá y guardá cambios';
+        final canGoNext = _canContinueStep(formState);
 
         return _FormScaffold(
-          title: widget.isEditing ? 'Editar producto' : 'Nuevo producto',
+          title: widget.isEditing ? 'Editar producto' : 'Agregar producto',
+          subtitle: stepLabel,
           child: formState.isInitialLoading
               ? const Center(
                   child: CircularProgressIndicator(color: AppColors.primary500),
@@ -199,101 +219,255 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                         catalogCapacity != null) ||
                                     isCreateDisabledByFlag)
                                   const SizedBox(height: 12),
-                                _ImagePickerSection(
-                                  imageProvider: imageProvider,
-                                  imageError: formState.imageError,
-                                  onPickImage: () => _onPickImage(notifier),
-                                  onClearImage: formState.hasLocalImage
-                                      ? notifier.clearLocalImage
-                                      : null,
-                                ),
-                                if (uploadState.isUploading) ...[
-                                  const SizedBox(height: 10),
-                                  LinearProgressIndicator(
-                                    value: uploadState.progress == 0
-                                        ? null
-                                        : uploadState.progress,
+                                if (!isCreateFlow || _createStep == 0) ...[
+                                  const Text(
+                                    'Empezá con lo básico.',
+                                    style: AppTextStyles.headingLg,
                                   ),
-                                ],
-                                const SizedBox(height: 18),
-                                _LabeledField(
-                                  label: 'Nombre',
-                                  child: TextField(
-                                    controller: _nameController,
-                                    focusNode: _nameFocusNode,
-                                    textInputAction: TextInputAction.next,
-                                    onSubmitted: (_) =>
-                                        _priceFocusNode.requestFocus(),
-                                    onChanged: notifier.setName,
-                                    maxLength: productNameMaxLength,
-                                    decoration: InputDecoration(
-                                      hintText: 'Nombre del producto',
-                                      errorText: formState.nameError,
-                                      counterText: '',
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Después podés sumar más detalles.',
+                                    style: AppTextStyles.bodyMd.copyWith(
+                                      color: AppColors.neutral700,
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: 14),
-                                _LabeledField(
-                                  label: 'Precio visible',
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      TextField(
-                                        controller: _priceController,
-                                        focusNode: _priceFocusNode,
-                                        textInputAction: TextInputAction.done,
-                                        onSubmitted: (_) => _handleSubmit(
-                                          scope: scope,
-                                          ownerUserId: ownerUserId,
-                                          merchantId: merchant.id,
-                                          catalogCapacity: catalogCapacity,
-                                          catalogPolicyEnabled:
-                                              catalogPolicyEnabled,
-                                          catalogHardBlockEnabled:
-                                              catalogHardBlockEnabled,
-                                          catalogCreateViaCfEnabled:
-                                              catalogCreateViaCfEnabled,
-                                        ),
-                                        onChanged: notifier.setPriceLabel,
-                                        maxLength: productPriceLabelMaxLength,
-                                        decoration: InputDecoration(
-                                          hintText: '\$ 0.00',
-                                          errorText: formState.priceLabelError,
-                                          counterText: '',
-                                        ),
+                                  const SizedBox(height: 18),
+                                  _LabeledField(
+                                    label: 'Nombre del producto',
+                                    child: TextField(
+                                      controller: _nameController,
+                                      focusNode: _nameFocusNode,
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) =>
+                                          _descriptionFocusNode.requestFocus(),
+                                      onChanged: notifier.setName,
+                                      maxLength: productNameMaxLength,
+                                      decoration: InputDecoration(
+                                        hintText:
+                                            'Ej: alimento balanceado, gaseosa fría, analgésico',
+                                        errorText: formState.nameError,
+                                        counterText: '',
                                       ),
-                                      Padding(
-                                        padding: const EdgeInsets.only(
-                                            left: 4, top: 4),
-                                        child: Text(
-                                          'Ej: \$2.500, Desde \$4.000 o Consultar',
-                                          style: AppTextStyles.bodyXs.copyWith(
-                                            color: AppColors.neutral600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Usá el nombre que el Vecino buscaría.',
+                                    style: AppTextStyles.bodySm.copyWith(
+                                      color: AppColors.neutral700,
+                                    ),
+                                  ),
+                                  if (duplicateCandidate != null) ...[
+                                    const SizedBox(height: 8),
+                                    _DuplicateWarningInline(
+                                      onOpen: () => _showDuplicateWarningSheet(
+                                        product: duplicateCandidate,
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 14),
+                                  _LabeledField(
+                                    label: 'Disponibilidad',
+                                    child: _AvailabilityToggle(
+                                      stockStatus: formState.stockStatus,
+                                      onChanged: notifier.setStockStatus,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Podés cambiarlo cuando quieras.',
+                                    style: AppTextStyles.bodySm.copyWith(
+                                      color: AppColors.neutral700,
+                                    ),
+                                  ),
+                                  if (!isCreateFlow) ...[
+                                    const SizedBox(height: 16),
+                                    _OperationalStateCard(
+                                      stockStatus: formState.stockStatus,
+                                      visibilityStatus:
+                                          formState.visibilityStatus,
+                                      onStockChanged: notifier.setStockStatus,
+                                      onVisibilityChanged:
+                                          notifier.setVisibilityStatus,
+                                    ),
+                                  ],
+                                ],
+                                if (!isCreateFlow || _createStep == 1) ...[
+                                  if (isCreateFlow) ...[
+                                    const Text(
+                                      'Detalles del producto',
+                                      style: AppTextStyles.headingLg,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Podés completar esto después.',
+                                      style: AppTextStyles.bodyMd.copyWith(
+                                        color: AppColors.neutral700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 18),
+                                  ],
+                                  _ImagePickerSection(
+                                    imageProvider: imageProvider,
+                                    imageError: formState.imageError,
+                                    onPickImage: () => _onPickImage(notifier),
+                                    onSkipPhoto: formState.hasLocalImage ||
+                                            formState.hasCurrentImage
+                                        ? null
+                                        : () {
+                                            FocusScope.of(context).unfocus();
+                                            AppToast.show(
+                                              context,
+                                              message:
+                                                  'Podés agregar la foto después.',
+                                              type: ToastType.success,
+                                            );
+                                          },
+                                    onClearImage: formState.hasLocalImage
+                                        ? notifier.clearLocalImage
+                                        : null,
+                                  ),
+                                  if (uploadState.isUploading) ...[
+                                    const SizedBox(height: 10),
+                                    LinearProgressIndicator(
+                                      value: uploadState.progress == 0
+                                          ? null
+                                          : uploadState.progress,
+                                    ),
+                                  ],
+                                  const SizedBox(height: 16),
+                                  _LabeledField(
+                                    label: 'Descripción breve',
+                                    child: TextField(
+                                      controller: _descriptionController,
+                                      focusNode: _descriptionFocusNode,
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) =>
+                                          _priceFocusNode.requestFocus(),
+                                      maxLength: productDescriptionMaxLength,
+                                      onChanged: notifier.setDescription,
+                                      decoration: InputDecoration(
+                                        hintText:
+                                            'Ej: presentación chica, sabor clásico, venta por unidad',
+                                        errorText: formState.descriptionError,
+                                        counterText: '',
+                                      ),
+                                      minLines: 2,
+                                      maxLines: 3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Una frase corta alcanza.',
+                                    style: AppTextStyles.bodySm.copyWith(
+                                      color: AppColors.neutral700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _LabeledField(
+                                    label: 'Precio',
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        TextField(
+                                          controller: _priceController,
+                                          focusNode: _priceFocusNode,
+                                          textInputAction: TextInputAction.done,
+                                          onChanged: (value) {
+                                            notifier.setPriceLabel(value);
+                                            final normalized =
+                                                normalizeProductField(value);
+                                            if (normalized.isEmpty &&
+                                                formState.priceMode ==
+                                                    ProductPriceMode.fixed) {
+                                              notifier.setPriceMode(
+                                                ProductPriceMode.none,
+                                              );
+                                            }
+                                            if (normalized.isNotEmpty &&
+                                                formState.priceMode !=
+                                                    ProductPriceMode.consult) {
+                                              notifier.setPriceMode(
+                                                ProductPriceMode.fixed,
+                                              );
+                                            }
+                                          },
+                                          maxLength: productPriceLabelMaxLength,
+                                          keyboardType: const TextInputType
+                                              .numberWithOptions(decimal: true),
+                                          decoration: InputDecoration(
+                                            hintText: '\$ Ej: 2900',
+                                            errorText:
+                                                formState.priceLabelError,
+                                            counterText: '',
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Opcional. Si cambia seguido, dejalo sin precio.',
+                                          style: AppTextStyles.bodySm.copyWith(
+                                            color: AppColors.neutral700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        CheckboxListTile(
+                                          value: formState.priceMode ==
+                                              ProductPriceMode.consult,
+                                          contentPadding: EdgeInsets.zero,
+                                          controlAffinity:
+                                              ListTileControlAffinity.leading,
+                                          onChanged: (value) {
+                                            if (value == true) {
+                                              notifier.setPriceMode(
+                                                ProductPriceMode.consult,
+                                              );
+                                              _priceController.text = '';
+                                              notifier.setPriceLabel('');
+                                              return;
+                                            }
+                                            notifier.setPriceMode(
+                                              _priceController.text
+                                                      .trim()
+                                                      .isEmpty
+                                                  ? ProductPriceMode.none
+                                                  : ProductPriceMode.fixed,
+                                            );
+                                          },
+                                          title: const Text(
+                                            'Mostrar como consultar precio',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                _OperationalStateCard(
-                                  stockStatus: formState.stockStatus,
-                                  visibilityStatus: formState.visibilityStatus,
-                                  onStockChanged: notifier.setStockStatus,
-                                  onVisibilityChanged:
-                                      notifier.setVisibilityStatus,
-                                ),
-                                const SizedBox(height: 14),
-                                ProductPublicPreviewCard(
-                                  name: formState.name,
-                                  priceLabel: formState.priceLabel,
-                                  stockStatus: formState.stockStatus,
-                                  visibilityStatus: formState.visibilityStatus,
-                                  status: formState.status,
-                                  imageProvider: imageProvider,
-                                ),
+                                ],
+                                if (!isCreateFlow || _createStep == 2) ...[
+                                  if (isCreateFlow) ...[
+                                    const Text(
+                                      'Así se va a ver en Tu zona.',
+                                      style: AppTextStyles.headingLg,
+                                    ),
+                                    const SizedBox(height: 14),
+                                  ],
+                                  ProductPublicPreviewCard(
+                                    merchantName: merchant.name,
+                                    name: formState.name,
+                                    description: formState.description,
+                                    priceLabel: formState.priceLabel,
+                                    priceMode: formState.priceMode,
+                                    stockStatus: formState.stockStatus,
+                                    visibilityStatus:
+                                        formState.visibilityStatus,
+                                    status: formState.status,
+                                    imageProvider: imageProvider,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  const _InlineBanner(
+                                    message:
+                                        'Este producto puede aparecer para Vecinos que busquen en Tu zona.',
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -321,10 +495,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                             isCreateBlocked ||
                                             isCreateDisabledByFlag
                                         ? null
-                                        : () => _handleSubmit(
+                                        : () => _handlePrimaryAction(
+                                              isCreateFlow: isCreateFlow,
+                                              canGoNext: canGoNext,
+                                              formState: formState,
+                                              notifier: notifier,
+                                              merchantId: merchant.id,
                                               scope: scope,
                                               ownerUserId: ownerUserId,
-                                              merchantId: merchant.id,
                                               catalogCapacity: catalogCapacity,
                                               catalogPolicyEnabled:
                                                   catalogPolicyEnabled,
@@ -353,11 +531,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                         : Text(
                                             widget.isEditing
                                                 ? 'Guardar cambios'
-                                                : (isCreateBlocked
-                                                    ? 'Límite alcanzado'
-                                                    : (isCreateDisabledByFlag
-                                                        ? 'Temporalmente deshabilitado'
-                                                        : 'Guardar producto')),
+                                                : (_createStep < 2
+                                                    ? 'Continuar'
+                                                    : (isCreateBlocked
+                                                        ? 'Límite alcanzado'
+                                                        : (isCreateDisabledByFlag
+                                                            ? 'Temporalmente deshabilitado'
+                                                            : 'Publicar producto'))),
                                             style:
                                                 AppTextStyles.labelMd.copyWith(
                                               color: Colors.white,
@@ -372,6 +552,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                 onPressed: formState.isSubmitting
                                     ? null
                                     : () {
+                                        if (!widget.isEditing &&
+                                            _createStep > 0) {
+                                          setState(() {
+                                            _createStep -= 1;
+                                          });
+                                          return;
+                                        }
                                         if (context.canPop()) {
                                           context.pop();
                                         } else {
@@ -379,7 +566,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                         }
                                       },
                                 child: Text(
-                                  'Cancelar',
+                                  (!widget.isEditing && _createStep > 0)
+                                      ? 'Volver'
+                                      : 'Cancelar',
                                   style: AppTextStyles.labelMd.copyWith(
                                     color: AppColors.neutral700,
                                   ),
@@ -416,7 +605,216 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     if (_seededControllers || state.isInitialLoading) return;
     _seededControllers = true;
     _nameController.text = state.name;
+    _descriptionController.text = state.description;
     _priceController.text = state.priceLabel;
+  }
+
+  bool _canContinueStep(ProductFormState state) {
+    if (widget.isEditing) return true;
+    if (_createStep == 0) {
+      return normalizeProductField(state.name).isNotEmpty;
+    }
+    if (_createStep == 1) {
+      return true;
+    }
+    return true;
+  }
+
+  bool _looksLikeDuplicate({
+    required String incomingName,
+    required String existingName,
+    required String? editingProductId,
+    required String existingProductId,
+  }) {
+    if (editingProductId != null && editingProductId == existingProductId) {
+      return false;
+    }
+    final incoming = normalizeProductName(incomingName);
+    final existing = normalizeProductName(existingName);
+    if (incoming.isEmpty || existing.isEmpty) return false;
+    if (incoming == existing) return true;
+    return incoming.length >= 5 &&
+        existing.length >= 5 &&
+        (incoming.contains(existing) || existing.contains(incoming));
+  }
+
+  MerchantProduct? _findPotentialDuplicate({
+    required String incomingName,
+    required List<MerchantProduct> products,
+  }) {
+    for (final item in products) {
+      if (item.status != ProductStatus.active) continue;
+      if (_looksLikeDuplicate(
+        incomingName: incomingName,
+        existingName: item.name,
+        editingProductId: widget.productId,
+        existingProductId: item.id,
+      )) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  Future<void> _showDuplicateWarningSheet({
+    required MerchantProduct product,
+  }) async {
+    final parentContext = context;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ya tenés un producto parecido',
+                  style: AppTextStyles.headingSm,
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Podés editar el producto existente o cargar este igual si es distinto.',
+                  style: AppTextStyles.bodySm,
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.neutral100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: AppTextStyles.labelMd,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        product.displayPriceLabel,
+                        style: AppTextStyles.bodyXs.copyWith(
+                          color: AppColors.neutral600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      parentContext.push(
+                        AppRoutes.ownerProductsEditPath(product.id),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary500,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Ver producto existente'),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cargar igual'),
+                  ),
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _nameFocusNode.requestFocus();
+                    },
+                    child: const Text('Volver y editar'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handlePrimaryAction({
+    required bool isCreateFlow,
+    required bool canGoNext,
+    required ProductFormState formState,
+    required ProductFormNotifier notifier,
+    required String merchantId,
+    required ProductFormScope scope,
+    required String ownerUserId,
+    required OwnerCatalogCapacity? catalogCapacity,
+    required bool catalogPolicyEnabled,
+    required bool catalogHardBlockEnabled,
+    required bool catalogCreateViaCfEnabled,
+  }) async {
+    if (!isCreateFlow) {
+      await _handleSubmit(
+        scope: scope,
+        ownerUserId: ownerUserId,
+        merchantId: merchantId,
+        catalogCapacity: catalogCapacity,
+        catalogPolicyEnabled: catalogPolicyEnabled,
+        catalogHardBlockEnabled: catalogHardBlockEnabled,
+        catalogCreateViaCfEnabled: catalogCreateViaCfEnabled,
+      );
+      return;
+    }
+
+    if (_createStep == 0) {
+      notifier.setName(_nameController.text);
+      final isValid = notifier.validateStepBasic();
+      if (!isValid) {
+        return;
+      }
+      if (!canGoNext) return;
+      setState(() => _createStep = 1);
+      return;
+    }
+
+    if (_createStep == 1) {
+      notifier.setDescription(_descriptionController.text);
+      notifier.setPriceLabel(_priceController.text);
+      if (normalizeProductField(_priceController.text).isNotEmpty &&
+          formState.priceMode != ProductPriceMode.consult) {
+        notifier.setPriceMode(ProductPriceMode.fixed);
+      } else if (normalizeProductField(_priceController.text).isEmpty &&
+          formState.priceMode == ProductPriceMode.fixed) {
+        notifier.setPriceMode(ProductPriceMode.none);
+      }
+      final isValid = notifier.validateStepDetails();
+      if (!isValid) {
+        return;
+      }
+      if (!canGoNext) return;
+      setState(() => _createStep = 2);
+      return;
+    }
+
+    await _handleSubmit(
+      scope: scope,
+      ownerUserId: ownerUserId,
+      merchantId: merchantId,
+      catalogCapacity: catalogCapacity,
+      catalogPolicyEnabled: catalogPolicyEnabled,
+      catalogHardBlockEnabled: catalogHardBlockEnabled,
+      catalogCreateViaCfEnabled: catalogCreateViaCfEnabled,
+    );
   }
 
   ImageProvider<Object>? _resolveImageProvider(ProductFormState state) {
@@ -495,7 +893,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       AppToast.show(
         context,
         message:
-            'Alcanzaste el límite del catálogo. Contactá a administración para ampliar el cupo.',
+            'Llegaste al máximo de productos activos. Para cargar otro, ocultá alguno que ya no quieras mostrar en Tu zona.',
         type: ToastType.error,
       );
       return;
@@ -505,7 +903,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     final notifier = ref.read(productFormNotifierProvider(scope).notifier);
     final repository = ref.read(productRepositoryProvider);
     notifier.setName(_nameController.text);
+    notifier.setDescription(_descriptionController.text);
     notifier.setPriceLabel(_priceController.text);
+    if (normalizeProductField(_priceController.text).isNotEmpty &&
+        ref.read(productFormNotifierProvider(scope)).priceMode !=
+            ProductPriceMode.consult) {
+      notifier.setPriceMode(ProductPriceMode.fixed);
+    }
 
     final result = await notifier.submit(actorUserId: ownerUserId);
     if (!result.success || !mounted) return;
@@ -531,14 +935,19 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       final payload = ProductSavedPayload(
         productId: createdId ?? '',
         name: createdProduct?.name ?? normalizeProductField(latestState.name),
-        priceLabel: createdProduct?.priceLabel ??
-            normalizeProductField(latestState.priceLabel),
+        priceLabel: (createdProduct?.displayPriceLabel ??
+                _resolveDisplayPriceLabel(
+                  priceMode: latestState.priceMode,
+                  rawPriceLabel: latestState.priceLabel,
+                ))
+            .trim(),
         imageUrl: createdProduct?.imageUrl,
         isPublic: (createdProduct?.status ?? latestState.status) ==
                 ProductStatus.active &&
             (createdProduct?.visibilityStatus ??
                     latestState.visibilityStatus) ==
                 ProductVisibilityStatus.visible,
+        imageUploadFailed: result.imageUploadFailed,
       );
       if (!mounted) return;
       context.go(AppRoutes.ownerProductsSaved, extra: payload);
@@ -561,10 +970,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 class _FormScaffold extends StatelessWidget {
   const _FormScaffold({
     required this.title,
+    this.subtitle,
     required this.child,
   });
 
   final String title;
+  final String? subtitle;
   final Widget child;
 
   @override
@@ -572,7 +983,21 @@ class _FormScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
-        title: Text(title, style: AppTextStyles.headingSm),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(title, style: AppTextStyles.headingSm),
+            if (subtitle != null)
+              Text(
+                subtitle!,
+                style: AppTextStyles.bodyXs.copyWith(
+                  color: AppColors.neutral600,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
+        ),
         backgroundColor: AppColors.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -587,12 +1012,14 @@ class _ImagePickerSection extends StatelessWidget {
     required this.imageProvider,
     required this.imageError,
     required this.onPickImage,
+    this.onSkipPhoto,
     this.onClearImage,
   });
 
   final ImageProvider<Object>? imageProvider;
   final String? imageError;
   final VoidCallback onPickImage;
+  final VoidCallback? onSkipPhoto;
   final VoidCallback? onClearImage;
 
   @override
@@ -601,7 +1028,7 @@ class _ImagePickerSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Imagen del producto',
+          'Foto del producto',
           style: AppTextStyles.labelMd.copyWith(color: AppColors.neutral700),
         ),
         const SizedBox(height: 6),
@@ -638,8 +1065,15 @@ class _ImagePickerSection extends StatelessWidget {
                           vertical: 10,
                         ),
                       ),
-                      child: const Text('Subir foto'),
+                      child: const Text('Agregar foto'),
                     ),
+                    if (onSkipPhoto != null) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: onSkipPhoto,
+                        child: const Text('Foto luego'),
+                      ),
+                    ],
                   ],
                 )
               : Stack(
@@ -690,10 +1124,9 @@ class _ImagePickerSection extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Usá una foto clara y liviana',
+          'Ayuda a que el Vecino lo reconozca, pero podés cargarla después.',
           style: AppTextStyles.bodyXs.copyWith(
             color: AppColors.neutral600,
-            fontStyle: FontStyle.italic,
           ),
         ),
         if (imageError != null) ...[
@@ -707,6 +1140,36 @@ class _ImagePickerSection extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _AvailabilityToggle extends StatelessWidget {
+  const _AvailabilityToggle({
+    required this.stockStatus,
+    required this.onChanged,
+  });
+
+  final ProductStockStatus stockStatus;
+  final ValueChanged<ProductStockStatus> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SegmentedOptionBar<ProductStockStatus>(
+      values: const [
+        ProductStockStatus.available,
+        ProductStockStatus.outOfStock,
+      ],
+      selected: stockStatus,
+      labelBuilder: (value) {
+        switch (value) {
+          case ProductStockStatus.available:
+            return 'Disponible';
+          case ProductStockStatus.outOfStock:
+            return 'Agotado';
+        }
+      },
+      onChanged: onChanged,
     );
   }
 }
@@ -978,6 +1441,56 @@ class _InlineBanner extends StatelessWidget {
   }
 }
 
+class _DuplicateWarningInline extends StatelessWidget {
+  const _DuplicateWarningInline({
+    required this.onOpen,
+  });
+
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.warningBg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Ya tenés un producto parecido.',
+            style: AppTextStyles.bodySm.copyWith(
+              color: AppColors.warningFg,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              TextButton(
+                onPressed: onOpen,
+                child: const Text('Ver producto existente'),
+              ),
+              Expanded(
+                child: Text(
+                  'Podés cargarlo igual si es distinto.',
+                  textAlign: TextAlign.right,
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.warningFg,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _FormErrorState extends StatelessWidget {
   const _FormErrorState({
     required this.message,
@@ -1023,4 +1536,18 @@ String _guessContentType(String fileName) {
   if (normalized.endsWith('.gif')) return 'image/gif';
   if (normalized.endsWith('.heic')) return 'image/heic';
   return 'image/jpeg';
+}
+
+String _resolveDisplayPriceLabel({
+  required ProductPriceMode priceMode,
+  required String rawPriceLabel,
+}) {
+  switch (priceMode) {
+    case ProductPriceMode.consult:
+      return 'Consultar precio';
+    case ProductPriceMode.none:
+      return '';
+    case ProductPriceMode.fixed:
+      return normalizeProductField(rawPriceLabel);
+  }
 }

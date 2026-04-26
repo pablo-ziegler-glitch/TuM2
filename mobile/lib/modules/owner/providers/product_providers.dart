@@ -81,30 +81,36 @@ final productImageUploadStateProvider =
 
 class ProductMutationState {
   const ProductMutationState({
-    this.visibilityInFlightIds = const <String>{},
+    this.stockInFlightIds = const <String>{},
+    this.reactivateInFlightIds = const <String>{},
     this.deactivateInFlightIds = const <String>{},
     this.errorMessage,
   });
 
-  final Set<String> visibilityInFlightIds;
+  final Set<String> stockInFlightIds;
+  final Set<String> reactivateInFlightIds;
   final Set<String> deactivateInFlightIds;
   final String? errorMessage;
 
-  bool isVisibilityLoading(String productId) =>
-      visibilityInFlightIds.contains(productId);
+  bool isStockLoading(String productId) => stockInFlightIds.contains(productId);
+
+  bool isReactivateLoading(String productId) =>
+      reactivateInFlightIds.contains(productId);
 
   bool isDeactivateLoading(String productId) =>
       deactivateInFlightIds.contains(productId);
 
   ProductMutationState copyWith({
-    Set<String>? visibilityInFlightIds,
+    Set<String>? stockInFlightIds,
+    Set<String>? reactivateInFlightIds,
     Set<String>? deactivateInFlightIds,
     String? errorMessage,
     bool clearError = false,
   }) {
     return ProductMutationState(
-      visibilityInFlightIds:
-          visibilityInFlightIds ?? this.visibilityInFlightIds,
+      stockInFlightIds: stockInFlightIds ?? this.stockInFlightIds,
+      reactivateInFlightIds:
+          reactivateInFlightIds ?? this.reactivateInFlightIds,
       deactivateInFlightIds:
           deactivateInFlightIds ?? this.deactivateInFlightIds,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -124,58 +130,53 @@ class ProductMutationController extends StateNotifier<ProductMutationState> {
   final Ref _ref;
   Timer? _ownerMerchantInvalidateTimer;
 
-  Future<bool> toggleVisibility({
+  Future<bool> setStockStatus({
     required MerchantProduct product,
+    required ProductStockStatus stockStatus,
     required String actorUserId,
   }) async {
     if (product.status == ProductStatus.inactive) {
       state = state.copyWith(
         errorMessage:
-            'Este producto está inactivo. Reactivalo para cambiar su visibilidad.',
+            'Este producto está oculto. Volvé a mostrarlo para cambiar disponibilidad.',
       );
       return false;
     }
-    if (state.visibilityInFlightIds.contains(product.id)) return false;
-    final nextVisibility =
-        product.visibilityStatus == ProductVisibilityStatus.visible
-            ? ProductVisibilityStatus.hidden
-            : ProductVisibilityStatus.visible;
+    if (state.stockInFlightIds.contains(product.id)) return false;
+    if (product.stockStatus == stockStatus) return true;
 
-    final nextInFlight = {...state.visibilityInFlightIds, product.id};
+    final nextInFlight = {...state.stockInFlightIds, product.id};
     state = state.copyWith(
-      visibilityInFlightIds: nextInFlight,
+      stockInFlightIds: nextInFlight,
       clearError: true,
     );
 
     try {
-      await _repository.setVisibilityStatus(
+      await _repository.setStockStatus(
         product: product,
-        visibilityStatus: nextVisibility,
+        stockStatus: stockStatus,
         actorUserId: actorUserId,
       );
-      await OwnerProductsAnalytics.logVisibilityChanged(
+      await OwnerProductsAnalytics.logStockStatusChanged(
         merchantId: product.merchantId,
         productId: product.id,
-        visibilityStatus: nextVisibility,
+        stockStatus: stockStatus,
       );
       _invalidateCaches(product);
       state = state.copyWith(
-        visibilityInFlightIds: {...state.visibilityInFlightIds}
-          ..remove(product.id),
+        stockInFlightIds: {...state.stockInFlightIds}..remove(product.id),
       );
       return true;
     } on ProductRepositoryException catch (error) {
       state = state.copyWith(
-        visibilityInFlightIds: {...state.visibilityInFlightIds}
-          ..remove(product.id),
+        stockInFlightIds: {...state.stockInFlightIds}..remove(product.id),
         errorMessage: error.message,
       );
       return false;
     } catch (_) {
       state = state.copyWith(
-        visibilityInFlightIds: {...state.visibilityInFlightIds}
-          ..remove(product.id),
-        errorMessage: 'No pudimos actualizar la visibilidad del producto.',
+        stockInFlightIds: {...state.stockInFlightIds}..remove(product.id),
+        errorMessage: 'No pudimos actualizar la disponibilidad del producto.',
       );
       return false;
     }
@@ -204,6 +205,11 @@ class ProductMutationController extends StateNotifier<ProductMutationState> {
         merchantId: product.merchantId,
         productId: product.id,
       );
+      await OwnerProductsAnalytics.logVisibilityChanged(
+        merchantId: product.merchantId,
+        productId: product.id,
+        visibilityStatus: ProductVisibilityStatus.hidden,
+      );
       _invalidateCaches(product);
       state = state.copyWith(
         deactivateInFlightIds: {...state.deactivateInFlightIds}
@@ -222,6 +228,57 @@ class ProductMutationController extends StateNotifier<ProductMutationState> {
         deactivateInFlightIds: {...state.deactivateInFlightIds}
           ..remove(product.id),
         errorMessage: 'No pudimos dar de baja el producto.',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> reactivate({
+    required MerchantProduct product,
+    required String actorUserId,
+  }) async {
+    if (product.status == ProductStatus.active) {
+      return true;
+    }
+    if (state.reactivateInFlightIds.contains(product.id)) return false;
+    final nextInFlight = {...state.reactivateInFlightIds, product.id};
+    state = state.copyWith(
+      reactivateInFlightIds: nextInFlight,
+      clearError: true,
+    );
+
+    try {
+      await _repository.reactivateProduct(
+        product: product,
+        actorUserId: actorUserId,
+      );
+      await OwnerProductsAnalytics.logReactivated(
+        merchantId: product.merchantId,
+        productId: product.id,
+      );
+      await OwnerProductsAnalytics.logVisibilityChanged(
+        merchantId: product.merchantId,
+        productId: product.id,
+        visibilityStatus: ProductVisibilityStatus.visible,
+      );
+      _invalidateCaches(product);
+      state = state.copyWith(
+        reactivateInFlightIds: {...state.reactivateInFlightIds}
+          ..remove(product.id),
+      );
+      return true;
+    } on ProductRepositoryException catch (error) {
+      state = state.copyWith(
+        reactivateInFlightIds: {...state.reactivateInFlightIds}
+          ..remove(product.id),
+        errorMessage: error.message,
+      );
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        reactivateInFlightIds: {...state.reactivateInFlightIds}
+          ..remove(product.id),
+        errorMessage: 'No pudimos volver a mostrar el producto.',
       );
       return false;
     }

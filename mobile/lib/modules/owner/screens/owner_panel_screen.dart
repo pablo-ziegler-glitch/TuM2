@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/auth/auth_notifier.dart';
 import '../../../core/auth/owner_access_summary.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -282,12 +283,6 @@ class _AdminOwnerDashboard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        const _AdminOwnerActionCard(
-          title: 'Gestionar Productos',
-          route: AppRoutes.ownerProducts,
-          icon: Icons.inventory_2_outlined,
-        ),
-        const SizedBox(height: 10),
         const _AdminOwnerActionCard(
           title: 'Editar Horarios',
           route: AppRoutes.ownerSchedules,
@@ -774,6 +769,8 @@ class _OwnerDashboardBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ownerProductsEnabledAsync = ref.watch(ownerProductsEnabledProvider);
+    final ownerProductsEnabled = ownerProductsEnabledAsync.valueOrNull ?? true;
     final signalAsync = ref.watch(ownerOperationalSignalProvider(merchant.id));
     final signal = signalAsync.valueOrNull;
     final operationalSummary = resolveOperationalSummary(
@@ -809,6 +806,7 @@ class _OwnerDashboardBody extends ConsumerWidget {
         const SizedBox(height: 14),
         _OwnerQuickActions(
           merchant: merchant,
+          showProductsAction: ownerProductsEnabled,
           onActionTap: (actionId) {
             unawaited(
               OwnerDashboardAnalytics.logQuickActionTapped(
@@ -818,9 +816,15 @@ class _OwnerDashboardBody extends ConsumerWidget {
             );
           },
         ),
-        if (!merchant.hasProducts) ...[
+        if (ownerProductsEnabled) ...[
           const SizedBox(height: 14),
-          const _EmptyProductsCard(),
+          _CatalogAccessCard(
+            activeProductsCount: merchant.activeProductCount,
+          ),
+          if (!merchant.hasProducts) ...[
+            const SizedBox(height: 14),
+            const _EmptyProductsCard(),
+          ],
         ],
         const SizedBox(height: 10),
         Align(
@@ -1286,22 +1290,25 @@ class _StatusRow extends StatelessWidget {
 class _OwnerQuickActions extends StatelessWidget {
   const _OwnerQuickActions({
     required this.merchant,
+    required this.showProductsAction,
     required this.onActionTap,
   });
 
   final OwnerMerchantSummary merchant;
+  final bool showProductsAction;
   final void Function(String actionId) onActionTap;
 
   @override
   Widget build(BuildContext context) {
     final actions = <_OwnerAction>[
-      const _OwnerAction(
-        id: 'products',
-        label: 'Gestionar productos',
-        subtitle: 'Stock y precios',
-        icon: Icons.inventory_2_outlined,
-        route: AppRoutes.ownerProducts,
-      ),
+      if (showProductsAction)
+        const _OwnerAction(
+          id: 'products',
+          label: 'Mi catálogo',
+          subtitle: 'Productos y disponibilidad',
+          icon: Icons.inventory_2_outlined,
+          route: AppRoutes.ownerProducts,
+        ),
       const _OwnerAction(
         id: 'schedules',
         label: 'Editar horarios',
@@ -1439,6 +1446,126 @@ class _OwnerAction {
   final String route;
 }
 
+class _CatalogAccessCard extends StatelessWidget {
+  const _CatalogAccessCard({
+    required this.activeProductsCount,
+  });
+
+  final int activeProductsCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: AppColors.primary100,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppColors.primary700,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Tus productos',
+                  style: AppTextStyles.headingMd,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Mostrá qué tenés disponible en Tu zona',
+            style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.neutral700,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.neutral100,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$activeProductsCount',
+                        style: AppTextStyles.headingLg.copyWith(
+                          color: AppColors.neutral900,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'productos activos',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.neutral700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.trending_up,
+                  color: AppColors.secondary500,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF0044AA), Color(0xFF0E5BD8)],
+                ),
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () => context.push(AppRoutes.ownerProducts),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  elevation: 0,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                icon: const Icon(Icons.arrow_forward),
+                label: const Text(
+                  'Gestionar catálogo',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptyProductsCard extends StatelessWidget {
   const _EmptyProductsCard();
 
@@ -1467,13 +1594,13 @@ class _EmptyProductsCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Tu catálogo está vacío',
+            'Todavía no cargaste productos',
             style: AppTextStyles.headingSm,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
           Text(
-            'Empezá cargando tu primer producto para que los vecinos te encuentren.',
+            'Mostrá qué tenés disponible para que los Vecinos te encuentren mejor.',
             style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
             textAlign: TextAlign.center,
           ),

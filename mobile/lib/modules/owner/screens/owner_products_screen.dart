@@ -30,6 +30,15 @@ enum _ProductsSortOption {
   final String label;
 }
 
+enum _ProductsFilter {
+  active('Activos'),
+  outOfStock('Agotados'),
+  hidden('Ocultos');
+
+  const _ProductsFilter(this.label);
+  final String label;
+}
+
 class OwnerProductsScreen extends ConsumerStatefulWidget {
   const OwnerProductsScreen({super.key});
 
@@ -45,6 +54,7 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   _ProductsSortOption _sortOption = _ProductsSortOption.recents;
+  _ProductsFilter _filter = _ProductsFilter.active;
 
   @override
   void dispose() {
@@ -158,6 +168,7 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                 policyEnabled: catalogPolicyEnabled,
                 hardBlockEnabled: catalogHardBlockEnabled,
                 createViaCfEnabled: catalogCreateViaCfEnabled,
+                products: const <MerchantProduct>[],
               ),
               child: Column(
                 children: [
@@ -179,7 +190,9 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                       ),
                       data: (products) {
                         final filtered = _applyFilters(products,
-                            query: _searchQuery, sort: _sortOption);
+                            query: _searchQuery,
+                            sort: _sortOption,
+                            filter: _filter);
                         if (products.isEmpty) {
                           return _buildEmptyState(
                             context,
@@ -208,6 +221,7 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                                   policyEnabled: catalogPolicyEnabled,
                                   hardBlockEnabled: catalogHardBlockEnabled,
                                   createViaCfEnabled: catalogCreateViaCfEnabled,
+                                  products: products,
                                 ),
                                 capacity: catalogCapacity,
                                 policyEnabled: catalogPolicyEnabled,
@@ -234,6 +248,15 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                                 },
                               ),
                               const SizedBox(height: 12),
+                              _FilterChips(
+                                selected: _filter,
+                                onSelected: (value) {
+                                  setState(() {
+                                    _filter = value;
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 12),
                               if (filtered.isEmpty)
                                 const _NoResultsState()
                               else
@@ -251,17 +274,20 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                                           index++) ...[
                                         ProductCard(
                                           product: filtered[index],
-                                          isBusy: mutationState
-                                                  .isVisibilityLoading(
+                                          isBusy: mutationState.isStockLoading(
+                                                filtered[index].id,
+                                              ) ||
+                                              mutationState.isReactivateLoading(
                                                 filtered[index].id,
                                               ) ||
                                               mutationState.isDeactivateLoading(
                                                 filtered[index].id,
                                               ),
-                                          onVisibilityChanged: (visible) {
-                                            _confirmToggleVisibility(
+                                          onStockStatusChanged: (status) {
+                                            _setStockStatus(
                                               context,
                                               product: filtered[index],
+                                              stockStatus: status,
                                               ownerUserId: ownerUserId,
                                             );
                                           },
@@ -273,14 +299,34 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                                                 context,
                                                 filtered[index].id,
                                               ),
-                                              onToggleVisibility: () =>
-                                                  _confirmToggleVisibility(
+                                              onMarkOutOfStock: () =>
+                                                  _setStockStatus(
+                                                context,
+                                                product: filtered[index],
+                                                stockStatus: ProductStockStatus
+                                                    .outOfStock,
+                                                ownerUserId: ownerUserId,
+                                              ),
+                                              onMarkAvailable: () =>
+                                                  _setStockStatus(
+                                                context,
+                                                product: filtered[index],
+                                                stockStatus: ProductStockStatus
+                                                    .available,
+                                                ownerUserId: ownerUserId,
+                                              ),
+                                              onHide: () => _confirmDeactivate(
                                                 context,
                                                 product: filtered[index],
                                                 ownerUserId: ownerUserId,
                                               ),
-                                              onDeactivate: () =>
-                                                  _confirmDeactivate(
+                                              onReactivate: () =>
+                                                  _confirmReactivate(
+                                                context,
+                                                product: filtered[index],
+                                                ownerUserId: ownerUserId,
+                                              ),
+                                              onDelete: () => _confirmDelete(
                                                 context,
                                                 product: filtered[index],
                                                 ownerUserId: ownerUserId,
@@ -300,10 +346,21 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                                 ),
                               if (isCreateBlocked) ...[
                                 const SizedBox(height: 12),
-                                _CreateBlockedFooter(
-                                  onContactAdmin: () => _showContactAdminDialog(
+                                _LimitBlockedPanel(
+                                  capacity: catalogCapacity,
+                                  onChooseProductToHide: () =>
+                                      _openHideSelectorForBlockedCatalog(
                                     merchantId: merchant.id,
+                                    ownerUserId: ownerUserId,
+                                    products: products,
                                   ),
+                                  onBackToCatalog: () {
+                                    setState(() {
+                                      _filter = _ProductsFilter.active;
+                                      _searchQuery = '';
+                                      _searchController.clear();
+                                    });
+                                  },
                                 ),
                               ],
                             ],
@@ -346,6 +403,7 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
             policyEnabled: policyEnabled,
             hardBlockEnabled: hardBlockEnabled,
             createViaCfEnabled: createViaCfEnabled,
+            products: const <MerchantProduct>[],
           ),
           capacity: capacity,
           policyEnabled: policyEnabled,
@@ -362,13 +420,10 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
           sort: _sortOption,
           onSortChanged: (_) {},
         ),
-        const SizedBox(height: 16),
-        const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: CircularProgressIndicator(color: AppColors.primary500),
-          ),
-        ),
+        const SizedBox(height: 12),
+        const _FilterSkeleton(),
+        const SizedBox(height: 12),
+        const _CatalogLoadingSkeleton(),
       ],
     );
   }
@@ -391,6 +446,7 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
             policyEnabled: policyEnabled,
             hardBlockEnabled: hardBlockEnabled,
             createViaCfEnabled: createViaCfEnabled,
+            products: const <MerchantProduct>[],
           ),
           capacity: capacity,
           policyEnabled: policyEnabled,
@@ -407,6 +463,7 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
             policyEnabled: policyEnabled,
             hardBlockEnabled: hardBlockEnabled,
             createViaCfEnabled: createViaCfEnabled,
+            products: const <MerchantProduct>[],
           ),
         ),
       ],
@@ -417,9 +474,23 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
     List<MerchantProduct> items, {
     required String query,
     required _ProductsSortOption sort,
+    required _ProductsFilter filter,
   }) {
+    final filteredByTab = items.where((item) {
+      switch (filter) {
+        case _ProductsFilter.active:
+          return item.status == ProductStatus.active &&
+              item.stockStatus == ProductStockStatus.available;
+        case _ProductsFilter.outOfStock:
+          return item.status == ProductStatus.active &&
+              item.stockStatus == ProductStockStatus.outOfStock;
+        case _ProductsFilter.hidden:
+          return item.status == ProductStatus.inactive ||
+              item.visibilityStatus == ProductVisibilityStatus.hidden;
+      }
+    }).toList(growable: false);
     final normalizedQuery = normalizeProductName(query);
-    final filtered = items.where((item) {
+    final filtered = filteredByTab.where((item) {
       if (normalizedQuery.isEmpty) return true;
       return item.normalizedName.contains(normalizedQuery) ||
           normalizeProductName(item.name).contains(normalizedQuery);
@@ -479,6 +550,7 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
     required bool policyEnabled,
     required bool hardBlockEnabled,
     required bool createViaCfEnabled,
+    required List<MerchantProduct> products,
   }) async {
     if (!createViaCfEnabled) {
       if (!mounted) return;
@@ -494,6 +566,11 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
     final isBlocked =
         policyEnabled && hardBlockEnabled && (capacity?.isBlocked ?? false);
     if (isBlocked) {
+      final fallbackProducts =
+          ref.read(merchantProductsProvider(merchantId)).valueOrNull ??
+              const <MerchantProduct>[];
+      final productsForSelector =
+          products.isNotEmpty ? products : fallbackProducts;
       await OwnerProductsAnalytics.logProductCreateBlockedByLimit(
         merchantId: merchantId,
         used: capacity?.used ?? 0,
@@ -501,16 +578,21 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
         source: capacity?.source.value ?? 'global_default',
       );
       if (!mounted) return;
-      AppToast.show(
-        context,
-        message:
-            'Alcanzaste el límite del catálogo. Contactá a administración para ampliar tu cupo.',
-        type: ToastType.error,
+      await _openHideSelectorForBlockedCatalog(
+        merchantId: merchantId,
+        ownerUserId: _ownerUserIdFromAuthState(),
+        products: productsForSelector,
       );
       return;
     }
     if (!mounted) return;
     context.push(AppRoutes.ownerProductsNew);
+  }
+
+  String _ownerUserIdFromAuthState() {
+    final authState = ref.read(authNotifierProvider).authState;
+    if (authState is! AuthAuthenticated) return '';
+    return normalizeProductField(authState.user.uid);
   }
 
   void _goToEdit(BuildContext context, String productId) {
@@ -588,51 +670,24 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
     }
   }
 
-  Future<void> _confirmToggleVisibility(
+  Future<void> _setStockStatus(
     BuildContext context, {
     required MerchantProduct product,
+    required ProductStockStatus stockStatus,
     required String ownerUserId,
   }) async {
-    final shouldHide =
-        product.visibilityStatus == ProductVisibilityStatus.visible;
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(shouldHide ? 'Ocultar producto' : 'Mostrar producto'),
-          content: Text(
-            shouldHide
-                ? 'El producto quedará oculto y no aparecerá en tu ficha pública.'
-                : 'El producto volverá a verse en tu ficha pública.',
-            style: AppTextStyles.bodySm,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(shouldHide ? 'Ocultar' : 'Mostrar'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (accepted != true || !context.mounted) return;
     final success =
-        await ref.read(productMutationProvider.notifier).toggleVisibility(
+        await ref.read(productMutationProvider.notifier).setStockStatus(
               product: product,
+              stockStatus: stockStatus,
               actorUserId: ownerUserId,
             );
     if (!success || !context.mounted) return;
-
     AppToast.show(
       context,
-      message: shouldHide
-          ? 'El producto quedó oculto. Podés volver a mostrarlo cuando quieras.'
-          : 'El producto vuelve a estar visible para los vecinos.',
+      message: stockStatus == ProductStockStatus.outOfStock
+          ? 'Marcado como agotado.'
+          : 'Marcado como disponible.',
       type: ToastType.success,
     );
   }
@@ -659,21 +714,23 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: AppColors.errorBg,
+                    color: AppColors.neutral100,
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: const Icon(Icons.archive_outlined,
-                      color: AppColors.errorFg),
+                  child: const Icon(
+                    Icons.visibility_off_outlined,
+                    color: AppColors.neutral700,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 const Text(
-                  '¿Eliminar este producto?',
+                  '¿Ocultar este producto?',
                   style: AppTextStyles.headingSm,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Este producto dejará de aparecer en tu catálogo. No se elimina para siempre, podés recuperarlo luego.',
+                  'No se va a mostrar a los Vecinos, pero lo podés volver a activar cuando quieras.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodySm,
                 ),
@@ -683,17 +740,30 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                   child: ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(true),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.errorFg,
+                      backgroundColor: AppColors.primary500,
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: const Text('Dar de baja'),
+                    child: const Text('Ocultar producto'),
                   ),
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton(
+                  child: ElevatedButton(
                     onPressed: () => Navigator.of(context).pop(false),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.neutral200,
+                      foregroundColor: AppColors.neutral900,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                     child: const Text('Cancelar'),
                   ),
                 ),
@@ -713,8 +783,231 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
 
     AppToast.show(
       context,
-      message: 'El producto se dio de baja y ya no aparece públicamente.',
+      message: 'Producto oculto.',
       type: ToastType.success,
+    );
+  }
+
+  Future<void> _confirmReactivate(
+    BuildContext context, {
+    required MerchantProduct product,
+    required String ownerUserId,
+  }) async {
+    final success = await ref.read(productMutationProvider.notifier).reactivate(
+          product: product,
+          actorUserId: ownerUserId,
+        );
+    if (!success || !context.mounted) return;
+    AppToast.show(
+      context,
+      message: 'Volvió a mostrarse en Tu zona.',
+      type: ToastType.success,
+    );
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context, {
+    required MerchantProduct product,
+    required String ownerUserId,
+  }) async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.errorBg,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.errorFg,
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                '¿Eliminar producto?',
+                style: AppTextStyles.headingSm,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Esta acción no se puede deshacer. Si solo querés que no se vea, te conviene ocultarlo.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodySm,
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary500,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Ocultar en vez de eliminar'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.errorBg,
+                    foregroundColor: AppColors.errorFg,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Eliminar igual'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (accepted != true || !context.mounted) return;
+    final success = await ref.read(productMutationProvider.notifier).deactivate(
+          product: product,
+          actorUserId: ownerUserId,
+        );
+    if (!success || !context.mounted) return;
+    AppToast.show(
+      context,
+      message: 'Producto eliminado del catálogo activo.',
+      type: ToastType.success,
+    );
+  }
+
+  Future<void> _openHideSelectorForBlockedCatalog({
+    required String merchantId,
+    required String ownerUserId,
+    required List<MerchantProduct> products,
+  }) async {
+    final parentContext = context;
+    final normalizedOwnerId = normalizeProductField(ownerUserId);
+    if (normalizedOwnerId.isEmpty) {
+      AppToast.show(
+        context,
+        message: 'No pudimos validar tu sesión. Volvé a iniciar.',
+        type: ToastType.error,
+      );
+      return;
+    }
+    final activeProducts = products
+        .where((item) =>
+            item.status == ProductStatus.active &&
+            item.visibilityStatus == ProductVisibilityStatus.visible)
+        .toList(growable: false);
+    if (activeProducts.isEmpty) {
+      AppToast.show(
+        context,
+        message: 'No hay productos activos para ocultar.',
+        type: ToastType.error,
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Elegí un producto para ocultar',
+                  style: AppTextStyles.headingSm,
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Para cargar otro, ocultá alguno que ya no quieras mostrar en Tu zona.',
+                  style: AppTextStyles.bodySm,
+                ),
+                const SizedBox(height: 10),
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: activeProducts.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, color: AppColors.neutral100),
+                    itemBuilder: (context, index) {
+                      final item = activeProducts[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.labelMd,
+                        ),
+                        subtitle: Text(
+                          item.displayPriceLabel,
+                          style: AppTextStyles.bodyXs.copyWith(
+                            color: AppColors.neutral600,
+                          ),
+                        ),
+                        trailing: TextButton(
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            final success = await ref
+                                .read(productMutationProvider.notifier)
+                                .deactivate(
+                                  product: item,
+                                  actorUserId: normalizedOwnerId,
+                                );
+                            if (!mounted ||
+                                !parentContext.mounted ||
+                                !success) {
+                              return;
+                            }
+                            AppToast.show(
+                              parentContext,
+                              message:
+                                  'Producto oculto. Ya podés agregar uno nuevo.',
+                              type: ToastType.success,
+                            );
+                            await OwnerProductsAnalytics
+                                .logCatalogLimitBlockSeen(
+                              merchantId: merchantId,
+                              used: activeProducts.length - 1,
+                              limit: activeProducts.length,
+                              source: 'owner_products',
+                            );
+                          },
+                          child: const Text('Ocultar'),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -744,9 +1037,9 @@ class _Shell extends StatelessWidget {
             }
             context.go(AppRoutes.ownerDashboard);
           },
-          icon: const Icon(Icons.menu, color: AppColors.primary500),
+          icon: const Icon(Icons.arrow_back, color: AppColors.primary500),
         ),
-        title: const Text('Productos', style: AppTextStyles.headingSm),
+        title: const Text('Tus productos', style: AppTextStyles.headingSm),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
@@ -796,7 +1089,7 @@ class _HeaderBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Productos',
+          'Tus productos',
           style: TextStyle(
             fontFamily: 'Plus Jakarta Sans',
             fontSize: 44,
@@ -808,7 +1101,7 @@ class _HeaderBlock extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Mostrá lo que ofrecés hoy a tus vecinos',
+          'Mantené actualizado lo que mostrás en Tu zona.',
           style: AppTextStyles.bodyMd.copyWith(
             color: AppColors.neutral700,
             fontWeight: FontWeight.w500,
@@ -828,7 +1121,7 @@ class _HeaderBlock extends StatelessWidget {
             color: AppColors.warningFg,
             background: AppColors.warningBg,
             icon: Icons.warning_amber_rounded,
-            text: 'Te estás quedando con poco espacio para tu catálogo.',
+            text: 'Te queda poco lugar para productos activos.',
           ),
         ],
         if (isBlocked) ...[
@@ -838,7 +1131,7 @@ class _HeaderBlock extends StatelessWidget {
             background: AppColors.errorBg,
             icon: Icons.block_rounded,
             text:
-                'Límite alcanzado: no podés crear productos nuevos hasta ampliar cupo o reducir activos.',
+                'Llegaste al máximo de productos activos. Para cargar otro, ocultá alguno que ya no quieras mostrar en Tu zona.',
           ),
         ],
         const SizedBox(height: 14),
@@ -857,7 +1150,7 @@ class _HeaderBlock extends StatelessWidget {
               onPressed: onAddPressed,
               icon: const Icon(Icons.add, size: 18),
               label: const Text(
-                '+ Agregar producto',
+                'Agregar producto',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
               style: ElevatedButton.styleFrom(
@@ -1013,16 +1306,22 @@ class _InlineNotice extends StatelessWidget {
   }
 }
 
-class _CreateBlockedFooter extends StatelessWidget {
-  const _CreateBlockedFooter({required this.onContactAdmin});
+class _LimitBlockedPanel extends StatelessWidget {
+  const _LimitBlockedPanel({
+    required this.capacity,
+    required this.onChooseProductToHide,
+    required this.onBackToCatalog,
+  });
 
-  final VoidCallback onContactAdmin;
+  final OwnerCatalogCapacity? capacity;
+  final VoidCallback onChooseProductToHide;
+  final VoidCallback onBackToCatalog;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.errorBg,
         borderRadius: BorderRadius.circular(12),
@@ -1031,7 +1330,7 @@ class _CreateBlockedFooter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Alta bloqueada por capacidad',
+            'Llegaste al máximo de productos activos',
             style: AppTextStyles.labelMd.copyWith(
               color: AppColors.errorFg,
               fontWeight: FontWeight.w800,
@@ -1039,19 +1338,50 @@ class _CreateBlockedFooter extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Podés editar u ocultar productos existentes. Para sumar nuevos, necesitás ampliar el cupo.',
-            style: AppTextStyles.bodyXs.copyWith(
+            'Para cargar otro, ocultá alguno que ya no quieras mostrar en Tu zona.',
+            style: AppTextStyles.bodySm.copyWith(
               color: AppColors.errorFg,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (capacity != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              '${capacity!.used} de ${capacity!.limit} productos activos',
+              style: AppTextStyles.bodyXs.copyWith(
+                color: AppColors.errorFg,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onChooseProductToHide,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.errorFg,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: const Text('Elegir producto para ocultar'),
             ),
           ),
           const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: onContactAdmin,
-            icon: const Icon(Icons.support_agent, size: 16),
-            label: const Text('Contactar administración'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.errorFg,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: onBackToCatalog,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.errorFg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: const Text('Volver a mi catálogo'),
             ),
           ),
         ],
@@ -1143,6 +1473,127 @@ class _SearchAndSortBlock extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FilterChips extends StatelessWidget {
+  const _FilterChips({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final _ProductsFilter selected;
+  final ValueChanged<_ProductsFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _ProductsFilter.values.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final item = _ProductsFilter.values[index];
+          final isSelected = item == selected;
+          return ChoiceChip(
+            label: Text(item.label),
+            selected: isSelected,
+            onSelected: (_) => onSelected(item),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FilterSkeleton extends StatelessWidget {
+  const _FilterSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: 3,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, __) => Container(
+          width: 96,
+          decoration: BoxDecoration(
+            color: AppColors.neutral200,
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogLoadingSkeleton extends StatelessWidget {
+  const _CatalogLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List.generate(3, (index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.neutral200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.neutral100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 14,
+                      width: 160,
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral200,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 12,
+                      width: 90,
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      height: 34,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppColors.neutral100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
     );
   }
 }

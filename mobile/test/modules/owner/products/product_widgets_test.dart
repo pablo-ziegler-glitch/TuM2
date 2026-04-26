@@ -27,10 +27,10 @@ void main() {
       );
 
       expect(
-        find.text('Tu catálogo está vacío. ¡Sumá tu primer producto!'),
+        find.text('Todavía no cargaste productos'),
         findsOneWidget,
       );
-      expect(find.text('Agregar producto'), findsOneWidget);
+      expect(find.text('Agregar primer producto'), findsOneWidget);
     });
 
     testWidgets('product card renderiza fila estilo catálogo', (tester) async {
@@ -44,7 +44,9 @@ void main() {
                 ownerUserId: 'owner-1',
                 name: 'Yerba Mate Tradicional 1kg',
                 normalizedName: 'yerba mate tradicional 1kg',
+                description: '',
                 priceLabel: '\$4.000',
+                priceMode: ProductPriceMode.fixed,
                 stockStatus: ProductStockStatus.outOfStock,
                 visibilityStatus: ProductVisibilityStatus.hidden,
                 status: ProductStatus.inactive,
@@ -53,7 +55,7 @@ void main() {
                 updatedBy: 'owner-1',
               ),
               onTapActions: () {},
-              onVisibilityChanged: (_) {},
+              onStockStatusChanged: (_) {},
             ),
           ),
         ),
@@ -63,7 +65,7 @@ void main() {
       expect(find.text('OCULTO'), findsOneWidget);
       expect(find.text('SIN STOCK'), findsOneWidget);
       expect(find.text('INACTIVO'), findsOneWidget);
-      expect(find.byType(Switch), findsOneWidget);
+      expect(find.text('Marcar disponible'), findsOneWidget);
     });
 
     testWidgets('formulario muestra errores inline al enviar inválido',
@@ -122,29 +124,27 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).first, 'A');
-      await tester.enterText(find.byType(TextField).at(1), '');
-      await tester.tap(find.text('Guardar producto'));
+      await tester.tap(find.text('Continuar'));
       await tester.pumpAndSettle();
 
       expect(
         find.text('El nombre debe tener al menos 2 caracteres.'),
         findsOneWidget,
       );
-      expect(find.text('Ingresá el precio visible.'), findsOneWidget);
     });
   });
 }
 
 class _WidgetFakeRepository implements ProductRepository {
   @override
-  Future<String> createProduct({
+  Future<ProductCreateResult> createProduct({
     required String merchantId,
     required String ownerUserId,
     required String actorUserId,
     required ProductDraftInput input,
     ProductImageUploadData? image,
   }) async {
-    return 'new-product';
+    return const ProductCreateResult(productId: 'new-product');
   }
 
   @override
@@ -182,6 +182,13 @@ class _WidgetFakeRepository implements ProductRepository {
   }) async {}
 
   @override
+  Future<void> setStockStatus({
+    required MerchantProduct product,
+    required ProductStockStatus stockStatus,
+    required String actorUserId,
+  }) async {}
+
+  @override
   Future<void> updateProduct({
     required MerchantProduct product,
     required String actorUserId,
@@ -215,4 +222,10 @@ class _WidgetFakeRepository implements ProductRepository {
   }) {
     return const Stream.empty();
   }
+
+  @override
+  Future<void> reactivateProduct({
+    required MerchantProduct product,
+    required String actorUserId,
+  }) async {}
 }

@@ -1,16 +1,27 @@
 # TuM2-0065 — Alta/edición de productos (implementación)
 
-Estado: TODO
+Estado: IMPLEMENTADO (READY_FOR_QA)
 
 ## Alcance implementado
-- CRUD operativo OWNER sobre `merchant_products` con baja lógica (`status=inactive`).
-- Imagen principal única por producto en Storage con path canónico:
-  - `merchant-products/{merchantId}/{productId}/cover.jpg`
-- Listado OWNER con empty state, badges de estado, acciones rápidas y confirmaciones.
-- Formulario de alta/edición con validaciones inline y preview público.
-- Trigger Functions para recalcular `merchants.hasProducts`.
-- Rules de Firestore y Storage endurecidas por ownership, enums y campos inmutables.
-- Índices de Firestore actualizados y válidos (sin comentarios JSON).
+- Alta OWNER en 3 pasos (`datos básicos` → `foto/detalles` → `revisión/publicación`).
+- Edición OWNER con guardado directo y preview actualizado.
+- Precio opcional con `priceMode` (`none|fixed|consult`) y soporte de “Consultar precio”.
+- Foto opcional con publicación permitida ante fallo de upload.
+- Descripción breve opcional en producto (`description`).
+- Lista OWNER con filtros `Activos / Agotados / Ocultos`.
+- Acción rápida desde card para `marcar agotado/disponible`.
+- Acción `Ocultar de Tu zona` (baja lógica `status=inactive`) y `Volver a mostrar`.
+- Integración visual adicional de Stitch v2:
+  - acceso a catálogo desde `Mi comercio` con card destacada,
+  - estado `loading` con skeleton en listado de catálogo,
+  - confirmaciones de ocultar/eliminar con layout modal alineado a diseño,
+  - preview pública enriquecida en paso de revisión.
+- Callables de catálogo:
+  - `createMerchantProduct` (enforce capacidad + nuevos campos de precio/descripcion)
+  - `deactivateMerchantProduct` (ocultar)
+  - `reactivateMerchantProduct` (reactivar con enforce de capacidad)
+- Trigger Functions existente para recalcular `merchants.hasProducts` mantenido.
+- Firestore rules de `merchant_products` ajustadas para `description`, `priceMode` y `priceLabel` opcional.
 
 ## Rutas OWNER
 - `/owner/products`
@@ -30,3 +41,17 @@ Estado: TODO
 - `product_made_visible`
 - `product_image_uploaded`
 - `product_image_upload_failed`
+- `owner_product_marked_available`
+- `owner_product_marked_out_of_stock`
+- `owner_product_reactivated`
+
+## Pendientes para cierre
+- QA manual end-to-end en dev/staging con usuarios `owner` y `owner_pending`.
+- Definir decisión final de hard-delete irreversible (en esta iteración se mantiene ocultamiento/baja lógica).
+
+## Validación técnica y CI (2026-04-26)
+- Diagnóstico de falla CI en PR #138: el job `mobile` fallaba por commit incompleto (faltaban archivos dependientes del flujo OWNER, no por falla del workflow).
+- Corrección aplicada: se incorporó el set faltante de código/modelos/auth/guards/tests relacionado a OWNER products.
+- Verificación ejecutada en worktree limpio:
+  - `flutter analyze` ✅
+  - `flutter test --dart-define=ENV=staging` ✅

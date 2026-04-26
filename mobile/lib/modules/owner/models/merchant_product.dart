@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 const int productNameMaxLength = 80;
 const int productPriceLabelMaxLength = 60;
+const int productDescriptionMaxLength = 180;
 
 enum ProductStockStatus {
   available('available'),
@@ -50,6 +51,30 @@ enum ProductStatus {
   }
 }
 
+enum ProductPriceMode {
+  none('none'),
+  fixed('fixed'),
+  consult('consult');
+
+  const ProductPriceMode(this.value);
+  final String value;
+
+  static ProductPriceMode fromValue(
+    String? value, {
+    String? priceLabel,
+  }) {
+    final normalized = (value ?? '').trim().toLowerCase();
+    for (final item in ProductPriceMode.values) {
+      if (item.value == normalized) return item;
+    }
+    final normalizedPrice =
+        normalizeProductField(priceLabel ?? '').toLowerCase();
+    if (normalizedPrice.isEmpty) return ProductPriceMode.none;
+    if (normalizedPrice.contains('consult')) return ProductPriceMode.consult;
+    return ProductPriceMode.fixed;
+  }
+}
+
 enum ProductImageUploadStatus {
   pending('pending'),
   ready('ready'),
@@ -74,7 +99,9 @@ class MerchantProduct {
     required this.ownerUserId,
     required this.name,
     required this.normalizedName,
+    required this.description,
     required this.priceLabel,
+    required this.priceMode,
     required this.stockStatus,
     required this.visibilityStatus,
     required this.status,
@@ -95,7 +122,9 @@ class MerchantProduct {
   final String ownerUserId;
   final String name;
   final String normalizedName;
+  final String description;
   final String priceLabel;
+  final ProductPriceMode priceMode;
   final ProductStockStatus stockStatus;
   final ProductVisibilityStatus visibilityStatus;
   final ProductStatus status;
@@ -115,6 +144,13 @@ class MerchantProduct {
   bool get isAvailable => stockStatus == ProductStockStatus.available;
   bool get isPubliclyVisible => !isInactive && isVisible;
   bool get hasImage => (imageUrl ?? '').trim().isNotEmpty;
+  bool get hasDescription => description.trim().isNotEmpty;
+
+  String get displayPriceLabel {
+    if (priceMode == ProductPriceMode.consult) return 'Consultar precio';
+    if (priceMode == ProductPriceMode.none) return '';
+    return priceLabel;
+  }
 
   MerchantProduct copyWith({
     String? id,
@@ -122,7 +158,9 @@ class MerchantProduct {
     String? ownerUserId,
     String? name,
     String? normalizedName,
+    String? description,
     String? priceLabel,
+    ProductPriceMode? priceMode,
     ProductStockStatus? stockStatus,
     ProductVisibilityStatus? visibilityStatus,
     ProductStatus? status,
@@ -148,7 +186,9 @@ class MerchantProduct {
       ownerUserId: ownerUserId ?? this.ownerUserId,
       name: name ?? this.name,
       normalizedName: normalizedName ?? this.normalizedName,
+      description: description ?? this.description,
       priceLabel: priceLabel ?? this.priceLabel,
+      priceMode: priceMode ?? this.priceMode,
       stockStatus: stockStatus ?? this.stockStatus,
       visibilityStatus: visibilityStatus ?? this.visibilityStatus,
       status: status ?? this.status,
@@ -182,8 +222,14 @@ class MerchantProduct {
     final normalizedName = normalizeProductName(
       data['normalizedName'] as String? ?? name,
     );
+    final description =
+        normalizeProductField(data['description'] as String? ?? '');
     final priceLabel =
         normalizeProductField(data['priceLabel'] as String? ?? '');
+    final priceMode = ProductPriceMode.fromValue(
+      data['priceMode'] as String?,
+      priceLabel: priceLabel,
+    );
 
     return MerchantProduct(
       id: id,
@@ -191,7 +237,9 @@ class MerchantProduct {
       ownerUserId: normalizeProductField(data['ownerUserId'] as String? ?? ''),
       name: name,
       normalizedName: normalizedName,
+      description: description,
       priceLabel: priceLabel,
+      priceMode: priceMode,
       stockStatus: ProductStockStatus.fromValue(
         (data['stockStatus'] as String?)?.trim().toLowerCase(),
       ),
@@ -225,8 +273,10 @@ class MerchantProduct {
       'ownerUserId': ownerUserId,
       'name': name,
       'normalizedName': normalizedName,
+      'description': description,
       'searchKeywords': searchKeywords ?? buildProductSearchKeywords(name),
       'priceLabel': priceLabel,
+      'priceMode': priceMode.value,
       'stockStatus': stockStatus.value,
       'visibilityStatus': visibilityStatus.value,
       'status': status.value,
@@ -319,11 +369,29 @@ String? validateProductName(String value) {
 String? validateProductPriceLabel(
   String value, {
   int maxLength = productPriceLabelMaxLength,
+  required ProductPriceMode mode,
 }) {
   final normalized = normalizeProductField(value);
-  if (normalized.isEmpty) return 'Ingresá el precio visible.';
+  if (mode == ProductPriceMode.none || mode == ProductPriceMode.consult) {
+    if (normalized.length > maxLength) {
+      return 'El precio no puede superar $maxLength caracteres.';
+    }
+    return null;
+  }
+  if (normalized.isEmpty) return 'Ingresá un precio válido o dejalo vacío.';
   if (normalized.length > maxLength) {
     return 'El precio no puede superar $maxLength caracteres.';
+  }
+  return null;
+}
+
+String? validateProductDescription(
+  String value, {
+  int maxLength = productDescriptionMaxLength,
+}) {
+  final normalized = normalizeProductField(value);
+  if (normalized.length > maxLength) {
+    return 'La descripción no puede superar $maxLength caracteres.';
   }
   return null;
 }

@@ -1,6 +1,6 @@
 # TuM2-0147 — Honeypot defensivo y detección temprana de abuso
 
-Estado: IN_PROGRESS (corte técnico 2026-04-26)  
+Estado: READY_TO_QA (implementación lista; pendiente QA de cierre)  
 Prioridad: P0  
 Dependencias: Firebase Hosting rewrites, Cloud Functions v2 HTTP, Cloud Logging
 
@@ -111,11 +111,14 @@ Unit tests agregados:
 - `functions/src/security/__tests__/trapClassifier.test.ts`
 - `functions/src/security/__tests__/redaction.test.ts`
 - `functions/src/security/__tests__/hash.test.ts`
+- `functions/src/security/__tests__/honeytokens.test.ts`
+- `functions/src/security/__tests__/securityTrap.test.ts`
 
 Validación ejecutada (cobertura CI local):
 - `cd functions && npm run lint` ✅
 - `cd functions && npm run build` ✅
 - `cd functions && npm test` ✅
+- `firebase emulators:exec --only functions ... curl securityTrap` ✅ (HTTP 404 + body `{"error":"not_found"}` + log `security_honeypot_hit`)
 - `cd functions && npm run guard:claim-categories:allowlist` ✅
 - `cd functions && npm run test:rules` ✅
 - `cd mobile && flutter analyze` ✅
@@ -150,7 +153,6 @@ Alertas sugeridas:
 5. Si se requiere pausa táctica, usar kill switch `SECURITY_TRAP_ENABLED=false` manteniendo respuesta 404.
 
 ## Riesgos
-- Smoke test HTTP del endpoint honeypot en emulador pendiente de corrida manual de entorno.
 - Validación de workflow `firestore-cost-guard` en modo completo pendiente de credenciales GCP de monitoreo (OIDC o service account key).
 
 ## Rollout
@@ -180,4 +182,5 @@ Alertas sugeridas:
 
 ## Estado real de implementación
 Implementación técnica de honeypot completada en código y configuración.  
-CI local validada en functions/mobile/web; pendiente smoke manual del endpoint y verificación del workflow de cost guard con credenciales de monitoreo.
+CI local validada en functions/mobile/web; smoke local del endpoint validado en emulador.  
+Pendiente validación de workflow de cost guard con credenciales de monitoreo y despliegue por ambiente.

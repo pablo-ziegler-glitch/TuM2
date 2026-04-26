@@ -1,7 +1,7 @@
 # TuM2-0083 — Implementación tracking base (mobile + runtime web Flutter)
 
 Fecha: 2026-04-24  
-Estado: implementado (base operativa para 0084)
+Estado: READY_FOR_QA
 
 ## 1. Alcance implementado
 

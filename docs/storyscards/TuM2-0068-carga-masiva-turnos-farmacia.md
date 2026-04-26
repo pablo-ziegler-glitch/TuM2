@@ -1,6 +1,6 @@
 # TuM2-0068 — Carga de turnos de farmacia (OWNER-09/10/11)
 
-Estado: IMPLEMENTADA (MVP)  
+Estado: DONE
 Última actualización: 2026-04-13  
 PR: #84
 

@@ -1,6 +1,6 @@
 # TuM2-0065 — Alta/edición de productos (implementación)
 
-Estado: IMPLEMENTADO (READY_FOR_QA)
+Estado: READY_FOR_QA
 
 ## Alcance implementado
 - Alta OWNER en 3 pasos (`datos básicos` → `foto/detalles` → `revisión/publicación`).

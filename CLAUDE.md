@@ -13,8 +13,8 @@
 
 ## Actualización técnica reciente (2026-04-26)
 
-- **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `IN_PROGRESS` (implementado y en condición `READY_FOR_QA` según storycard).
-- **[0065] Alta/edición de productos OWNER**: estado real confirmado en `IN_PROGRESS` (implementado y en condición `READY_FOR_QA` según storycard).
+- **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
+- **[0065] Alta/edición de productos OWNER**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
 - **[0064] Módulo OWNER**: estado real actualizado a `READY_FOR_QA`; implementación base completa en `develop` (transiciones owner_pending -> owner/customer, guards de rutas profundas, `OwnerAccessUpdatedScreen`, refresh de sesión sin relogin) y pendiente de QA formal en `tum2-staging-45c83`.
 - Se implementó flujo mobile de alta en 3 pasos con precio/foto opcionales, revisión previa y publicación.
 - Se incorporaron `description` + `priceMode` en dominio de producto OWNER (`none|fixed|consult`) y validaciones asociadas.
@@ -27,7 +27,7 @@
 - Pendiente para cierre de 0065:
   - QA manual end-to-end en dev/staging con roles reales.
   - Definición final de hard-delete irreversible (actualmente se prioriza ocultamiento/baja lógica).
-- **[0083] Tracking base analytics**: estado real actualizado a `IN_PROGRESS` con base operativa implementada y validada; queda pendiente cierre de outputs de consumo (0084/0085/0086).
+- **[0083] Tracking base analytics**: estado real actualizado a `READY_FOR_QA` con base operativa implementada y validada; pendiente QA formal y outputs de consumo (0084/0085/0086).
 - **[0147] Honeypot defensivo**: implementado `securityTrap` HTTP v2 (Functions), clasificación de rutas trampa, redacción segura, HMAC de `ip` y `user-agent`, detección de honeytokens y logging estructurado `security_honeypot_hit`.
 - Hosting: rewrites de honeypot agregadas en targets `web` y `admin`, ubicadas antes del catch-all.
 - FinOps/Seguridad: `securityTrap` sin reads/writes Firestore por hit, sin Auth lookup, sin llamadas externas, respuesta uniforme 404.
@@ -228,7 +228,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0035] **Diseñar vista Farmacias de turno** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0036] **Diseñar vista Abierto ahora** — P0 — `UX/UI, MVP` ✅
 - [0037] **Diseñar panel Mi comercio** — P0 — `UX/UI, Operaciones, MVP` ✅
-- [0038] **Diseñar flujo carga de productos** — P0 — `UX/UI, Operaciones, MVP` `IN_PROGRESS`
+- [0038] **Diseñar flujo carga de productos** — P0 — `UX/UI, Operaciones, MVP` `READY_FOR_QA`
 - [0039] **Diseñar flujo carga de horarios y señales** — P0 — `UX/UI, Operaciones, MVP`
 - [0040] **Diseñar flujo carga de turnos de farmacia** — P0 — `UX/UI, Operaciones, MVP`
 - [0041] **Diseñar board de propuestas y votos** — P1 — `UX/UI, Growth, Admin, MVP`
@@ -260,7 +260,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
 - [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `READY_FOR_QA`
-- [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP` `IN_PROGRESS`
+- [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP` `READY_FOR_QA`
 - [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` ✅
 - [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP` ✅
 - [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP` ✅
@@ -288,7 +288,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### ÉPICA 11: Analytics
 - [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `IN_PROGRESS`
-- [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP` `IN_PROGRESS`
+- [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP` `READY_FOR_QA`
 - [0084] **Crear dashboard MVP** — P1 — `Analytics, MVP`
 - [0085] **Medir activación OWNER** — P1 — `Analytics, Operaciones, MVP`
 - [0086] **Medir activación CUSTOMER** — P1 — `Analytics, MVP`
@@ -301,7 +301,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0091] **Testear permisos por rol** — P0 — `QA, Seguridad, MVP`
 - [0092] **Testear edge cases operativos** — P0 — `QA, Operaciones, MVP`
 - [0093] **Configurar alertas técnicas mínimas** — P1 — `Seguridad, Operaciones, Lanzamiento`
-- [0147] **Honeypot defensivo y detección temprana de abuso** — P0 — `Seguridad, Backend, Operaciones, MVP` `IN_PROGRESS`
+- [0147] **Honeypot defensivo y detección temprana de abuso** — P0 — `Seguridad, Backend, Operaciones, MVP` `READY_FOR_QA`
 
 ### ÉPICA 13: Lanzamiento / piloto
 - [0094] **Definir piloto geográfico** — P0 — `Lanzamiento, Producto, MVP`
@@ -356,15 +356,15 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - Costo: elimina lecturas runtime de catálogo en selector de zonas y agrega controles de publicación con guardrails por ambiente.
 
 ### ÉPICA 18: Reclamo de titularidad de comercio
-- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP` `READY_TO_QA`
-- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP` `READY_TO_QA`
-- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP` `READY_TO_QA`
-- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `READY_TO_QA`
-- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `READY_TO_QA`
-- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `READY_TO_QA`
-- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `READY_TO_QA`
+- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP` `READY_FOR_QA`
+- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP` `READY_FOR_QA`
+- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP` `READY_FOR_QA`
+- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `READY_FOR_QA`
+- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `READY_FOR_QA`
+- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `READY_FOR_QA`
+- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `READY_FOR_QA`
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
-- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `READY_TO_QA`
+- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `READY_FOR_QA`
 - [0140] **Hardening de Auth/Rules con JWT claims y eliminación de reads extra** — P0 — `Seguridad, Backend, Mobile, MVP` ✅
 
 ### ÉPICA 19: Estacionalidad y campañas contextuales

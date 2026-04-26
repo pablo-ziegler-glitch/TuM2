@@ -1,6 +1,6 @@
 # TuM2-0125 — Épica: Reclamo de titularidad de comercio
 
-Estado: READY_TO_QA  
+Estado: READY_FOR_QA
 Prioridad: P0 (MVP crítica)
 
 ## Estado real de implementación (corte 2026-04-16)

@@ -50,9 +50,7 @@ class OpenNowRepository implements OpenNowDataSource {
     final state = await _catalogRepository.loadCatalog();
     final active = state.catalog.zones.where(_isActiveZoneRecord).toList();
     active.sort(_compareZoneRecords);
-    return active
-        .map(OpenNowZone.fromCatalogEntry)
-        .toList(growable: false);
+    return active.map(OpenNowZone.fromCatalogEntry).toList(growable: false);
   }
 
   static bool _isActiveZoneRecord(ZonesCatalogEntry zone) {

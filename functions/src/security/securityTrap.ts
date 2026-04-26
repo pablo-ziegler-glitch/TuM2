@@ -45,6 +45,24 @@ interface SecurityHoneypotHitLog {
   timestamp: string;
 }
 
+interface SecurityTrapRequest {
+  method?: unknown;
+  path?: unknown;
+  originalUrl?: unknown;
+  url?: unknown;
+  ip?: unknown;
+  headers?: Record<string, unknown>;
+  query?: Record<string, unknown>;
+  body?: unknown;
+  socket?: { remoteAddress?: unknown };
+  connection?: { remoteAddress?: unknown };
+}
+
+interface SecurityTrapResponse {
+  status: (code: number) => { json: (body: unknown) => void };
+  set: (name: string, value: string) => void;
+}
+
 function resolveProjectId(): string | undefined {
   const rawProject = process.env.GCLOUD_PROJECT ?? process.env.GCP_PROJECT;
   if (typeof rawProject === "string" && rawProject.trim().length > 0) {
@@ -121,12 +139,46 @@ function buildLogPayload(
   };
 }
 
-function sendNotFound(response: {
-  status: (code: number) => { json: (body: unknown) => void };
-  set: (name: string, value: string) => void;
-}): void {
+function sendNotFound(response: SecurityTrapResponse): void {
   response.set("Cache-Control", "no-store");
   response.status(404).json({ error: "not_found" });
+}
+
+export async function handleSecurityTrapRequest(
+  request: SecurityTrapRequest,
+  response: SecurityTrapResponse
+): Promise<void> {
+  try {
+    if (!trapEnabled()) {
+      sendNotFound(response);
+      return;
+    }
+
+    const secret = resolveSecurityHashSecret();
+    const metadata = redactRequestMetadata(request, secret);
+    const trap = classifyTrapPath(metadata.normalizedPath);
+    const honeytoken = detectHoneytoken({
+      normalizedPath: metadata.normalizedPath,
+      queryValues: collectQueryValues(request.query as Record<string, unknown>),
+      headerValues: collectHeaderValues(request.headers as Record<string, unknown>),
+      bodyText: bodyTextForDetection(request.body),
+    });
+
+    const severity = honeytoken.honeytokenDetected ? "critical" : trap.severity;
+    const riskScore = honeytoken.honeytokenDetected ? 100 : trap.riskScore;
+    const payload = buildLogPayload(metadata, {
+      trapCategory: trap.trapCategory,
+      severity,
+      riskScore,
+      honeytokenDetected: honeytoken.honeytokenDetected,
+      honeytokenType: honeytoken.honeytokenType,
+    });
+    console.log(JSON.stringify(payload));
+  } catch {
+    // Fall through to generic 404 response.
+  }
+
+  sendNotFound(response);
 }
 
 export const securityTrap = onRequest(
@@ -138,36 +190,6 @@ export const securityTrap = onRequest(
     maxInstances: 5,
   },
   async (request, response) => {
-    try {
-      if (!trapEnabled()) {
-        sendNotFound(response);
-        return;
-      }
-
-      const secret = resolveSecurityHashSecret();
-      const metadata = redactRequestMetadata(request, secret);
-      const trap = classifyTrapPath(metadata.normalizedPath);
-      const honeytoken = detectHoneytoken({
-        normalizedPath: metadata.normalizedPath,
-        queryValues: collectQueryValues(request.query as Record<string, unknown>),
-        headerValues: collectHeaderValues(request.headers as Record<string, unknown>),
-        bodyText: bodyTextForDetection(request.body),
-      });
-
-      const severity = honeytoken.honeytokenDetected ? "critical" : trap.severity;
-      const riskScore = honeytoken.honeytokenDetected ? 100 : trap.riskScore;
-      const payload = buildLogPayload(metadata, {
-        trapCategory: trap.trapCategory,
-        severity,
-        riskScore,
-        honeytokenDetected: honeytoken.honeytokenDetected,
-        honeytokenType: honeytoken.honeytokenType,
-      });
-      console.log(JSON.stringify(payload));
-    } catch {
-      // Fall through to generic 404 response.
-    }
-
-    sendNotFound(response);
+    await handleSecurityTrapRequest(request, response);
   }
 );

@@ -100,7 +100,7 @@ class ProductEmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         const Text(
-          'Tu catálogo está vacío. ¡Sumá tu primer producto!',
+          'Todavía no cargaste productos',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontFamily: 'Plus Jakarta Sans',
@@ -113,7 +113,7 @@ class ProductEmptyState extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'Mostrá lo que ofrecés hoy y mantené tu ficha actualizada.',
+          'Agregá algunos productos para que los Vecinos sepan qué pueden encontrar en tu Comercio.',
           textAlign: TextAlign.center,
           style: AppTextStyles.bodyMd.copyWith(
             color: AppColors.neutral700,
@@ -148,7 +148,7 @@ class ProductEmptyState extends StatelessWidget {
             ),
             icon: const Icon(Icons.add_circle_outline),
             label: Text(
-              'Agregar producto',
+              'Agregar primer producto',
               style: AppTextStyles.labelMd.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.w700,
@@ -181,7 +181,7 @@ class ProductEmptyState extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '¿No sabés por dónde empezar? Probá subiendo tus productos más vendidos.',
+                  'Podés empezar solo con el nombre. La foto y el precio pueden ir después.',
                   style: AppTextStyles.bodySm.copyWith(
                     color: AppColors.neutral700,
                     fontWeight: FontWeight.w500,

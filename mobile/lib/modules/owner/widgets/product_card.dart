@@ -9,18 +9,18 @@ class ProductCard extends StatelessWidget {
     super.key,
     required this.product,
     required this.onTapActions,
-    required this.onVisibilityChanged,
+    required this.onStockStatusChanged,
     this.isBusy = false,
   });
 
   final MerchantProduct product;
   final VoidCallback onTapActions;
-  final ValueChanged<bool> onVisibilityChanged;
+  final ValueChanged<ProductStockStatus> onStockStatusChanged;
   final bool isBusy;
 
   @override
   Widget build(BuildContext context) {
-    final isVisible =
+    final isVisible = product.status == ProductStatus.active &&
         product.visibilityStatus == ProductVisibilityStatus.visible;
     final isInactive = product.status == ProductStatus.inactive;
     final isOutOfStock = product.stockStatus == ProductStockStatus.outOfStock;
@@ -55,7 +55,9 @@ class ProductCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  product.priceLabel,
+                  product.displayPriceLabel.isEmpty
+                      ? 'Sin precio'
+                      : product.displayPriceLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.bodySm.copyWith(
@@ -98,7 +100,7 @@ class ProductCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                isVisible ? 'VISIBLE' : 'OCULTO',
+                isInactive ? 'OCULTO' : (isVisible ? 'VISIBLE' : 'PAUSADO'),
                 style: AppTextStyles.labelSm.copyWith(
                   color:
                       isVisible ? AppColors.primary500 : AppColors.neutral500,
@@ -107,14 +109,20 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Switch(
-                value: isVisible,
-                onChanged: isBusy || isInactive ? null : onVisibilityChanged,
-                activeThumbColor: Colors.white,
-                activeTrackColor: AppColors.secondary500,
-                inactiveThumbColor: Colors.white,
-                inactiveTrackColor: AppColors.neutral200,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              FilledButton.tonal(
+                onPressed: isBusy || isInactive
+                    ? null
+                    : () => onStockStatusChanged(
+                          isOutOfStock
+                              ? ProductStockStatus.available
+                              : ProductStockStatus.outOfStock,
+                        ),
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+                child: Text(
+                  isOutOfStock ? 'Marcar disponible' : 'Marcar agotado',
+                ),
               ),
             ],
           ),

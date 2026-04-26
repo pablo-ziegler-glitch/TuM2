@@ -17,6 +17,190 @@
       ],
       "rewrites": [
         {
+          "source": "/wp-login.php",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/wp-admin",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/wp-admin/**",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/xmlrpc.php",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/phpmyadmin",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/phpmyadmin/**",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/adminer.php",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.env",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.git/config",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.git/**",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/backup.zip",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/database.sql",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/config.json",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/server-status",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/admin/export-users",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/admin/export-claims",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/admin/users.csv",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/admin/claims.csv",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/users",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/export-users",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/export-claims",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/reveal-sensitive",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/merchant-claims-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/merchant-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/merchant-public-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/pharmacy-duties/export",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/zones/export",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/search-index-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/private/merchant_public_dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/private/app-config",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/private/firebase-config",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/export",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/reveal-all",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/evidence-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/approve-all",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/owner-transition",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/merchant-claims/export",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/merchant-claims/reveal-sensitive",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.env.prod",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.env.production",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/firebase-service-account.json",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/service-account.json",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/google-services.json",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/firebase.json.bak",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/functions/.env",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/functions/service-account.json",
+          "function": "securityTrap"
+        },
+        {
           "source": "**",
           "destination": "/index.html"
         }
@@ -31,6 +215,190 @@
         "**/node_modules/**"
       ],
       "rewrites": [
+        {
+          "source": "/wp-login.php",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/wp-admin",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/wp-admin/**",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/xmlrpc.php",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/phpmyadmin",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/phpmyadmin/**",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/adminer.php",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.env",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.git/config",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.git/**",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/backup.zip",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/database.sql",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/config.json",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/server-status",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/admin/export-users",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/admin/export-claims",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/admin/users.csv",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/admin/claims.csv",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/users",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/export-users",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/export-claims",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/reveal-sensitive",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/admin/merchant-claims-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/merchant-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/merchant-public-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/pharmacy-duties/export",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/zones/export",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/internal/search-index-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/private/merchant_public_dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/private/app-config",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/private/firebase-config",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/export",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/reveal-all",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/evidence-dump",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/approve-all",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/claims/owner-transition",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/merchant-claims/export",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/api/merchant-claims/reveal-sensitive",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.env.prod",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/.env.production",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/firebase-service-account.json",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/service-account.json",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/google-services.json",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/firebase.json.bak",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/functions/.env",
+          "function": "securityTrap"
+        },
+        {
+          "source": "/functions/service-account.json",
+          "function": "securityTrap"
+        },
         {
           "source": "**",
           "destination": "/index.html"

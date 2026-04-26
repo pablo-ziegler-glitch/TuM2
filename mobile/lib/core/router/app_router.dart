@@ -360,6 +360,7 @@ List<RouteBase> _buildRoutes() {
       path: AppRoutes.ownerProducts,
       builder: (_, __) => const OwnerAccessGuardPage(
         title: 'Productos',
+        requireOwnerRole: true,
         child: OwnerProductsScreen(),
       ),
     ),
@@ -367,6 +368,7 @@ List<RouteBase> _buildRoutes() {
       path: AppRoutes.ownerProductsNew,
       builder: (_, __) => const OwnerAccessGuardPage(
         title: 'Nuevo producto',
+        requireOwnerRole: true,
         child: ProductFormScreen(),
       ),
     ),
@@ -376,6 +378,7 @@ List<RouteBase> _buildRoutes() {
         final productId = state.pathParameters['productId']!;
         return OwnerAccessGuardPage(
           title: 'Editar producto',
+          requireOwnerRole: true,
           child: ProductFormScreen(productId: productId),
         );
       },
@@ -387,11 +390,13 @@ List<RouteBase> _buildRoutes() {
         if (payload == null) {
           return const OwnerAccessGuardPage(
             title: 'Producto guardado',
+            requireOwnerRole: true,
             child: OwnerProductsScreen(),
           );
         }
         return OwnerAccessGuardPage(
           title: 'Producto guardado',
+          requireOwnerRole: true,
           child: ProductSavedScreen(payload: payload),
         );
       },

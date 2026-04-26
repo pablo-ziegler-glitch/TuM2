@@ -8,19 +8,19 @@ Future<void> showProductActionsSheet(
   BuildContext context, {
   required MerchantProduct product,
   required VoidCallback onEdit,
-  required VoidCallback onToggleVisibility,
-  required VoidCallback onDeactivate,
+  required VoidCallback onMarkOutOfStock,
+  required VoidCallback onMarkAvailable,
+  required VoidCallback onHide,
+  required VoidCallback onReactivate,
+  required VoidCallback onDelete,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     backgroundColor: AppColors.surface,
     builder: (context) {
-      final hideOrShowLabel =
-          product.visibilityStatus == ProductVisibilityStatus.visible
-              ? 'Ocultar'
-              : 'Mostrar';
       final isInactive = product.status == ProductStatus.inactive;
+      final isOutOfStock = product.stockStatus == ProductStockStatus.outOfStock;
 
       return SafeArea(
         child: Padding(
@@ -38,39 +38,57 @@ Future<void> showProductActionsSheet(
               const SizedBox(height: 10),
               _ActionTile(
                 icon: Icons.edit_outlined,
-                label: 'Editar',
+                label: 'Editar producto',
                 onTap: () {
                   Navigator.of(context).pop();
                   onEdit();
                 },
               ),
+              if (!isInactive)
+                _ActionTile(
+                  icon: isOutOfStock
+                      ? Icons.check_circle_outline
+                      : Icons.remove_circle_outline,
+                  label: isOutOfStock
+                      ? 'Marcar como disponible'
+                      : 'Marcar como agotado',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    if (isOutOfStock) {
+                      onMarkAvailable();
+                      return;
+                    }
+                    onMarkOutOfStock();
+                  },
+                ),
               _ActionTile(
-                icon:
-                    product.visibilityStatus == ProductVisibilityStatus.visible
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                label: hideOrShowLabel,
-                enabled: !isInactive,
+                icon: isInactive
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                label: isInactive ? 'Volver a mostrar' : 'Ocultar de Tu zona',
                 onTap: () {
                   Navigator.of(context).pop();
-                  onToggleVisibility();
+                  if (isInactive) {
+                    onReactivate();
+                    return;
+                  }
+                  onHide();
                 },
               ),
               _ActionTile(
                 icon: Icons.delete_outline,
-                label: 'Dar de baja',
+                label: 'Eliminar producto',
                 color: AppColors.errorFg,
-                enabled: !isInactive,
                 onTap: () {
                   Navigator.of(context).pop();
-                  onDeactivate();
+                  onDelete();
                 },
               ),
               if (isInactive)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    'Este producto ya está inactivo.',
+                    'Ocultar lo saca de la vista de los Vecinos, pero podés volver a mostrarlo después.',
                     style: AppTextStyles.bodySm.copyWith(
                       color: AppColors.neutral600,
                     ),
@@ -90,14 +108,12 @@ class _ActionTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.color = AppColors.neutral900,
-    this.enabled = true,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   final Color color;
-  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -105,15 +121,15 @@ class _ActionTile extends StatelessWidget {
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         icon,
-        color: enabled ? color : AppColors.neutral400,
+        color: color,
       ),
       title: Text(
         label,
         style: AppTextStyles.labelMd.copyWith(
-          color: enabled ? color : AppColors.neutral500,
+          color: color,
         ),
       ),
-      onTap: enabled ? onTap : null,
+      onTap: onTap,
     );
   }
 }

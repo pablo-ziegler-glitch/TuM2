@@ -253,7 +253,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Gestionar productos'), findsOneWidget);
+    expect(find.text('Mi catálogo'), findsOneWidget);
     expect(
         find.text('Tu validación como dueño sigue pendiente'), findsOneWidget);
   });

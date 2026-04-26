@@ -12,6 +12,7 @@ class ProductSavedPayload {
     required this.priceLabel,
     this.imageUrl,
     required this.isPublic,
+    this.imageUploadFailed = false,
   });
 
   final String productId;
@@ -19,6 +20,7 @@ class ProductSavedPayload {
   final String priceLabel;
   final String? imageUrl;
   final bool isPublic;
+  final bool imageUploadFailed;
 }
 
 class ProductSavedScreen extends StatelessWidget {
@@ -94,11 +96,9 @@ class ProductSavedScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Text(
-                  payload.isPublic
-                      ? '¡Listo! Tu producto ya es visible para los vecinos'
-                      : '¡Listo! Tu producto ya está cargado',
-                  style: const TextStyle(
+                const Text(
+                  'Producto publicado',
+                  style: TextStyle(
                     fontFamily: 'Plus Jakarta Sans',
                     fontSize: 38,
                     fontWeight: FontWeight.w800,
@@ -110,14 +110,42 @@ class ProductSavedScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  payload.isPublic
-                      ? 'Ya se puede ver en tu ficha pública'
-                      : 'El producto quedó guardado y oculto en tu panel privado',
+                  'Listo, ya puede aparecer para los Vecinos de Tu zona.',
                   style: AppTextStyles.bodyMd.copyWith(
                     color: AppColors.neutral700,
                   ),
                   textAlign: TextAlign.center,
                 ),
+                if (payload.imageUploadFailed) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorBg,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: AppColors.errorFg,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'No pudimos cargar la foto. Podés editar el producto y sumarla después.',
+                            style: AppTextStyles.bodySm.copyWith(
+                              color: AppColors.errorFg,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
@@ -140,7 +168,7 @@ class ProductSavedScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       child: const Text(
-                        'Volver al listado',
+                        'Volver a productos',
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -150,7 +178,7 @@ class ProductSavedScreen extends StatelessWidget {
                 TextButton(
                   onPressed: () => context.go(AppRoutes.ownerProductsNew),
                   child: Text(
-                    'Cargar otro',
+                    'Agregar otro',
                     style: AppTextStyles.labelMd.copyWith(
                       color: AppColors.primary500,
                       fontWeight: FontWeight.w700,
@@ -201,7 +229,9 @@ class ProductSavedScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${payload.name} · ${payload.priceLabel}',
+                            payload.priceLabel.trim().isEmpty
+                                ? payload.name
+                                : '${payload.name} · ${payload.priceLabel}',
                             style: AppTextStyles.bodySm.copyWith(
                               color: AppColors.neutral900,
                               fontWeight: FontWeight.w700,

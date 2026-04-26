@@ -5,14 +5,18 @@ import '../models/merchant_product.dart';
 class ProductDraftInput {
   const ProductDraftInput({
     required this.name,
+    required this.description,
     required this.priceLabel,
+    required this.priceMode,
     required this.stockStatus,
     required this.visibilityStatus,
     this.status = ProductStatus.active,
   });
 
   final String name;
+  final String description;
   final String priceLabel;
+  final ProductPriceMode priceMode;
   final ProductStockStatus stockStatus;
   final ProductVisibilityStatus visibilityStatus;
   final ProductStatus status;
@@ -44,6 +48,18 @@ class ProductImageUploadResult {
   final int sizeBytes;
 }
 
+class ProductCreateResult {
+  const ProductCreateResult({
+    required this.productId,
+    this.imageUploadFailed = false,
+    this.imageUploadErrorCode,
+  });
+
+  final String productId;
+  final bool imageUploadFailed;
+  final String? imageUploadErrorCode;
+}
+
 abstract interface class ProductRepository {
   Stream<List<MerchantProduct>> watchOwnerProducts({
     required String merchantId,
@@ -59,7 +75,7 @@ abstract interface class ProductRepository {
 
   Future<MerchantProduct?> getProductById(String productId);
 
-  Future<String> createProduct({
+  Future<ProductCreateResult> createProduct({
     required String merchantId,
     required String ownerUserId,
     required String actorUserId,
@@ -82,6 +98,17 @@ abstract interface class ProductRepository {
   Future<void> setVisibilityStatus({
     required MerchantProduct product,
     required ProductVisibilityStatus visibilityStatus,
+    required String actorUserId,
+  });
+
+  Future<void> setStockStatus({
+    required MerchantProduct product,
+    required ProductStockStatus stockStatus,
+    required String actorUserId,
+  });
+
+  Future<void> reactivateProduct({
+    required MerchantProduct product,
     required String actorUserId,
   });
 

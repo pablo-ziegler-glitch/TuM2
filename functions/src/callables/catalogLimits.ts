@@ -19,6 +19,7 @@ type Role = "owner" | "admin" | "super_admin" | "customer" | "unknown";
 type ProductStockStatus = "available" | "out_of_stock";
 type ProductVisibilityStatus = "visible" | "hidden";
 type ProductStatus = "active" | "inactive";
+type ProductPriceMode = "none" | "fixed" | "consult";
 type ProductImageUploadStatus = "pending" | "ready" | "failed";
 
 interface SetGlobalCatalogProductLimitRequest {
@@ -78,7 +79,9 @@ interface CreateMerchantProductRequest {
   merchantId?: string;
   productId?: string;
   name?: string;
+  description?: string;
   priceLabel?: string;
+  priceMode?: ProductPriceMode;
   stockStatus?: ProductStockStatus;
   visibilityStatus?: ProductVisibilityStatus;
   status?: ProductStatus;
@@ -105,6 +108,20 @@ interface DeactivateMerchantProductResponse {
   merchantId: string;
   productId: string;
   activeProductCount: number;
+}
+
+interface ReactivateMerchantProductRequest {
+  merchantId?: string;
+  productId?: string;
+}
+
+interface ReactivateMerchantProductResponse {
+  merchantId: string;
+  productId: string;
+  activeProductCount: number;
+  effectiveLimit: number;
+  limitSource: CatalogLimitSource;
+  usageRatio: number;
 }
 
 function normalizeRole(raw: unknown): Role {
@@ -183,15 +200,47 @@ function normalizeProductName(value: unknown): string {
   return normalized.replace(/\s+/g, " ");
 }
 
+function normalizeDescription(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value !== "string") {
+    throw new HttpsError("invalid-argument", "description inválida.");
+  }
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (normalized.length > 180) {
+    throw new HttpsError(
+      "invalid-argument",
+      "description no puede superar 180 caracteres."
+    );
+  }
+  return normalized;
+}
+
 function normalizePriceLabel(value: unknown): string {
-  const normalized = normalizeRequiredString(value, "priceLabel");
+  if (value == null) return "";
+  if (typeof value !== "string") {
+    throw new HttpsError("invalid-argument", "priceLabel inválido.");
+  }
+  const normalized = value.trim().replace(/\s+/g, " ");
   if (normalized.length > 60) {
     throw new HttpsError(
       "invalid-argument",
       "priceLabel no puede superar 60 caracteres."
     );
   }
-  return normalized.replace(/\s+/g, " ");
+  return normalized;
+}
+
+function normalizePriceMode(
+  value: unknown,
+  priceLabel: string
+): ProductPriceMode {
+  if (value == null) {
+    return priceLabel ? "fixed" : "none";
+  }
+  if (value === "none" || value === "fixed" || value === "consult") {
+    return value;
+  }
+  throw new HttpsError("invalid-argument", "priceMode inválido.");
 }
 
 function normalizeNormalizedName(input: string): string {
@@ -626,7 +675,9 @@ export const createMerchantProduct = onCall<
     ? normalizeProductId(request.data.productId)
     : db().collection("merchant_products").doc().id;
   const name = normalizeProductName(request.data.name);
+  const description = normalizeDescription(request.data.description);
   const priceLabel = normalizePriceLabel(request.data.priceLabel);
+  const priceMode = normalizePriceMode(request.data.priceMode, priceLabel);
   const stockStatus = normalizeStockStatus(request.data.stockStatus);
   const visibilityStatus = normalizeVisibilityStatus(request.data.visibilityStatus);
   const status = normalizeProductStatus(request.data.status);
@@ -651,6 +702,12 @@ export const createMerchantProduct = onCall<
     throw new HttpsError(
       "invalid-argument",
       "imageUploadStatus debe ser 'ready' cuando se envía imagen."
+    );
+  }
+  if (priceMode === "fixed" && !priceLabel) {
+    throw new HttpsError(
+      "invalid-argument",
+      "priceLabel es requerido cuando priceMode es fixed."
     );
   }
 
@@ -730,7 +787,9 @@ export const createMerchantProduct = onCall<
       name,
       normalizedName,
       searchKeywords: buildProductSearchKeywords(name),
+      description,
       priceLabel,
+      priceMode,
       stockStatus,
       visibilityStatus,
       status,
@@ -910,6 +969,169 @@ export const deactivateMerchantProduct = onCall<
       merchantId: response.merchantId,
       productId: response.productId,
       activeProductCount: response.activeProductCount,
+    })
+  );
+
+  return response;
+});
+
+export const reactivateMerchantProduct = onCall<
+  ReactivateMerchantProductRequest,
+  Promise<ReactivateMerchantProductResponse>
+>({ enforceAppCheck: true }, async (request) => {
+  const auth = assertAuthenticated(request.auth);
+  const role = normalizeRole(auth.token.role);
+  assertOwnerOrAdminRole(role);
+
+  const merchantId = normalizeRequiredString(request.data.merchantId, "merchantId");
+  const productId = normalizeRequiredString(request.data.productId, "productId");
+
+  const merchantRef = db().doc(`merchants/${merchantId}`);
+  const productRef = db().doc(`merchant_products/${productId}`);
+  const configRef = db().doc(CATALOG_LIMITS_CONFIG_PATH);
+
+  const response = await db().runTransaction<ReactivateMerchantProductResponse>(
+    async (tx) => {
+      const [merchantSnap, productSnap, configSnap] = await Promise.all([
+        tx.get(merchantRef),
+        tx.get(productRef),
+        tx.get(configRef),
+      ]);
+
+      if (!merchantSnap.exists) {
+        throw new HttpsError("not-found", "Comercio no encontrado.");
+      }
+      if (!productSnap.exists) {
+        throw new HttpsError("not-found", "Producto no encontrado.");
+      }
+
+      const merchantData = merchantSnap.data() as Record<string, unknown>;
+      const ownerUserId = merchantOwnerUserId(merchantData);
+      if (!ownerUserId) {
+        throw new HttpsError(
+          "failed-precondition",
+          "El comercio no tiene owner asignado."
+        );
+      }
+      if (role === "owner" && ownerUserId !== auth.uid) {
+        throw new HttpsError(
+          "permission-denied",
+          "No podés modificar productos de otro comercio."
+        );
+      }
+
+      const productData = productSnap.data() as Record<string, unknown>;
+      const productMerchantId =
+        typeof productData["merchantId"] === "string"
+          ? productData["merchantId"].trim()
+          : "";
+      if (!productMerchantId || productMerchantId !== merchantId) {
+        throw new HttpsError(
+          "failed-precondition",
+          "El producto no pertenece al comercio indicado."
+        );
+      }
+      const productOwnerUserId =
+        typeof productData["ownerUserId"] === "string"
+          ? productData["ownerUserId"].trim()
+          : "";
+      if (role === "owner" && productOwnerUserId !== auth.uid) {
+        throw new HttpsError(
+          "permission-denied",
+          "No podés modificar productos de otro comercio."
+        );
+      }
+
+      const currentStatus =
+        typeof productData["status"] === "string"
+          ? (productData["status"] as ProductStatus)
+          : "inactive";
+
+      const catalogConfig = normalizeCatalogLimitsConfig(
+        configSnap.data() as Record<string, unknown> | undefined
+      );
+      const resolved = resolveEffectiveCatalogLimit({
+        merchant: {
+          categoryId: resolveMerchantCategoryId(merchantData),
+          catalogLimits:
+            (merchantData["catalogLimits"] as { productLimitOverride?: number | null } | undefined) ??
+            undefined,
+          catalogStats:
+            (merchantData["catalogStats"] as { activeProductCount?: number } | undefined) ??
+            undefined,
+        },
+        catalogConfig,
+      });
+
+      const currentCount = resolveActiveProductCount({
+        catalogStats:
+          (merchantData["catalogStats"] as { activeProductCount?: number } | undefined) ??
+          undefined,
+      });
+
+      if (currentStatus === "active") {
+        return {
+          merchantId,
+          productId,
+          activeProductCount: currentCount,
+          effectiveLimit: resolved.effectiveLimit,
+          limitSource: resolved.limitSource,
+          usageRatio: usageRatio(currentCount, resolved.effectiveLimit),
+        };
+      }
+
+      if (currentCount >= resolved.effectiveLimit) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Límite de catálogo alcanzado.",
+          {
+            code: "catalog_limit_reached",
+            activeProductCount: currentCount,
+            effectiveLimit: resolved.effectiveLimit,
+            limitSource: resolved.limitSource,
+          }
+        );
+      }
+
+      const nextCount = currentCount + 1;
+      tx.update(productRef, {
+        status: "active",
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: auth.uid,
+      });
+      tx.set(
+        merchantRef,
+        {
+          catalogStats: {
+            activeProductCount: nextCount,
+            updatedAt: FieldValue.serverTimestamp(),
+          },
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      return {
+        merchantId,
+        productId,
+        activeProductCount: nextCount,
+        effectiveLimit: resolved.effectiveLimit,
+        limitSource: resolved.limitSource,
+        usageRatio: usageRatio(nextCount, resolved.effectiveLimit),
+      };
+    }
+  );
+
+  console.log(
+    JSON.stringify({
+      source: "catalog_limits",
+      action: "reactivate_merchant_product",
+      actorUid: auth.uid,
+      merchantId: response.merchantId,
+      productId: response.productId,
+      activeProductCount: response.activeProductCount,
+      effectiveLimit: response.effectiveLimit,
+      limitSource: response.limitSource,
     })
   );
 

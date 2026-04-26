@@ -98,7 +98,7 @@ String _checksum(String payload) {
   return 'sha256-${base64.encode(digest)}';
 }
 
-class _FakeAssetBundle extends CachingAssetBundle {
+class _FakeAssetBundle extends AssetBundle {
   _FakeAssetBundle(this._seedCatalog);
 
   final String _seedCatalog;

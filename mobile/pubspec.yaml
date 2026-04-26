@@ -43,6 +43,7 @@ dependencies:
   # Utils
   intl: ^0.19.0
   http: ^1.2.0
+  crypto: ^3.0.6
   url_launcher: ^6.3.0
   image_picker: ^1.1.2
   file_picker: ^8.0.7
@@ -65,3 +66,4 @@ flutter:
     - assets/clusters/
     - assets/icons/
     - assets/logo/
+    - assets/catalogs/

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../../core/catalog/zones_catalog_models.dart';
+
 class OpenNowZone {
   const OpenNowZone({
     required this.zoneId,
@@ -28,6 +30,15 @@ class OpenNowZone {
       name: _readText(data, const ['name', 'nombre']) ?? zoneId,
       cityId: _readText(data, const ['cityId', 'ciudadId', 'city_id']) ?? '',
       priorityLevel: _readPriority(data),
+    );
+  }
+
+  factory OpenNowZone.fromCatalogEntry(ZonesCatalogEntry entry) {
+    return OpenNowZone(
+      zoneId: entry.zoneId,
+      name: entry.name,
+      cityId: entry.cityId,
+      priorityLevel: entry.priorityLevel,
     );
   }
 

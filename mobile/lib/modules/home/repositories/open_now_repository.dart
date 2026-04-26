@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../../core/cache/zones_cache_service.dart';
+import '../../../core/catalog/zones_catalog_models.dart';
+import '../../../core/catalog/zones_catalog_repository.dart';
 import '../models/open_now_models.dart';
 
 abstract interface class OpenNowDataSource {
@@ -29,60 +30,50 @@ class OpenNowRepository implements OpenNowDataSource {
 
   OpenNowRepository({FirebaseFirestore? firestore})
       : _firestore = firestore ?? FirebaseFirestore.instance,
-        _zonesCache = ZonesCacheService(firestore: firestore);
+        _catalogRepository = ZonesCatalogRepository();
+
+  OpenNowRepository.withCatalogRepository({
+    FirebaseFirestore? firestore,
+    required ZonesCatalogRepository catalogRepository,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _catalogRepository = catalogRepository;
 
   final FirebaseFirestore _firestore;
-  final ZonesCacheService _zonesCache;
+  final ZonesCatalogRepository _catalogRepository;
 
-  static const Duration _queryTimeout = Duration(seconds: 6);
+  static const Duration _queryTimeout = Duration(seconds: 8);
   static const int _openNowLimit = 200;
   static const int _fallbackLimit = 40;
 
   @override
   Future<List<OpenNowZone>> fetchZones() async {
-    final zones = await _zonesCache.fetchZones(timeout: _queryTimeout);
-    final active = zones.where(_isActiveZoneRecord).toList();
+    final state = await _catalogRepository.loadCatalog();
+    final active = state.catalog.zones.where(_isActiveZoneRecord).toList();
     active.sort(_compareZoneRecords);
     return active
-        .map((zone) => OpenNowZone.fromMap(zone.id, zone.data))
+        .map(OpenNowZone.fromCatalogEntry)
         .toList(growable: false);
   }
 
-  static bool _isActiveZoneRecord(ZoneCacheRecord zone) {
-    final status =
-        _readText(zone.data, const ['status', 'estado'])?.toLowerCase();
-    if (status == null || status.isEmpty) return true;
+  static bool _isActiveZoneRecord(ZonesCatalogEntry zone) {
+    final status = zone.status.toLowerCase();
+    if (status.isEmpty) return true;
     return !_inactiveZoneStatuses.contains(status);
   }
 
   static int _compareZoneRecords(
-    ZoneCacheRecord a,
-    ZoneCacheRecord b,
+    ZonesCatalogEntry a,
+    ZonesCatalogEntry b,
   ) {
-    final priorityCompare =
-        _zonePriority(a.data).compareTo(_zonePriority(b.data));
+    final priorityCompare = _zonePriority(a).compareTo(_zonePriority(b));
     if (priorityCompare != 0) return priorityCompare;
-    final nameCompare = (_readText(a.data, const ['name', 'nombre']) ?? a.id)
-        .toLowerCase()
-        .compareTo(
-          (_readText(b.data, const ['name', 'nombre']) ?? b.id).toLowerCase(),
-        );
+    final nameCompare = a.name.toLowerCase().compareTo(b.name.toLowerCase());
     if (nameCompare != 0) return nameCompare;
-    return a.id.compareTo(b.id);
+    return a.zoneId.compareTo(b.zoneId);
   }
 
-  static int _zonePriority(Map<String, dynamic> data) {
-    final rawPriority =
-        data['priorityLevel'] ?? data['priority'] ?? data['prioridad'];
-    return rawPriority is num ? rawPriority.toInt() : 1 << 30;
-  }
-
-  static String? _readText(Map<String, dynamic> data, List<String> keys) {
-    for (final key in keys) {
-      final value = data[key]?.toString().trim();
-      if (value != null && value.isNotEmpty) return value;
-    }
-    return null;
+  static int _zonePriority(ZonesCatalogEntry data) {
+    return data.priorityLevel;
   }
 
   @override

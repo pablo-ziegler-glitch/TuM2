@@ -155,7 +155,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         _seedTextControllers(formState);
         final imageProvider = _resolveImageProvider(formState);
         final isCreateFlow = !widget.isEditing;
-        final stepTotal = 3;
+        const stepTotal = 3;
         final stepLabel = isCreateFlow
             ? 'Paso ${_createStep + 1} de $stepTotal'
             : 'Editá y guardá cambios';
@@ -220,7 +220,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                     isCreateDisabledByFlag)
                                   const SizedBox(height: 12),
                                 if (!isCreateFlow || _createStep == 0) ...[
-                                  Text(
+                                  const Text(
                                     'Empezá con lo básico.',
                                     style: AppTextStyles.headingLg,
                                   ),
@@ -294,7 +294,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                 ],
                                 if (!isCreateFlow || _createStep == 1) ...[
                                   if (isCreateFlow) ...[
-                                    Text(
+                                    const Text(
                                       'Detalles del producto',
                                       style: AppTextStyles.headingLg,
                                     ),
@@ -444,7 +444,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                                 ],
                                 if (!isCreateFlow || _createStep == 2) ...[
                                   if (isCreateFlow) ...[
-                                    Text(
+                                    const Text(
                                       'Así se va a ver en Tu zona.',
                                       style: AppTextStyles.headingLg,
                                     ),

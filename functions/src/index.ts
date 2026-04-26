@@ -64,6 +64,7 @@ export {
   searchCatalogLimitMerchants,
   createMerchantProduct,
   deactivateMerchantProduct,
+  reactivateMerchantProduct,
 } from "./callables/catalogLimits";
 export {
   listAdminCategories,
@@ -103,3 +104,7 @@ export { backfillSearchKeywords } from "./admin/backfillKeywords";
 export { adminSanitizeMerchantClaimsSensitive } from "./admin/sanitizeMerchantClaims";
 
 export { submitOutdatedInfoReport } from "./callables/outdatedInfoReports";
+
+// ─── Security / Abuse Detection ────────────────────────────────────────────
+
+export { securityTrap } from "./security/securityTrap";

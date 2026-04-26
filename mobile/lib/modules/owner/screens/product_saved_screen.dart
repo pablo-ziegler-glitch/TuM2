@@ -96,9 +96,9 @@ class ProductSavedScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Text(
+                const Text(
                   'Producto publicado',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Plus Jakarta Sans',
                     fontSize: 38,
                     fontWeight: FontWeight.w800,

@@ -978,8 +978,11 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                                   product: item,
                                   actorUserId: normalizedOwnerId,
                                 );
-                            if (!mounted || !parentContext.mounted || !success)
+                            if (!mounted ||
+                                !parentContext.mounted ||
+                                !success) {
                               return;
+                            }
                             AppToast.show(
                               parentContext,
                               message:

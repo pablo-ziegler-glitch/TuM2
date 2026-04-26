@@ -11,6 +11,38 @@
 - En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
 - Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
 
+## Actualización técnica reciente (2026-04-25)
+
+- **[0065] Alta/edición de productos OWNER**: estado real actualizado a `IN_PROGRESS`.
+- Se implementó flujo mobile de alta en 3 pasos con precio/foto opcionales, revisión previa y publicación.
+- Se incorporaron `description` + `priceMode` en dominio de producto OWNER (`none|fixed|consult`) y validaciones asociadas.
+- Se agregaron acciones rápidas en listado para disponibilidad (`marcar agotado/disponible`) y filtros `Activos/Agotados/Ocultos`.
+- Backend catálogo: nuevo callable `reactivateMerchantProduct` + ajuste de `createMerchantProduct` para nuevos campos.
+- Firestore rules de `merchant_products` actualizadas para los nuevos campos (`description`, `priceMode`, `priceLabel` opcional).
+- QA automático ejecutado en mobile:
+  - `flutter analyze --no-fatal-infos` (sin errores, con infos de estilo no bloqueantes).
+  - Tests owner/products en verde (`merchant_product_test`, `product_form_notifier_test`, `product_mutation_controller_test`, `product_widgets_test`).
+- Pendiente para cierre de 0065:
+  - QA manual end-to-end en dev/staging con roles reales.
+  - Definición final de hard-delete irreversible (actualmente se prioriza ocultamiento/baja lógica).
+- **[0147] Honeypot defensivo**: implementado `securityTrap` HTTP v2 (Functions), clasificación de rutas trampa, redacción segura, HMAC de `ip` y `user-agent`, detección de honeytokens y logging estructurado `security_honeypot_hit`.
+- Hosting: rewrites de honeypot agregadas en targets `web` y `admin`, ubicadas antes del catch-all.
+- FinOps/Seguridad: `securityTrap` sin reads/writes Firestore por hit, sin Auth lookup, sin llamadas externas, respuesta uniforme 404.
+- Se restauró `functions/src/utils/usageTracker.ts` (faltante preexistente) para recuperar CI de functions.
+- Validación CI local ejecutada:
+  - `cd functions && npm run lint` ✅
+  - `cd functions && npm run build` ✅
+  - `cd functions && npm test` ✅
+  - `cd functions && npm run guard:claim-categories:allowlist` ✅
+  - `cd functions && npm run test:rules` ✅
+  - `cd mobile && flutter analyze` ✅
+  - `cd mobile && flutter test --dart-define=ENV=staging` ✅
+  - `cd web && flutter analyze` ✅
+  - `cd web && flutter test` ✅
+- Pendientes de validación externa:
+  - Smoke manual del endpoint `securityTrap` en emulador.
+  - Workflow `firestore-cost-guard` completo con credenciales GCP de monitoreo.
+
 ## Fuente de verdad de estado (obligatoria)
 
 - El único documento fuente de verdad para estado de tarjetas es **este `CLAUDE.md`**.
@@ -97,6 +129,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
 | **[0123]** Enforce de capacidad de catálogo por comercio ✅ | Backend / Mobile / Admin Web — límites globales/categoría/override en `admin_configs/catalog_limits`, creación de productos vía callable con validación transaccional y hard-block por cupo, telemetría de warning/bloqueo y gestión admin de límites |
 | **[0124]** Mitigación operativa de guardias de farmacia ✅ | Backend / Mobile — confirmación preventiva, incidente operativo, candidatas por zona+distancia con límite, ronda de reasignación (primera aceptación gana), expiración automática de solicitudes y degradación pública por confianza |
+| **[0136]** Catálogos estáticos versionados y serving barato ✅ | Mobile / Web Admin / Tooling — `zones` migrado a catálogo versionado (seed + manifest + JSON Hosting + cache persistente + búsqueda local), sin Firestore hot path runtime para selector; rollback cliente soporta downgrade por manifest |
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
 | **[0036]** Diseñar vista Abierto ahora ✅ | UX/UI — HOME-02 implementado: header con zona activa + indicador en vivo, filtro por categoría (6 rubros), lista de comercios con horario de cierre y action buttons, barra "Ver en el mapa" |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
@@ -517,3 +550,6 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0131] Cierre técnico (2026-04-21): `ownerAccessSummary` canónico en `users/{uid}`, claims mínimas (`role`, `owner_pending`, `access_version`), estrategia multi-merchant sin `merchantId` principal en JWT, restricciones antifraude (`none/cooldown/manual_review_only/blocked`) con rehabilitación admin auditada, refresh de sesión en foreground claim/owner y tests ampliados backend/mobile.
 - [0140] Hardening Auth/Rules (2026-04-23): claims canónicas centralizadas en `applyUserAccessClaims` (Admin SDK only, no-op avoidance, trazabilidad), Rules sin dependencia de rol en `users`, eliminación de claims legacy `merchantId/merchantIds/onboardingComplete`, refresh móvil por motivo con telemetría de transición y matriz de tests rules/auth ampliada.
 - [0134] Alta documental inicial (2026-04-17): creadas `docs/storyscards/0134-modo-seleccion-argentina.md` y `docs/storyscards/0134-modo-seleccion-argentina.prompt.md`; estado canónico `TODO` (sin implementación).
+- [0136] Cierre técnico (2026-04-24): catálogo `zones` migrado a serving estático versionado por ambiente (`manifest + zones-vN + checksum`), publicación/rollback automatizable (`tools/catalogs/publish_zones_catalog.mjs`), seed embebida mobile/web admin, cache persistente+memoria, búsqueda local normalizada y eliminación de lecturas Firestore de `zones` en `ZoneSelectorSheet`, `OpenNow`, `Pharmacy`, `Search`, `Onboarding Owner` e import wizard admin.
+- [0136] Hardening post-auditoría (2026-04-26): cliente mobile/web aplica rollback por downgrade de `manifest.version` (no solo upgrades), se elimina residual legacy `ZonesCacheService` (lectura Firestore `zones`) y se amplían tests de catálogo para no-download en versión igual + downgrade remoto.
+- [0136] Optimización costo/eficiencia (2026-04-26): publish de seed pasa a opt-in (`--update-seed`) con guardrail por ambiente, `OpenNow` agrega cache local por zona con TTL+buckets para reducir reads repetidas, búsqueda mobile de zonas usa índice precomputado por versión, y cliente web admin agrega timeout + dedupe de cargas concurrentes.

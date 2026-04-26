@@ -26,6 +26,8 @@ class FirebaseBootstrap {
     defaultValue: 'false',
   );
 
+  static String get currentProjectId => _projectId;
+
   static Future<void> initialize() async {
     if (!kIsWeb) {
       await Firebase.initializeApp();

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../core/providers/analytics_provider.dart';
+import '../../../core/providers/zones_catalog_provider.dart';
 import '../../pharmacy/services/distance_calculator.dart';
 import '../analytics/open_now_analytics.dart';
 import '../models/open_now_models.dart';
@@ -29,6 +30,18 @@ class OpenNowLocationReadResult {
 
   final OpenNowLocationStatus status;
   final OpenNowUserPosition? position;
+}
+
+class _OpenNowZoneCacheEntry {
+  const _OpenNowZoneCacheEntry({
+    required this.cachedAtUtc,
+    required this.openNowRaw,
+    required this.fallbackRaw,
+  });
+
+  final DateTime cachedAtUtc;
+  final List<OpenNowMerchant> openNowRaw;
+  final List<OpenNowMerchant> fallbackRaw;
 }
 
 abstract interface class OpenNowLocationReader {
@@ -170,6 +183,10 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
     'community_submitted': 2,
     'unverified': 1,
   };
+  static const _zonePayloadCacheTtl = Duration(minutes: 3);
+  static const _zonePayloadBucket = Duration(minutes: 15);
+
+  final Map<String, _OpenNowZoneCacheEntry> _zonePayloadCache = {};
 
   Future<void> ensureInitialized() async {
     if (state.hasInitialized) return;
@@ -228,7 +245,7 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
       isLoading: true,
       clearError: true,
     );
-    await _loadForZone(zoneId: zoneId);
+    await _loadForZone(zoneId: zoneId, forceRefresh: true);
   }
 
   void logCardClicked({
@@ -248,24 +265,46 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
 
   Future<void> _loadForZone({
     required String zoneId,
+    bool forceRefresh = false,
   }) async {
     try {
-      final openNow = await _repository.fetchOpenNow(zoneId: zoneId);
+      _pruneZonePayloadCache();
+      final zoneCacheKey = _zoneCacheKey(zoneId);
+      final nowUtc = DateTime.now().toUtc();
+
+      List<OpenNowMerchant> openNowRaw;
+      List<OpenNowMerchant> fallbackRaw;
+
+      final cached = _zonePayloadCache[zoneCacheKey];
+      final canUseCache = !forceRefresh &&
+          cached != null &&
+          nowUtc.difference(cached.cachedAtUtc) <= _zonePayloadCacheTtl;
+
+      if (canUseCache) {
+        openNowRaw = cached.openNowRaw;
+        fallbackRaw = cached.fallbackRaw;
+      } else {
+        openNowRaw = await _repository.fetchOpenNow(zoneId: zoneId);
+        fallbackRaw = openNowRaw.isEmpty
+            ? await _repository.fetchFallback(zoneId: zoneId)
+            : const <OpenNowMerchant>[];
+        _zonePayloadCache[zoneCacheKey] = _OpenNowZoneCacheEntry(
+          cachedAtUtc: nowUtc,
+          openNowRaw: openNowRaw,
+          fallbackRaw: fallbackRaw,
+        );
+      }
+
       final rankedOpenNow = _rankMerchants(
-        openNow,
+        openNowRaw,
         userPosition: state.userPosition,
       );
-
-      List<OpenNowMerchant> fallback = const [];
-      if (rankedOpenNow.isEmpty) {
-        final fallbackRaw = await _repository.fetchFallback(zoneId: zoneId);
-        fallback = _rankMerchants(
-          fallbackRaw,
-          userPosition: state.userPosition,
-        ).take(6).toList(growable: false);
-
-        // El fallback se refleja en open_now_viewed con is_open_now_shown=false.
-      }
+      final fallback = rankedOpenNow.isEmpty
+          ? _rankMerchants(
+              fallbackRaw,
+              userPosition: state.userPosition,
+            ).take(6).toList(growable: false)
+          : const <OpenNowMerchant>[];
 
       state = state.copyWith(
         isLoading: false,
@@ -288,6 +327,26 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
         merchants: const [],
         fallbackMerchants: const [],
       );
+    }
+  }
+
+  String _zoneCacheKey(String zoneId) {
+    final bucket = DateTime.now().toUtc().millisecondsSinceEpoch ~/
+        _zonePayloadBucket.inMilliseconds;
+    return '$zoneId|$bucket';
+  }
+
+  void _pruneZonePayloadCache() {
+    if (_zonePayloadCache.isEmpty) return;
+    final nowUtc = DateTime.now().toUtc();
+    final toRemove = <String>[];
+    _zonePayloadCache.forEach((key, value) {
+      if (nowUtc.difference(value.cachedAtUtc) > _zonePayloadCacheTtl) {
+        toRemove.add(key);
+      }
+    });
+    for (final key in toRemove) {
+      _zonePayloadCache.remove(key);
     }
   }
 
@@ -373,7 +432,9 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
 }
 
 final openNowRepositoryProvider = Provider<OpenNowDataSource>(
-  (ref) => OpenNowRepository(),
+  (ref) => OpenNowRepository.withCatalogRepository(
+    catalogRepository: ref.watch(zonesCatalogRepositoryProvider),
+  ),
 );
 
 final openNowAnalyticsProvider = Provider<OpenNowAnalyticsSink>(

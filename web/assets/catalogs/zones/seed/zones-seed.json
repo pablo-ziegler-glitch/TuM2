@@ -1,0 +1,30 @@
+{
+  "catalog": "zones",
+  "schemaVersion": 1,
+  "version": 1,
+  "generatedAt": "2026-04-26T00:00:00Z",
+  "entries": 1,
+  "zones": [
+    {
+      "id": "ar-caba-palermo",
+      "zoneId": "ar-caba-palermo",
+      "name": "Palermo",
+      "normalizedName": "palermo",
+      "provinceId": "ar-caba",
+      "provinceName": "Ciudad Autónoma de Buenos Aires",
+      "provinceNormalizedName": "ciudad autonoma de buenos aires",
+      "departmentId": "ar-caba-comuna14",
+      "departmentName": "Comuna 14",
+      "departmentNormalizedName": "comuna 14",
+      "localityId": "ar-caba-palermo",
+      "localityName": "Palermo",
+      "localityNormalizedName": "palermo",
+      "cityId": "ar-caba-palermo",
+      "cityName": "Palermo",
+      "countryId": "AR",
+      "countryName": "Argentina",
+      "status": "public_enabled",
+      "priorityLevel": 1
+    }
+  ]
+}

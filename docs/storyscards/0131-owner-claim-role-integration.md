@@ -1,6 +1,6 @@
 # TuM2-0131 — Integración de claim con roles OWNER / owner_pending / aprobación
 
-Estado: DONE (cierre técnico 2026-04-21)
+Estado: READY_TO_QA (cierre técnico 2026-04-21; pendiente QA de cierre)
 Última actualización: 2026-04-26
 Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  

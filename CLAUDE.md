@@ -7,11 +7,11 @@
 
 ## Regla anti-mocks y cierre QA (obligatoria)
 
-- Para cualquier tarjeta marcada como `READY_TO_QA` o `DONE`, la solución debe estar **100% funcional** sin datos mock.
+- Para cualquier tarjeta marcada como `READY_FOR_QA`/`READY_TO_QA` o `DONE`, la solución debe estar **100% funcional** sin datos mock.
 - En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
 - Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
 - `DONE` queda reservado exclusivamente para tarjetas con QA de cierre ejecutado y documentado.
-- Flujo canónico de estados: `TODO` -> `IN_PROGRESS` -> `READY_TO_QA` -> `DONE`.
+- Flujo canónico de estados: `TODO` -> `IN_PROGRESS` -> `READY_FOR_QA` -> `QA_IN_PROGRESS` -> `DONE`.
 
 ## Actualización técnica reciente (2026-04-26)
 
@@ -53,6 +53,23 @@
 - OpenSpec queda **discontinuado** en este repositorio para planificación/estado.
 - No usar artefactos de `openspec/` para decidir progreso ni para reportes ejecutivos.
 - Si hay diferencias entre `openspec/` y `CLAUDE.md`, **prevalece `CLAUDE.md`**.
+
+## Semántica documental de estados de tarjetas
+
+- `TODO`: tarjeta aún no implementada ni iniciada.
+- `IN_PROGRESS`: desarrollo funcional o técnico activo; hay trabajo de implementación pendiente.
+- `READY_FOR_QA`: implementación base finalizada y validaciones automáticas mínimas ejecutadas; no debe tratarse como pendiente de desarrollo. Queda en cola para QA manual/E2E/staging.
+- `QA_IN_PROGRESS`: QA manual/E2E en curso.
+- `BUGFIX_REQUIRED`: QA encontró bugs o regresiones; vuelve a desarrollo con issues concretos.
+- `DONE`: QA requerido completado, documentación sincronizada y criterios de cierre satisfechos.
+- `BLOCKED`: no puede avanzar por dependencia externa o decisión pendiente.
+
+Regla explícita:
+- Una tarjeta en `READY_FOR_QA` NO debe contarse como pendiente de desarrollo salvo que durante QA se detecten bugs.
+- Si QA detecta bugs, se debe:
+  1. documentar el bug concreto,
+  2. mover la tarjeta a `BUGFIX_REQUIRED` o crear subitem de bug,
+  3. no reabrir genéricamente como `IN_PROGRESS` sin causa técnica identificada.
 
 ---
 
@@ -139,8 +156,17 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 diseñado por Stitches e implementado: listado con badges de turno y confianza, 4 estados (sin ubicación, cargando, resultados, vacío), detalle con verificación, mapa, CTAs y reporte |
 | **[0061]** Implementar vista Farmacias de turno `READY_TO_QA` | Mobile app — PharmacyDutyScreen y PharmacyDutyDetailScreen integrados con datos reales, estados operativos y deep links de detalle |
+| **[0064]** Implementar módulo OWNER `READY_FOR_QA` | Mobile app — módulo OWNER implementado con transición owner_pending -> OWNER, salida limpia a customer ante cierre negativo, guards para rutas profundas, `OwnerAccessUpdatedScreen` y plan QA E2E; pendiente QA formal en staging con roles reales |
 
 ---
+
+## Cola READY_FOR_QA / QA staging
+
+- `TuM2-0064 — Implementar módulo OWNER`
+  - Estado: `READY_FOR_QA`
+  - Ambiente recomendado: `tum2-staging-45c83`
+  - Pendiente: QA E2E claim/admin/owner con roles reales, validación de permisos y costo Firestore.
+  - No pendiente: implementación base de UX/transiciones/guards.
 
 ## Indicador de avance MVP (snapshot 2026-04-08)
 
@@ -234,7 +260,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` `READY_TO_QA`
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
-- [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `IN_PROGRESS`
+- [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `READY_FOR_QA`
 - [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP` `READY_TO_QA`
 - [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` `READY_TO_QA`
 - [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP` `READY_TO_QA`
@@ -536,6 +562,7 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0058] DETAIL-01 consolidado con navegación desde mapa/lista/home y deep links `/commerce/:id`.
 - [0060] HOME-02 consolidado en flujo productivo con navegación a SEARCH-03.
 - [0061] Farmacias de turno consolidado con flujo público y deep links de detalle.
+- [0064] Estado documental actualizado a `READY_FOR_QA` (2026-04-26): implementación base integrada en `develop` (ruta `/access-updated`, `OwnerAccessUpdatedScreen`, variantes `approved_transition`/`claim_closed`/`deep_route_access_changed`, refresh de sesión con `AuthNotifier.refreshSession`, guards owner y tests clave); pendiente QA formal en `tum2-staging-45c83` con roles reales y validación de costo Firestore.
 - [0066] OWNER-06 consolidado con pantalla completa de horarios (corrido/cortado/cerrado), preview y validaciones inline.
 - [0066] Implementadas excepciones por fecha y cierres temporales por rango con alta/edición/eliminación.
 - [0066] Integración Firestore sobre `schedule_config/weekly`, `schedule_exceptions` y `schedule_exceptions_ranges`, con reglas y triggers backend para recompute de proyección pública.

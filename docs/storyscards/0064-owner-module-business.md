@@ -1,21 +1,27 @@
 # TuM2-0064 — Implementar módulo OWNER
 
-Estado: IN_PROGRESS  
+Estado: READY_FOR_QA
 Prioridad: P0  
 Motivo de actualización: impacto directo de la nueva épica de reclamo de titularidad sobre Dashboard OWNER, incorporación formal de `owner_pending` y separación entre revisión de claim y ownership aprobado.
 
-## Estado real de implementación (corte 2026-04-16)
-### Hecho
-- Backend/Auth: existe sincronización de `owner_pending` en callables de claim y trigger fallback (`functions/src/callables/merchantClaims.ts`, `functions/src/triggers/claims.ts`).
-- Frontend: `OwnerPanelScreen` ya separa OWNER aprobado vs `owner_pending` con variante contextual y bloqueo operativo.
-- Routing: guards activos para que `owner_pending` quede restringido al carril dashboard/claim status y no navegue a módulos operativos (`mobile/lib/core/router/router_guards.dart`).
-- QA base: tests de owner pending y guards cubren estados críticos (`mobile/test/modules/owner/owner_panel_screen_test.dart`, `mobile/test/core/router/router_guards_test.dart`).
+## Estado real de implementación (corte 2026-04-26)
+### Implementado
+- Backend/Auth: sincronización de `owner_pending`, `ownerAccessSummary`, `accessVersion`, custom claims vía Admin SDK.
+- Frontend: `OwnerPanelScreen` distingue OWNER aprobado, `owner_pending`, restricted y customer sin acceso.
+- Routing: guards evitan acceso operativo a pending/customer por rutas profundas.
+- UX: `/access-updated` cubre `approved_transition`, `claim_closed`, `deep_route_access_changed`.
+- Sesión activa: refresh de token/sesión sin relogin manual.
+- Tests: guards y owner panel cubren escenarios principales.
+- QA plan: existe `docs/qa/TuM2-0064-PLAN-PRUEBAS-TRANSICIONES-OWNER.md`.
 
-### Falta para cerrar
-- UX/Producto: cerrar comportamiento final para cierre negativo de claim (sin residuos visuales en carril owner) y transición aprobada con refresh de token en sesión activa.
-- Frontend: completar cobertura de edge cases de transición `owner_pending -> owner` sin relogin manual y con navegación profunda abierta.
-- Backend: unificar limpieza de estados residuales para escenarios multi-claim/multi-merchant futuros.
-- QA E2E: ejecutar pruebas punta a punta claim/admin/owner con validación explícita de permisos y costo Firestore (sin listeners globales en carril owner).
+### Pendiente para DONE
+- Ejecutar QA manual/E2E en `tum2-staging-45c83`.
+- Validar claim aprobado desde admin -> transición OWNER.
+- Validar claim rechazado/cerrado -> salida limpia a customer.
+- Validar navegación profunda stale durante transición.
+- Validar multi-claim/multi-merchant con datos reales.
+- Validar permisos efectivos y ausencia de listeners globales/costos Firestore inesperados.
+- Registrar bugs si aparecen y mover a `BUGFIX_REQUIRED`.
 
 ## 1. Objetivo
 Actualizar el módulo OWNER para distinguir explícitamente:

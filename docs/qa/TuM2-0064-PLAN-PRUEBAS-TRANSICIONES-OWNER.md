@@ -1,8 +1,26 @@
 # TuM2-0064 — Plan de Pruebas de Transiciones OWNER
 
-Estado: READY FOR QA  
-Fecha: 2026-04-19  
+Estado: READY_FOR_QA
+Fecha: 2026-04-19
 Alcance: cierre UX/flujo de transiciones `owner_pending`, promoción a `owner` y salida a `customer`.
+
+## Interpretación del estado
+
+- Este documento no indica desarrollo pendiente.
+- La implementación base ya está integrada en `develop`.
+- Este plan se ejecuta cuando el lote de tarjetas listas para QA pase a stage de QA.
+- Si QA detecta bugs, los bugs deben registrarse como hallazgos concretos y la tarjeta pasa a `BUGFIX_REQUIRED`, no a `IN_PROGRESS` genérico.
+
+Ambiente objetivo: `tum2-staging-45c83`
+Tipo de QA: manual E2E + permisos + costo Firestore
+Dependencias de QA:
+- usuario customer,
+- usuario owner_pending,
+- usuario owner aprobado,
+- usuario admin/reviewer con permisos reales,
+- merchant reclamable,
+- claim aprobable,
+- claim rechazable.
 
 ## 1. Objetivo
 

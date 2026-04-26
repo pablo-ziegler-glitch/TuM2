@@ -1,6 +1,6 @@
 # TuM2-0147 — Honeypot defensivo y detección temprana de abuso
 
-Estado: READY_TO_QA (implementación lista; pendiente QA de cierre)  
+Estado: READY_FOR_QA (implementación lista; pendiente QA de cierre)
 Prioridad: P0  
 Dependencias: Firebase Hosting rewrites, Cloud Functions v2 HTTP, Cloud Logging
 

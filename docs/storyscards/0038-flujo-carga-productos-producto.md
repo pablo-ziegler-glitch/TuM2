@@ -1,6 +1,6 @@
 # TuM2-0038 — Flujo carga de productos (Producto/UX)
 
-Estado: IMPLEMENTADO (READY_FOR_QA)  
+Estado: READY_FOR_QA
 Última actualización: 2026-04-26
 
 ## Decisiones funcionales cerradas

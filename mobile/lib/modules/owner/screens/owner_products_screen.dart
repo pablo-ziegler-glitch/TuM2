@@ -978,14 +978,16 @@ class _OwnerProductsScreenState extends ConsumerState<OwnerProductsScreen> {
                                   product: item,
                                   actorUserId: normalizedOwnerId,
                                 );
-                            if (!mounted || !parentContext.mounted || !success) return;
+                            if (!mounted || !parentContext.mounted || !success)
+                              return;
                             AppToast.show(
                               parentContext,
                               message:
                                   'Producto oculto. Ya podés agregar uno nuevo.',
                               type: ToastType.success,
                             );
-                            await OwnerProductsAnalytics.logCatalogLimitBlockSeen(
+                            await OwnerProductsAnalytics
+                                .logCatalogLimitBlockSeen(
                               merchantId: merchantId,
                               used: activeProducts.length - 1,
                               limit: activeProducts.length,

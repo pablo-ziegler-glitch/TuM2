@@ -1,6 +1,6 @@
 # TuM2-0133 — Conflictos, duplicados y disputa de titularidad
 
-Estado: IN_PROGRESS  
+Estado: READY_TO_QA  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0131

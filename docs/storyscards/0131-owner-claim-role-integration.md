@@ -1,23 +1,29 @@
 # TuM2-0131 — Integración de claim con roles OWNER / owner_pending / aprobación
 
-Estado: IN_PROGRESS  
-Prioridad: P0 (MVP crítica)  
+Estado: DONE (cierre técnico 2026-04-21)
+Última actualización: 2026-04-26
+Prioridad: P0 (MVP crítica)
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126, TuM2-0127, TuM2-0128, TuM2-0130
 
-## Estado real de implementación (corte 2026-04-17)
-### Hecho
-- Sincronización de `owner_pending` activa en submit/evaluate/resolve de claims y trigger fallback legacy.
-- Promoción a OWNER implementada por backend autorizado: actualiza `merchants`, custom claims y `users/{uid}`.
-- Auth mobile consume `owner_pending` desde token con fallback controlado a Firestore y guards de ruta aplicados.
-- Dashboard OWNER ya diferencia `owner_pending` vs owner aprobado con estado contextual y bloqueo de operaciones.
-- Admin review 0128 ya opera con token de concurrencia y detalle seguro; la aprobación/rechazo manual no pisa silenciosamente cambios de claim y mantiene el puente a `owner_pending` / `owner` sólo en backend.
+## Estado real de implementación (corte 2026-04-21)
+### Cierre implementado
+- Fuente canónica de acceso OWNER consolidada en `users/{uid}` con `ownerAccessSummary`, `ownerPending`, `accessVersion`, `role` y fallback `merchantId` legacy.
+- Custom claims reducidas a capacidad global mínima (`role`, `owner_pending`, `access_version`), sin `merchantId` principal en JWT.
+- Flujo admin `resolveMerchantClaim` ahora ejecuta secuencia completa: resolución claim, recalculo ownership efectivo, recalculo pending, sincronización summary, actualización custom claims, bump de `accessVersion` y auditoría estructurada.
+- Política antifraude/reingreso owner activa y auditable (`none`, `cooldown`, `manual_review_only`, `blocked`) con aplicación automática en resolución y rehabilitación manual vía callable admin dedicado.
+- Guards y módulo OWNER migrados a lectura canónica (`ownerAccessSummary`) con reglas multi-merchant/multi-claim y prioridad de comercios aprobados sobre claims pendientes.
+- Refresh de sesión en app abierta implementado para rutas sensibles claim/owner al volver a foreground y en transición de estado, sin exigir relogin manual.
+- Cobertura de tests extendida en backend + mobile para escenarios de rechazo sin degradación de owner existente, bloqueo por restricción, rehabilitación, no-op de `accessVersion`, deep links stale y owner concurrente.
+- Integración consolidada con TuM2-0065: rutas de gestión de productos OWNER quedan ocultas/bloqueadas para no-owner y owner_pending según guards de acceso.
 
-### Falta para cerrar
-- Consolidar refresh de token/estado en sesión abierta inmediatamente después de resoluciones admin (evitar latencia perceptible de transición).
-- Definir y ejecutar estrategia multi-merchant/multi-claim para evitar ambigüedades en `merchantId` principal.
-- Integrar restricciones por fraude/abuso al ciclo de reingreso a carril owner con política explícita de rehabilitación.
-- Completar pruebas E2E cruzadas claim -> admin -> owner con navegación profunda y estados concurrentes.
+### Criterios de costo/canon respetados en la implementación
+- Sin listeners globales claims+roles+merchants.
+- Resolución de acceso owner con lectura acotada y cache TTL en cliente.
+- Refresh costo-eficiente por `access_version`: si no cambia versión, no relee `users/{uid}`.
+- Queries de backend con `limit` y/o `count` con fallback acotado.
+- No-op write avoidance en sincronización de summary y claims.
+- Sin escritura cliente de `merchant_public` ni custom claims.
 
 ## 1. Objetivo
 Definir la integración entre dominio de claim y sistema de roles para cerrar de forma explícita:
@@ -413,3 +419,52 @@ TuM2-0131 define el puente seguro entre reclamar, quedar pendiente y convertirse
 - OWNER solo por aprobación backend autorizada,
 - cierres negativos limpian pending,
 - Auth + Shell + OWNER reflejan estado real (token + backend), no supuestos locales.
+
+## 37. Evidencia de implementación (archivos clave)
+- Backend:
+  - `functions/src/lib/merchantClaimOwnerPending.ts`
+  - `functions/src/callables/merchantClaims.ts`
+  - `functions/src/triggers/claims.ts`
+  - `functions/src/index.ts`
+  - `functions/src/callables/__tests__/merchantClaims.integration.test.ts`
+- Mobile:
+  - `mobile/lib/core/auth/owner_access_summary.dart`
+  - `mobile/lib/core/auth/auth_notifier.dart`
+  - `mobile/lib/core/auth/auth_state.dart`
+  - `mobile/lib/core/providers/auth_providers.dart`
+  - `mobile/lib/core/router/router_guards.dart`
+  - `mobile/lib/modules/merchant_claim/screens/merchant_claim_flow_screens.dart`
+  - `mobile/lib/modules/owner/providers/owner_providers.dart`
+  - `mobile/lib/modules/owner/repositories/owner_repository.dart`
+  - `mobile/lib/modules/owner/screens/owner_panel_screen.dart`
+  - `mobile/lib/modules/owner/screens/owner_access_guard_page.dart`
+  - `mobile/lib/modules/owner/analytics/owner_dashboard_analytics.dart`
+  - `mobile/test/core/router/router_guards_claim_test.dart`
+  - `mobile/test/core/router/router_guards_test.dart`
+  - `mobile/test/modules/owner/owner_panel_screen_test.dart`
+  - `mobile/test/core/auth/owner_access_summary_test.dart`
+
+## 38. Matriz E2E cruzada (claim -> admin -> owner)
+Cobertura validada por tests de integración backend + router/widget mobile (8/8):
+- (1) CUSTOMER claim -> admin approve -> app abierta -> refresh -> OWNER-01:
+  - `functions/src/callables/__tests__/merchantClaims.integration.test.ts` (`resolve approved promueve a owner y limpia owner_pending`)
+  - `mobile/test/core/router/router_guards_claim_test.dart` (`E2E-01 claim aprobado + refresh permite entrada OWNER-01`)
+- (2) CUSTOMER claim -> admin reject -> desaparece carril owner_pending:
+  - `functions/src/callables/__tests__/merchantClaims.integration.test.ts` (`E2E-02 CUSTOMER claim -> admin reject limpia owner_pending`)
+- (3) OWNER(A) + pending(B) -> approve(B) -> mantiene contexto correcto:
+  - `functions/src/callables/__tests__/merchantClaims.integration.test.ts` (`E2E-03 OWNER(A)+pending(B)->approve(B) conserva OWNER y queda multi-merchant`)
+- (4) OWNER(A) + conflict(B) -> A sigue operable, B visible conflicto:
+  - `functions/src/callables/__tests__/merchantClaims.integration.test.ts` (`E2E-04 OWNER(A)+conflict(B) mantiene A operable y B conflictivo`)
+- (5) blocked user -> re-entry deny consistente UI/backend:
+  - `functions/src/callables/__tests__/merchantClaims.integration.test.ts` (`submit bloquea reingreso cuando restrictionState=blocked`)
+  - `mobile/test/core/router/router_guards_claim_test.dart` (`owner restringido no puede reingresar a subrutas owner por deep link`)
+- (6) app offline durante resolución -> no habilita permisos hasta refresh exitoso:
+  - `mobile/test/core/router/router_guards_claim_test.dart` (`E2E-06 offline con estado stale no habilita owner hasta refresh exitoso`)
+- (7) deep links OWNER-01 con estado viejo -> reevaluación y redirect:
+  - `mobile/test/core/router/router_guards_claim_test.dart` (`deep link stale a owner desde customer redirige a access updated`)
+- (8) múltiples claims concurrentes -> ruta correcta y sin ambigüedad:
+  - `functions/src/callables/__tests__/merchantClaims.integration.test.ts` (`E2E-08 múltiples claims concurrentes reflejan owner_pending_only sin ambigüedad`)
+  - `mobile/test/core/router/router_guards_claim_test.dart` (`E2E-08 múltiples claims concurrentes sin aprobados mantienen ruta de pending`)
+
+## 39. Riesgo residual documentado
+- Push FCM de invalidación inmediata (`claim_state_changed`) quedó opcional y no se activó en este cierre para evitar introducir infraestructura nueva fuera del scope canónico; el fallback implementado es refresh en foreground + refresh explícito en pantallas sensibles.

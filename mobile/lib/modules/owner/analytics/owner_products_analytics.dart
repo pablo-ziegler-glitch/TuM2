@@ -74,6 +74,38 @@ abstract class OwnerProductsAnalytics {
     );
   }
 
+  static Future<void> logStockStatusChanged({
+    required String merchantId,
+    required String productId,
+    required ProductStockStatus stockStatus,
+  }) async {
+    final eventName = stockStatus == ProductStockStatus.outOfStock
+        ? 'owner_product_marked_out_of_stock'
+        : 'owner_product_marked_available';
+    await _safeLog(
+      eventName,
+      parameters: {
+        'merchant_id': merchantId,
+        'product_id': productId,
+        'stock_status': stockStatus.value,
+        'source': 'owner',
+      },
+    );
+  }
+
+  static Future<void> logReactivated({
+    required String merchantId,
+    required String productId,
+  }) =>
+      _safeLog(
+        'owner_product_reactivated',
+        parameters: {
+          'merchant_id': merchantId,
+          'product_id': productId,
+          'source': 'owner',
+        },
+      );
+
   static Future<void> logImageUploaded({
     required String merchantId,
     required String productId,

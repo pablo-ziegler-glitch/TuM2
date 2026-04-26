@@ -31,10 +31,27 @@ void main() {
       expect(validateProductName('X' * 81), isNotNull);
     });
 
-    test('priceLabel requerido y límite', () {
-      expect(validateProductPriceLabel(''), isNotNull);
-      expect(validateProductPriceLabel('Consultar'), isNull);
-      expect(validateProductPriceLabel('X' * 61), isNotNull);
+    test('priceLabel opcional según modo y límite', () {
+      expect(
+        validateProductPriceLabel('', mode: ProductPriceMode.none),
+        isNull,
+      );
+      expect(
+        validateProductPriceLabel('', mode: ProductPriceMode.consult),
+        isNull,
+      );
+      expect(
+        validateProductPriceLabel('', mode: ProductPriceMode.fixed),
+        isNotNull,
+      );
+      expect(
+        validateProductPriceLabel('Consultar', mode: ProductPriceMode.consult),
+        isNull,
+      );
+      expect(
+        validateProductPriceLabel('X' * 61, mode: ProductPriceMode.fixed),
+        isNotNull,
+      );
     });
   });
 

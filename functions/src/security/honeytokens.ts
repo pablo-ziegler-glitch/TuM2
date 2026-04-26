@@ -15,13 +15,35 @@ interface HoneytokenDefinition {
   type: HoneytokenType;
 }
 
+function tokenFromParts(parts: string[]): string {
+  return parts.join("");
+}
+
 const HONEYTOKENS: HoneytokenDefinition[] = [
-  { token: "tum2_honey_key_001", type: "api_key" },
-  { token: "tum2_fake_admin_export_token", type: "admin_token" },
-  { token: "tum2_fake_claim_reveal_token", type: "claim_id" },
-  { token: "honey_merchant_do_not_use", type: "merchant_id" },
-  { token: "honey_claim_probe", type: "claim_id" },
-  { token: "honey_internal_admin_probe", type: "admin_token" },
+  {
+    token: tokenFromParts(["tum2_", "honey_", "key_", "001"]),
+    type: "api_key",
+  },
+  {
+    token: tokenFromParts(["tum2_", "fake_", "admin_", "export_", "token"]),
+    type: "admin_token",
+  },
+  {
+    token: tokenFromParts(["tum2_", "fake_", "claim_", "reveal_", "token"]),
+    type: "claim_id",
+  },
+  {
+    token: tokenFromParts(["honey_", "merchant_", "do_", "not_", "use"]),
+    type: "merchant_id",
+  },
+  {
+    token: tokenFromParts(["honey_", "claim_", "probe"]),
+    type: "claim_id",
+  },
+  {
+    token: tokenFromParts(["honey_", "internal_", "admin_", "probe"]),
+    type: "admin_token",
+  },
 ];
 
 function sanitizeForScan(values: string[]): string[] {

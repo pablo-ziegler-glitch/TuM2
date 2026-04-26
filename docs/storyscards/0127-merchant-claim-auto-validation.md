@@ -1,6 +1,6 @@
 # TuM2-0127 — Validación automática inicial de claims
 
-Estado: IN_PROGRESS  
+Estado: READY_TO_QA  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Depende de: TuM2-0126 — Flujo de claim del comercio

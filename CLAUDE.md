@@ -5,15 +5,18 @@
 - **Descripciones, comentarios y documentación**: siempre en **español**
 - **Código fuente**: siempre en **inglés** (variables, funciones, clases, archivos, etc.)
 
-## Regla anti-mocks (obligatoria)
+## Regla anti-mocks y cierre QA (obligatoria)
 
-- Para cualquier tarjeta marcada como implementada/completada, la solución debe estar **100% funcional** sin datos mock.
+- Para cualquier tarjeta marcada como `READY_TO_QA` o `DONE`, la solución debe estar **100% funcional** sin datos mock.
 - En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
 - Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
+- `DONE` queda reservado exclusivamente para tarjetas con QA de cierre ejecutado y documentado.
+- Flujo canónico de estados: `TODO` -> `IN_PROGRESS` -> `READY_TO_QA` -> `DONE`.
 
-## Actualización técnica reciente (2026-04-25)
+## Actualización técnica reciente (2026-04-26)
 
-- **[0065] Alta/edición de productos OWNER**: estado real actualizado a `IN_PROGRESS`.
+- **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `READY_TO_QA` (implementación cerrada; pendiente QA de cierre).
+- **[0065] Alta/edición de productos OWNER**: estado real confirmado en `READY_TO_QA` (implementación cerrada; pendiente QA de cierre).
 - Se implementó flujo mobile de alta en 3 pasos con precio/foto opcionales, revisión previa y publicación.
 - Se incorporaron `description` + `priceMode` en dominio de producto OWNER (`none|fixed|consult`) y validaciones asociadas.
 - Se agregaron acciones rápidas en listado para disponibilidad (`marcar agotado/disponible`) y filtros `Activos/Agotados/Ocultos`.
@@ -25,6 +28,7 @@
 - Pendiente para cierre de 0065:
   - QA manual end-to-end en dev/staging con roles reales.
   - Definición final de hard-delete irreversible (actualmente se prioriza ocultamiento/baja lógica).
+- **[0083] Tracking base analytics**: estado real actualizado a `READY_TO_QA` con base operativa implementada y validada; queda pendiente QA de cierre y outputs de consumo (0084/0085/0086).
 - **[0147] Honeypot defensivo**: implementado `securityTrap` HTTP v2 (Functions), clasificación de rutas trampa, redacción segura, HMAC de `ip` y `user-agent`, detección de honeytokens y logging estructurado `security_honeypot_hit`.
 - Hosting: rewrites de honeypot agregadas en targets `web` y `admin`, ubicadas antes del catch-all.
 - FinOps/Seguridad: `securityTrap` sin reads/writes Firestore por hit, sin Auth lookup, sin llamadas externas, respuesta uniforme 404.
@@ -79,10 +83,10 @@ tum2-XXXX — PR#YY — descripción corta
 
 ## Estado del backlog
 
-El backlog maestro de TuM2 está estructurado en 17 épicas (ver sección abajo).
+El backlog maestro de TuM2 está estructurado en 19 épicas + 1 épica transversal (ver sección abajo).
 El usuario pasa las tarjetas de a una. Estado actual:
 
-| Definición ✅ | Actividad completada |
+| Estado canónico | Actividad |
 |---|---|
 | **[0001]** Definir propuesta de valor final ✅ | Dirección del producto — propuesta de valor final definida y documentada |
 | **[0003]** Cerrar alcance real del MVP ✅ | Dirección del producto — scope MVP congelado, documentado en docs/MVP-SCOPE.md: IN/OUT, guardrails, decisiones clave, BDD, analytics, roadmap y rollout |
@@ -116,25 +120,25 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0030]** Diseñar onboarding OWNER ✅ | UX/UI — flujo completo implementado: draft entry, step1 tipo+nombre, step2 dirección, step3 horarios, step4 confirmación |
 | **[0033]** Diseñar ficha pública de comercio ✅ | UX/UI — HOME-01 Detail diseñado por Stitches: hero imagen, badge ABIERTO, info rows, mapa, acciones, historia y galería |
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
-| **[0053]** Implementar shell de app ✅ | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
-| **[0054]** Implementar login / registro ✅ | Mobile app — AUTH MVP completo: magic link email (same/cross-device con app_links), Google Sign-In, guards/redirects por rol consistentes, pending route post-auth, signOut hardened y tests de auth/router actualizados |
-| **[0056]** Implementar búsqueda de comercios ✅ | Mobile app — búsqueda MVP cerrada: corpus por zona con filtros/ranking, pantallas lista/mapa/empty integradas según mockups, tests de SearchNotifier en verde y documentación actualizada |
-| **[0057]** Implementar mapa ✅ | Mobile app — SEARCH-03 migrado a Google Maps con sistema de markers por estado, selección visual, z-index por prioridad y clustering por grilla desacoplado |
-| **[0058]** Implementar ficha de comercio ✅ | Mobile app — DETAIL-01 implementado con navegación real desde search/home/deep links |
-| **[0060]** Implementar vista Abierto ahora ✅ | Mobile app — HOME-02 implementado con filtros por rubro MVP y navegación al mapa |
-| **[0066]** Implementar carga de horarios ✅ | Mobile app — OWNER-06 implementado con UI Stitch completa, validaciones, excepciones/cierres, persistencia en subcolecciones, triggers backend de recompute, feature flag Remote Config y analytics de módulo |
-| **[0067]** Implementar carga de señales operativas ✅ | Mobile app / Backend — OWNER-08 migrado a señal operativa manual (`vacation`, `temporary_closure`, `delay`) con mensaje opcional (80), persistencia en `merchant_operational_signals`, precedencia server-side (`manual override > horario`) y proyección pública sincronizada por trigger con no-op write avoidance |
-| **[0068]** Implementar carga de turnos farmacia ✅ | Mobile app / Backend — OWNER-09/10/11 implementado con calendario mensual, alta/edición/borrado, publicación batch costo-optimizada, validaciones server-side y proyección pública vía Cloud Functions |
-| **[0077]** Diseñar panel admin mínimo ✅ | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
-| **[0122]** Implementar módulo de importación de datasets (admin web) ✅ | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
-| **[0123]** Enforce de capacidad de catálogo por comercio ✅ | Backend / Mobile / Admin Web — límites globales/categoría/override en `admin_configs/catalog_limits`, creación de productos vía callable con validación transaccional y hard-block por cupo, telemetría de warning/bloqueo y gestión admin de límites |
-| **[0124]** Mitigación operativa de guardias de farmacia ✅ | Backend / Mobile — confirmación preventiva, incidente operativo, candidatas por zona+distancia con límite, ronda de reasignación (primera aceptación gana), expiración automática de solicitudes y degradación pública por confianza |
-| **[0136]** Catálogos estáticos versionados y serving barato ✅ | Mobile / Web Admin / Tooling — `zones` migrado a catálogo versionado (seed + manifest + JSON Hosting + cache persistente + búsqueda local), sin Firestore hot path runtime para selector; rollback cliente soporta downgrade por manifest |
+| **[0053]** Implementar shell de app `READY_TO_QA` | Mobile app — shell implementado: tabs, guards por rol, pantallas HOME-01/SEARCH-01/PROFILE-01/OWNER-01/DETAIL-01 con UI real, bugs de code review corregidos |
+| **[0054]** Implementar login / registro `READY_TO_QA` | Mobile app — AUTH MVP completo: magic link email (same/cross-device con app_links), Google Sign-In, guards/redirects por rol consistentes, pending route post-auth, signOut hardened y tests de auth/router actualizados |
+| **[0056]** Implementar búsqueda de comercios `READY_TO_QA` | Mobile app — búsqueda MVP cerrada: corpus por zona con filtros/ranking, pantallas lista/mapa/empty integradas según mockups, tests de SearchNotifier en verde y documentación actualizada |
+| **[0057]** Implementar mapa `READY_TO_QA` | Mobile app — SEARCH-03 migrado a Google Maps con sistema de markers por estado, selección visual, z-index por prioridad y clustering por grilla desacoplado |
+| **[0058]** Implementar ficha de comercio `READY_TO_QA` | Mobile app — DETAIL-01 implementado con navegación real desde search/home/deep links |
+| **[0060]** Implementar vista Abierto ahora `READY_TO_QA` | Mobile app — HOME-02 implementado con filtros por rubro MVP y navegación al mapa |
+| **[0066]** Implementar carga de horarios `READY_TO_QA` | Mobile app — OWNER-06 implementado con UI Stitch completa, validaciones, excepciones/cierres, persistencia en subcolecciones, triggers backend de recompute, feature flag Remote Config y analytics de módulo |
+| **[0067]** Implementar carga de señales operativas `READY_TO_QA` | Mobile app / Backend — OWNER-08 migrado a señal operativa manual (`vacation`, `temporary_closure`, `delay`) con mensaje opcional (80), persistencia en `merchant_operational_signals`, precedencia server-side (`manual override > horario`) y proyección pública sincronizada por trigger con no-op write avoidance |
+| **[0068]** Implementar carga de turnos farmacia `READY_TO_QA` | Mobile app / Backend — OWNER-09/10/11 implementado con calendario mensual, alta/edición/borrado, publicación batch costo-optimizada, validaciones server-side y proyección pública vía Cloud Functions |
+| **[0077]** Diseñar panel admin mínimo `READY_TO_QA` | Admin / Web — portal web admin creado en Flutter Web: AdminShell con sidebar oscuro, topbar de búsqueda, sistema de rutas go_router y módulo de importación de datasets completo |
+| **[0122]** Implementar módulo de importación de datasets (admin web) `READY_TO_QA` | Admin / Web — 7 estados de UI implementados: empty state, lista con tabla y KPIs, wizard 3 pasos (archivo + preview + config), pantalla de resultado del batch, modal de reversión destructivo; schema import_batches extendido con FieldMapping, RowError, visibilidad y contadores UI |
+| **[0123]** Enforce de capacidad de catálogo por comercio `READY_TO_QA` | Backend / Mobile / Admin Web — límites globales/categoría/override en `admin_configs/catalog_limits`, creación de productos vía callable con validación transaccional y hard-block por cupo, telemetría de warning/bloqueo y gestión admin de límites |
+| **[0124]** Mitigación operativa de guardias de farmacia `READY_TO_QA` | Backend / Mobile — confirmación preventiva, incidente operativo, candidatas por zona+distancia con límite, ronda de reasignación (primera aceptación gana), expiración automática de solicitudes y degradación pública por confianza |
+| **[0136]** Catálogos estáticos versionados y serving barato `READY_TO_QA` | Mobile / Web Admin / Tooling — `zones` migrado a catálogo versionado (seed + manifest + JSON Hosting + cache persistente + búsqueda local), sin Firestore hot path runtime para selector; rollback cliente soporta downgrade por manifest |
 | **[0031]** Diseñar pantalla Buscar ✅ | UX/UI — Stack de búsqueda completo según mockups: SEARCH-01 (3 estados: initial/focused/typing), SEARCH-02 (6 estados: loading/results/openNow/verified/empty/error), pantalla especialidad farmacias, location fallback, zone selector sheet, filtros avanzados. 8 archivos implementados |
 | **[0036]** Diseñar vista Abierto ahora ✅ | UX/UI — HOME-02 implementado: header con zona activa + indicador en vivo, filtro por categoría (6 rubros), lista de comercios con horario de cierre y action buttons, barra "Ver en el mapa" |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 diseñado por Stitches e implementado: listado con badges de turno y confianza, 4 estados (sin ubicación, cargando, resultados, vacío), detalle con verificación, mapa, CTAs y reporte |
-| **[0061]** Implementar vista Farmacias de turno ✅ | Mobile app — PharmacyDutyScreen y PharmacyDutyDetailScreen integrados con datos reales, estados operativos y deep links de detalle |
+| **[0061]** Implementar vista Farmacias de turno `READY_TO_QA` | Mobile app — PharmacyDutyScreen y PharmacyDutyDetailScreen integrados con datos reales, estados operativos y deep links de detalle |
 
 ---
 
@@ -199,7 +203,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0035] **Diseñar vista Farmacias de turno** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0036] **Diseñar vista Abierto ahora** — P0 — `UX/UI, MVP` ✅
 - [0037] **Diseñar panel Mi comercio** — P0 — `UX/UI, Operaciones, MVP` ✅
-- [0038] **Diseñar flujo carga de productos** — P0 — `UX/UI, Operaciones, MVP`
+- [0038] **Diseñar flujo carga de productos** — P0 — `UX/UI, Operaciones, MVP` `READY_TO_QA`
 - [0039] **Diseñar flujo carga de horarios y señales** — P0 — `UX/UI, Operaciones, MVP`
 - [0040] **Diseñar flujo carga de turnos de farmacia** — P0 — `UX/UI, Operaciones, MVP`
 - [0041] **Diseñar board de propuestas y votos** — P1 — `UX/UI, Growth, Admin, MVP`
@@ -219,22 +223,22 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### ÉPICA 8: Mobile app
 - [0052] **Crear proyecto mobile base** — P0 — `Mobile, Fundacional` ✅
-- [0053] **Implementar shell de app** — P0 — `Mobile, UX/UI, MVP` ✅
-- [0054] **Implementar login / registro** — P0 — `Mobile, Seguridad, MVP` ✅
+- [0053] **Implementar shell de app** — P0 — `Mobile, UX/UI, MVP` `READY_TO_QA`
+- [0054] **Implementar login / registro** — P0 — `Mobile, Seguridad, MVP` `READY_TO_QA`
 - [0055] **Implementar home CUSTOMER** — P1 — `Mobile, Producto, MVP`
-- [0056] **Implementar búsqueda de comercios** — P0 — `Mobile, MVP` ✅
-- [0057] **Implementar mapa** — P1 — `Mobile, MVP` ✅
-- [0058] **Implementar ficha de comercio** — P0 — `Mobile, Producto, MVP` ✅
+- [0056] **Implementar búsqueda de comercios** — P0 — `Mobile, MVP` `READY_TO_QA`
+- [0057] **Implementar mapa** — P1 — `Mobile, MVP` `READY_TO_QA`
+- [0058] **Implementar ficha de comercio** — P0 — `Mobile, Producto, MVP` `READY_TO_QA`
 - [0059] **Implementar ficha de producto** — P2 — `Mobile, MVP`
-- [0060] **Implementar vista Abierto ahora** — P0 — `Mobile, MVP` ✅
-- [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` ✅
+- [0060] **Implementar vista Abierto ahora** — P0 — `Mobile, MVP` `READY_TO_QA`
+- [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` `READY_TO_QA`
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
 - [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `IN_PROGRESS`
-- [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP`
-- [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` ✅
-- [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP` ✅
-- [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP` ✅
+- [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP` `READY_TO_QA`
+- [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` `READY_TO_QA`
+- [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP` `READY_TO_QA`
+- [0068] **Implementar carga de turnos farmacia** — P0 — `Mobile, Owner, MVP` `READY_TO_QA`
 - [0069] **Implementar módulo de propuestas y votos** — P1 — `Mobile, Growth, MVP`
 
 ### ÉPICA 9: Web pública
@@ -247,10 +251,10 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0076] **Implementar links compartibles** — P1 — `Web, Growth, MVP`
 
 ### ÉPICA 10: Admin / Moderación
-- [0077] **Diseñar panel admin mínimo** — P1 — `Admin, Producto, MVP` ✅
+- [0077] **Diseñar panel admin mínimo** — P1 — `Admin, Producto, MVP` `READY_TO_QA`
   - Flutter Web portal: AdminShell (sidebar + topbar), go_router, tokens compartidos con mobile
 - [0078] **Implementar listado de comercios** — P2 — `Admin, MVP`
-- [0122] **Implementar módulo de importación de datasets (admin web)** — P1 — `Admin, Web, Data, Operaciones, MVP` ✅
+- [0122] **Implementar módulo de importación de datasets (admin web)** — P1 — `Admin, Web, Data, Operaciones, MVP` `READY_TO_QA`
   - 7 estados de UI: empty state, lista con tabla/KPIs/paginación, wizard Archivo→Preview→Configuración, resultado del batch, modal de reversión
   - Schema import_batches extendido: ImportFieldMapping, ImportRowError, ImportVisibility, batchNumber, datasetType, fieldMappings, deduplicationEnabled, visibilityAfterImport, errors, contadores UI
 - [0079] **Implementar listado de propuestas** — P2 — `Admin, MVP`
@@ -259,7 +263,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ### ÉPICA 11: Analytics
 - [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `IN_PROGRESS`
-- [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP`
+- [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP` `READY_TO_QA`
 - [0084] **Crear dashboard MVP** — P1 — `Analytics, MVP`
 - [0085] **Medir activación OWNER** — P1 — `Analytics, Operaciones, MVP`
 - [0086] **Medir activación CUSTOMER** — P1 — `Analytics, MVP`
@@ -272,6 +276,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0091] **Testear permisos por rol** — P0 — `QA, Seguridad, MVP`
 - [0092] **Testear edge cases operativos** — P0 — `QA, Operaciones, MVP`
 - [0093] **Configurar alertas técnicas mínimas** — P1 — `Seguridad, Operaciones, Lanzamiento`
+- [0147] **Honeypot defensivo y detección temprana de abuso** — P0 — `Seguridad, Backend, Operaciones, MVP` `READY_TO_QA`
 
 ### ÉPICA 13: Lanzamiento / piloto
 - [0094] **Definir piloto geográfico** — P0 — `Lanzamiento, Producto, MVP`
@@ -315,24 +320,27 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - TUM-138 / Parent: TuM2-9004 / TUM-18
   - Dependencias: TuM2-0001, TuM2-0003, TuM2-0015, TuM2-0017, TuM2-0020
   - Fuente semilla: Google Places (controlada, con guardrails de costo y atribución)
-- [0123] **Aplicar límites de capacidad de catálogo por comercio/categoría** — P0 — `Backend, Mobile, Admin, Operaciones, MVP` ✅
+- [0123] **Aplicar límites de capacidad de catálogo por comercio/categoría** — P0 — `Backend, Mobile, Admin, Operaciones, MVP` `READY_TO_QA`
   - PR #58: callables con `enforceAppCheck`, límites globales/categoría/override y creación de producto transaccional con bloqueo por cuota.
   - Costo: búsqueda admin acotada con `limit` (máx. 30) y capacidad owner con cache TTL en provider.
-- [0124] **Mitigar guardias de farmacia con reasignación operativa** — P0 — `Backend, Mobile, Operaciones, MVP` ✅
+- [0124] **Mitigar guardias de farmacia con reasignación operativa** — P0 — `Backend, Mobile, Operaciones, MVP` `READY_TO_QA`
   - PR #59: incidente → candidatas por `zoneId` + distancia + `limit` → ronda abierta con requests paralelos y cierre por primera aceptación.
   - Costo: scans programados incrementales (`limit` fijo) para recordatorios/expiraciones, sin listeners globales.
+- [0136] **Catálogos estáticos versionados y serving barato** — P0 — `Mobile, Web Admin, Tooling, Costos, MVP` `READY_TO_QA`
+  - `zones` fuera del hot path de Firestore en runtime (seed + manifest + JSON versionado + cache persistente/memoria + rollback por versión).
+  - Costo: elimina lecturas runtime de catálogo en selector de zonas y agrega controles de publicación con guardrails por ambiente.
 
 ### ÉPICA 18: Reclamo de titularidad de comercio
-- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP` `IN_PROGRESS`
-- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP` `IN_PROGRESS`
-- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP` `IN_PROGRESS`
-- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `IN_PROGRESS`
-- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `IN_PROGRESS`
-- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `IN_PROGRESS`
-- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` ✅
+- [0125] **Épica: Reclamo de titularidad de comercio** — P0 — `Producto, Backend, Mobile, Admin, Seguridad, Legal, MVP` `READY_TO_QA`
+- [0126] **Flujo de claim del comercio (usuario/owner)** — P0 — `Mobile, UX/UI, MVP` `READY_TO_QA`
+- [0127] **Validación automática inicial de claims** — P0 — `Backend, Seguridad, MVP` `READY_TO_QA`
+- [0128] **Revisión manual de claims en Admin Web** — P0 — `Admin, Web, Seguridad, MVP` `READY_TO_QA`
+- [0129] **Evidencia y documentación por categoría de comercio** — P0 — `Producto, Operaciones, Legal, MVP` `READY_TO_QA`
+- [0130] **Seguridad y protección de datos sensibles en claims** — P0 — `Seguridad, Backend, Admin, MVP` `READY_TO_QA`
+- [0131] **Integración de claim con roles OWNER / owner_pending / aprobación** — P0 — `Producto, Seguridad, Mobile, Backend, MVP` `READY_TO_QA`
 - [0132] **Verificación de teléfono del usuario para fase 2** — P1 — `Auth, Seguridad, Post-MVP`
-- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `IN_PROGRESS`
-- [0140] **Hardening de Auth/Rules con JWT claims y eliminación de reads extra** — P0 — `Seguridad, Backend, Mobile, MVP` ✅
+- [0133] **Conflictos, duplicados y disputa de titularidad** — P0 — `Admin, Backend, Seguridad, MVP` `READY_TO_QA`
+- [0140] **Hardening de Auth/Rules con JWT claims y eliminación de reads extra** — P0 — `Seguridad, Backend, Mobile, MVP` `READY_TO_QA`
 
 ### ÉPICA 19: Estacionalidad y campañas contextuales
 - [0134] **Modo Selección Argentina + tarjeta pineada de próximo partido** — P1 — `Producto, Branding, Mobile, Web, Admin, Backend, Analytics, MVP+`
@@ -516,7 +524,7 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0082] Cobertura adicional de acciones core en detalle de farmacia (`operator_call_click`, `directions_opened`) sin listeners ni lecturas extra.
 - [0082] Merchant Detail migrado a capa segura: acciones core pasan por `AnalyticsService` y se elimina emisión de `merchant_id` en payload analytics.
 - [0082] Impacto documental sincronizado para 0035/0100/0101 y seguimiento explícito de dependencias 0035/0056/0057/0061/0100/0101/0083.
-- [0056] Implementar búsqueda de comercios: estado final DONE (cerrada el 2026-04-07).
+- [0056] Implementar búsqueda de comercios: estado final `READY_TO_QA` (implementación cerrada el 2026-04-07; pendiente QA de cierre).
 - [0056] Mobile quedó recompuesto y compilable: modelos/repositorios de búsqueda, notifier con ranking y filtros MVP, exclusión de panadería/confitería, rutas de búsqueda activas y analytics safe.
 - [0056] Se agregó cobertura unitaria en Flutter para SearchNotifier (inicialización, normalización, filtros open-now, ranking, y consistencia lista/mapa).
 - [0056] Se aplicó integración visual de pantallas search según `stitch_tum2.zip` (inicio, loading, lista, mapa y vacío enriquecido).
@@ -539,7 +547,7 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0123] UI OWNER/ADMIN integrada con capacidad (`used/limit/source`), eventos analytics de warning/bloqueo y controles de costo (`limit` en búsquedas admin + cache TTL de config).
 - [0124] Mitigación de guardias cerrada (PR #59, 2026-04-09): confirmación de guardia, reporte de incidente, selección de candidatas por zona/distancia y ronda de reasignación con primera aceptación ganadora.
 - [0124] Nuevas colecciones operativas (`pharmacy_duty_incidents`, `pharmacy_duty_reassignment_rounds`, `pharmacy_duty_reassignment_requests`) y jobs incrementales para recordatorios/expiraciones con límites de scan por ciclo.
-- [0126] Flujo claim en progreso (2026-04-14): implementado flujo mobile CLAIM-01..07 con Firebase real (draft, evidencia, consentimiento, submit, estado), sin listeners permanentes y con refresh por acción.
+- [0126] Flujo claim implementado (2026-04-14): implementado flujo mobile CLAIM-01..07 con Firebase real (draft, evidencia, consentimiento, submit, estado), sin listeners permanentes y con refresh por acción.
 - [0126] Backend inicial implementado: callables `upsertMerchantClaimDraft`, `submitMerchantClaim`, `evaluateMerchantClaim`, `resolveMerchantClaim`, `revealMerchantClaimSensitiveData`, `getMyMerchantClaimStatus`, `listMerchantClaimsForReview`, `listMyMerchantClaims`, `searchClaimableMerchants`; reglas Firestore/Storage endurecidas e índices `merchant_claims` actualizados a `claimStatus`.
 - [0128] Admin Web claims endurecido (2026-04-17): rutas `/claims` + `/claims/:claimId`, listado paginado con scope geográfico obligatorio y `limit`, detalle servido por callable `getMerchantClaimReviewDetail` (sin lectura directa cliente), masking por defecto, timeline, filtros locales sin lecturas extra, reveal temporal auditado y stale handling backend/UI por `expectedUpdatedAtMillis`.
 - [0128] Seguridad/capabilities: reviewer/senior reviewer soportados vía claims finos opcionales (`claimsReviewLevel` / `capabilities`) con fallback compatible para `admin`/`super_admin`; resoluciones críticas y reveal quedan hard-gated por backend, nunca por cliente.

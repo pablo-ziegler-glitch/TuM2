@@ -1,6 +1,6 @@
 # TuM2-0126 — Flujo de claim del comercio (usuario / owner claimant)
 
-Estado: IN_PROGRESS  
+Estado: READY_TO_QA  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio
 

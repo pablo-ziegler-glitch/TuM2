@@ -1,6 +1,6 @@
 # TuM2-0129 — Evidencia y documentación por categoría de comercio
 
-Estado: IN_PROGRESS  
+Estado: READY_TO_QA  
 Prioridad: P0 (MVP crítica)  
 Épica madre: TuM2-0125 — Reclamo de titularidad de comercio  
 Dependencia directa del flujo: TuM2-0126 — Flujo de claim del comercio  

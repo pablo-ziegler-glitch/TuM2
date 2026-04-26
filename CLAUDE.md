@@ -15,6 +15,7 @@
 
 - **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `IN_PROGRESS` (implementado y en condición `READY_FOR_QA` según storycard).
 - **[0065] Alta/edición de productos OWNER**: estado real confirmado en `IN_PROGRESS` (implementado y en condición `READY_FOR_QA` según storycard).
+- **[0064] Módulo OWNER**: estado real actualizado a `READY_FOR_QA`; implementación base completa en `develop` (transiciones owner_pending -> owner/customer, guards de rutas profundas, `OwnerAccessUpdatedScreen`, refresh de sesión sin relogin) y pendiente de QA formal en `tum2-staging-45c83`.
 - Se implementó flujo mobile de alta en 3 pasos con precio/foto opcionales, revisión previa y publicación.
 - Se incorporaron `description` + `priceMode` en dominio de producto OWNER (`none|fixed|consult`) y validaciones asociadas.
 - Se agregaron acciones rápidas en listado para disponibilidad (`marcar agotado/disponible`) y filtros `Activos/Agotados/Ocultos`.
@@ -51,6 +52,23 @@
 - OpenSpec queda **discontinuado** en este repositorio para planificación/estado.
 - No usar artefactos de `openspec/` para decidir progreso ni para reportes ejecutivos.
 - Si hay diferencias entre `openspec/` y `CLAUDE.md`, **prevalece `CLAUDE.md`**.
+
+## Semántica documental de estados de tarjetas
+
+- `TODO`: tarjeta aún no implementada ni iniciada.
+- `IN_PROGRESS`: desarrollo funcional o técnico activo; hay trabajo de implementación pendiente.
+- `READY_FOR_QA`: implementación base finalizada y validaciones automáticas mínimas ejecutadas; no debe tratarse como pendiente de desarrollo. Queda en cola para QA manual/E2E/staging.
+- `QA_IN_PROGRESS`: QA manual/E2E en curso.
+- `BUGFIX_REQUIRED`: QA encontró bugs o regresiones; vuelve a desarrollo con issues concretos.
+- `DONE`: QA requerido completado, documentación sincronizada y criterios de cierre satisfechos.
+- `BLOCKED`: no puede avanzar por dependencia externa o decisión pendiente.
+
+Regla explícita:
+- Una tarjeta en `READY_FOR_QA` NO debe contarse como pendiente de desarrollo salvo que durante QA se detecten bugs.
+- Si QA detecta bugs, se debe:
+  1. documentar el bug concreto,
+  2. mover la tarjeta a `BUGFIX_REQUIRED` o crear subitem de bug,
+  3. no reabrir genéricamente como `IN_PROGRESS` sin causa técnica identificada.
 
 ---
 
@@ -137,8 +155,17 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 implementado: hero farmacia activa con CTAs (Cómo llegar / Llamar), lista "Resto del día", disclaimer de actualización de turnos |
 | **[0035]** Diseñar vista Farmacias de turno ✅ | UX/UI — HOME-03 diseñado por Stitches e implementado: listado con badges de turno y confianza, 4 estados (sin ubicación, cargando, resultados, vacío), detalle con verificación, mapa, CTAs y reporte |
 | **[0061]** Implementar vista Farmacias de turno ✅ | Mobile app — PharmacyDutyScreen y PharmacyDutyDetailScreen integrados con datos reales, estados operativos y deep links de detalle |
+| **[0064]** Implementar módulo OWNER `READY_FOR_QA` | Mobile app — módulo OWNER implementado con transición owner_pending -> OWNER, salida limpia a customer ante cierre negativo, guards para rutas profundas, `OwnerAccessUpdatedScreen` y plan QA E2E; pendiente QA formal en staging con roles reales |
 
 ---
+
+## Cola READY_FOR_QA / QA staging
+
+- `TuM2-0064 — Implementar módulo OWNER`
+  - Estado: `READY_FOR_QA`
+  - Ambiente recomendado: `tum2-staging-45c83`
+  - Pendiente: QA E2E claim/admin/owner con roles reales, validación de permisos y costo Firestore.
+  - No pendiente: implementación base de UX/transiciones/guards.
 
 ## Indicador de avance MVP (snapshot 2026-04-08)
 
@@ -232,7 +259,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0061] **Implementar vista Farmacias de turno** — P0 — `Mobile, MVP` ✅
 - [0062] **Implementar favoritos** — P2 — `Mobile, MVP`
 - [0063] **Implementar seguir comercio** — P2 — `Mobile, MVP`
-- [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `IN_PROGRESS`
+- [0064] **Implementar módulo OWNER** — P0 — `Mobile, Operaciones, MVP` `READY_FOR_QA`
 - [0065] **Implementar alta/edición de productos** — P0 — `Mobile, Owner, MVP` `IN_PROGRESS`
 - [0066] **Implementar carga de horarios** — P0 — `Mobile, Owner, MVP` ✅
 - [0067] **Implementar carga de señales operativas** — P0 — `Mobile, Owner, MVP` ✅

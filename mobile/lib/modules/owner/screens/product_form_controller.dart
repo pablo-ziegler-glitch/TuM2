@@ -63,7 +63,9 @@ class ProductFormState {
     this.isSubmitting = false,
     this.submitStatus = ProductFormSubmitStatus.idle,
     this.name = '',
+    this.description = '',
     this.priceLabel = '',
+    this.priceMode = ProductPriceMode.none,
     this.stockStatus = ProductStockStatus.available,
     this.visibilityStatus = ProductVisibilityStatus.visible,
     this.status = ProductStatus.active,
@@ -71,6 +73,7 @@ class ProductFormState {
     this.currentImagePath,
     this.localImage,
     this.nameError,
+    this.descriptionError,
     this.priceLabelError,
     this.imageError,
     this.message,
@@ -84,7 +87,9 @@ class ProductFormState {
   final bool isSubmitting;
   final ProductFormSubmitStatus submitStatus;
   final String name;
+  final String description;
   final String priceLabel;
+  final ProductPriceMode priceMode;
   final ProductStockStatus stockStatus;
   final ProductVisibilityStatus visibilityStatus;
   final ProductStatus status;
@@ -92,6 +97,7 @@ class ProductFormState {
   final String? currentImagePath;
   final ProductImageUploadData? localImage;
   final String? nameError;
+  final String? descriptionError;
   final String? priceLabelError;
   final String? imageError;
   final String? message;
@@ -109,7 +115,9 @@ class ProductFormState {
     bool? isSubmitting,
     ProductFormSubmitStatus? submitStatus,
     String? name,
+    String? description,
     String? priceLabel,
+    ProductPriceMode? priceMode,
     ProductStockStatus? stockStatus,
     ProductVisibilityStatus? visibilityStatus,
     ProductStatus? status,
@@ -121,6 +129,8 @@ class ProductFormState {
     bool clearLocalImage = false,
     String? nameError,
     bool clearNameError = false,
+    String? descriptionError,
+    bool clearDescriptionError = false,
     String? priceLabelError,
     bool clearPriceLabelError = false,
     String? imageError,
@@ -137,7 +147,9 @@ class ProductFormState {
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submitStatus: submitStatus ?? this.submitStatus,
       name: name ?? this.name,
+      description: description ?? this.description,
       priceLabel: priceLabel ?? this.priceLabel,
+      priceMode: priceMode ?? this.priceMode,
       stockStatus: stockStatus ?? this.stockStatus,
       visibilityStatus: visibilityStatus ?? this.visibilityStatus,
       status: status ?? this.status,
@@ -149,6 +161,9 @@ class ProductFormState {
           : (currentImagePath ?? this.currentImagePath),
       localImage: clearLocalImage ? null : (localImage ?? this.localImage),
       nameError: clearNameError ? null : (nameError ?? this.nameError),
+      descriptionError: clearDescriptionError
+          ? null
+          : (descriptionError ?? this.descriptionError),
       priceLabelError: clearPriceLabelError
           ? null
           : (priceLabelError ?? this.priceLabelError),
@@ -165,11 +180,13 @@ class ProductFormSubmitResult {
     required this.success,
     required this.isCreate,
     this.productId,
+    this.imageUploadFailed = false,
   });
 
   final bool success;
   final bool isCreate;
   final String? productId;
+  final bool imageUploadFailed;
 }
 
 class ProductFormNotifier extends StateNotifier<ProductFormState> {
@@ -216,7 +233,9 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
         isInitialLoading: false,
         loadedProduct: product,
         name: product.name,
+        description: product.description,
         priceLabel: product.priceLabel,
+        priceMode: product.priceMode,
         stockStatus: product.stockStatus,
         visibilityStatus: product.visibilityStatus,
         status: product.status,
@@ -250,6 +269,24 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
   void setPriceLabel(String value) {
     state = state.copyWith(
       priceLabel: value,
+      clearPriceLabelError: true,
+      clearMessage: true,
+      submitStatus: ProductFormSubmitStatus.idle,
+    );
+  }
+
+  void setDescription(String value) {
+    state = state.copyWith(
+      description: value,
+      clearDescriptionError: true,
+      clearMessage: true,
+      submitStatus: ProductFormSubmitStatus.idle,
+    );
+  }
+
+  void setPriceMode(ProductPriceMode value) {
+    state = state.copyWith(
+      priceMode: value,
       clearPriceLabelError: true,
       clearMessage: true,
       submitStatus: ProductFormSubmitStatus.idle,
@@ -304,6 +341,34 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
     );
   }
 
+  bool validateStepBasic() {
+    final nameError = validateProductName(normalizeProductField(state.name));
+    state = state.copyWith(
+      nameError: nameError,
+      submitStatus: nameError == null
+          ? ProductFormSubmitStatus.idle
+          : ProductFormSubmitStatus.error,
+    );
+    return nameError == null;
+  }
+
+  bool validateStepDetails() {
+    final descriptionError =
+        validateProductDescription(normalizeProductField(state.description));
+    final priceLabelError = validateProductPriceLabel(
+      normalizeProductField(state.priceLabel),
+      mode: state.priceMode,
+    );
+    state = state.copyWith(
+      descriptionError: descriptionError,
+      priceLabelError: priceLabelError,
+      submitStatus: descriptionError == null && priceLabelError == null
+          ? ProductFormSubmitStatus.idle
+          : ProductFormSubmitStatus.error,
+    );
+    return descriptionError == null && priceLabelError == null;
+  }
+
   Future<ProductFormSubmitResult> submit({
     required String actorUserId,
   }) async {
@@ -315,13 +380,21 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
     }
 
     final name = normalizeProductField(state.name);
+    final description = normalizeProductField(state.description);
     final priceLabel = normalizeProductField(state.priceLabel);
     final nameError = validateProductName(name);
-    final priceLabelError = validateProductPriceLabel(priceLabel);
+    final descriptionError = validateProductDescription(description);
+    final priceLabelError = validateProductPriceLabel(
+      priceLabel,
+      mode: state.priceMode,
+    );
 
-    if (nameError != null || priceLabelError != null) {
+    if (nameError != null ||
+        descriptionError != null ||
+        priceLabelError != null) {
       state = state.copyWith(
         nameError: nameError,
+        descriptionError: descriptionError,
         priceLabelError: priceLabelError,
         submitStatus: ProductFormSubmitStatus.error,
       );
@@ -333,7 +406,9 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
 
     final input = ProductDraftInput(
       name: name,
+      description: description,
       priceLabel: priceLabel,
+      priceMode: state.priceMode,
       stockStatus: state.stockStatus,
       visibilityStatus: state.visibilityStatus,
       status: state.status,
@@ -406,20 +481,29 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
         );
       }
 
-      final productId = await _repository.createProduct(
+      final createResult = await _repository.createProduct(
         merchantId: state.scope.merchantId,
         ownerUserId: state.scope.ownerUserId,
         actorUserId: actorUserId,
         input: input,
         image: state.localImage,
       );
+      final productId = createResult.productId;
 
-      if (state.hasLocalImage) {
+      if (state.hasLocalImage && !createResult.imageUploadFailed) {
         await OwnerProductsAnalytics.logImageUploaded(
           merchantId: state.scope.merchantId,
           productId: productId,
           imageSizeBytes: state.localImage!.sizeBytes,
           latencyMs: stopwatch.elapsedMilliseconds,
+        );
+      }
+      if (state.hasLocalImage && createResult.imageUploadFailed) {
+        await OwnerProductsAnalytics.logImageUploadFailed(
+          merchantId: state.scope.merchantId,
+          productId: productId,
+          reason: createResult.imageUploadErrorCode ??
+              'product-image-upload-failed',
         );
       }
 
@@ -435,7 +519,9 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
       state = state.copyWith(
         isSubmitting: false,
         submitStatus: ProductFormSubmitStatus.success,
-        message: 'Producto creado correctamente.',
+        message: createResult.imageUploadFailed
+            ? 'Producto creado correctamente. No pudimos cargar la foto: podés sumarla después.'
+            : 'Producto creado correctamente.',
         clearLocalImage: true,
         uploadState: const ProductImageUploadState.idle(),
       );
@@ -443,6 +529,7 @@ class ProductFormNotifier extends StateNotifier<ProductFormState> {
         success: true,
         isCreate: true,
         productId: productId,
+        imageUploadFailed: createResult.imageUploadFailed,
       );
     } on ProductImageUploadException catch (error) {
       await OwnerProductsAnalytics.logImageUploadFailed(

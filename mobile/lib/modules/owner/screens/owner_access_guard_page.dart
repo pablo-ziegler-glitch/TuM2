@@ -18,10 +18,12 @@ class OwnerAccessGuardPage extends ConsumerStatefulWidget {
     super.key,
     required this.title,
     required this.child,
+    this.requireOwnerRole = false,
   });
 
   final String title;
   final Widget child;
+  final bool requireOwnerRole;
 
   @override
   ConsumerState<OwnerAccessGuardPage> createState() => _OwnerAccessGuardState();
@@ -33,6 +35,13 @@ class _OwnerAccessGuardState extends ConsumerState<OwnerAccessGuardPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider).authState;
+    if (widget.requireOwnerRole &&
+        (authState is! AuthAuthenticated || authState.role != 'owner')) {
+      return _GuardScaffold(
+        title: widget.title,
+        child: const _OwnerRoleRequired(),
+      );
+    }
     final isAdminSession =
         authState is AuthAuthenticated ? _isAdminRole(authState.role) : false;
     if (isAdminSession) {
@@ -55,7 +64,7 @@ class _OwnerAccessGuardState extends ConsumerState<OwnerAccessGuardPage> {
       ),
       data: (result) {
         if (!result.hasMerchant) {
-          _redirectToOnboarding(context);
+          _redirectWhenMissingMerchant(context, authState);
           return _GuardScaffold(
             title: widget.title,
             child: const Center(child: CircularProgressIndicator()),
@@ -73,6 +82,73 @@ class _OwnerAccessGuardState extends ConsumerState<OwnerAccessGuardPage> {
       if (!mounted) return;
       context.go(AppRoutes.onboardingOwner);
     });
+  }
+
+  void _redirectToOwnerDashboard(BuildContext context) {
+    if (_redirectedToOnboarding) return;
+    _redirectedToOnboarding = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.go(AppRoutes.ownerDashboard);
+    });
+  }
+
+  void _redirectWhenMissingMerchant(BuildContext context, AuthState authState) {
+    if (authState is! AuthAuthenticated || authState.role != 'owner') {
+      _redirectToOnboarding(context);
+      return;
+    }
+    final accessSummary = authState.ownerAccessSummary;
+    final hasApprovedMerchants =
+        (accessSummary?.approvedMerchantIdsCount ?? 0) > 0 ||
+            authState.merchantId != null;
+    if (accessSummary?.restrictionActive == true ||
+        authState.ownerPending ||
+        !hasApprovedMerchants) {
+      _redirectToOwnerDashboard(context);
+      return;
+    }
+    _redirectToOnboarding(context);
+  }
+}
+
+class _OwnerRoleRequired extends StatelessWidget {
+  const _OwnerRoleRequired();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.lock_outline,
+              size: 34,
+              color: AppColors.neutral600,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Solo para owner',
+              style: AppTextStyles.headingSm,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Esta sección está disponible únicamente para usuarios owner.',
+              style: AppTextStyles.bodySm,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 14),
+            OutlinedButton(
+              onPressed: () => context.go(AppRoutes.ownerDashboard),
+              child: const Text('Volver a Mi comercio'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

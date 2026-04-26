@@ -116,7 +116,7 @@ class FirebaseProductRepository implements ProductRepository {
   }
 
   @override
-  Future<String> createProduct({
+  Future<ProductCreateResult> createProduct({
     required String merchantId,
     required String ownerUserId,
     required String actorUserId,
@@ -137,27 +137,42 @@ class FirebaseProductRepository implements ProductRepository {
 
     final productId = _firestore.collection(_productsCollection).doc().id;
     ProductImageUploadResult? imageResult;
+    ProductRepositoryException? imageUploadFailure;
 
     try {
       if (image != null) {
-        imageResult = await uploadProductImage(
-          merchantId: normalizedMerchantId,
-          productId: productId,
-          image: image,
-        );
+        try {
+          imageResult = await uploadProductImage(
+            merchantId: normalizedMerchantId,
+            productId: productId,
+            image: image,
+          );
+        } on ProductImageUploadException catch (error) {
+          imageUploadFailure = error;
+        } on ProductImageTooLargeException catch (error) {
+          imageUploadFailure = error;
+        } on ProductImageTypeException catch (error) {
+          imageUploadFailure = error;
+        }
       }
 
       final createdProductId = await _callCreateProductCallable(
         merchantId: normalizedMerchantId,
         productId: productId,
         name: normalizeProductField(input.name),
+        description: normalizeProductField(input.description),
         priceLabel: normalizeProductField(input.priceLabel),
+        priceMode: input.priceMode,
         stockStatus: input.stockStatus,
         visibilityStatus: input.visibilityStatus,
         status: input.status,
         imageResult: imageResult,
       );
-      return createdProductId;
+      return ProductCreateResult(
+        productId: createdProductId,
+        imageUploadFailed: imageUploadFailure != null,
+        imageUploadErrorCode: imageUploadFailure?.code,
+      );
     } on FirebaseFunctionsException catch (error) {
       if (imageResult != null) {
         await _safeDeleteStorageObject(imageResult.storagePath);
@@ -215,8 +230,10 @@ class FirebaseProductRepository implements ProductRepository {
       final payload = <String, dynamic>{
         'name': normalizeProductField(input.name),
         'normalizedName': normalizedName,
+        'description': normalizeProductField(input.description),
         'searchKeywords': buildProductSearchKeywords(input.name),
         'priceLabel': normalizeProductField(input.priceLabel),
+        'priceMode': input.priceMode.value,
         'stockStatus': input.stockStatus.value,
         'visibilityStatus': input.visibilityStatus.value,
         'status': input.status.value,
@@ -305,6 +322,55 @@ class FirebaseProductRepository implements ProductRepository {
   }
 
   @override
+  Future<void> setStockStatus({
+    required MerchantProduct product,
+    required ProductStockStatus stockStatus,
+    required String actorUserId,
+  }) async {
+    _assertActorMatchesProductOwner(product: product, actorUserId: actorUserId);
+
+    try {
+      await _firestore.collection(_productsCollection).doc(product.id).update({
+        'stockStatus': stockStatus.value,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': normalizeProductField(actorUserId),
+      });
+    } on FirebaseException catch (error) {
+      throw _mapFirebaseException(error);
+    } catch (error) {
+      throw ProductRepositoryException(
+        code: 'product-stock-status-failed',
+        message: 'No pudimos actualizar el estado del producto.',
+        cause: error,
+      );
+    }
+  }
+
+  @override
+  Future<void> reactivateProduct({
+    required MerchantProduct product,
+    required String actorUserId,
+  }) async {
+    _assertActorMatchesProductOwner(product: product, actorUserId: actorUserId);
+    try {
+      await _callReactivateProductCallable(
+        merchantId: product.merchantId,
+        productId: product.id,
+      );
+    } on FirebaseFunctionsException catch (error) {
+      throw _mapFunctionsException(error);
+    } on FirebaseException catch (error) {
+      throw _mapFirebaseException(error);
+    } catch (error) {
+      throw ProductRepositoryException(
+        code: 'product-reactivate-failed',
+        message: 'No pudimos volver a mostrar el producto.',
+        cause: error,
+      );
+    }
+  }
+
+  @override
   Future<ProductImageUploadResult> uploadProductImage({
     required String merchantId,
     required String productId,
@@ -387,7 +453,17 @@ class FirebaseProductRepository implements ProductRepository {
         message: nameError,
       );
     }
-    final priceError = validateProductPriceLabel(input.priceLabel);
+    final descriptionError = validateProductDescription(input.description);
+    if (descriptionError != null) {
+      throw ProductRepositoryException(
+        code: 'product-description-invalid',
+        message: descriptionError,
+      );
+    }
+    final priceError = validateProductPriceLabel(
+      input.priceLabel,
+      mode: input.priceMode,
+    );
     if (priceError != null) {
       throw ProductRepositoryException(
         code: 'product-price-invalid',
@@ -489,7 +565,9 @@ class FirebaseProductRepository implements ProductRepository {
     required String merchantId,
     required String productId,
     required String name,
+    required String description,
     required String priceLabel,
+    required ProductPriceMode priceMode,
     required ProductStockStatus stockStatus,
     required ProductVisibilityStatus visibilityStatus,
     required ProductStatus status,
@@ -500,7 +578,9 @@ class FirebaseProductRepository implements ProductRepository {
       'merchantId': merchantId,
       'productId': productId,
       'name': name,
+      'description': description,
       'priceLabel': priceLabel,
+      'priceMode': priceMode.value,
       'stockStatus': stockStatus.value,
       'visibilityStatus': visibilityStatus.value,
       'status': status.value,
@@ -528,6 +608,17 @@ class FirebaseProductRepository implements ProductRepository {
     required String productId,
   }) async {
     final callable = _functions.httpsCallable('deactivateMerchantProduct');
+    await callable.call(<String, dynamic>{
+      'merchantId': normalizeProductField(merchantId),
+      'productId': normalizeProductField(productId),
+    }).timeout(_callableTimeout);
+  }
+
+  Future<void> _callReactivateProductCallable({
+    required String merchantId,
+    required String productId,
+  }) async {
+    final callable = _functions.httpsCallable('reactivateMerchantProduct');
     await callable.call(<String, dynamic>{
       'merchantId': normalizeProductField(merchantId),
       'productId': normalizeProductField(productId),

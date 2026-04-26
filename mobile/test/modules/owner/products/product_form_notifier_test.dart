@@ -47,7 +47,6 @@ void main() {
 
       expect(result.success, isFalse);
       expect(notifier.state.nameError, isNotNull);
-      expect(notifier.state.priceLabelError, isNotNull);
       expect(repository.createCalls, 0);
     });
 
@@ -62,7 +61,7 @@ void main() {
       );
 
       notifier.setName('Yerba Mate');
-      notifier.setPriceLabel('Consultar');
+      notifier.setPriceMode(ProductPriceMode.consult);
       notifier.setVisibilityStatus(ProductVisibilityStatus.hidden);
 
       final result = await notifier.submit(actorUserId: 'owner-1');
@@ -71,6 +70,39 @@ void main() {
       expect(result.isCreate, isTrue);
       expect(repository.createCalls, 1);
       expect(notifier.state.submitStatus, ProductFormSubmitStatus.success);
+    });
+
+    test('publica producto aunque falle la subida de foto', () async {
+      final repository = _FakeProductRepository(
+        createResult: const ProductCreateResult(
+          productId: 'created-without-image',
+          imageUploadFailed: true,
+          imageUploadErrorCode: 'product-image-upload-failed',
+        ),
+      );
+      final notifier = ProductFormNotifier(
+        repository: repository,
+        scope: const ProductFormScope(
+          merchantId: 'm-1',
+          ownerUserId: 'owner-1',
+        ),
+      );
+
+      notifier.setName('Yerba Mate');
+      notifier.setLocalImage(
+        ProductImageUploadData(
+          bytes: Uint8List.fromList(const [1, 2, 3]),
+          contentType: 'image/jpeg',
+          fileName: 'cover.jpg',
+        ),
+      );
+
+      final result = await notifier.submit(actorUserId: 'owner-1');
+
+      expect(result.success, isTrue);
+      expect(result.isCreate, isTrue);
+      expect(result.imageUploadFailed, isTrue);
+      expect(notifier.state.message, contains('podés sumarla después'));
     });
 
     test('edita producto existente con imagen nueva', () async {
@@ -146,7 +178,9 @@ MerchantProduct _buildProduct({required String id}) {
     ownerUserId: 'owner-1',
     name: 'Ibuprofeno',
     normalizedName: 'ibuprofeno',
+    description: 'Caja de 20 comprimidos',
     priceLabel: '\$2.500',
+    priceMode: ProductPriceMode.fixed,
     stockStatus: ProductStockStatus.available,
     visibilityStatus: ProductVisibilityStatus.visible,
     status: ProductStatus.active,
@@ -161,16 +195,18 @@ MerchantProduct _buildProduct({required String id}) {
 class _FakeProductRepository implements ProductRepository {
   _FakeProductRepository({
     Map<String, MerchantProduct>? initialProducts,
+    this.createResult = const ProductCreateResult(productId: 'created-1'),
   }) : _products = initialProducts ?? {};
 
   final Map<String, MerchantProduct> _products;
+  final ProductCreateResult createResult;
   int createCalls = 0;
   int updateCalls = 0;
   String? lastUpdatedProductId;
   ProductImageUploadData? lastUpdatedImage;
 
   @override
-  Future<String> createProduct({
+  Future<ProductCreateResult> createProduct({
     required String merchantId,
     required String ownerUserId,
     required String actorUserId,
@@ -178,14 +214,16 @@ class _FakeProductRepository implements ProductRepository {
     ProductImageUploadData? image,
   }) async {
     createCalls += 1;
-    final id = 'created-$createCalls';
+    final id = createResult.productId;
     _products[id] = MerchantProduct(
       id: id,
       merchantId: merchantId,
       ownerUserId: ownerUserId,
       name: input.name,
       normalizedName: normalizeProductName(input.name),
+      description: input.description,
       priceLabel: input.priceLabel,
+      priceMode: input.priceMode,
       stockStatus: input.stockStatus,
       visibilityStatus: input.visibilityStatus,
       status: input.status,
@@ -195,7 +233,7 @@ class _FakeProductRepository implements ProductRepository {
       imageUrl: null,
       imagePath: null,
     );
-    return id;
+    return createResult;
   }
 
   @override
@@ -239,6 +277,13 @@ class _FakeProductRepository implements ProductRepository {
   }) async {}
 
   @override
+  Future<void> setStockStatus({
+    required MerchantProduct product,
+    required ProductStockStatus stockStatus,
+    required String actorUserId,
+  }) async {}
+
+  @override
   Future<void> updateProduct({
     required MerchantProduct product,
     required String actorUserId,
@@ -251,7 +296,9 @@ class _FakeProductRepository implements ProductRepository {
     _products[product.id] = product.copyWith(
       name: input.name,
       normalizedName: normalizeProductName(input.name),
+      description: input.description,
       priceLabel: input.priceLabel,
+      priceMode: input.priceMode,
       stockStatus: input.stockStatus,
       visibilityStatus: input.visibilityStatus,
       status: input.status,
@@ -287,4 +334,10 @@ class _FakeProductRepository implements ProductRepository {
       _products.values.where((item) => item.merchantId == merchantId).toList(),
     );
   }
+
+  @override
+  Future<void> reactivateProduct({
+    required MerchantProduct product,
+    required String actorUserId,
+  }) async {}
 }

@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/auth/auth_notifier.dart';
+import '../../../core/auth/owner_access_summary.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -32,12 +35,47 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
   String? _lastViewedMerchantId;
   bool _errorEventLogged = false;
   bool _emptyEventLogged = false;
+  bool _restrictionEventLogged = false;
   bool _seenOwnerPending = false;
   bool _handledPendingToOwnerTransition = false;
+  DateTime? _lastAccessRefreshAt;
+  late final _OwnerLifecycleObserver _lifecycleObserver;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleObserver = _OwnerLifecycleObserver(_refreshAccessOnResume);
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    super.dispose();
+  }
+
+  Future<void> _refreshAccessOnResume() async {
+    final now = DateTime.now();
+    if (_lastAccessRefreshAt != null &&
+        now.difference(_lastAccessRefreshAt!) < const Duration(seconds: 6)) {
+      return;
+    }
+    _lastAccessRefreshAt = now;
+    try {
+      await ref.read(authNotifierProvider).refreshSession(
+            reason: AuthSessionRefreshReason.ownerPanel,
+          );
+    } catch (_) {
+      // No interrumpir UX OWNER si falla refresh puntual por red.
+    }
+    ref.invalidate(ownerMerchantProvider);
+  }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(ownerAuthStateProvider);
+    final selectedMerchantId =
+        ref.watch(ownerSelectedMerchantIdProvider).valueOrNull;
     final isAdminSession =
         authState is AuthAuthenticated ? _isAdminRole(authState.role) : false;
 
@@ -72,13 +110,20 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
       );
     }
 
-    if (authState.role == 'owner' && authState.ownerPending) {
+    final accessSummary = authState.ownerAccessSummary;
+    final hasApprovedMerchants =
+        (accessSummary?.approvedMerchantIdsCount ?? 0) > 0 ||
+            authState.merchantId != null;
+    final pendingOnlyOwner = authState.ownerPending && !hasApprovedMerchants;
+    final restrictionActive = accessSummary?.restrictionActive ?? false;
+
+    if (authState.role == 'owner' && pendingOnlyOwner) {
       _seenOwnerPending = true;
       _handledPendingToOwnerTransition = false;
     }
 
     if (authState.role == 'owner' &&
-        !authState.ownerPending &&
+        hasApprovedMerchants &&
         _seenOwnerPending &&
         !_handledPendingToOwnerTransition) {
       _handledPendingToOwnerTransition = true;
@@ -108,9 +153,24 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
       );
     }
 
-    if (authState.ownerPending) {
-      return const _OwnerDashboardScaffold(
-        body: _OwnerPendingState(),
+    if (restrictionActive) {
+      if (!_restrictionEventLogged) {
+        _restrictionEventLogged = true;
+        unawaited(
+          OwnerDashboardAnalytics.logRestrictedViewed(
+            restrictionState: accessSummary?.restrictionState.name ?? 'unknown',
+          ),
+        );
+      }
+      return _OwnerDashboardScaffold(
+        body: _OwnerRestrictedState(summary: accessSummary),
+      );
+    }
+    _restrictionEventLogged = false;
+
+    if (pendingOnlyOwner) {
+      return _OwnerDashboardScaffold(
+        body: _OwnerPendingState(summary: accessSummary),
       );
     }
 
@@ -149,8 +209,22 @@ class _OwnerPanelScreenState extends ConsumerState<OwnerPanelScreen> {
 
           return _OwnerDashboardBody(
             merchant: merchant,
-            hasMultipleMerchants: resolution.hasMultipleMerchants,
-            ownerPending: authState.ownerPending,
+            allMerchants: resolution.allMerchants,
+            selectedMerchantId: selectedMerchantId,
+            onSelectMerchant: (merchantId) {
+              unawaited(
+                ref
+                    .read(ownerSelectedMerchantIdProvider.notifier)
+                    .setSelectedMerchantId(merchantId),
+              );
+              unawaited(
+                OwnerDashboardAnalytics.logMerchantSwitched(
+                  merchantId: merchantId,
+                ),
+              );
+              ref.invalidate(ownerMerchantProvider);
+            },
+            ownerPending: authState.ownerPending && hasApprovedMerchants,
           );
         },
       ),
@@ -209,12 +283,6 @@ class _AdminOwnerDashboard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        const _AdminOwnerActionCard(
-          title: 'Gestionar Productos',
-          route: AppRoutes.ownerProducts,
-          icon: Icons.inventory_2_outlined,
-        ),
-        const SizedBox(height: 10),
         const _AdminOwnerActionCard(
           title: 'Editar Horarios',
           route: AppRoutes.ownerSchedules,
@@ -323,16 +391,20 @@ class _OwnerDashboardUnauthorized extends StatelessWidget {
 }
 
 class _OwnerPendingState extends StatelessWidget {
-  const _OwnerPendingState();
+  const _OwnerPendingState({this.summary});
+
+  final OwnerAccessSummary? summary;
 
   @override
   Widget build(BuildContext context) {
-    return const _OwnerPendingStateContent();
+    return _OwnerPendingStateContent(summary: summary);
   }
 }
 
 class _OwnerPendingStateContent extends ConsumerStatefulWidget {
-  const _OwnerPendingStateContent();
+  const _OwnerPendingStateContent({this.summary});
+
+  final OwnerAccessSummary? summary;
 
   @override
   ConsumerState<_OwnerPendingStateContent> createState() =>
@@ -352,6 +424,8 @@ class _OwnerPendingStateContentState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(merchantClaimFlowControllerProvider);
+    final pendingClaimsCount =
+        widget.summary?.pendingClaimMerchantIdsCount ?? 0;
     final claimStatus = state.statusSummary?.claimStatus;
     final isNeedsInfo = claimStatus == MerchantClaimStatus.needsMoreInfo;
     final isConflict = claimStatus == MerchantClaimStatus.conflictDetected ||
@@ -371,7 +445,9 @@ class _OwnerPendingStateContentState
         ? 'Subí la evidencia solicitada para continuar con la revisión.'
         : isConflict
             ? 'Detectamos un conflicto o duplicado. El equipo de revisión va a contactarte.'
-            : 'Cuando finalice la revisión vas a poder operar tu comercio desde este panel.';
+            : pendingClaimsCount > 1
+                ? 'Tenés varios reclamos en revisión. Al aprobarse uno, se habilita tu acceso OWNER.'
+                : 'Cuando finalice la revisión vas a poder operar tu comercio desde este panel.';
 
     final Color cardColor = isNeedsInfo
         ? AppColors.warningBg
@@ -473,6 +549,33 @@ class _OwnerPendingStateContentState
           child: const Text('Ir a Perfil'),
         ),
         const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () async {
+            try {
+              await ref.read(authNotifierProvider).refreshSession(
+                    reason: AuthSessionRefreshReason.manualRetry,
+                  );
+            } catch (_) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'No pudimos actualizar tu acceso. Reintentá en unos segundos.',
+                  ),
+                ),
+              );
+              return;
+            }
+            ref.invalidate(ownerMerchantProvider);
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Acceso actualizado.')),
+            );
+          },
+          icon: const Icon(Icons.refresh),
+          label: const Text('Actualizar acceso'),
+        ),
+        const SizedBox(height: 8),
         if (isNeedsInfo || isConflict)
           OutlinedButton.icon(
             onPressed: () => context.push(AppRoutes.claimIntro),
@@ -484,6 +587,121 @@ class _OwnerPendingStateContentState
               isNeedsInfo ? 'Completar información' : 'Contactar soporte',
             ),
           ),
+      ],
+    );
+  }
+}
+
+class _OwnerRestrictedState extends ConsumerWidget {
+  const _OwnerRestrictedState({required this.summary});
+
+  final OwnerAccessSummary? summary;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final restrictionState = summary?.restrictionState;
+    final blockedUntil = summary?.blockedUntil;
+    final title = switch (restrictionState) {
+      OwnerRestrictionState.blocked => 'Acceso owner bloqueado',
+      OwnerRestrictionState.cooldown => 'Reingreso temporalmente pausado',
+      OwnerRestrictionState.manualReviewOnly => 'Acceso bajo revisión manual',
+      _ => 'Acceso restringido',
+    };
+    final subtitle = switch (restrictionState) {
+      OwnerRestrictionState.blocked =>
+        'Tu cuenta requiere rehabilitación administrativa antes de operar en carril owner.',
+      OwnerRestrictionState.cooldown =>
+        'Esperá a que termine el cooldown para reenviar o continuar reclamos.',
+      OwnerRestrictionState.manualReviewOnly =>
+        'Tus próximos reclamos pasan por revisión manual obligatoria.',
+      _ => 'El carril owner no está disponible en este momento.',
+    };
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: AppColors.errorBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.headingSm.copyWith(
+                  color: AppColors.errorFg,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: AppTextStyles.bodySm.copyWith(
+                  color: AppColors.errorFg,
+                ),
+              ),
+              if (blockedUntil != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Vigente hasta: ${blockedUntil.toLocal()}',
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.errorFg,
+                  ),
+                ),
+              ],
+              if (summary?.restrictionReasonCode != null &&
+                  summary!.restrictionReasonCode!.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Motivo: ${summary!.restrictionReasonCode}',
+                  style: AppTextStyles.bodyXs.copyWith(
+                    color: AppColors.errorFg,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: () => context.push(AppRoutes.claimStatus),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary500,
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(52),
+          ),
+          icon: const Icon(Icons.shield_outlined),
+          label: const Text('Ver estado de reclamos'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () async {
+            try {
+              await ref.read(authNotifierProvider).refreshSession(
+                    reason: AuthSessionRefreshReason.manualRetry,
+                  );
+            } catch (_) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'No pudimos actualizar tu sesión. Reintentá en unos segundos.',
+                  ),
+                ),
+              );
+              return;
+            }
+            ref.invalidate(ownerMerchantProvider);
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Sesión de acceso actualizada.')),
+            );
+          },
+          icon: const Icon(Icons.refresh),
+          label: const Text('Actualizar sesión'),
+        ),
       ],
     );
   }
@@ -537,16 +755,22 @@ class _OwnerDashboardNoMerchant extends StatelessWidget {
 class _OwnerDashboardBody extends ConsumerWidget {
   const _OwnerDashboardBody({
     required this.merchant,
-    required this.hasMultipleMerchants,
+    required this.allMerchants,
+    required this.selectedMerchantId,
+    required this.onSelectMerchant,
     required this.ownerPending,
   });
 
   final OwnerMerchantSummary merchant;
-  final bool hasMultipleMerchants;
+  final List<OwnerMerchantSummary> allMerchants;
+  final String? selectedMerchantId;
+  final ValueChanged<String> onSelectMerchant;
   final bool ownerPending;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ownerProductsEnabledAsync = ref.watch(ownerProductsEnabledProvider);
+    final ownerProductsEnabled = ownerProductsEnabledAsync.valueOrNull ?? true;
     final signalAsync = ref.watch(ownerOperationalSignalProvider(merchant.id));
     final signal = signalAsync.valueOrNull;
     final operationalSummary = resolveOperationalSummary(
@@ -562,13 +786,14 @@ class _OwnerDashboardBody extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
       children: [
-        _OwnerMerchantHeader(merchant: merchant),
+        _OwnerMerchantHeader(
+          merchant: merchant,
+          allMerchants: allMerchants,
+          selectedMerchantId: selectedMerchantId,
+          onSelectMerchant: onSelectMerchant,
+        ),
         const SizedBox(height: 14),
         _OperationalSummaryCard(summary: operationalSummary),
-        if (hasMultipleMerchants) ...[
-          const SizedBox(height: 12),
-          const _InconsistencyBanner(),
-        ],
         if (alerts.isNotEmpty) ...[
           const SizedBox(height: 14),
           _OwnerAlertsList(
@@ -581,6 +806,7 @@ class _OwnerDashboardBody extends ConsumerWidget {
         const SizedBox(height: 14),
         _OwnerQuickActions(
           merchant: merchant,
+          showProductsAction: ownerProductsEnabled,
           onActionTap: (actionId) {
             unawaited(
               OwnerDashboardAnalytics.logQuickActionTapped(
@@ -590,9 +816,15 @@ class _OwnerDashboardBody extends ConsumerWidget {
             );
           },
         ),
-        if (!merchant.hasProducts) ...[
+        if (ownerProductsEnabled) ...[
           const SizedBox(height: 14),
-          const _EmptyProductsCard(),
+          _CatalogAccessCard(
+            activeProductsCount: merchant.activeProductCount,
+          ),
+          if (!merchant.hasProducts) ...[
+            const SizedBox(height: 14),
+            const _EmptyProductsCard(),
+          ],
         ],
         const SizedBox(height: 10),
         Align(
@@ -614,12 +846,22 @@ class _OwnerDashboardBody extends ConsumerWidget {
 }
 
 class _OwnerMerchantHeader extends StatelessWidget {
-  const _OwnerMerchantHeader({required this.merchant});
+  const _OwnerMerchantHeader({
+    required this.merchant,
+    required this.allMerchants,
+    required this.selectedMerchantId,
+    required this.onSelectMerchant,
+  });
 
   final OwnerMerchantSummary merchant;
+  final List<OwnerMerchantSummary> allMerchants;
+  final String? selectedMerchantId;
+  final ValueChanged<String> onSelectMerchant;
 
   @override
   Widget build(BuildContext context) {
+    final hasMultipleMerchants = allMerchants.length > 1;
+    final selectedId = selectedMerchantId ?? merchant.id;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -633,49 +875,77 @@ class _OwnerMerchantHeader extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: AppColors.primary500,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.storefront, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(merchant.name, style: AppTextStyles.headingMd),
-                const SizedBox(height: 4),
-                Row(
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.primary500,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.storefront, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 14,
-                      color: AppColors.neutral600,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        merchant.locationLabel,
-                        style: AppTextStyles.bodySm,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    Text(merchant.name, style: AppTextStyles.headingMd),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: AppColors.neutral600,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            merchant.locationLabel,
+                            style: AppTextStyles.bodySm,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+              _VisibilityPill(
+                label: _visibilityLabel(merchant.visibilityStatus),
+                status: merchant.visibilityStatus,
+              ),
+            ],
+          ),
+          if (hasMultipleMerchants) ...[
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: allMerchants.any((item) => item.id == selectedId)
+                  ? selectedId
+                  : merchant.id,
+              items: allMerchants
+                  .map(
+                    (item) => DropdownMenuItem<String>(
+                      value: item.id,
+                      child: Text(item.name),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value == null || value.trim().isEmpty) return;
+                onSelectMerchant(value);
+              },
+              decoration: const InputDecoration(
+                labelText: 'Comercio activo',
+              ),
             ),
-          ),
-          _VisibilityPill(
-            label: _visibilityLabel(merchant.visibilityStatus),
-            status: merchant.visibilityStatus,
-          ),
+          ],
         ],
       ),
     );
@@ -1020,22 +1290,25 @@ class _StatusRow extends StatelessWidget {
 class _OwnerQuickActions extends StatelessWidget {
   const _OwnerQuickActions({
     required this.merchant,
+    required this.showProductsAction,
     required this.onActionTap,
   });
 
   final OwnerMerchantSummary merchant;
+  final bool showProductsAction;
   final void Function(String actionId) onActionTap;
 
   @override
   Widget build(BuildContext context) {
     final actions = <_OwnerAction>[
-      const _OwnerAction(
-        id: 'products',
-        label: 'Gestionar productos',
-        subtitle: 'Stock y precios',
-        icon: Icons.inventory_2_outlined,
-        route: AppRoutes.ownerProducts,
-      ),
+      if (showProductsAction)
+        const _OwnerAction(
+          id: 'products',
+          label: 'Mi catálogo',
+          subtitle: 'Productos y disponibilidad',
+          icon: Icons.inventory_2_outlined,
+          route: AppRoutes.ownerProducts,
+        ),
       const _OwnerAction(
         id: 'schedules',
         label: 'Editar horarios',
@@ -1173,6 +1446,126 @@ class _OwnerAction {
   final String route;
 }
 
+class _CatalogAccessCard extends StatelessWidget {
+  const _CatalogAccessCard({
+    required this.activeProductsCount,
+  });
+
+  final int activeProductsCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: AppColors.primary100,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppColors.primary700,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Tus productos',
+                  style: AppTextStyles.headingMd,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Mostrá qué tenés disponible en Tu zona',
+            style: AppTextStyles.bodyMd.copyWith(
+              color: AppColors.neutral700,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.neutral100,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$activeProductsCount',
+                        style: AppTextStyles.headingLg.copyWith(
+                          color: AppColors.neutral900,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'productos activos',
+                        style: AppTextStyles.bodySm.copyWith(
+                          color: AppColors.neutral700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.trending_up,
+                  color: AppColors.secondary500,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF0044AA), Color(0xFF0E5BD8)],
+                ),
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () => context.push(AppRoutes.ownerProducts),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  elevation: 0,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                icon: const Icon(Icons.arrow_forward),
+                label: const Text(
+                  'Gestionar catálogo',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptyProductsCard extends StatelessWidget {
   const _EmptyProductsCard();
 
@@ -1201,13 +1594,13 @@ class _EmptyProductsCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Tu catálogo está vacío',
+            'Todavía no cargaste productos',
             style: AppTextStyles.headingSm,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
           Text(
-            'Empezá cargando tu primer producto para que los vecinos te encuentren.',
+            'Mostrá qué tenés disponible para que los Vecinos te encuentren mejor.',
             style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
             textAlign: TextAlign.center,
           ),
@@ -1223,25 +1616,6 @@ class _EmptyProductsCard extends StatelessWidget {
             label: const Text('Agregar producto'),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _InconsistencyBanner extends StatelessWidget {
-  const _InconsistencyBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.warningBg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        'Detectamos más de un comercio asociado a tu usuario. Mostramos el más reciente.',
-        style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral800),
       ),
     );
   }
@@ -1286,3 +1660,15 @@ class _OwnerDashboardError extends StatelessWidget {
 }
 
 bool _isAdminRole(String role) => role == 'admin' || role == 'super_admin';
+
+class _OwnerLifecycleObserver extends WidgetsBindingObserver {
+  _OwnerLifecycleObserver(this.onResumed);
+
+  final Future<void> Function() onResumed;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    unawaited(onResumed());
+  }
+}

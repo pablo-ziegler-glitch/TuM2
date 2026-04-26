@@ -174,6 +174,63 @@ void main() {
       expect(notifier.state.activeZoneId, 'loma');
       expect(notifier.state.merchants.single.merchantId, 'zona-loma');
     });
+
+    test('reutiliza cache por zona dentro del bucket y ttl', () async {
+      final repository = _FakeOpenNowRepository(
+        zones: const [
+          OpenNowZone(zoneId: 'adro', name: 'Adrogue', cityId: 'banfield'),
+          OpenNowZone(zoneId: 'loma', name: 'Lomas', cityId: 'banfield'),
+        ],
+        openNowByZone: {
+          'adro': [
+            _merchant(id: 'zona-adro', name: 'Adro', verification: 'verified'),
+          ],
+          'loma': [
+            _merchant(id: 'zona-loma', name: 'Loma', verification: 'verified'),
+          ],
+        },
+      );
+      final notifier = OpenNowNotifier(
+        repository: repository,
+        analytics: _FakeOpenNowAnalytics(),
+        locationReader: const _FakeLocationReader(
+          OpenNowLocationReadResult(status: OpenNowLocationStatus.unavailable),
+        ),
+      );
+
+      await notifier.ensureInitialized();
+      await notifier.setZone('loma');
+      await notifier.setZone('adro');
+
+      expect(repository.openNowFetchCalls, 2);
+      expect(notifier.state.activeZoneId, 'adro');
+      expect(notifier.state.merchants.single.merchantId, 'zona-adro');
+    });
+
+    test('refresh ignora cache y vuelve a consultar', () async {
+      final repository = _FakeOpenNowRepository(
+        zones: const [
+          OpenNowZone(zoneId: 'adro', name: 'Adrogue', cityId: 'banfield'),
+        ],
+        openNowByZone: {
+          'adro': [
+            _merchant(id: 'zona-adro', name: 'Adro', verification: 'verified'),
+          ],
+        },
+      );
+      final notifier = OpenNowNotifier(
+        repository: repository,
+        analytics: _FakeOpenNowAnalytics(),
+        locationReader: const _FakeLocationReader(
+          OpenNowLocationReadResult(status: OpenNowLocationStatus.unavailable),
+        ),
+      );
+
+      await notifier.ensureInitialized();
+      expect(repository.openNowFetchCalls, 1);
+      await notifier.refresh();
+      expect(repository.openNowFetchCalls, 2);
+    });
   });
 }
 
@@ -217,6 +274,8 @@ class _FakeOpenNowRepository implements OpenNowDataSource {
   final List<OpenNowZone> zones;
   final Map<String, List<OpenNowMerchant>> _openNowByZone;
   final Map<String, List<OpenNowMerchant>> _fallbackByZone;
+  int openNowFetchCalls = 0;
+  int fallbackFetchCalls = 0;
 
   @override
   Future<List<OpenNowZone>> fetchZones() async => zones;
@@ -226,6 +285,7 @@ class _FakeOpenNowRepository implements OpenNowDataSource {
     required String zoneId,
     int limit = 200,
   }) async {
+    openNowFetchCalls++;
     final list = _openNowByZone[zoneId] ?? const [];
     return list.take(limit).toList(growable: false);
   }
@@ -235,6 +295,7 @@ class _FakeOpenNowRepository implements OpenNowDataSource {
     required String zoneId,
     int limit = 40,
   }) async {
+    fallbackFetchCalls++;
     final list = _fallbackByZone[zoneId] ?? const [];
     return list.take(limit).toList(growable: false);
   }

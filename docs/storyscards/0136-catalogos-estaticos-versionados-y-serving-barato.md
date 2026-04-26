@@ -1,189 +1,155 @@
-# TuM2-0136 — Catálogos estáticos versionados y serving barato (`zones`, taxonomías, reglas)
+# TuM2-0136 — Catálogos estáticos versionados y serving barato
 
-## 1. Estado y metadata
-- **Estado:** TODO
-- **Prioridad:** P0
-- **Dependencia madre:** TuM2-0135
+## Estado
+- Estado: DONE
+- Prioridad: P0
+- Fecha de cierre técnico: 2026-04-24
 
-## 2. Objetivo
-Sacar los catálogos estáticos del hot path de Firestore y servirlos mediante un esquema versionado/publicado de muy bajo costo, comenzando por `zones` y siguiendo por taxonomías y reglas semi-estáticas del MVP.
+## Objetivo cumplido
+Se removió `zones` del hot path de Firestore para runtime normal en mobile y admin web, reemplazándolo por:
+- seed local embebida
+- manifest remoto versionado
+- JSON versionado en Firebase Hosting
+- caché persistente local + memoria
+- búsqueda local normalizada
 
-## 3. Contexto
-`zones` hoy es un dominio delicado por dos razones:
-1. el selector actual tiene deuda conocida por usar lista hardcodeada,
-2. una migración ingenua a Firestore con 15k registros y lecturas repetidas sería una mala decisión económica.
+## Implementación aplicada
 
-Además de `zones`, TuM2 tiene otros datasets de naturaleza estática o casi estática:
-- categorías/rubros canónicos del MVP,
-- tipos de señales operativas,
-- reglas de evidencia por categoría,
-- labels y taxonomías operativas auxiliares.
+### 1) Publicación/versionado de catálogo
+- Se agregó publicador reproducible: `tools/catalogs/publish_zones_catalog.mjs`.
+- Soporta:
+  - `publish` por ambiente (`dev|staging|prod`) con versión explícita
+  - checksum `sha256-*`
+  - escritura de `manifest.json`
+  - escritura de `zones-vN.json`
+  - `rollback` a versión previa publicada (`--rollback --rollback-to N`)
+- Scripts npm:
+  - `npm run catalogs:zones:publish -- --env <env> --version <N>`
+  - `npm run catalogs:zones:publish -- --env prod --version <N> --update-seed`
+  - `npm run catalogs:zones:rollback -- --env <env> --rollback-to <N>`
+- Hardening de seguridad operativa:
+  - `--update-seed` pasó a ser opt-in (default `false`).
+  - `--update-seed` fuera de `prod` requiere `--allow-non-prod-seed` explícito.
 
-## 4. Problema
-Usar Firestore como serving directo para catálogos estáticos produce:
-- muchas lecturas repetidas del mismo dato,
-- mala latencia en selectores o filtros,
-- costo innecesario en admin/mobile/web,
-- tentación de listeners absurdos sobre datos que no cambian.
+### 2) Artefactos versionados por ambiente
+- Canonical source: `data/catalogs/zones/`.
+- Publicados por ambiente:
+  - `data/catalogs/zones/dev/*`
+  - `data/catalogs/zones/staging/*`
+  - `data/catalogs/zones/prod/*`
+- Cada ambiente tiene su `manifest.json`, historial `versions/zones-vN.json` y metadata de rollback.
 
-## 5. User stories
-### Como usuario
-quiero que el selector de zonas abra rápido y funcione sin esperas absurdas.
+### 3) Serving estático en Hosting
+- Se espejan artefactos en:
+  - `mobile/web/catalogs/zones/<env>/...` (hosting target `web`)
+  - `web/web/catalogs/zones/<env>/...` (hosting target `admin`)
+- Runtime consulta:
+  - `/catalogs/zones/<env>/manifest.json`
+  - y descarga condicional de `zones-vN.json` cuando cambia versión (upgrade o rollback).
 
-### Como admin
-quiero publicar una nueva versión de catálogo sin forzar a que cada apertura me cueste miles de lecturas.
+### 4) Seed local y fallback
+- Seed embebida en:
+  - `mobile/assets/catalogs/zones/seed/zones-seed.json`
+  - `web/assets/catalogs/zones/seed/zones-seed.json`
+- Se usa para primer arranque/fallo de red.
+- Se conserva catálogo previo ante:
+  - falla de manifest
+  - payload inválido
+  - checksum mismatch.
+- Si el manifest publicado hace rollback (`version` menor), el cliente aplica downgrade y persiste la versión validada.
 
-### Como equipo
-quiero que `zones` y otras taxonomías tengan costo casi nulo en runtime.
+### 5) Repositorio de catálogo mobile
+- Nuevo: `mobile/lib/core/catalog/zones_catalog_repository.dart`.
+- Incluye:
+  - carga seed/cache/remoto
+  - TTL de chequeo de manifest
+  - validación de checksum
+  - caché persistente (`SharedPreferences`)
+  - caché memoria
+  - índice de búsqueda local precomputado por versión de catálogo
+  - búsqueda local normalizada.
 
-## 6. Alcance IN
-- resolver `zones` con publicación versionada,
-- definir formato de `zones.json`,
-- definir manifiesto/versionado,
-- definir repositorio Flutter para consumo local,
-- habilitar uso en mobile, web pública y admin web,
-- incluir taxonomías y reglas estáticas elegibles.
+### 6) Migración de consumidores mobile
+- `ZoneSelectorSheet` migrado a catálogo real:
+  - sin hardcode
+  - búsqueda local
+  - navegación jerárquica provincia → departamento → localidad
+- Repositorios migrados a catálogo versionado:
+  - `ZoneSearchRepository`
+  - `ZonesRepository` (farmacias)
+  - `OpenNowRepository` (zonas)
+  - `GooglePlacesService.resolveZone` (onboarding owner)
+- Se elimina lectura Firestore de `zones` en estos flujos.
 
-## 7. Alcance OUT
-- editor admin complejo de cartografía,
-- edición colaborativa en vivo del catálogo,
-- geosearch avanzado Post-MVP.
+### 7) Admin web alineado a la misma fuente lógica
+- Nuevo cliente: `web/lib/core/catalog/zones_catalog_client.dart`.
+- `ImportDataRepository.fetchAvailableZones()` deja de leer Firestore `zones` y usa catálogo versionado.
+- Hardening:
+  - timeout de red para `manifest` y payload
+  - dedupe de cargas concurrentes (`in-flight`) para evitar requests duplicadas
 
-## 8. Decisión canónica
-### 8.1 Estrategia elegida
-**Hosting + JSON versionado/publicado + cache de navegador/cliente + invalidación por versión**
-
-### 8.2 Alternativas evaluadas
-- Firestore directo: más caro y peor para este dominio.
-- Firestore bundle: válido, pero para MVP la solución JSON versionado/publicado en Hosting es más simple operativamente.
-- Asset embebido puro: extremadamente barato, pero obliga a deploy para cada cambio.
-
-### 8.3 Conclusión
-Se elige una solución híbrida:
-- fuente editorial/admin: dataset fuente en repositorio o pipeline interno de publicación,
-- serving runtime: archivo JSON versionado en Hosting,
-- invalidación: doc/manifiesto mínimo o Remote Config con `zones_catalog_version`.
-
-## 9. Arquitectura propuesta
-```text
-dataset fuente (manual/admin/pipeline)
-            |
-            v
-publicación controlada
-            |
-            v
-Firebase Hosting
-  /catalogs/zones/v{N}/zones.json
-  /catalogs/zones/manifest.json
-            |
-            v
-Flutter repos
-  memory cache + persistent metadata
-            |
-            v
-UI local con búsqueda jerárquica
-```
-
-## 10. Frontend
-- descargar `manifest.json`,
-- comparar `version`,
-- si cambió, descargar JSON nuevo,
-- guardar metadata local,
-- usar dataset en memoria para búsqueda.
-Modelo de interacción:
-- selector jerárquico: provincia → departamento → ciudad
-- búsqueda local normalizada,
-- sin requests por cada tecla.
-
-## 11. Backend
-Flujo de publicación:
-1. validar dataset fuente,
-2. generar `zones.json`,
-3. generar `manifest.json`,
-4. publicar a Hosting,
-5. actualizar `zones_catalog_version` en Remote Config o doc mínimo.
-
-### Formato sugerido
-#### `manifest.json`
-```json
-{
-  "catalog": "zones",
-  "version": 3,
-  "publishedAt": "2026-04-23T00:00:00Z",
-  "path": "/catalogs/zones/v3/zones.json",
-  "checksum": "sha256:..."
-}
-```
-
-## 12. Seguridad
-- `zones.json` es público y no contiene información sensible.
-- la publicación debe estar protegida del lado admin/pipeline,
-- no se habilita escritura cliente,
-- no se expone pipeline de publicación a clientes anónimos.
-
-## 13. UX / Producto
-- el selector debe sentirse instantáneo,
-- si hay actualización, debe aplicarse sin fricción,
-- si falla la descarga de una nueva versión, se usa la versión anterior.
-
-## 14. Datos impactados
-- `zones`
-- `manifest.json` / catálogo publicado
-- Remote Config o doc mínimo de versión
-- `ZoneSelectorSheet`
-
-## 15. APIs y servicios
-- Firebase Hosting
-- Remote Config o doc mínimo
-- repositorios Flutter
-- utilidades de normalización de texto UTF-8
-
-## 16. Analytics
-Eventos sugeridos:
-- `zones_catalog_manifest_fetched`
+## Analytics integrado
+Se incorporaron eventos de catálogo/selector en mobile:
+- `zones_catalog_load_started`
+- `zones_catalog_load_succeeded`
+- `zones_catalog_load_failed`
+- `zones_catalog_manifest_checked`
 - `zones_catalog_updated`
-- `zones_catalog_update_failed`
 - `zone_selector_opened`
-- `zone_selector_search_used`
+- `zone_selected`
+- `zone_search_local_used`
 
-## 17. Testing
-- parser de manifest,
-- parser de catálogo,
-- normalización de búsqueda,
-- invalidación por versión,
-- fallback a catálogo anterior,
-- Hosting fetch,
-- cache local,
-- E2E de sesión fría/caliente/offline.
+Se habilitaron también en allowlist de `AnalyticsService`.
 
-## 18. DevOps
-- pipeline de publicación de catálogo,
-- checksum obligatorio,
-- rollback simple por versión anterior,
-- hosting headers con cache control adecuados.
+## Testing y validación
 
-## 19. Riesgos
-- JSON excesivamente grande si se modela mal,
-- parser lento si no se optimiza estructura,
-- invalidación defectuosa.
+### Mobile
+- Unit tests nuevos:
+  - `mobile/test/core/catalog/zones_catalog_repository_test.dart`
+    - seed fallback
+    - update por versión nueva
+    - fallback ante checksum inválido
+    - no descarga payload cuando `manifest.version` no cambia
+    - aplica rollback remoto cuando `manifest.version` baja
+  - `mobile/test/modules/home/open_now_notifier_test.dart`
+    - reutiliza cache por zona dentro de TTL/bucket
+    - `refresh()` ignora cache y reconsulta
 
-## 20. Definition of Done
-- `ZoneSelectorSheet` consume catálogo real no hardcodeado,
-- `zones` no usa snapshots ni Firestore hot path,
-- catálogo versionado/publicado operativo,
-- búsqueda local normalizada funcionando.
+### Web Admin
+- Unit tests nuevos:
+  - `web/test/core/catalog/zones_catalog_client_test.dart`
+    - dedupe de cargas concurrentes en cliente de catálogo
+- Tests existentes en verde:
+  - `search_notifier_test.dart`
+  - `pharmacy_duty_notifier_test.dart`
 
-## 21. Rollout
-1. publicar versión inicial,
-2. migrar primero admin web,
-3. luego mobile,
-4. luego web pública,
-5. remover hardcodes y feature flag legacy.
+### Análisis estático
+- `flutter analyze` en `mobile`: sin issues.
+- `flutter analyze` en `web`: sin issues.
 
-## 22. Checklist final
-- [ ] `zones` fuera de Firestore runtime hot path
-- [ ] manifest y catálogo versionados
-- [ ] selector jerárquico real
-- [ ] búsqueda local
-- [ ] fallback offline
-- [ ] rollback por versión
+## Costo/runtime
+- Runtime normal de selector de zonas y consumos equivalentes:
+  - 0 lecturas Firestore para servir catálogo de zonas
+  - 0 listeners/snapshots sobre `zones`
+  - 0 queries por tecleo de búsqueda de zonas
+- Se eliminó residual legacy de lectura Firestore de zonas (`ZonesCacheService`) para evitar regresiones de costo.
+- `OpenNow` incorpora cache local por zona con TTL + bucket temporal para reducir lecturas repetidas en navegación normal.
+- Firestore queda disponible para fuente editorial/procesos internos, no como canal caliente de serving.
+
+## Riesgos residuales
+- El catálogo editorial inicial actual del repo es acotado (31 zonas); escalar a cobertura nacional completa depende del input editorial final.
+- El flujo de publicación debe ejecutarse en CI/CD operativo para asegurar consistencia de versiones entre ambientes.
+
+## DoD contra checklist
+- [x] `ZoneSelectorSheet` sin hardcode
+- [x] runtime normal sin Firestore para `zones`
+- [x] manifest versionado
+- [x] JSON versionado publicado
+- [x] seed local
+- [x] caché persistente local
+- [x] búsqueda local
+- [x] fallback offline con última versión válida
+- [x] misma fuente lógica mobile/web/admin
+- [x] tests de parser/versionado/fallback
+- [x] rollback de versión publicada
+- [x] documentación actualizada

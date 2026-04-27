@@ -47,8 +47,9 @@ class MerchantVisualStateMappers {
       categoryLabel:
           merchant.categoryName.trim().isEmpty ? null : merchant.categoryName,
       claimState: null,
-      hasSufficientScheduleInfo: merchant.scheduleSummary?.hasSchedule == true ||
-          merchant.effectiveScheduleLabel.trim().isNotEmpty,
+      hasSufficientScheduleInfo:
+          merchant.scheduleSummary?.hasSchedule == true ||
+              merchant.effectiveScheduleLabel.trim().isNotEmpty,
       manualOverrideMode: merchant.manualOverrideMode,
       informational: merchant.manualOverrideMode == 'informational',
     );

@@ -95,8 +95,8 @@ class MerchantScheduleSummary {
             .toList(growable: false)
         : const <MerchantScheduleSummaryWindow>[];
     return MerchantScheduleSummary(
-      timezone:
-          (map['timezone'] as String?)?.trim() ?? 'America/Argentina/Buenos_Aires',
+      timezone: (map['timezone'] as String?)?.trim() ??
+          'America/Argentina/Buenos_Aires',
       todayWindows: windows,
       hasSchedule: map['hasSchedule'] == true,
       scheduleLastUpdatedAt: _asDateTime(map['scheduleLastUpdatedAt']),

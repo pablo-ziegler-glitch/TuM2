@@ -224,7 +224,8 @@ final trustBadgesSearchEnabledProvider = FutureProvider<bool>((ref) async {
   );
 });
 
-final clientOpenStatusResolutionEnabledProvider = FutureProvider<bool>((ref) async {
+final clientOpenStatusResolutionEnabledProvider =
+    FutureProvider<bool>((ref) async {
   final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
   return _resolveFeatureFlag(
     remoteConfig: remoteConfig,

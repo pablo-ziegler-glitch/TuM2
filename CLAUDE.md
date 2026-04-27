@@ -13,6 +13,7 @@
 
 ## Actualización técnica reciente (2026-04-26)
 
+- **[0013] Sellos operativos y de confianza costo-eficientes**: backend con `TrustBadgeId` + `computeTrustBadges` + `primaryTrustBadge` + `sortBoost` puro (tope 120), proyección de `scheduleSummary/nextTransitionAt` en `merchant_public`, job `nightlyRefreshOpenStatuses` migrado a query scoped (`nextTransitionAt <= now`, `limit 300`) y mobile con `TrustBadgeChip/TrustBadgeRow` + helper local `resolveOperationalStatus` sin listeners ni writes adicionales.
 - **[0012] Diseñar app icon**: integración del ícono productivo base en Android + Web/PWA de `mobile`; variante Mundialista versionada como promocional no activa por defecto, con documentación y rollback.
 - **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
 - **[0065] Alta/edición de productos OWNER**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
@@ -549,10 +550,11 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0082] Integraciones cruzadas: 0056/0057/0061/0083 cableadas a nueva taxonomía (`search_performed`, `category_filtered`, `nearby_bootstrap_*`, `map_*`, `operator_call_click`, `directions_opened`, `pharmacy_duty_feedback_*`, `report_*`, `claim_*`) priorizando `entity_zone_id` para acciones sobre entidad.
 - [0082] Hardening de seguridad analytics (2026-04-23): allowlist estricta de eventos/parámetros, bloqueo por fragmentos sensibles en keys/values, bloqueo de URLs y descarte por defecto de payload fuera de contrato para reducir superficie de exfiltración.
 - [0082] Migración legacy complementaria (2026-04-23): wrappers de auth/onboarding/open-now/owner/claim migrados a `AnalyticsService` central; `firebase_analytics` directo queda encapsulado en backend único.
-- [0082] Hardening adicional (2026-04-23): bloqueo explícito de identificadores directos en payload (`merchant_id`, `product_id`, `merchant_ref`, `user_id`, `uid`, `device_id`, `session_id`) y test unitario dedicado.
+- [0082] Hardening adicional (2026-04-23): bloqueo explícito de identificadores directos en payload (snake_case + camelCase: `merchant_id/merchantId`, `product_id/productId`, `merchant_ref/merchantRef`, `user_id/userId`, `uid`, `device_id/deviceId`, `session_id/sessionId`) y test unitario dedicado.
 - [0082] Cobertura adicional de acciones core en detalle de farmacia (`operator_call_click`, `directions_opened`) sin listeners ni lecturas extra.
 - [0082] Merchant Detail migrado a capa segura: acciones core pasan por `AnalyticsService` y se elimina emisión de `merchant_id` en payload analytics.
 - [0082] Impacto documental sincronizado para 0035/0100/0101 y seguimiento explícito de dependencias 0035/0056/0057/0061/0100/0101/0083.
+- [0082] Alineación canónica 0082↔0083 (2026-04-27): deprecados/no emitidos `map_recenter_tapped`, `map_search_this_area_tapped` y `claim_evidence_uploaded`; prioridad de señal territorial (`entity_zone_id`) sin IDs directos en analytics.
 - [0056] Implementar búsqueda de comercios: estado final DONE (cerrada el 2026-04-07).
 - [0056] Mobile quedó recompuesto y compilable: modelos/repositorios de búsqueda, notifier con ranking y filtros MVP, exclusión de panadería/confitería, rutas de búsqueda activas y analytics safe.
 - [0056] Se agregó cobertura unitaria en Flutter para SearchNotifier (inicialización, normalización, filtros open-now, ranking, y consistencia lista/mapa).

@@ -24,7 +24,7 @@ extension OperationalSignalTypeX on OperationalSignalType {
       case OperationalSignalType.none:
         return 'Sin señal activa';
       case OperationalSignalType.vacation:
-        return 'De vacaciones';
+        return 'Cerrado por vacaciones';
       case OperationalSignalType.temporaryClosure:
         return 'Cerrado temporalmente';
       case OperationalSignalType.delay:

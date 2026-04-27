@@ -6,6 +6,20 @@ final _hhmmRegex = RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$');
 
 bool isValidTime(String value) => _hhmmRegex.hasMatch(value);
 
+bool isContinuous24h({
+  required DayScheduleMode mode,
+  required String? firstOpen,
+  required String? firstClose,
+  required String? secondOpen,
+  required String? secondClose,
+}) {
+  return mode == DayScheduleMode.continuous &&
+      firstOpen == '00:00' &&
+      firstClose == '23:59' &&
+      !_present(secondOpen) &&
+      !_present(secondClose);
+}
+
 int hhmmToMinutes(String value) {
   final parts = value.split(':');
   final hours = int.tryParse(parts.first) ?? 0;
@@ -104,6 +118,15 @@ List<TimeBlock> exceptionBlocks(ScheduleExceptionDraft exception) {
 
 String daySummary(DayScheduleDraft day) {
   if (day.mode == DayScheduleMode.closed) return 'Cerrado';
+  if (isContinuous24h(
+    mode: day.mode,
+    firstOpen: day.firstOpen,
+    firstClose: day.firstClose,
+    secondOpen: day.secondOpen,
+    secondClose: day.secondClose,
+  )) {
+    return '24 hs';
+  }
   if (day.mode == DayScheduleMode.continuous &&
       _present(day.firstOpen) &&
       _present(day.firstClose)) {

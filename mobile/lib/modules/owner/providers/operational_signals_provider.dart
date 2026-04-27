@@ -163,12 +163,19 @@ class OperationalSignalsNotifier
   }
 
   void setDraftSignalType(OperationalSignalType type) {
+    final previousType = state.draftSignalType;
     state = state.copyWith(
       draftSignalType: type,
       saveStatus: OperationalSignalsSaveStatus.idle,
       clearValidationError: true,
       clearMessage: true,
     );
+    if (type != OperationalSignalType.none && type != previousType) {
+      unawaited(OwnerOperationalSignalsAnalytics.logCreateStarted(
+        merchantId: state.merchantId,
+        signalType: type,
+      ));
+    }
   }
 
   void setDraftMessage(String value) {
@@ -234,15 +241,15 @@ class OperationalSignalsNotifier
         isInitialLoading: false,
         isSaving: false,
         saveStatus: OperationalSignalsSaveStatus.success,
-        message: 'Señal operativa guardada.',
+        message: 'Aviso activo para los Vecinos.',
         lastSuccessfulSaveAt: resolved.updatedAt,
       );
       unawaited(OwnerOperationalSignalsAnalytics.logSaved(
         merchantId: state.merchantId,
         payload: OperationalSignalsAnalyticsPayload(
           signalType: signalType,
-          isActive: true,
-          forceClosed: signalType.forcesClosed,
+          hasMessage: message.isNotEmpty,
+          hasEndDate: false,
         ),
       ));
       unawaited(_refreshSignalFromRepositoryBestEffort());
@@ -253,7 +260,8 @@ class OperationalSignalsNotifier
       );
     } catch (_) {
       _setSaveError(
-        message: 'No pudimos guardar la señal. Revisá tu conexión.',
+        message:
+            'No pudimos guardar los cambios. Revisá tu conexión y probá de nuevo.',
         reason: 'network_or_backend_error',
       );
     }
@@ -291,7 +299,7 @@ class OperationalSignalsNotifier
         isInitialLoading: false,
         isSaving: false,
         saveStatus: OperationalSignalsSaveStatus.success,
-        message: 'Señal operativa desactivada.',
+        message: 'Aviso desactivado.',
         lastSuccessfulSaveAt: resolved.updatedAt,
       );
       unawaited(OwnerOperationalSignalsAnalytics.logDisabled(
@@ -305,7 +313,8 @@ class OperationalSignalsNotifier
       );
     } catch (_) {
       _setSaveError(
-        message: 'No pudimos desactivar la señal. Revisá tu conexión.',
+        message:
+            'No pudimos guardar los cambios. Revisá tu conexión y probá de nuevo.',
         reason: 'network_or_backend_error',
       );
     }
@@ -333,8 +342,8 @@ class OperationalSignalsNotifier
       reason: reason,
       payload: OperationalSignalsAnalyticsPayload(
         signalType: state.draftSignalType,
-        isActive: state.draftSignalType != OperationalSignalType.none,
-        forceClosed: state.draftSignalType.forcesClosed,
+        hasMessage: state.draftMessage.trim().isNotEmpty,
+        hasEndDate: false,
       ),
     ));
   }

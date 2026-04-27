@@ -6,9 +6,23 @@ abstract class OwnerOperationalSignalsAnalytics {
     required String merchantId,
   }) =>
       _safeLog(
-        'owner_operational_signal_opened',
+        'owner_signal_viewed',
         parameters: {
-          'merchant_id': merchantId,
+          'merchantId': merchantId,
+          'source_screen': 'owner_signals',
+        },
+      );
+
+  static Future<void> logCreateStarted({
+    required String merchantId,
+    required OperationalSignalType signalType,
+  }) =>
+      _safeLog(
+        'owner_signal_create_started',
+        parameters: {
+          'merchantId': merchantId,
+          'signal_type': signalType.firestoreValue,
+          'source_screen': 'owner_signals',
         },
       );
 
@@ -17,21 +31,13 @@ abstract class OwnerOperationalSignalsAnalytics {
     required OperationalSignalsAnalyticsPayload payload,
   }) async {
     await _safeLog(
-      'owner_operational_signal_saved',
+      'owner_signal_activated',
       parameters: {
-        'merchant_id': merchantId,
+        'merchantId': merchantId,
         'signal_type': payload.signalType.firestoreValue,
-        'is_active': payload.isActive,
-        'force_closed': payload.forceClosed,
-        'save_result': 'success',
+        'has_message': payload.hasMessage,
+        'has_end_date': payload.hasEndDate,
         'source_screen': 'owner_signals',
-      },
-    );
-    await _safeLog(
-      'senal_creada',
-      parameters: {
-        'merchant_id': merchantId,
-        'signal_type': payload.signalType.firestoreValue,
       },
     );
   }
@@ -40,19 +46,26 @@ abstract class OwnerOperationalSignalsAnalytics {
     required String merchantId,
   }) async {
     await _safeLog(
-      'owner_operational_signal_disabled',
+      'owner_signal_deactivated',
       parameters: {
-        'merchant_id': merchantId,
+        'merchantId': merchantId,
         'source_screen': 'owner_signals',
       },
     );
-    await _safeLog(
-      'senal_desactivada',
-      parameters: {
-        'merchant_id': merchantId,
-      },
-    );
   }
+
+  static Future<void> logOperationalPreviewViewed({
+    required String merchantId,
+    required OperationalSignalType signalType,
+  }) =>
+      _safeLog(
+        'owner_operational_preview_viewed',
+        parameters: {
+          'merchantId': merchantId,
+          'signal_type': signalType.firestoreValue,
+          'source_screen': 'owner_signals',
+        },
+      );
 
   static Future<void> logSaveFailed({
     required String merchantId,
@@ -60,13 +73,12 @@ abstract class OwnerOperationalSignalsAnalytics {
     required OperationalSignalsAnalyticsPayload payload,
   }) =>
       _safeLog(
-        'owner_operational_signal_save_failed',
+        'owner_signal_save_failed',
         parameters: {
-          'merchant_id': merchantId,
+          'merchantId': merchantId,
           'signal_type': payload.signalType.firestoreValue,
-          'is_active': payload.isActive,
-          'force_closed': payload.forceClosed,
-          'save_result': 'error',
+          'has_message': payload.hasMessage,
+          'has_end_date': payload.hasEndDate,
           'source_screen': 'owner_signals',
           'reason': reason,
         },
@@ -90,11 +102,11 @@ abstract class OwnerOperationalSignalsAnalytics {
 class OperationalSignalsAnalyticsPayload {
   const OperationalSignalsAnalyticsPayload({
     required this.signalType,
-    required this.isActive,
-    required this.forceClosed,
+    required this.hasMessage,
+    required this.hasEndDate,
   });
 
   final OperationalSignalType signalType;
-  final bool isActive;
-  final bool forceClosed;
+  final bool hasMessage;
+  final bool hasEndDate;
 }

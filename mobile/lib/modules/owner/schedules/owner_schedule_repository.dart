@@ -19,11 +19,15 @@ class OwnerScheduleRepository {
     final exceptionsRef = _firestore
         .collection('merchants')
         .doc(merchantId)
-        .collection('schedule_exceptions');
+        .collection('schedule_exceptions')
+        .orderBy('date')
+        .limit(120);
     final closuresRef = _firestore
         .collection('merchants')
         .doc(merchantId)
-        .collection('schedule_exceptions_ranges');
+        .collection('schedule_exceptions_ranges')
+        .orderBy('startDate')
+        .limit(120);
 
     final results = await Future.wait([
       weeklyRef.get(),

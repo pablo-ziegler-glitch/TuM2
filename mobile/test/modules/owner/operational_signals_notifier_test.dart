@@ -159,6 +159,20 @@ void main() {
       expect(notifier.state.hasError, isTrue);
       expect(notifier.state.message, contains('No pudimos guardar'));
     });
+
+    test('rechaza mensaje mayor a 80 caracteres', () async {
+      final dataSource = _FakeDataSource();
+      final notifier = _buildNotifier(dataSource);
+      await _waitForLoad(notifier);
+
+      notifier.setDraftSignalType(OperationalSignalType.delay);
+      notifier.setDraftMessage('a' * 81);
+      await notifier.saveDraft();
+
+      expect(notifier.state.hasError, isTrue);
+      expect(notifier.state.validationError, contains('hasta 80 caracteres'));
+      expect(dataSource.savedType, isNull);
+    });
   });
 }
 

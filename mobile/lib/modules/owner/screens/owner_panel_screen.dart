@@ -1311,15 +1311,17 @@ class _OwnerQuickActions extends StatelessWidget {
         ),
       const _OwnerAction(
         id: 'schedules',
-        label: 'Editar horarios',
-        subtitle: 'Atención y apertura',
+        label: 'Horarios',
+        subtitle: 'Definí cuándo atendés normalmente.',
+        ctaLabel: 'Editar horarios',
         icon: Icons.schedule_outlined,
         route: AppRoutes.ownerSchedules,
       ),
       const _OwnerAction(
         id: 'signals',
-        label: 'Señales operativas',
-        subtitle: 'Estados del comercio',
+        label: 'Avisos de hoy',
+        subtitle: 'Informá si cerrás, abrís más tarde o estás de vacaciones.',
+        ctaLabel: 'Avisar cambio',
         icon: Icons.campaign_outlined,
         route: AppRoutes.ownerSignals,
       ),
@@ -1423,6 +1425,17 @@ class _OwnerActionCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+            if (action.ctaLabel != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                action.ctaLabel!,
+                style: AppTextStyles.labelSm.copyWith(
+                  color: AppColors.primary600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
       ),
@@ -1435,6 +1448,7 @@ class _OwnerAction {
     required this.id,
     required this.label,
     required this.subtitle,
+    this.ctaLabel,
     required this.icon,
     required this.route,
   });
@@ -1442,6 +1456,7 @@ class _OwnerAction {
   final String id;
   final String label;
   final String subtitle;
+  final String? ctaLabel;
   final IconData icon;
   final String route;
 }

@@ -1305,8 +1305,9 @@ class _OwnerQuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasActiveSignal = signal?.hasActiveSignal == true;
-    final signalTypeLabel =
-        signal?.signalType.publicLabel ?? 'Sin señal activa';
+    final signalTypeLabel = signal == null
+        ? ownerOperationalSignalLabel(OperationalSignalType.none)
+        : ownerOperationalSignalLabel(signal!.signalType);
     final actions = <_OwnerAction>[
       if (showProductsAction)
         const _OwnerAction(
@@ -1441,7 +1442,7 @@ class _OwnerActionCard extends StatelessWidget {
               Text(
                 action.ctaLabel!,
                 style: AppTextStyles.labelSm.copyWith(
-                  color: AppColors.primary700,
+                  color: AppColors.primary600,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

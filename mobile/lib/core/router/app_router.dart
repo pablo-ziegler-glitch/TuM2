@@ -404,7 +404,7 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: AppRoutes.ownerSchedules,
       builder: (_, __) => const OwnerAccessGuardPage(
-        title: 'Editar horarios',
+        title: 'Horarios',
         child: OwnerScheduleScreen(),
       ),
     ),

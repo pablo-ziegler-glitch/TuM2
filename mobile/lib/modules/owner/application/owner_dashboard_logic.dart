@@ -40,6 +40,19 @@ class OwnerOperationalSummary {
   final bool isSpecialCondition;
 }
 
+String ownerOperationalSignalLabel(OperationalSignalType type) {
+  switch (type) {
+    case OperationalSignalType.vacation:
+      return 'De vacaciones';
+    case OperationalSignalType.temporaryClosure:
+      return 'Cerrado temporalmente';
+    case OperationalSignalType.delay:
+      return 'Abre más tarde';
+    case OperationalSignalType.none:
+      return 'Sin señal activa';
+  }
+}
+
 OwnerOperationalSummary resolveOperationalSummary({
   required OwnerMerchantSummary merchant,
   required OwnerOperationalSignal? signal,
@@ -67,7 +80,8 @@ OwnerOperationalSummary resolveOperationalSummary({
     if (activeSignal.forceClosed) {
       final detail = (activeSignal.message ?? '').trim();
       return OwnerOperationalSummary(
-        title: 'Aviso activo: ${activeSignal.signalType.publicLabel}',
+        title:
+            'Aviso activo: ${ownerOperationalSignalLabel(activeSignal.signalType)}',
         subtitle: detail.isEmpty
             ? 'Fuente: aviso activo. Los vecinos ven este aviso en tu comercio.'
             : 'Fuente: aviso activo. $detail',

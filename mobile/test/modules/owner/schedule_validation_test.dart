@@ -54,4 +54,18 @@ void main() {
       expect(validateTemporaryClosure(closure), isNotNull);
     });
   });
+
+  group('daySummary', () {
+    test('muestra 24 hs cuando el bloque es continuo de todo el día', () {
+      const day = DayScheduleDraft(
+        dayKey: 'wednesday',
+        dayLabel: 'Miércoles',
+        mode: DayScheduleMode.continuous,
+        firstOpen: '00:00',
+        firstClose: '23:59',
+      );
+
+      expect(daySummary(day), '24 hs');
+    });
+  });
 }

@@ -24,6 +24,7 @@ class _OwnerOperationalSignalsScreenState
     extends ConsumerState<OwnerOperationalSignalsScreen> {
   final _messageController = TextEditingController();
   bool _openedLogged = false;
+  bool _previewLogged = false;
 
   @override
   void dispose() {
@@ -59,6 +60,12 @@ class _OwnerOperationalSignalsScreenState
         ),
       ),
       data: (resolution) {
+        if (authState is AuthAuthenticated && authState.ownerPending) {
+          return const _SignalsScaffold(
+            child: _PendingBlockedCard(),
+          );
+        }
+
         final merchant = resolution.primaryMerchant;
         if (merchant == null) {
           return const _SignalsScaffold(
@@ -76,6 +83,11 @@ class _OwnerOperationalSignalsScreenState
         final notifier =
             ref.read(operationalSignalsNotifierProvider(scope).notifier);
         _logOpenedOnce(merchant.id);
+        _logPreviewOnce(
+          merchantId: merchant.id,
+          signalType: state.draftSignalType,
+          isInitialLoading: state.isInitialLoading,
+        );
 
         if (_messageController.text != state.draftMessage) {
           _messageController.text = state.draftMessage;
@@ -154,9 +166,9 @@ class _OwnerOperationalSignalsScreenState
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('¿Desactivar señal operativa?'),
+          title: const Text('¿Desactivar aviso?'),
           content: const Text(
-            'Tu comercio volverá a mostrarse según el cálculo automático de horarios.',
+            'Tu Comercio volverá a mostrarse según tus horarios habituales.',
           ),
           actions: [
             TextButton(
@@ -165,7 +177,7 @@ class _OwnerOperationalSignalsScreenState
             ),
             FilledButton.tonal(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Desactivar'),
+              child: const Text('Desactivar aviso'),
             ),
           ],
         );
@@ -174,6 +186,21 @@ class _OwnerOperationalSignalsScreenState
     if (confirmed == true) {
       await onConfirm();
     }
+  }
+
+  void _logPreviewOnce({
+    required String merchantId,
+    required OperationalSignalType signalType,
+    required bool isInitialLoading,
+  }) {
+    if (_previewLogged || isInitialLoading) return;
+    _previewLogged = true;
+    unawaited(
+      OwnerOperationalSignalsAnalytics.logOperationalPreviewViewed(
+        merchantId: merchantId,
+        signalType: signalType,
+      ),
+    );
   }
 }
 
@@ -190,7 +217,7 @@ class _SignalsScaffold extends StatelessWidget {
         backgroundColor: AppColors.surface,
         elevation: 0,
         title: Text(
-          'TuM2 Operaciones',
+          'Señales operativas',
           style: AppTextStyles.headingSm.copyWith(
             color: AppColors.primary600,
           ),
@@ -286,38 +313,38 @@ class _EmptySignalsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Informá situaciones especiales',
+            'Señales operativas',
             style:
                 AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
-            'Si hoy tu comercio opera distinto a lo habitual, podés avisarlo en segundos.',
+            'Avisá algo puntual para que los Vecinos vean información actualizada.',
             style: AppTextStyles.bodyMd.copyWith(color: AppColors.neutral700),
           ),
           const SizedBox(height: 14),
           ElevatedButton.icon(
             onPressed: onCreatePressed,
             icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Crear señal'),
+            label: const Text('Avisar cambio'),
           ),
           const SizedBox(height: 16),
           const _TipTile(
-            icon: Icons.schedule,
-            title: 'Horarios',
-            body: '¿Abrís más tarde o cerrás antes? Avisá el cambio temporal.',
+            icon: Icons.beach_access,
+            title: 'Cerrado por vacaciones',
+            body: 'Para varios días o cierres estacionales.',
           ),
           const SizedBox(height: 10),
           const _TipTile(
-            icon: Icons.delivery_dining,
-            title: 'Logística',
-            body: 'Informá demoras operativas para evitar falsas expectativas.',
+            icon: Icons.lock_clock,
+            title: 'Cerrado temporalmente',
+            body: 'Para un cierre puntual por mantenimiento o imprevistos.',
           ),
           const SizedBox(height: 10),
           const _TipTile(
-            icon: Icons.new_releases_outlined,
-            title: 'Novedades',
-            body: 'Publicá excepciones reales y mantené información confiable.',
+            icon: Icons.update,
+            title: 'Abre más tarde',
+            body: 'Para avisar una demora puntual en la apertura.',
           ),
         ],
       ),
@@ -399,21 +426,12 @@ class _OperationalFormSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'PASO 01',
-          style: AppTextStyles.labelSm.copyWith(
-            color: AppColors.primary600,
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '¿Qué tipo de señal deseas configurar?',
+          'Señales operativas',
           style: AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 8),
         Text(
-          'Seleccioná el motivo para ajustar la visibilidad pública.',
+          'Avisá algo puntual para que los Vecinos vean información actualizada.',
           style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
         ),
         const SizedBox(height: 12),
@@ -422,18 +440,14 @@ class _OperationalFormSection extends StatelessWidget {
           onChanged: onTypeChanged,
         ),
         const SizedBox(height: 16),
-        Text(
-          'PASO 02',
-          style: AppTextStyles.labelSm.copyWith(
-            color: AppColors.primary600,
-            letterSpacing: 1.2,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 6),
         const Text(
-          'Mensaje breve para vecinos',
+          'Mensaje para los Vecinos',
           style: AppTextStyles.labelMd,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Opcional. Máximo $operationalSignalMaxMessageLength caracteres.',
+          style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -467,7 +481,7 @@ class _OperationalFormSection extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: isSaving ? null : onSave,
             icon: Icon(isSaving ? Icons.hourglass_top : Icons.send),
-            label: Text(isSaving ? 'Guardando...' : 'Guardar señal'),
+            label: Text(isSaving ? 'Guardando...' : 'Activar aviso'),
           ),
         ),
         const SizedBox(height: 8),
@@ -475,7 +489,7 @@ class _OperationalFormSection extends StatelessWidget {
           width: double.infinity,
           child: OutlinedButton(
             onPressed: isSaving || !state.hasActiveSignal ? null : onDeactivate,
-            child: const Text('Desactivar señal'),
+            child: const Text('Desactivar aviso'),
           ),
         ),
         if (state.hasSuccess) ...[
@@ -501,8 +515,8 @@ class _SignalTypeCards extends StatelessWidget {
     return Column(
       children: [
         _SignalTypeCard(
-          title: 'Vacaciones',
-          subtitle: 'Informa un periodo de descanso prolongado.',
+          title: 'Cerrado por vacaciones',
+          subtitle: 'Para varios días.',
           icon: Icons.beach_access,
           tone: AppColors.primary600,
           type: OperationalSignalType.vacation,
@@ -511,8 +525,8 @@ class _SignalTypeCards extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _SignalTypeCard(
-          title: 'Cierre temporal',
-          subtitle: 'Para reformas o incidencia operativa.',
+          title: 'Cerrado temporalmente',
+          subtitle: 'Para un cierre puntual.',
           icon: Icons.lock_clock,
           tone: AppColors.errorFg,
           type: OperationalSignalType.temporaryClosure,
@@ -521,8 +535,8 @@ class _SignalTypeCards extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _SignalTypeCard(
-          title: 'Demora',
-          subtitle: 'No cierra comercio; muestra aviso informativo.',
+          title: 'Abre más tarde',
+          subtitle: 'Para avisar una demora hoy.',
           icon: Icons.schedule,
           tone: AppColors.tertiary700,
           type: OperationalSignalType.delay,
@@ -616,7 +630,7 @@ class _PreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedLabel = switch (signalType) {
-      OperationalSignalType.vacation => 'De vacaciones',
+      OperationalSignalType.vacation => 'Cerrado por vacaciones',
       OperationalSignalType.temporaryClosure => 'Cerrado temporalmente',
       OperationalSignalType.delay => 'Abre más tarde',
       OperationalSignalType.none => 'Sin señal activa',
@@ -640,7 +654,7 @@ class _PreviewCard extends StatelessWidget {
                   size: 16, color: AppColors.neutral600),
               const SizedBox(width: 6),
               Text(
-                'Vista previa pública',
+                'Así se verá en Tu zona.',
                 style:
                     AppTextStyles.labelSm.copyWith(color: AppColors.neutral700),
               ),
@@ -650,6 +664,11 @@ class _PreviewCard extends StatelessWidget {
           Text(
             previewMessage,
             style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral900),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Los avisos activos tienen prioridad sobre el horario habitual.',
+            style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
           ),
         ],
       ),
@@ -725,7 +744,7 @@ class _SuccessCard extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Señal actualizada. $savedLabel',
+              'Aviso actualizado. $savedLabel',
               style: AppTextStyles.bodySm.copyWith(color: AppColors.successFg),
             ),
           ),
@@ -817,6 +836,41 @@ class _ErrorState extends StatelessWidget {
                 child: const Text('Reintentar'),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingBlockedCard extends StatelessWidget {
+  const _PendingBlockedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.hourglass_top_rounded,
+              size: 40,
+              color: AppColors.neutral600,
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Tu comercio está en revisión',
+              style: AppTextStyles.headingSm,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Cuando se apruebe, vas a poder editar horarios y avisos operativos.',
+              style: AppTextStyles.bodySm,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

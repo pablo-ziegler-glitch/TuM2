@@ -229,7 +229,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0036] **Diseñar vista Abierto ahora** — P0 — `UX/UI, MVP` ✅
 - [0037] **Diseñar panel Mi comercio** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0038] **Diseñar flujo carga de productos** — P0 — `UX/UI, Operaciones, MVP` `READY_FOR_QA`
-- [0039] **Diseñar flujo carga de horarios y señales** — P0 — `UX/UI, Operaciones, MVP`
+- [0039] **Diseñar flujo carga de horarios y señales** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0040] **Diseñar flujo carga de turnos de farmacia** — P0 — `UX/UI, Operaciones, MVP`
 - [0041] **Diseñar board de propuestas y votos** — P1 — `UX/UI, Growth, Admin, MVP`
 
@@ -568,6 +568,7 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0067] OWNER-08 implementado con flujo de señal manual activa/inactiva (sin listeners permanentes), tipos MVP (`vacation`, `temporary_closure`, `delay`), validación de mensaje (80 chars) y desactivación explícita.
 - [0067] Backend unificado en trigger `merchant_operational_signals -> merchant_public` con función canónica de precedencia: `vacation/temporary_closure` fuerzan cerrado, `delay` es informativa y preserva `isOpenNow` automático.
 - [0067] Reglas Firestore endurecidas: `merchant_public` client write deny, `merchant_operational_signals` restringido a owner/admin con validaciones de enum/tipos/ownership/path consistency y bloqueo de campos derivados en writes owner.
+- [0039] Cierre UX/Product OWNER (2026-04-27): auditoría contra handoff Stitch + ajuste de microcopy/estados en OWNER-06/08, bloqueo contextual `owner_pending`, preview con prioridad de avisos, instrumentación analytics `owner_schedule_*`/`owner_signal_*` sin PII y tests focalizados de horarios/señales en mobile.
 - [0123] Límites de catálogo cerrados (PR #58, 2026-04-09): configuración global/categoría/override en `admin_configs/catalog_limits`, alta de producto vía callable transaccional y bloqueo duro por cupo.
 - [0123] UI OWNER/ADMIN integrada con capacidad (`used/limit/source`), eventos analytics de warning/bloqueo y controles de costo (`limit` en búsquedas admin + cache TTL de config).
 - [0124] Mitigación de guardias cerrada (PR #59, 2026-04-09): confirmación de guardia, reporte de incidente, selección de candidatas por zona/distancia y ronda de reasignación con primera aceptación ganadora.

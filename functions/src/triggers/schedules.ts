@@ -1,6 +1,10 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { isOpenNow, todayScheduleLabel } from "../lib/schedules";
+import {
+  computeNextScheduleTransition,
+  isOpenNow,
+  todayScheduleLabel,
+} from "../lib/schedules";
 import { MerchantScheduleDoc } from "../lib/types";
 
 const db = () => getFirestore();
@@ -33,6 +37,7 @@ export const onScheduleWriteRecalculateOpenNow = onDocumentWritten(
     const scheduleDoc = afterSnap.data() as MerchantScheduleDoc;
     const openNow = isOpenNow(scheduleDoc);
     const scheduleLabel = todayScheduleLabel(scheduleDoc);
+    const transitions = computeNextScheduleTransition(scheduleDoc);
 
     if (beforeSnap?.exists) {
       const beforeDoc = beforeSnap.data() as MerchantScheduleDoc;
@@ -48,7 +53,14 @@ export const onScheduleWriteRecalculateOpenNow = onDocumentWritten(
 
     const signalUpdate = {
       isOpenNow: openNow,
+      isOpenNowSnapshot: openNow,
+      snapshotComputedAt: FieldValue.serverTimestamp(),
       todayScheduleLabel: scheduleLabel,
+      scheduleSummary: transitions.scheduleSummary,
+      nextOpenAt: transitions.nextOpenAt,
+      nextCloseAt: transitions.nextCloseAt,
+      nextTransitionAt: transitions.nextTransitionAt,
+      hasScheduleConfigured: transitions.scheduleSummary.hasSchedule,
       updatedAt: FieldValue.serverTimestamp(),
     };
 

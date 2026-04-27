@@ -2,6 +2,7 @@ import '../../home/models/open_now_models.dart';
 import '../../pharmacy/models/pharmacy_duty_item.dart';
 import '../../search/models/merchant_search_item.dart';
 import 'merchant_marker_resolver.dart';
+import 'operational_status_resolver.dart';
 import 'merchant_visual_models.dart';
 
 class MerchantVisualStateMappers {
@@ -12,13 +13,29 @@ class MerchantVisualStateMappers {
   }
 
   static MerchantVisualState fromOpenNowMerchant(OpenNowMerchant merchant) {
+    final resolvedOperational = resolveOperationalStatus(
+      now: DateTime.now(),
+      merchant: MerchantOperationalProjection(
+        scheduleSummary: merchant.scheduleSummary,
+        nextOpenAt: merchant.nextOpenAt,
+        nextCloseAt: merchant.nextCloseAt,
+        nextTransitionAt: merchant.nextTransitionAt,
+        hasOperationalSignal: merchant.hasOperationalSignal,
+        operationalSignalType: merchant.operationalSignalType,
+        operationalStatusLabel: merchant.operationalStatusLabel,
+      ),
+    );
+
     return MerchantVisualState(
       visibility: _visibility(merchant.visibilityStatus),
       lifecycle: MerchantLifecycleState.active,
       confidence: _confidence(merchant.verificationStatus),
-      opening: merchant.isOpenNow
-          ? MerchantOpeningState.openNow
-          : MerchantOpeningState.closed,
+      opening:
+          resolvedOperational.type == ResolvedOperationalStatusType.openNow ||
+                  resolvedOperational.type ==
+                      ResolvedOperationalStatusType.closingSoon
+              ? MerchantOpeningState.openNow
+              : MerchantOpeningState.closed,
       guardState: _guard(
         isOnDuty: merchant.isOnDutyToday,
         publicStatusLabel: merchant.publicStatusLabel,
@@ -30,7 +47,7 @@ class MerchantVisualStateMappers {
       categoryLabel:
           merchant.categoryName.trim().isEmpty ? null : merchant.categoryName,
       claimState: null,
-      hasSufficientScheduleInfo:
+      hasSufficientScheduleInfo: merchant.scheduleSummary?.hasSchedule == true ||
           merchant.effectiveScheduleLabel.trim().isNotEmpty,
       manualOverrideMode: merchant.manualOverrideMode,
       informational: merchant.manualOverrideMode == 'informational',

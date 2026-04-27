@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../merchant_badges/domain/merchant_badge_resolver.dart';
 import '../../merchant_badges/domain/merchant_marker_resolver.dart';
+import '../../merchant_badges/domain/trust_badges.dart';
 import '../../merchant_badges/domain/merchant_visual_models.dart';
 import '../../merchant_badges/widgets/merchant_badge_widgets.dart';
+import '../../merchant_badges/widgets/trust_badge_widgets.dart';
 import '../models/merchant_search_item.dart';
 
-class MerchantSearchCard extends StatelessWidget {
+class MerchantSearchCard extends ConsumerWidget {
   const MerchantSearchCard({
     super.key,
     required this.item,
@@ -23,7 +27,13 @@ class MerchantSearchCard extends StatelessWidget {
   final int imageSeed;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trustBadgesEnabled =
+        ref.watch(trustBadgesEnabledProvider).valueOrNull ?? false;
+    final trustBadgesSearchEnabled =
+        ref.watch(trustBadgesSearchEnabledProvider).valueOrNull ?? false;
+    final showTrustBadges = trustBadgesEnabled && trustBadgesSearchEnabled;
+    final trustBadges = _trustBadgesForCard(item);
     final distanceText = item.distanceMeters == null
         ? null
         : _distanceLabel(item.distanceMeters!);
@@ -125,6 +135,14 @@ class MerchantSearchCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       MerchantRubricLabel(label: rubricLabel),
+                      if (showTrustBadges && trustBadges.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        TrustBadgeRow(
+                          badges: trustBadges,
+                          maxVisible: 1,
+                          compact: true,
+                        ),
+                      ],
                       if (address.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Row(
@@ -227,6 +245,17 @@ class MerchantSearchCard extends StatelessWidget {
     if (meters < 1000) return 'A ${meters.round()}m';
     final km = meters / 1000.0;
     return 'A ${km.toStringAsFixed(1)}km';
+  }
+
+  static List<TrustBadgeId> _trustBadgesForCard(MerchantSearchItem item) {
+    final ordered = <TrustBadgeId>[];
+    if (item.primaryTrustBadge != null) {
+      ordered.add(item.primaryTrustBadge!);
+    }
+    for (final badge in item.badges) {
+      if (!ordered.contains(badge)) ordered.add(badge);
+    }
+    return ordered;
   }
 }
 

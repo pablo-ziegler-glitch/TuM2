@@ -404,14 +404,14 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: AppRoutes.ownerSchedules,
       builder: (_, __) => const OwnerAccessGuardPage(
-        title: 'Editar Horarios',
+        title: 'Editar horarios',
         child: OwnerScheduleScreen(),
       ),
     ),
     GoRoute(
       path: AppRoutes.ownerSignals,
       builder: (_, __) => const OwnerAccessGuardPage(
-        title: 'Señales Operativas',
+        title: 'Avisos de hoy',
         child: OwnerOperationalSignalsScreen(),
       ),
     ),

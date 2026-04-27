@@ -13,6 +13,7 @@
 
 ## Actualización técnica reciente (2026-04-26)
 
+- **[0012] Diseñar app icon**: integración del ícono productivo base en Android + Web/PWA de `mobile`; variante Mundialista versionada como promocional no activa por defecto, con documentación y rollback.
 - **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
 - **[0065] Alta/edición de productos OWNER**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
 - **[0064] Módulo OWNER**: estado real actualizado a `READY_FOR_QA`; implementación base completa en `develop` (transiciones owner_pending -> owner/customer, guards de rutas profundas, `OwnerAccessUpdatedScreen`, refresh de sesión sin relogin) y pendiente de QA formal en `tum2-staging-45c83`.
@@ -112,6 +113,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
 | **[0010]** Definir identidad visual base ✅ | Branding — paleta y tokens base definidos (color system inicial TuM2) |
 | **[0011]** Diseñar logo principal ✅ | Branding — sistema de logo y assets SVG base versionados (`design/branding_v1.json`, `mobile/assets/branding/*`) |
+| **[0012]** Diseñar app icon ✅ | Branding / Mobile / Web — app icon productivo base integrado en Android/Web/PWA; variante Mundialista versionada como asset promocional eventual no activa por defecto; documentación en `docs/branding/APP_ICON.md` y `docs/branding/APP_ICON_MUNDIALISTA.md` |
 | **[0014]** Definir tono de microcopy ✅ | Branding / UX/UI — guía de microcopy MVP Fase 3 documentada en docs/TuM2-0014-MICROCOPY.md |
 | **[0019]** Diseñar modelo de usuarios ✅ | Modelo de datos — modelo de usuarios definido con roles y atributos |
 | **[0020]** Diseñar modelo de comercios ✅ | Modelo de datos — modelo de comercios definido con campos públicos y operativos |
@@ -195,7 +197,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 3: Branding de TuM2
 - [0010] **Definir identidad visual base** — P0 — `Branding, UX/UI, Fundacional` ✅
 - [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional` ✅
-- [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional`
+- [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional` ✅
 - [0013] **Definir sistema de sellos** — P1 — `Branding, Producto, MVP`
 - [0014] **Definir tono de microcopy** — P1 — `Branding, UX/UI, MVP` ✅
 
@@ -540,6 +542,8 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - En cada avance de tarjeta, actualizar siempre `docs/storyscards/<tarjeta>.md` y `CLAUDE.md` con estado real.
 
 ## Registro operativo reciente
+- [0012] App icon productivo integrado desde pack exact-source aprobado, con assets Android/Web/PWA y validación por tamaños.
+- [0012] Variante Mundialista versionada como asset promocional eventual con exactamente 3 estrellas, no activa por defecto y documentada con activación/rollback.
 - [0082] Redefinición técnica aplicada (2026-04-22): contrato canónico en `docs/storyscards/0082-analytics-technical.md` con bootstrap geolocalizado, taxonomía oficial MVP, reglas de no-PII/query crudo/coordenadas finas y política de copy desacoplada (`Me sirvió`/`Messirve` -> mismo evento).
 - [0082] Implementación base en mobile: `AnalyticsService` único con sanitización, validación de buckets/enums, dedupe, gating por ambiente (`prod` real / dev-staging debug sanitizado), gating de consentimiento web y cola offline restringida a eventos críticos permitidos.
 - [0082] Integraciones cruzadas: 0056/0057/0061/0083 cableadas a nueva taxonomía (`search_performed`, `category_filtered`, `nearby_bootstrap_*`, `map_*`, `operator_call_click`, `directions_opened`, `pharmacy_duty_feedback_*`, `report_*`, `claim_*`) priorizando `entity_zone_id` para acciones sobre entidad.

@@ -1,6 +1,6 @@
 # TuM2-0082 — Definir eventos analytics (versión técnica canónica)
 
-Estado: IN_PROGRESS  
+Estado: READY_FOR_QA  
 Prioridad: P0 (MVP crítica)  
 Área: Analytics / Producto / Arquitectura / Mobile / Web pública  
 North Star: **% de sesiones con acción útil en < 3 min**
@@ -19,6 +19,10 @@ Definir y congelar el contrato analytics MVP para medir utilidad real en context
 8. En reason `other` puede haber texto/foto en flujo de reporte, nunca en analytics.
 9. En acciones sobre entidad manda `entity_zone_id` como dimensión territorial principal.
 10. Mobile activo; Web pública con consentimiento liviano si analytics depende de cookies.
+11. No se envían identificadores directos de entidad ni de usuario en payload analytics (snake_case ni camelCase).
+12. `merchantId`/`productId`/`userId`/`deviceId` quedan explícitamente bloqueados en cliente analytics.
+13. Para mapa MVP se conserva `map_viewed` + `map_pin_selected`; `map_recenter_tapped` y `map_search_this_area_tapped` quedan deprecados/no emitidos por costo/ruido.
+14. Para claim MVP se conserva `claim_started` + `claim_submitted`; `claim_evidence_uploaded` queda deprecado/no emitido en runtime.
 
 ## 3. Reglas no negociables
 - No usar Firestore como event store analytics.
@@ -42,7 +46,7 @@ UI
 - Sanitización de parámetros y eliminación de nulls.
 - Validación de enums/buckets.
 - Allowlist estricta de eventos y parámetros (drop por defecto).
-- Bloqueo explícito de claves sensibles y de identificadores directos de entidad (`merchant_id`, `product_id`, `merchant_ref`, `user_id`, `device_id`) para minimizar riesgo de exfiltración.
+- Bloqueo explícito de claves sensibles y de identificadores directos de entidad (snake_case + camelCase: `merchant_id/merchantId`, `product_id/productId`, `merchant_ref/merchantRef`, `user_id/userId`, `device_id/deviceId`) para minimizar riesgo de exfiltración.
 - Gating por ambiente (real solo prod).
 - Gating por consentimiento web.
 - Dedupe simple para evitar doble emisión.
@@ -67,8 +71,8 @@ UI
 ### 5.3 Mapa (mínimo útil, sin tracking continuo pan/zoom)
 - `map_viewed`
 - `map_pin_selected`
-- `map_recenter_tapped`
-- `map_search_this_area_tapped`
+- `map_recenter_tapped` (deprecado/no emitido en runtime)
+- `map_search_this_area_tapped` (deprecado/no emitido en runtime)
 
 ### 5.4 Acciones core
 - `operator_call_click`
@@ -85,7 +89,7 @@ UI
 
 ### 5.6 Claim funnel
 - `claim_started`
-- `claim_evidence_uploaded`
+- `claim_evidence_uploaded` (deprecado/no emitido en runtime)
 - `claim_submitted`
 
 ## 6. User properties mínimas
@@ -136,7 +140,6 @@ Persistir localmente solo:
 - `directions_opened`
 - `pharmacy_duty_view`
 - `claim_started`
-- `claim_evidence_uploaded`
 - `claim_submitted`
 - `pharmacy_duty_feedback_positive`
 - `report_submitted` (sin contenido sensible)
@@ -150,13 +153,13 @@ No persistir offline:
 Eventos legacy detectados y declarados como deprecados para 0083:
 - `search_query_submitted` -> `search_performed`
 - `search_filter_applied` -> `category_filtered` (cuando aplica categoría)
-- `search_map_toggled` -> `map_viewed` / `map_search_this_area_tapped`
+- `search_map_toggled` -> `map_viewed` (`map_search_this_area_tapped` deprecado/no emitido)
 - `search_result_opened` -> deprecado (reemplazo por `map_pin_selected` si corresponde)
 - `pharmacy_duty_view_opened` -> `pharmacy_duty_view`
 - `pharmacy_duty_call_tap` -> `operator_call_click`
 - `pharmacy_duty_directions_tap` -> `directions_opened`
 - `merchant_claim_started` -> `claim_started`
-- `merchant_claim_evidence_uploaded` -> `claim_evidence_uploaded`
+- `merchant_claim_evidence_uploaded` -> deprecado/no emitido
 - `merchant_claim_submitted` -> `claim_submitted`
 - `merchant_detail_call_click` -> `operator_call_click`
 - `merchant_detail_directions_click` -> `directions_opened`

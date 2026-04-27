@@ -141,6 +141,36 @@ void main() {
       expect(params.containsKey('merchant_ref'), isFalse);
     });
 
+    test('bloquea identificadores directos tambien en camelCase', () async {
+      final backend = _FakeBackend();
+      final service = AnalyticsService(
+        backend: backend,
+        environment: AppEnvironment.prod,
+        isWeb: false,
+        isWebConsentGranted: () => true,
+        preferencesLoader: SharedPreferences.getInstance,
+      );
+
+      await service.track(
+        event: 'merchant_card_impression',
+        parameters: {
+          'merchantId': 'm-123',
+          'productId': 'p-999',
+          'userId': 'u-77',
+          'zoneId': 'ar-caba-palermo',
+          'surface': 'search_results',
+        },
+      );
+
+      expect(backend.events.length, 1);
+      final params = backend.events.single.parameters;
+      expect(params['zoneId'], 'ar-caba-palermo');
+      expect(params['surface'], 'search_results');
+      expect(params.containsKey('merchantId'), isFalse);
+      expect(params.containsKey('productId'), isFalse);
+      expect(params.containsKey('userId'), isFalse);
+    });
+
     test('dedupe evita doble emisión inmediata', () async {
       final backend = _FakeBackend();
       final service = AnalyticsService(

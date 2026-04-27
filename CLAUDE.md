@@ -290,7 +290,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0081] **Implementar revisión de señales operativas reportadas** — P1 — `Admin, Operaciones, MVP`
 
 ### ÉPICA 11: Analytics
-- [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `IN_PROGRESS`
+- [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `READY_FOR_QA`
 - [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP` `READY_FOR_QA`
 - [0084] **Crear dashboard MVP** — P1 — `Analytics, MVP`
 - [0085] **Medir activación OWNER** — P1 — `Analytics, Operaciones, MVP`

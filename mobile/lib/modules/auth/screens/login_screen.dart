@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/providers/legal_documents_provider.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/copy/brand_copy.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_text_input.dart';
@@ -151,8 +152,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     const Text('Entrá a TuM2', style: AppTextStyles.headingMd),
                     const SizedBox(height: 4),
                     const Text(
-                      'Usá tu email o Google para continuar',
+                      BrandCopy.primaryClaim,
                       style: AppTextStyles.bodySm,
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      BrandCopy.institutionalSubtitle,
+                      style: AppTextStyles.bodyXs,
                     ),
 
                     const SizedBox(height: 24),

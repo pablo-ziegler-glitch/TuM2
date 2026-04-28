@@ -76,7 +76,7 @@ class MerchantPublicViewData {
   bool get hasPhone => (phonePrimary ?? '').trim().isNotEmpty;
   bool get isPharmacyCategory {
     final normalized = categoryId.trim().toLowerCase();
-    return normalized == 'farmacia';
+    return normalized == 'pharmacy' || normalized == 'farmacia';
   }
 }
 

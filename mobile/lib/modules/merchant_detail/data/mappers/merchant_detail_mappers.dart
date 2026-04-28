@@ -8,15 +8,21 @@ import '../../domain/merchant_detail_view_data.dart';
 import '../dtos/merchant_detail_dto.dart';
 
 const Map<String, String> _categoryFallbackLabelById = {
+  'pharmacy': 'Farmacias',
   'farmacia': 'Farmacias',
+  'kiosk': 'Kioscos',
   'kiosco': 'Kioscos',
+  'convenience_store': 'Kioscos',
+  'grocery': 'Almacenes',
   'almacen': 'Almacenes',
+  'supermarket': 'Almacenes',
+  'veterinary': 'Veterinarias',
   'veterinaria': 'Veterinarias',
-  'comida_al_paso': 'Comida al paso',
-  'casa_de_comidas': 'Rotiserías',
+  'fast_food': 'Tiendas de comida al paso',
+  'prepared_food': 'Casas de comida/Rotiserias',
+  'rotiseria': 'Casas de comida/Rotiserias',
+  'tire_shop': 'Gomerias',
   'gomeria': 'Gomerias',
-  'panaderia': 'Panaderías',
-  'confiteria': 'Confiterías',
 };
 
 const List<String> _orderedScheduleKeys = [

@@ -129,6 +129,8 @@ TuM2 App
 - **Timeout/offline:** mostrar feedback amable y permitir continuar en modo invitado si no hay sesión confirmada.
 - **Datos:** Auth local/Firebase token. No debe leer colecciones públicas ni hacer queries amplias.
 - **Costo:** 0 Firestore reads para invitado; token refresh para sesión activa; lectura de resumen de usuario solo si hay sesión.
+- **Microcopy:** `Lo que necesitás, en tu zona.` + `Preparando tu zona...`.
+- **Branding variante:** logo `original`/`mundialista` controlado por Remote Config (`splash_brand_variant` o `mobile_worldcup_enabled`).
 
 ### AUTH-02 — Onboarding CUSTOMER
 
@@ -137,7 +139,7 @@ TuM2 App
 - **Slides MVP:**
   1. `Encontrá comercios abiertos ahora en tu cuadra`
   2. `Farmacias de turno al instante`
-  3. `Seguí tus comercios favoritos`
+  3. `Tené tus lugares de siempre más cerca` (copy conservador mientras favoritos/seguimiento no estén activos para todos)
 - **CTA último slide:** `Empezar` → HOME-01 en modo invitado.
 - **Skip:** `Omitir` → HOME-01 en modo invitado.
 - **Persistencia:** guardar `onboarding_seen=true` en SharedPreferences.

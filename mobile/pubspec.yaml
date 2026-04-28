@@ -66,4 +66,5 @@ flutter:
     - assets/clusters/
     - assets/icons/
     - assets/logo/
+    - assets/auth01/
     - assets/catalogs/

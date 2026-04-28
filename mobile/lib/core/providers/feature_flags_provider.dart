@@ -1,6 +1,11 @@
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+enum SplashBrandVariant {
+  original,
+  worldcup,
+}
+
 final firebaseRemoteConfigProvider = Provider<FirebaseRemoteConfig>((ref) {
   return FirebaseRemoteConfig.instance;
 });
@@ -232,4 +237,34 @@ final clientOpenStatusResolutionEnabledProvider =
     key: 'client_open_status_resolution_enabled',
     safeDefault: true,
   );
+});
+
+final splashBrandVariantProvider =
+    FutureProvider<SplashBrandVariant>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  try {
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(seconds: 8),
+        minimumFetchInterval: const Duration(minutes: 30),
+      ),
+    );
+    await remoteConfig.setDefaults(const {
+      'splash_brand_variant': 'original',
+      'mobile_worldcup_enabled': false,
+    });
+    await remoteConfig.fetchAndActivate();
+
+    final rawVariant =
+        remoteConfig.getString('splash_brand_variant').trim().toLowerCase();
+    final worldcupEnabled = remoteConfig.getBool('mobile_worldcup_enabled');
+    final isWorldcup = worldcupEnabled ||
+        rawVariant == 'mundialista' ||
+        rawVariant == 'worldcup';
+    return isWorldcup
+        ? SplashBrandVariant.worldcup
+        : SplashBrandVariant.original;
+  } catch (_) {
+    return SplashBrandVariant.original;
+  }
 });

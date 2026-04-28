@@ -245,6 +245,33 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 16),
+            Text(
+              'Ayuda',
+              style: AppTextStyles.labelSm.copyWith(
+                color: AppColors.neutral500,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _MenuCard(
+              items: [
+                _MenuItem(
+                  icon: Icons.help_outline,
+                  label: 'Cómo funciona TuM2',
+                  onTap: () => context.push(
+                    AppRoutes.onboardingPath(source: 'profile_help'),
+                  ),
+                ),
+                _MenuItem(
+                  icon: Icons.slideshow_outlined,
+                  label: 'Ver bienvenida de TuM2',
+                  onTap: () => context.push(
+                    AppRoutes.onboardingPath(source: 'profile_help'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             // cerrar sesión
             _MenuCard(
               items: [

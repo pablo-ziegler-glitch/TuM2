@@ -18,12 +18,26 @@ abstract class AuthAnalytics {
   static const _kSignOut = 'auth_sign_out';
   static const _kDisplayNameSet = 'auth_display_name_set';
   static const _kDisplayNameSkipped = 'auth_display_name_skipped';
+  static const _kOnboardingStarted = 'auth_onboarding_started';
+  static const _kOnboardingSlideViewed = 'auth_onboarding_slide_viewed';
+  static const _kOnboardingSkipped = 'auth_onboarding_skipped';
+  static const _kOnboardingCompleted = 'auth_onboarding_completed';
+  static const _kSplashViewed = 'auth_splash_viewed';
+  static const _kSplashTimeout = 'auth_splash_timeout';
+  static const _kSplashResolved = 'auth_splash_resolved';
 
   // ── Parámetros ──────────────────────────────────────────────────────────────
 
   static const _pIsNewUser = 'is_new_user';
   static const _pErrorCode = 'error_code';
   static const _pIsCrossDevice = 'is_cross_device';
+  static const _pSlideIndex = 'slide_index';
+  static const _pSlideId = 'slide_id';
+  static const _pTotalSlides = 'total_slides';
+  static const _pSource = 'source';
+  static const _pResult = 'result';
+  static const _pSourceScreen = 'source_screen';
+  static const _pLatencyMs = 'latency_ms';
 
   // ── Métodos públicos ────────────────────────────────────────────────────────
 
@@ -76,6 +90,103 @@ abstract class AuthAnalytics {
   /// Usuario saltó el micro-step de displayName con "Ahora no".
   static Future<void> logDisplayNameSkipped() =>
       _safeLogEvent(name: _kDisplayNameSkipped);
+
+  static Future<void> logOnboardingStarted({
+    required String source,
+    required int totalSlides,
+  }) =>
+      _safeLogEvent(
+        name: _kOnboardingStarted,
+        parameters: {
+          _pSource: source,
+          _pTotalSlides: totalSlides,
+          _pResult: 'started',
+        },
+      );
+
+  static Future<void> logOnboardingSlideViewed({
+    required int slideIndex,
+    required String slideId,
+    required int totalSlides,
+    required String source,
+  }) =>
+      _safeLogEvent(
+        name: _kOnboardingSlideViewed,
+        parameters: {
+          _pSlideIndex: slideIndex,
+          _pSlideId: slideId,
+          _pTotalSlides: totalSlides,
+          _pSource: source,
+          _pResult: 'viewed',
+        },
+      );
+
+  static Future<void> logOnboardingSkipped({
+    required int slideIndex,
+    required String slideId,
+    required int totalSlides,
+    required String source,
+  }) =>
+      _safeLogEvent(
+        name: _kOnboardingSkipped,
+        parameters: {
+          _pSlideIndex: slideIndex,
+          _pSlideId: slideId,
+          _pTotalSlides: totalSlides,
+          _pSource: source,
+          _pResult: 'skipped',
+        },
+      );
+
+  static Future<void> logOnboardingCompleted({
+    required int slideIndex,
+    required String slideId,
+    required int totalSlides,
+    required String source,
+  }) =>
+      _safeLogEvent(
+        name: _kOnboardingCompleted,
+        parameters: {
+          _pSlideIndex: slideIndex,
+          _pSlideId: slideId,
+          _pTotalSlides: totalSlides,
+          _pSource: source,
+          _pResult: 'completed',
+        },
+      );
+
+  static Future<void> logSplashViewed({required int latencyMs}) =>
+      _safeLogEvent(
+        name: _kSplashViewed,
+        parameters: {
+          _pSourceScreen: 'splash',
+          _pResult: 'viewed',
+          _pLatencyMs: latencyMs,
+        },
+      );
+
+  static Future<void> logSplashTimeout({required int latencyMs}) =>
+      _safeLogEvent(
+        name: _kSplashTimeout,
+        parameters: {
+          _pSourceScreen: 'splash',
+          _pResult: 'timeout',
+          _pLatencyMs: latencyMs,
+        },
+      );
+
+  static Future<void> logSplashResolved({
+    required String result,
+    required int latencyMs,
+  }) =>
+      _safeLogEvent(
+        name: _kSplashResolved,
+        parameters: {
+          _pSourceScreen: 'splash',
+          _pResult: result,
+          _pLatencyMs: latencyMs,
+        },
+      );
 
   static Future<void> _safeLogEvent({
     required String name,

@@ -122,6 +122,7 @@ Moderación (modelo semi-automático B):
 - Moderador
 
 Login requerido para: chat, contribuciones, acciones de owner
+Guest-first: home/búsqueda/mapa/fichas públicas y farmacias de turno disponibles sin sesión; onboarding CUSTOMER persiste localmente en `SharedPreferences` (`onboarding_seen`).
 
 ---
 

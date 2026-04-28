@@ -24,6 +24,10 @@ El MVP de TuM2 cubre **una zona piloto** con **rubros prioritarios**, con el obj
 8. Panaderías
 9. Confiterías
 
+**Nota de canon técnico (TuM2-0015):** el runtime usa únicamente IDs canónicos (`farmacia`, `kiosco`, `almacen`, `veterinaria`, `comida_al_paso`, `casa_de_comidas`, `gomeria`, `panaderia`, `confiteria`) con lista funcional MVP cerrada en 9 rubros.
+
+**IDs canónicos de producto (0015):** `farmacia`, `kiosco`, `almacen`, `veterinaria`, `comida_al_paso`, `casa_de_comidas`, `gomeria`, `panaderia`, `confiteria`.
+
 ---
 
 ## 2. Segmentos y roles

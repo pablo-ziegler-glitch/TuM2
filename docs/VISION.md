@@ -32,7 +32,7 @@ Es la fuente de verdad local para saber qué hay cerca, qué está abierto y qu�
 ### Para el vecino (CUSTOMER)
 - Saber al instante qué comercios de su zona están abiertos.
 - Ver qué farmacia está de turno hoy.
-- Encontrar rubros específicos (almacén, veterinaria, ferretería) en segundos.
+- Encontrar rubros específicos (farmacias, kioscos, almacenes, veterinarias, comida al paso, rotiserías, gomerías) en segundos.
 - Tener la información actualizada sin tener que llamar ni buscar en redes.
 
 ### Para el dueño de comercio (OWNER)
@@ -90,13 +90,14 @@ Es la fuente de verdad local para saber qué hay cerca, qué está abierto y qu�
 - **No es marketplace.** No cobra comisión por ventas.
 - **No es red social.** No hay feed de contenido, no hay comentarios ni likes.
 - **No es Google Maps.** No tiene mapas generales, no indexa todo el mundo.
-- **No es guía gastronómica.** El foco es el comercio de barrio útil (almacén, farmacia, ferretería), no restaurantes o turismo.
+- **No es guía gastronómica.** El foco es el comercio de barrio útil y operativo inmediato, no restaurantes o turismo.
 
 ---
 
 ## 8. Horizonte de mediano plazo
 
-**MVP (fase actual):** app mobile + web pública, foco en zonas piloto, rubros prioritarios (farmacias, almacenes, kioscos, veterinarias).
+**MVP (fase actual):** app mobile + web pública, foco en zonas piloto, rubros prioritarios cerrados (farmacias, kioscos, almacenes, veterinarias, comida al paso, rotiserías, gomerías, panaderías y confiterías).
+Canon producto (TuM2-0015): `pharmacies`, `kiosks`, `grocery_stores`, `veterinaries`, `food_on_the_go`, `rotisseries`, `tire_shops`, `bakeries`, `confectioneries`, con runtime estricto sobre IDs canónicos.
 
 **MVP+:** sistema de propuestas y votos para que vecinos sugieran mejoras. Favoritos y seguimiento de comercios.
 

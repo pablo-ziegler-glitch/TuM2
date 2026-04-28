@@ -231,6 +231,68 @@ void main() {
       await notifier.refresh();
       expect(repository.openNowFetchCalls, 2);
     });
+
+    test(
+        'incluye panadería/confitería y mantiene filtro para rubros fuera de MVP',
+        () async {
+      final repository = _FakeOpenNowRepository(
+        zones: const [
+          OpenNowZone(zoneId: 'adro', name: 'Adrogue', cityId: 'banfield'),
+        ],
+        openNowByZone: {
+          'adro': [
+            _merchant(
+              id: 'out-bakery',
+              name: 'Panadería Barrio',
+              verification: 'verified',
+              categoryId: 'panaderia',
+              categoryName: 'Panadería',
+            ),
+            _merchant(
+              id: 'ok-confiteria',
+              name: 'Confitería Centro',
+              verification: 'claimed',
+              categoryId: 'confiteria',
+              categoryName: 'Confiterías',
+            ),
+          ],
+        },
+        fallbackByZone: {
+          'adro': [
+            _merchant(
+              id: 'out-hardware',
+              name: 'Ferretería Norte',
+              verification: 'verified',
+              categoryId: 'hardware_store',
+              categoryName: 'Ferretería',
+              isOpenNow: false,
+            ),
+            _merchant(
+              id: 'ok-kiosk',
+              name: 'Kiosco Sur',
+              verification: 'claimed',
+              categoryId: 'kiosk',
+              categoryName: 'Kioscos',
+              isOpenNow: false,
+            ),
+          ],
+        },
+      );
+      final notifier = OpenNowNotifier(
+        repository: repository,
+        analytics: _FakeOpenNowAnalytics(),
+        locationReader: const _FakeLocationReader(
+          OpenNowLocationReadResult(status: OpenNowLocationStatus.unavailable),
+        ),
+      );
+
+      await notifier.ensureInitialized();
+      expect(
+        notifier.state.merchants.map((m) => m.merchantId).toList(),
+        ['out-bakery', 'ok-confiteria'],
+      );
+      expect(notifier.state.fallbackMerchants, isEmpty);
+    });
   });
 }
 
@@ -238,6 +300,8 @@ OpenNowMerchant _merchant({
   required String id,
   required String name,
   required String verification,
+  String categoryId = 'pharmacy',
+  String categoryName = 'Farmacia',
   double sortBoost = 0,
   double? lat,
   double? lng,
@@ -246,8 +310,8 @@ OpenNowMerchant _merchant({
   return OpenNowMerchant(
     merchantId: id,
     name: name,
-    categoryId: 'general',
-    categoryName: 'General',
+    categoryId: categoryId,
+    categoryName: categoryName,
     zoneId: 'zone',
     addressShort: 'Direccion',
     verificationStatus: verification,

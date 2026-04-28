@@ -11,12 +11,12 @@ import {
 test("resolveEffectiveCatalogLimit prioriza merchant override", () => {
   const config = normalizeCatalogLimitsConfig({
     defaultProductLimit: 100,
-    categoryLimits: { pharmacy: 300 },
+    categoryLimits: { farmacia: 300 },
   });
 
   const result = resolveEffectiveCatalogLimit({
     merchant: {
-      categoryId: "pharmacy",
+      categoryId: "farmacia",
       catalogLimits: { productLimitOverride: 500 },
     },
     catalogConfig: config,
@@ -29,12 +29,12 @@ test("resolveEffectiveCatalogLimit prioriza merchant override", () => {
 test("resolveEffectiveCatalogLimit usa límite por categoría cuando no hay override", () => {
   const config = normalizeCatalogLimitsConfig({
     defaultProductLimit: 100,
-    categoryLimits: { pharmacy: 300 },
+    categoryLimits: { farmacia: 300 },
   });
 
   const result = resolveEffectiveCatalogLimit({
     merchant: {
-      categoryId: "pharmacy",
+      categoryId: "farmacia",
       catalogLimits: { productLimitOverride: null },
     },
     catalogConfig: config,
@@ -52,7 +52,7 @@ test("resolveEffectiveCatalogLimit usa global por defecto", () => {
 
   const result = resolveEffectiveCatalogLimit({
     merchant: {
-      categoryId: "kiosk",
+      categoryId: "kiosco",
       catalogLimits: { productLimitOverride: null },
     },
     catalogConfig: config,
@@ -62,12 +62,13 @@ test("resolveEffectiveCatalogLimit usa global por defecto", () => {
   assert.equal(result.limitSource, "global_default");
 });
 
-test("normalizeCatalogLimitsConfig descarta categorías inválidas y límites no enteros", () => {
+test("normalizeCatalogLimitsConfig descarta límites inválidos y preserva categorías permitidas", () => {
   const config = normalizeCatalogLimitsConfig({
     defaultProductLimit: 200,
     categoryLimits: {
-      pharmacy: 300,
+      farmacia: 300,
       bakery: 999,
+      confiteria: 120,
       grocery: 50.5,
       tire_shop: 500,
     },
@@ -75,7 +76,9 @@ test("normalizeCatalogLimitsConfig descarta categorías inválidas y límites no
 
   assert.equal(config.defaultProductLimit, 200);
   assert.deepEqual(config.categoryLimits, {
-    pharmacy: 300,
+    farmacia: 300,
+    bakery: 999,
+    confiteria: 120,
     tire_shop: 500,
   });
 });
@@ -92,8 +95,9 @@ test("resolveActiveProductCount retorna 0 con valores inválidos", () => {
   );
 });
 
-test("isAllowedCatalogCategoryId bloquea bakery/confitería", () => {
-  assert.equal(isAllowedCatalogCategoryId("pharmacy"), true);
-  assert.equal(isAllowedCatalogCategoryId("bakery"), false);
-  assert.equal(isAllowedCatalogCategoryId("confiteria"), false);
+test("isAllowedCatalogCategoryId permite bakery/confitería y bloquea categoría prohibida legacy", () => {
+  assert.equal(isAllowedCatalogCategoryId("farmacia"), true);
+  assert.equal(isAllowedCatalogCategoryId("bakery"), true);
+  assert.equal(isAllowedCatalogCategoryId("confiteria"), true);
+  assert.equal(isAllowedCatalogCategoryId("bakery_confiteria"), false);
 });

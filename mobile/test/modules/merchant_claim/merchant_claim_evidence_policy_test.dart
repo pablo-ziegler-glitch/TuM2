@@ -3,17 +3,17 @@ import 'package:tum2/modules/merchant_claim/models/merchant_claim_evidence_polic
 import 'package:tum2/modules/merchant_claim/models/merchant_claim_models.dart';
 
 void main() {
-  test('policy pharmacy exige evidencia regulatoria', () {
-    final policy = resolveMerchantClaimEvidencePolicy('pharmacy');
-    expect(policy.categoryId, 'pharmacy');
+  test('policy farmacia exige evidencia regulatoria', () {
+    final policy = resolveMerchantClaimEvidencePolicy('farmacia');
+    expect(policy.categoryId, 'farmacia');
     expect(
       policy.requiredAdditionalKinds,
       contains(MerchantClaimEvidenceKind.regulatoryDocument),
     );
   });
 
-  test('policy fast_food acepta visual y vínculo contextual', () {
-    final policy = resolveMerchantClaimEvidencePolicy('fast_food');
+  test('policy comida_al_paso acepta visual y vínculo contextual', () {
+    final policy = resolveMerchantClaimEvidencePolicy('comida_al_paso');
     final evidence = [
       const MerchantClaimEvidenceFile(
         id: 'e1',
@@ -41,24 +41,25 @@ void main() {
         contains('fallback_category_policy_applied'));
   });
 
-  test('aliases legacy en español resuelven a policy canónica', () {
+  test('categorías canónicas resuelven a policy canónica', () {
     expect(
-        resolveMerchantClaimEvidencePolicy('farmacia').categoryId, 'pharmacy');
+        resolveMerchantClaimEvidencePolicy('farmacia').categoryId, 'farmacia');
     expect(
       resolveMerchantClaimEvidencePolicy('veterinaria').categoryId,
-      'veterinary',
+      'veterinaria',
     );
     expect(
       resolveMerchantClaimEvidencePolicy('comida_al_paso').categoryId,
-      'fast_food',
+      'comida_al_paso',
     );
   });
 
   test('allowlist de claims bloquea categorías no MVP', () {
-    expect(isAllowedMerchantClaimCategoryId('panaderia'), isFalse);
+    expect(isAllowedMerchantClaimCategoryId('panaderia'), isTrue);
     expect(isAllowedMerchantClaimCategoryId('bakery'), isFalse);
+    expect(isAllowedMerchantClaimCategoryId('confiteria'), isTrue);
     expect(isAllowedMerchantClaimCategoryId('otro'), isFalse);
-    expect(isAllowedMerchantClaimCategoryId('pharmacy'), isTrue);
+    expect(isAllowedMerchantClaimCategoryId('farmacia'), isTrue);
     expect(isAllowedMerchantClaimCategoryId('kiosco'), isTrue);
   });
 }

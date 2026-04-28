@@ -7,9 +7,9 @@ import {
   uniqueCategoryTokens,
 } from "../adminCategories";
 
-test("canonicalCategoryToken normaliza y mapea legacy vet", () => {
-  assert.equal(canonicalCategoryToken("  VeT "), "veterinaria");
-  assert.equal(canonicalCategoryToken("prepared_food"), "casa_de_comidas");
+test("canonicalCategoryToken normaliza sin alias legacy", () => {
+  assert.equal(canonicalCategoryToken("  VeT "), "vet");
+  assert.equal(canonicalCategoryToken("prepared_food"), "prepared_food");
 });
 
 test("isCanonicalCategoryToken valida formato canónico", () => {

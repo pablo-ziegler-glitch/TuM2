@@ -26,16 +26,20 @@ function resolveEncryptionKey(): Buffer {
   const explicitB64 = process.env.CLAIM_SENSITIVE_KEY_B64;
   if (typeof explicitB64 === "string" && explicitB64.trim().length > 0) {
     const decoded = Buffer.from(explicitB64.trim(), "base64");
-    if (decoded.length === 32) return decoded;
+    if (decoded.length !== 32) {
+      throw new Error("CLAIM_SENSITIVE_KEY_B64 inválida: debe decodificar 32 bytes.");
+    }
+    return decoded;
   }
 
   const explicitRaw = process.env.CLAIM_SENSITIVE_KEY;
-  const seed =
-    typeof explicitRaw === "string" && explicitRaw.trim().length > 0
-      ? explicitRaw.trim()
-      : `${process.env.GCLOUD_PROJECT ?? "tum2-dev-6283d"}:claim-sensitive-default`;
-
-  return createHash("sha256").update(seed).digest();
+  if (typeof explicitRaw === "string" && explicitRaw.trim().length > 0) {
+    const derived = createHash("sha256").update(explicitRaw.trim()).digest();
+    if (derived.length === 32) return derived;
+  }
+  throw new Error(
+    "Falta clave sensible: configurá CLAIM_SENSITIVE_KEY_B64 (Secret Manager) en runtime."
+  );
 }
 
 function keyVersion(): string {

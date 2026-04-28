@@ -185,6 +185,17 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
   };
   static const _zonePayloadCacheTtl = Duration(minutes: 3);
   static const _zonePayloadBucket = Duration(minutes: 15);
+  static const Set<String> _allowedMvpCategoryTokens = <String>{
+    'farmacia',
+    'kiosco',
+    'almacen',
+    'veterinaria',
+    'comida_al_paso',
+    'casa_de_comidas',
+    'gomeria',
+    'panaderia',
+    'confiteria',
+  };
 
   final Map<String, _OpenNowZoneCacheEntry> _zonePayloadCache = {};
 
@@ -284,9 +295,13 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
         openNowRaw = cached.openNowRaw;
         fallbackRaw = cached.fallbackRaw;
       } else {
-        openNowRaw = await _repository.fetchOpenNow(zoneId: zoneId);
+        openNowRaw = _filterMvpCategories(
+          await _repository.fetchOpenNow(zoneId: zoneId),
+        );
         fallbackRaw = openNowRaw.isEmpty
-            ? await _repository.fetchFallback(zoneId: zoneId)
+            ? _filterMvpCategories(
+                await _repository.fetchFallback(zoneId: zoneId),
+              )
             : const <OpenNowMerchant>[];
         _zonePayloadCache[zoneCacheKey] = _OpenNowZoneCacheEntry(
           cachedAtUtc: nowUtc,
@@ -412,6 +427,42 @@ class OpenNowNotifier extends StateNotifier<OpenNowState> {
 
   int _verificationScore(String status) =>
       _verificationRank[status.trim().toLowerCase()] ?? 0;
+
+  List<OpenNowMerchant> _filterMvpCategories(List<OpenNowMerchant> merchants) {
+    return merchants.where((merchant) {
+      final tokens =
+          _normalizeTokens('${merchant.categoryId} ${merchant.categoryName}');
+      if (tokens.isEmpty) return false;
+      return tokens.any(_allowedMvpCategoryTokens.contains);
+    }).toList(growable: false);
+  }
+
+  List<String> _normalizeTokens(String input) {
+    final lower = input.toLowerCase().trim();
+    if (lower.isEmpty) return const <String>[];
+    const accentMap = <String, String>{
+      'á': 'a',
+      'é': 'e',
+      'í': 'i',
+      'ó': 'o',
+      'ú': 'u',
+      'ü': 'u',
+      'ñ': 'n',
+    };
+    final buffer = StringBuffer();
+    for (final codePoint in lower.runes) {
+      final char = String.fromCharCode(codePoint);
+      buffer.write(accentMap[char] ?? char);
+    }
+    return buffer
+        .toString()
+        .replaceAll(RegExp(r'[^a-z0-9\s_]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim()
+        .split(' ')
+        .where((token) => token.isNotEmpty)
+        .toList(growable: false);
+  }
 
   Future<void> _logZoneResolved({
     required String zoneId,

@@ -4,21 +4,18 @@ const fs = require("fs");
 const path = require("path");
 
 const EXPECTED_ALLOWLIST = [
-  "pharmacy",
-  "kiosk",
+  "farmacia",
+  "kiosco",
   "almacen",
-  "veterinary",
-  "fast_food",
+  "veterinaria",
+  "comida_al_paso",
   "casa_de_comidas",
   "gomeria",
+  "panaderia",
+  "confiteria",
 ];
 
 const BLOCKED_LEGACY = new Set([
-  "panaderia",
-  "panadería",
-  "bakery",
-  "confiteria",
-  "confitería",
   "cafeteria",
   "cafe",
   "supermarket",
@@ -26,7 +23,12 @@ const BLOCKED_LEGACY = new Set([
   "other",
   "otro",
   "prepared_food",
+  "food_on_the_go",
+  "fast_food",
   "grocery",
+  "kiosk",
+  "pharmacy",
+  "veterinary",
 ]);
 
 function parseQuotedStrings(source, declarationName) {

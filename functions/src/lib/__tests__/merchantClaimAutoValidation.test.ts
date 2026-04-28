@@ -11,7 +11,7 @@ function baseInput(): MerchantClaimAutoValidationInput {
     claimId: "claim-1",
     userId: "user-1",
     merchantId: "merchant-1",
-    categoryId: "kiosk",
+    categoryId: "kiosco",
     zoneId: "zone-1",
     claimAuthenticatedEmail: "owner@example.com",
     authEmail: "owner@example.com",
@@ -58,7 +58,7 @@ test("claim sin documento base -> needs_more_info", () => {
 
 test("farmacia sin evidencia regulatoria -> needs_more_info", () => {
   const input = baseInput();
-  input.categoryId = "pharmacy";
+  input.categoryId = "farmacia";
   const result = evaluateMerchantClaimAutoValidation(input);
   assert.equal(result.nextStatus, "needs_more_info");
   assert.ok(result.reasonCodes.includes("missing_category_required_evidence"));
@@ -66,7 +66,7 @@ test("farmacia sin evidencia regulatoria -> needs_more_info", () => {
 
 test("veterinaria sin evidencia reforzada -> needs_more_info", () => {
   const input = baseInput();
-  input.categoryId = "veterinary";
+  input.categoryId = "veterinaria";
   const result = evaluateMerchantClaimAutoValidation(input);
   assert.equal(result.nextStatus, "needs_more_info");
   assert.ok(result.reasonCodes.includes("missing_category_required_evidence"));
@@ -74,7 +74,7 @@ test("veterinaria sin evidencia reforzada -> needs_more_info", () => {
 
 test("comida al paso con evidencia flexible válida -> under_review", () => {
   const input = baseInput();
-  input.categoryId = "fast_food";
+  input.categoryId = "comida_al_paso";
   input.evidence = [
     { kind: "operational_point_photo" },
     { kind: "alternative_relationship_evidence" },

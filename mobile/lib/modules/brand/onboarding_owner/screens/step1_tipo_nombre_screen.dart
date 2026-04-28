@@ -90,7 +90,13 @@ class _Step1TipoNombreScreenState extends State<Step1TipoNombreScreen> {
       'storefront': Icons.store_outlined,
       'shopping_basket': Icons.shopping_basket_outlined,
       'pets': Icons.pets_outlined,
+      'lunch_dining': Icons.fastfood_outlined,
+      'fastfood': Icons.fastfood_outlined,
+      'restaurant': Icons.restaurant_outlined,
+      'tire_repair': Icons.build_outlined,
+      'build': Icons.build_outlined,
       'bakery_dining': Icons.bakery_dining_outlined,
+      'local_cafe': Icons.local_cafe_outlined,
       'store': Icons.more_horiz,
     };
     return map[iconName] ?? Icons.store_outlined;

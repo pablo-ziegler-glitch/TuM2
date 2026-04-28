@@ -112,6 +112,13 @@ merchants/{id}          →  Cloud Function trigger  →  merchant_public/{id}
 
 **Importante:** `merchant_public` nunca se escribe directamente desde cliente. Solo Cloud Functions tienen permiso.
 
+### Scope de rubros MVP (TuM2-0015)
+
+- Lista cerrada MVP: Farmacias, Kioscos, Almacenes, Veterinarias, Comida al paso, Rotiserías, Gomerías, Panaderías y Confiterías.
+- Canon producto: `pharmacies`, `kiosks`, `grocery_stores`, `veterinaries`, `food_on_the_go`, `rotisseries`, `tire_shops`, `bakeries`, `confectioneries`.
+- Runtime: los rubros MVP usan únicamente IDs canónicos; no se aceptan aliases legacy en serving.
+- Onboarding OWNER y filtros públicos deben aplicar allowlist MVP y no leer catálogo completo cuando no sea necesario.
+
 ---
 
 ## 5. Modelo de estados de comercio (3 ejes)

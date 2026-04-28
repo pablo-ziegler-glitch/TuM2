@@ -1,12 +1,14 @@
 export const CLAIM_EVIDENCE_POLICY_VERSION = "2026-04-19.v1";
 export const CLAIM_ALLOWED_CATEGORY_IDS = [
-  "pharmacy",
-  "kiosk",
+  "farmacia",
+  "kiosco",
   "almacen",
-  "veterinary",
-  "fast_food",
+  "veterinaria",
+  "comida_al_paso",
   "casa_de_comidas",
   "gomeria",
+  "panaderia",
+  "confiteria",
 ] as const;
 
 export type ClaimEvidenceKind =
@@ -69,47 +71,13 @@ export interface ClaimEvidenceEvaluation {
 }
 
 const GENERAL_FIXED_CATEGORY_IDS = new Set([
-  "kiosk",
   "kiosco",
   "almacen",
-  "rotiseria",
   "casa_de_comidas",
-  "casa_comidas",
-  "comercio_general",
-  "house_food",
-  "food_house",
   "gomeria",
-  "tire_shop",
+  "panaderia",
+  "confiteria",
 ]);
-
-const CATEGORY_ALIASES: Record<string, string> = {
-  farmacia: "pharmacy",
-  drugstore: "pharmacy",
-  veterinary: "veterinary",
-  veterinaria: "veterinary",
-  vet: "veterinary",
-  comida_al_paso: "fast_food",
-  comida_rapida: "fast_food",
-  prepared_food: "casa_de_comidas",
-  rotiseria: "casa_de_comidas",
-  house_food: "casa_de_comidas",
-  kiosk: "kiosk",
-  kiosco: "kiosk",
-  grocery: "almacen",
-  store: "almacen",
-  tire_shop: "gomeria",
-  supermercado: "unsupported_non_mvp",
-  supermarket: "unsupported_non_mvp",
-  cafeteria: "unsupported_non_mvp",
-  cafe: "unsupported_non_mvp",
-  panaderia: "unsupported_non_mvp",
-  "panadería": "unsupported_non_mvp",
-  confiteria: "unsupported_non_mvp",
-  "confitería": "unsupported_non_mvp",
-  bakery: "unsupported_non_mvp",
-  other: "unsupported_non_mvp",
-  otro: "unsupported_non_mvp",
-};
 
 const FALLBACK_POLICY: ClaimEvidencePolicy = {
   categoryId: "fallback",
@@ -142,8 +110,8 @@ const FALLBACK_POLICY: ClaimEvidencePolicy = {
 };
 
 const POLICY_BY_CATEGORY: Record<string, ClaimEvidencePolicy> = {
-  pharmacy: {
-    categoryId: "pharmacy",
+  farmacia: {
+    categoryId: "farmacia",
     policyVersion: CLAIM_EVIDENCE_POLICY_VERSION,
     strictnessLevel: "regulated_strict",
     requiredPrimaryVisualEvidence: ["storefront_photo"],
@@ -165,8 +133,8 @@ const POLICY_BY_CATEGORY: Record<string, ClaimEvidencePolicy> = {
     riskLevel: "high",
     supportsMobileOrInformalOperation: false,
   },
-  veterinary: {
-    categoryId: "veterinary",
+  veterinaria: {
+    categoryId: "veterinaria",
     policyVersion: CLAIM_EVIDENCE_POLICY_VERSION,
     strictnessLevel: "reinforced_intermediate",
     requiredPrimaryVisualEvidence: ["storefront_photo"],
@@ -188,8 +156,8 @@ const POLICY_BY_CATEGORY: Record<string, ClaimEvidencePolicy> = {
     riskLevel: "high",
     supportsMobileOrInformalOperation: false,
   },
-  fast_food: {
-    categoryId: "fast_food",
+  comida_al_paso: {
+    categoryId: "comida_al_paso",
     policyVersion: CLAIM_EVIDENCE_POLICY_VERSION,
     strictnessLevel: "flexible_contextual",
     requiredPrimaryVisualEvidence: ["operational_point_photo", "storefront_photo"],
@@ -276,8 +244,7 @@ function hasAnyKind(
 }
 
 export function normalizeClaimCategoryId(categoryId: string): string {
-  const normalized = categoryId.trim().toLowerCase();
-  return CATEGORY_ALIASES[normalized] ?? normalized;
+  return categoryId.trim().toLowerCase();
 }
 
 export function isAllowedClaimCategoryId(categoryId: string): boolean {
@@ -328,7 +295,7 @@ export function evaluateEvidenceAgainstPolicy(params: {
     manualReviewReasons.push("fallback_category_policy_applied");
   }
   if (
-    policy.categoryId === "fast_food" &&
+    policy.categoryId === "comida_al_paso" &&
     hasAnyKind(params.evidenceKinds, ["operational_point_photo", "alternative_relationship_evidence"])
   ) {
     manualReviewReasons.push("ambiguous_food_stand_evidence");

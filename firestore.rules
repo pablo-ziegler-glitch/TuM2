@@ -23,8 +23,14 @@ service cloud.firestore {
     function isOwnerPending() {
       return isAuthenticated()
         && (
-          request.auth.token.owner_pending == true
-          || request.auth.token.owner_pending == 'true'
+          (
+            'owner_pending' in request.auth.token
+            && request.auth.token.owner_pending == true
+          )
+          || (
+            'owner_pending' in request.auth.token
+            && request.auth.token.owner_pending == 'true'
+          )
         );
     }
 
@@ -37,7 +43,7 @@ service cloud.firestore {
     }
 
     function isOwnerRole() {
-      return tokenRole() in ['owner', 'OWNER'];
+      return tokenRole() in ['owner', 'OWNER'] && !isOwnerPending();
     }
 
     function isAdmin() {
@@ -206,7 +212,9 @@ service cloud.firestore {
         allow read, write: if isAdmin();
         allow create, update, delete: if isOwnerRole() && merchantBelongsToUser(merchantId);
       }
-      allow delete: if isOwnerRole() && isOwnerOfThisMerchant();
+      // Seguridad: nunca habilitar borrado físico de merchants por cliente.
+      // La baja se resuelve por inactivación lógica vía backend.
+      allow delete: if false;
     }
 
     // ─── merchant_public/{merchantId} ────────────────────────────────────────

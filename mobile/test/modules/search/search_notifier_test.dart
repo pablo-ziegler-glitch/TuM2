@@ -148,7 +148,7 @@ void main() {
         _item(
           id: 'm1',
           name: 'Farmácia Ñandú',
-          categoryId: 'pharmacy',
+          categoryId: 'farmacia',
           isOpenNow: true,
           sortBoost: 10,
         ),
@@ -169,14 +169,14 @@ void main() {
         _item(
           id: 'm1',
           name: 'Farmacia Uno',
-          categoryId: 'pharmacy',
+          categoryId: 'farmacia',
           isOpenNow: true,
           sortBoost: 10,
         ),
         _item(
           id: 'm2',
           name: 'Kiosco Dos',
-          categoryId: 'kiosk',
+          categoryId: 'kiosco',
           isOpenNow: false,
           sortBoost: 5,
         ),
@@ -195,21 +195,21 @@ void main() {
         _item(
           id: 'm1',
           name: 'Abierto',
-          categoryId: 'pharmacy',
+          categoryId: 'farmacia',
           isOpenNow: true,
           sortBoost: 2,
         ),
         _item(
           id: 'm2',
           name: 'Cerrado',
-          categoryId: 'pharmacy',
+          categoryId: 'farmacia',
           isOpenNow: false,
           sortBoost: 9,
         ),
         _item(
           id: 'm3',
           name: 'Sin horario',
-          categoryId: 'pharmacy',
+          categoryId: 'farmacia',
           isOpenNow: null,
           sortBoost: 12,
         ),
@@ -229,21 +229,21 @@ void main() {
         _item(
           id: 'm1',
           name: 'Farmacia Alta',
-          categoryId: 'pharmacy',
+          categoryId: 'farmacia',
           isOpenNow: true,
           sortBoost: 100,
         ),
         _item(
           id: 'm2',
           name: 'Farmacia Media',
-          categoryId: 'pharmacy',
+          categoryId: 'farmacia',
           isOpenNow: true,
           sortBoost: 50,
         ),
         _item(
           id: 'm3',
           name: 'Kiosco',
-          categoryId: 'kiosk',
+          categoryId: 'kiosco',
           isOpenNow: true,
           sortBoost: 999,
         ),
@@ -254,7 +254,7 @@ void main() {
       await notifier.setZone('palermo');
       notifier.setFilters(
         const SearchFilters(
-          categoryId: 'pharmacy',
+          categoryId: 'farmacia',
           isOpenNow: true,
           sortBy: SearchSortBy.sortBoost,
         ),
@@ -263,6 +263,48 @@ void main() {
 
       final results = container.read(searchNotifierProvider).results;
       expect(results.map((e) => e.merchantId).toList(), ['m1', 'm2']);
+    });
+
+    test(
+        'incluye panadería/confitería y excluye rubros realmente fuera del set MVP',
+        () async {
+      final container = buildContainer([
+        _item(
+          id: 'm1',
+          name: 'Farmacia Uno',
+          categoryId: 'farmacia',
+          isOpenNow: true,
+          sortBoost: 100,
+        ),
+        _item(
+          id: 'm2',
+          name: 'Panadería Dos',
+          categoryId: 'panaderia',
+          isOpenNow: true,
+          sortBoost: 90,
+        ),
+        _item(
+          id: 'm3',
+          name: 'Confitería Tres',
+          categoryId: 'confiteria',
+          isOpenNow: true,
+          sortBoost: 95,
+        ),
+        _item(
+          id: 'm4',
+          name: 'Ferretería Tres',
+          categoryId: 'hardware_store',
+          isOpenNow: true,
+          sortBoost: 80,
+        ),
+      ]);
+      addTearDown(container.dispose);
+
+      final notifier = container.read(searchNotifierProvider.notifier);
+      await notifier.setZone('palermo');
+
+      final results = container.read(searchNotifierProvider).results;
+      expect(results.map((e) => e.merchantId).toList(), ['m1', 'm3', 'm2']);
     });
   });
 }

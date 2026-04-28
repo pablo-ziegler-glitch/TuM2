@@ -26,8 +26,13 @@ import {
   generateDownloadSignedUrl,
   generatePreviewSignedUrl,
 } from "../lib/storage/signedUrls";
+import { CLAIM_SENSITIVE_KEY_B64_SECRET } from "../config/secrets";
 
 const db = () => getFirestore();
+const CLAIMS_CALLABLE_OPTIONS = {
+  enforceAppCheck: true,
+  secrets: [CLAIM_SENSITIVE_KEY_B64_SECRET],
+};
 
 type UserVisibleStatus =
   | "draft"
@@ -1248,7 +1253,7 @@ function hasSensitivePrivateChanges(
 export const upsertMerchantClaimDraft = onCall<
   UpsertMerchantClaimDraftRequest,
   Promise<UpsertMerchantClaimDraftResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const uid = auth.uid;
   const authEmail = normalizeAuthEmail(auth.token);
@@ -1465,7 +1470,7 @@ export const upsertMerchantClaimDraft = onCall<
 export const submitMerchantClaim = onCall<
   SubmitMerchantClaimRequest,
   Promise<SubmitMerchantClaimResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const uid = auth.uid;
   const claimId = normalizeClaimId(request.data.claimId);
@@ -1571,7 +1576,7 @@ export const submitMerchantClaim = onCall<
 export const evaluateMerchantClaim = onCall<
   EvaluateMerchantClaimRequest,
   Promise<EvaluateMerchantClaimResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
@@ -1627,7 +1632,7 @@ export const evaluateMerchantClaim = onCall<
 export const resolveMerchantClaim = onCall<
   ResolveMerchantClaimRequest,
   Promise<ResolveMerchantClaimResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
@@ -1779,7 +1784,7 @@ export const resolveMerchantClaim = onCall<
 export const revealMerchantClaimSensitiveData = onCall<
   RevealSensitiveClaimDataRequest,
   Promise<RevealSensitiveClaimDataResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
@@ -2003,7 +2008,7 @@ async function issueMerchantClaimAttachmentUrl(params: {
 export const getMerchantClaimAttachmentPreviewUrl = onCall<
   GetMerchantClaimAttachmentAccessRequest,
   Promise<GetMerchantClaimAttachmentAccessResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
@@ -2018,7 +2023,7 @@ export const getMerchantClaimAttachmentPreviewUrl = onCall<
 export const getMerchantClaimAttachmentDownloadUrl = onCall<
   GetMerchantClaimAttachmentAccessRequest,
   Promise<GetMerchantClaimAttachmentAccessResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
@@ -2033,7 +2038,7 @@ export const getMerchantClaimAttachmentDownloadUrl = onCall<
 export const getMerchantClaimReviewDetail = onCall<
   GetMerchantClaimReviewDetailRequest,
   Promise<GetMerchantClaimReviewDetailResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimDetail(capabilities);
@@ -2207,7 +2212,7 @@ export const revealMerchantClaimSensitive = revealMerchantClaimSensitiveData;
 export const getMyMerchantClaimStatus = onCall<
   GetMyMerchantClaimStatusRequest,
   Promise<GetMyMerchantClaimStatusResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const uid = auth.uid;
   const claimId =
@@ -2271,7 +2276,7 @@ export const getMyMerchantClaimStatus = onCall<
 export const listMerchantClaimsForReview = onCall<
   ListMerchantClaimsForReviewRequest,
   Promise<ListMerchantClaimsForReviewResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const capabilities = readClaimReviewCapabilities(auth);
   assertCanViewClaimQueue(capabilities);
@@ -2400,7 +2405,7 @@ export const listMerchantClaimsForReview = onCall<
 export const listMyMerchantClaims = onCall<
   ListMyMerchantClaimsRequest,
   Promise<ListMyMerchantClaimsResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   const auth = assertAuthenticated(request.auth as CallableAuth);
   const uid = auth.uid;
   const limit = normalizeMyClaimsLimit(request.data.limit);
@@ -2471,7 +2476,7 @@ export const listMyMerchantClaims = onCall<
 export const searchClaimableMerchants = onCall<
   SearchClaimableMerchantsRequest,
   Promise<SearchClaimableMerchantsResponse>
->({ enforceAppCheck: true }, async (request) => {
+>(CLAIMS_CALLABLE_OPTIONS, async (request) => {
   assertAuthenticated(request.auth as CallableAuth);
   const zoneId = normalizeRequiredString(request.data.zoneId, "zoneId");
   const query = normalizeSearchQuery(request.data.query);

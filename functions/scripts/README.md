@@ -172,11 +172,11 @@ npm run seed:zones:csv -- \
 
 Migración forzada para normalizar categorías legacy:
 
-- `vet` ➜ `veterinary`
+- `vet` ➜ `veterinaria`
 
 Alcance:
 
-- `categories` (renombra doc id `vet` a `veterinary` y agrega alias)
+- `categories` (renombra doc id `vet` a `veterinaria` y agrega alias)
 - `admin_configs/catalog_limits` (`categoryLimits.vet`)
 - `merchants` (`category`, `categoryId`)
 - `merchant_public` (`category`, `categoryId`)
@@ -214,11 +214,12 @@ Migración para normalizar `merchant_claims.categoryId` al set canónico de clai
 
 Objetivos:
 
-- normalizar alias legacy frecuentes (`farmacia` -> `pharmacy`, `veterinaria` -> `veterinary`, etc.),
+- normalizar alias legacy frecuentes (`pharmacy` -> `farmacia`, `veterinary` -> `veterinaria`, etc.),
 - detectar categorías fuera del allowlist MVP de claims,
 - dejar trazabilidad de cuántos casos quedan para resolución manual.
 
-No intenta auto-mapear categorías no MVP (ej. `panaderia`, `cafeteria`, `other`): las reporta como `unsupported`.
+Auto-mapea aliases soportados del canon MVP (incluyendo `bakery -> panaderia`).
+Categorías fuera de scope (ej. `cafeteria`, `other`) quedan reportadas como `unsupported`.
 
 ### Ejecución
 
@@ -295,8 +296,8 @@ npm run guard:claim-categories:allowlist
 Normaliza categorías en `merchants` + `merchant_public` para aliases legacy
 conocidos y reporta categorías no-MVP que requieren curación manual.
 
-No fuerza auto-mapeo de categorías fuera de MVP (ej.: `panaderia`,
-`cafeteria`, `other`): las deja registradas como `unsupported_non_mvp`.
+Auto-mapea aliases soportados del canon MVP (incluyendo `bakery -> panaderia`).
+Categorías fuera de scope (ej.: `cafeteria`, `other`) quedan como `unsupported_non_mvp`.
 
 ### Ejecución
 
@@ -325,23 +326,21 @@ Parámetros:
 
 ## `seed_categories_es_latam.js`
 
-Seed idempotente de colección `categories` con catálogo base ES-LATAM.
+Seed idempotente de colección `categories` con catálogo base **MVP** (TuM2-0015).
 
 Incluye categorías canónicas:
 
 - `farmacia`
 - `kiosco`
 - `almacen`
-- `supermercado`
 - `veterinaria`
 - `casa_de_comidas`
 - `comida_al_paso`
 - `gomeria`
-- `cafeteria`
 - `panaderia`
-- `otro`
+- `confiteria`
 
-También elimina IDs legacy en inglés (`pharmacy`, `kiosk`, etc.).
+También elimina IDs legacy y no-MVP (`pharmacy`, `kiosk`, `supermercado`, `cafeteria`, `other`, etc.).
 
 ### Ejecución
 

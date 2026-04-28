@@ -111,6 +111,8 @@ Opcional para emuladores locales:
 | [SCREENS-MAP.md](docs/SCREENS-MAP.md) | Pantallas completas, flujos UX, deep links |
 | [NAVIGATION.md](docs/NAVIGATION.md) | Arquitectura de navegación Flutter (go_router) |
 | [QUERY-ARCHITECTURE.md](docs/QUERY-ARCHITECTURE.md) | Patrones de queries Firestore por pantalla |
+| [TuM2-0002-claim-principal.md](docs/branding/TuM2-0002-claim-principal.md) | Claim principal de marca, jerarquía oficial y reglas de uso |
+| [REVISION-TuM2-0029-onboarding-customer-2026-04-27.md](docs/ops/REVISION-TuM2-0029-onboarding-customer-2026-04-27.md) | Revisión de onboarding CUSTOMER: gap visual de splash y estado `BUGFIX_REQUIRED` |
 | [TuM2-0014-MICROCOPY.md](docs/TuM2-0014-MICROCOPY.md) | Guía de tono y microcopy para el MVP Fase 3 |
 | [PROD-LAUNCH-CRITICAL.md](docs/ops/PROD-LAUNCH-CRITICAL.md) | Runbook crítico para lanzamiento a producción |
 | [ci-cd.md](docs/devops/ci-cd.md) | Operación de workflows GitHub Actions, deploy por ambiente, seguridad OIDC y aprobaciones manuales |

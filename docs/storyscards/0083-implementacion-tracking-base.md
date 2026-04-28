@@ -64,7 +64,7 @@ Se incorporaron y validaron en allowlist:
 - `surface`
 - `zoneId`
 - `categoryId`
-- `merchantId`
+- `entity_zone_id`
 - `action_type`
 - `role`
 - `platform`
@@ -77,6 +77,7 @@ Se incorporaron y validaron en allowlist:
 
 Reglas aplicadas:
 - sin PII (`uid`, email, teléfono, texto libre, query cruda, coordenada fina, adjuntos);
+- sin IDs directos de entidad/usuario en payload analytics (`merchantId`, `productId`, `userId`, `deviceId`);
 - sin objetos/listas serializadas;
 - buckets para cardinalidad baja;
 - dedupe de emisión para evitar duplicados por re-render/taps repetidos.

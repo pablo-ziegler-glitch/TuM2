@@ -24,6 +24,7 @@ abstract class AppRoutes {
 
   // ── CustomerTabs — Tab Perfil ───────────────────────────────────────────────
   static const profile = '/profile';
+  static const profileHelp = '/profile/help';
   static const profileSettings = '/profile/settings';
   static const profileProposals = '/profile/propuestas';
   static const claimIntro = '/claim';
@@ -78,6 +79,15 @@ abstract class AppRoutes {
 
   // ── Pharmacy ─────────────────────────────────────────────────────────────────
   static const pharmacyDutyDetail = '/pharmacy/:id';
+
+  static String onboardingPath({String? source}) {
+    final normalized = source?.trim();
+    if (normalized == null || normalized.isEmpty) return onboarding;
+    return Uri(
+      path: onboarding,
+      queryParameters: {'source': normalized},
+    ).toString();
+  }
 
   /// Construye la ruta concreta de detalle de un comercio.
   static String commerceDetailPath(String merchantId, {String? source}) {

@@ -156,7 +156,9 @@ List<RouteBase> _buildRoutes() {
     ),
     GoRoute(
       path: AppRoutes.onboarding,
-      builder: (_, __) => const OnboardingScreen(),
+      builder: (_, state) => OnboardingScreen(
+        source: state.uri.queryParameters['source'] ?? 'first_launch',
+      ),
     ),
     GoRoute(
       path: AppRoutes.emailVerification,
@@ -404,14 +406,14 @@ List<RouteBase> _buildRoutes() {
     GoRoute(
       path: AppRoutes.ownerSchedules,
       builder: (_, __) => const OwnerAccessGuardPage(
-        title: 'Editar Horarios',
+        title: 'Horarios',
         child: OwnerScheduleScreen(),
       ),
     ),
     GoRoute(
       path: AppRoutes.ownerSignals,
       builder: (_, __) => const OwnerAccessGuardPage(
-        title: 'Señales Operativas',
+        title: 'Avisos de hoy',
         child: OwnerOperationalSignalsScreen(),
       ),
     ),

@@ -1,18 +1,20 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum TrustBadgeId {
-  verifiedMerchant('verified_merchant'),
-  validatedInfo('validated_info'),
-  claimedByOwner('claimed_by_owner'),
-  communityInfo('community_info'),
+  visibleInTum2('visible_in_tum2'),
   scheduleUpdated('schedule_updated'),
   scheduleVerified('schedule_verified'),
-  dutyLoaded('duty_loaded');
+  dutyLoaded('duty_loaded'),
+  communityInfo('community_info'),
+  claimedByOwner('claimed_by_owner'),
+  validatedInfo('validated_info'),
+  verifiedMerchant('verified_merchant');
 
   const TrustBadgeId(this.value);
   final String value;
 
-  static TrustBadgeId? fromValue(String? raw) {
-    final normalized = (raw ?? '').trim().toLowerCase();
-    if (normalized.isEmpty) return null;
+  static TrustBadgeId? fromValue(String raw) {
+    final normalized = raw.trim().toLowerCase();
     for (final badge in TrustBadgeId.values) {
       if (badge.value == normalized) return badge;
     }
@@ -20,34 +22,92 @@ enum TrustBadgeId {
   }
 }
 
-List<TrustBadgeId> parseTrustBadges(dynamic raw) {
-  if (raw is! List) return const <TrustBadgeId>[];
-  final output = <TrustBadgeId>[];
-  for (final item in raw) {
-    final badge = TrustBadgeId.fromValue(item?.toString());
-    if (badge != null && !output.contains(badge)) {
-      output.add(badge);
-    }
+String trustBadgeLabel(TrustBadgeId badge) {
+  switch (badge) {
+    case TrustBadgeId.visibleInTum2:
+      return 'Visible en TuM2';
+    case TrustBadgeId.scheduleUpdated:
+      return 'Horario actualizado';
+    case TrustBadgeId.scheduleVerified:
+      return 'Horario verificado';
+    case TrustBadgeId.dutyLoaded:
+      return 'Turno cargado';
+    case TrustBadgeId.communityInfo:
+      return 'Informacion de la comunidad';
+    case TrustBadgeId.claimedByOwner:
+      return 'Gestionado por su dueno';
+    case TrustBadgeId.validatedInfo:
+      return 'Informacion validada';
+    case TrustBadgeId.verifiedMerchant:
+      return 'Comercio verificado';
   }
-  return output;
+}
+
+List<TrustBadgeId> parseTrustBadges(dynamic rawBadges) {
+  if (rawBadges is! List) return const [];
+  final out = <TrustBadgeId>[];
+  for (final value in rawBadges) {
+    if (value is! String) continue;
+    final parsed = TrustBadgeId.fromValue(value);
+    if (parsed != null) out.add(parsed);
+  }
+  return out;
+}
+
+class MerchantScheduleSummaryWindow {
+  const MerchantScheduleSummaryWindow({
+    required this.opensAtLocalMinutes,
+    required this.closesAtLocalMinutes,
+  });
+
+  final int opensAtLocalMinutes;
+  final int closesAtLocalMinutes;
+
+  factory MerchantScheduleSummaryWindow.fromMap(Map<String, dynamic> map) {
+    return MerchantScheduleSummaryWindow(
+      opensAtLocalMinutes: (map['opensAtLocalMinutes'] as num?)?.toInt() ?? 0,
+      closesAtLocalMinutes: (map['closesAtLocalMinutes'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 class MerchantScheduleSummary {
   const MerchantScheduleSummary({
-    required this.isOpenNow,
-    required this.source,
-    required this.todayLabel,
+    required this.timezone,
+    required this.todayWindows,
+    required this.hasSchedule,
+    this.scheduleLastUpdatedAt,
+    this.lastVerifiedAt,
   });
 
-  final bool? isOpenNow;
-  final String? source;
-  final String? todayLabel;
+  final String timezone;
+  final List<MerchantScheduleSummaryWindow> todayWindows;
+  final bool hasSchedule;
+  final DateTime? scheduleLastUpdatedAt;
+  final DateTime? lastVerifiedAt;
 
-  static MerchantScheduleSummary fromMap(Map<String, dynamic> map) {
+  factory MerchantScheduleSummary.fromMap(Map<String, dynamic> map) {
+    final rawWindows = map['todayWindows'];
+    final windows = rawWindows is List
+        ? rawWindows
+            .whereType<Map<String, dynamic>>()
+            .map(MerchantScheduleSummaryWindow.fromMap)
+            .toList(growable: false)
+        : const <MerchantScheduleSummaryWindow>[];
     return MerchantScheduleSummary(
-      isOpenNow: map['isOpenNow'] is bool ? map['isOpenNow'] as bool : null,
-      source: map['source']?.toString(),
-      todayLabel: map['todayLabel']?.toString(),
+      timezone: (map['timezone'] as String?)?.trim() ??
+          'America/Argentina/Buenos_Aires',
+      todayWindows: windows,
+      hasSchedule: map['hasSchedule'] == true,
+      scheduleLastUpdatedAt: _asDateTime(map['scheduleLastUpdatedAt']),
+      lastVerifiedAt: _asDateTime(map['lastVerifiedAt']),
     );
   }
+}
+
+DateTime? _asDateTime(dynamic raw) {
+  if (raw is Timestamp) return raw.toDate().toLocal();
+  if (raw is DateTime) return raw.toLocal();
+  if (raw is String) return DateTime.tryParse(raw)?.toLocal();
+  return null;
 }

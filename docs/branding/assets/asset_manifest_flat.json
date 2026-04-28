@@ -1,0 +1,1130 @@
+[
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "README.md",
+    "flat_filename": "base__README.md",
+    "bytes": 561,
+    "sha256": "f1c794a8c7f53bcef787a6f0fa226c4ee094c589e9141e06a57b618e70f7da46"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/adaptive/ic_launcher_background.png",
+    "flat_filename": "base__android__adaptive__ic_launcher_background.png",
+    "bytes": 1173,
+    "sha256": "6e8e4d628ab4aaba60feb0df5014b55dc51be370185a2e6ce6360f5b8360a62f"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/adaptive/ic_launcher_foreground.png",
+    "flat_filename": "base__android__adaptive__ic_launcher_foreground.png",
+    "bytes": 48261,
+    "sha256": "83e906e97dd978544e0e9d0f0e2cbafe0275c028a80a532b2f3cc3fa02a9ac68"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/adaptive/ic_launcher_foreground_full_reference.png",
+    "flat_filename": "base__android__adaptive__ic_launcher_foreground_full_reference.png",
+    "bytes": 61355,
+    "sha256": "f7d58f993b15ba017b5b33e1cf11b36b10f59949e7a0ba4221e2f980cc7e825c"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "flat_filename": "base__android__app__src__main__res__mipmap-anydpi-v26__ic_launcher.xml",
+    "bytes": 266,
+    "sha256": "d03d20b2e161527e98cc63433fceead6b4f748e3c4952c2af9bcfcf555fbf7c3"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+    "flat_filename": "base__android__app__src__main__res__mipmap-anydpi-v26__ic_launcher_round.xml",
+    "bytes": 266,
+    "sha256": "d03d20b2e161527e98cc63433fceead6b4f748e3c4952c2af9bcfcf555fbf7c3"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-hdpi__ic_launcher.png",
+    "bytes": 4560,
+    "sha256": "58f680980130a42a4d8fe05be72eee0496d8e21c091f081ef24db8f4ded835e6"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-hdpi__ic_launcher_foreground.png",
+    "bytes": 2917,
+    "sha256": "e197b719e0a645f74c8caccdea17f5027e4519ab345f07e33435ea4b50a0d56a"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-hdpi__ic_launcher_round.png",
+    "bytes": 4560,
+    "sha256": "58f680980130a42a4d8fe05be72eee0496d8e21c091f081ef24db8f4ded835e6"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-mdpi__ic_launcher.png",
+    "bytes": 2591,
+    "sha256": "e834bb0e356891c796e7a5ee006d85c26b5bda18f73c23f61f0afea387611950"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-mdpi__ic_launcher_foreground.png",
+    "bytes": 1775,
+    "sha256": "99fa2759de66168d8684a76e31796b87189481d861f2ae450a79919f2098649f"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-mdpi__ic_launcher_round.png",
+    "bytes": 2591,
+    "sha256": "e834bb0e356891c796e7a5ee006d85c26b5bda18f73c23f61f0afea387611950"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xhdpi__ic_launcher.png",
+    "bytes": 7271,
+    "sha256": "c10f06a0f5ca13f26b2c6ffe54102a9db367a6141b7f699b64c2f8e6b05dd89b"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xhdpi__ic_launcher_foreground.png",
+    "bytes": 4547,
+    "sha256": "f8b9e17ab25141beb65a5601ef98ae674c4e2f6b506190ebca17dd154f280f58"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xhdpi__ic_launcher_round.png",
+    "bytes": 7271,
+    "sha256": "c10f06a0f5ca13f26b2c6ffe54102a9db367a6141b7f699b64c2f8e6b05dd89b"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xxhdpi__ic_launcher.png",
+    "bytes": 14904,
+    "sha256": "680368de84e21dbcf45f70e600b51c1972424d254ede809a81f533ed763aacc4"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xxhdpi__ic_launcher_foreground.png",
+    "bytes": 7727,
+    "sha256": "8195eaa52b61714714020da32993b85b229bb503ed4d73080088d6a823003474"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xxhdpi__ic_launcher_round.png",
+    "bytes": 14904,
+    "sha256": "680368de84e21dbcf45f70e600b51c1972424d254ede809a81f533ed763aacc4"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xxxhdpi__ic_launcher.png",
+    "bytes": 26173,
+    "sha256": "4104c55f11225e0938aec4c480af436f652ffde68a5d61be4bb313026a763cfc"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xxxhdpi__ic_launcher_foreground.png",
+    "bytes": 12620,
+    "sha256": "e4e385a14d39b6fe5c32c2d130ef553b3ec104be857be3bb1b9a625b5da56cfb"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png",
+    "flat_filename": "base__android__app__src__main__res__mipmap-xxxhdpi__ic_launcher_round.png",
+    "bytes": 26173,
+    "sha256": "4104c55f11225e0938aec4c480af436f652ffde68a5d61be4bb313026a763cfc"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "android/app/src/main/res/values/colors.xml",
+    "flat_filename": "base__android__app__src__main__res__values__colors.xml",
+    "bytes": 121,
+    "sha256": "ce9216aa83172785a42dae6e789dac699a9017cb9338dd7002efdbfabfc914d7"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "checksums.json",
+    "flat_filename": "base__checksums.json",
+    "bytes": 11785,
+    "sha256": "6f548a3f9210cb1ac56350eff4f227bebcba34d26646da5b7e75429ec6186baf"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "docs/icon-spec.md",
+    "flat_filename": "base__docs__icon-spec.md",
+    "bytes": 1501,
+    "sha256": "61a754152aa1c8cc0efdd527057d40bdb333556721fe476174912c257821d434"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/dev/tum2_icon_dev_1024.png",
+    "flat_filename": "base__env__dev__tum2_icon_dev_1024.png",
+    "bytes": 617406,
+    "sha256": "9c5eddbb2e96234582c31a2fda68809f994c3fadf26b37c05ee98adc67a30d62"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/dev/tum2_icon_dev_192.png",
+    "flat_filename": "base__env__dev__tum2_icon_dev_192.png",
+    "bytes": 27379,
+    "sha256": "5eacc712b325f67c35c05bdf2c44a2f06b465d10933e8fcf8cdfac4a2ee61fa2"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/dev/tum2_icon_dev_512.png",
+    "flat_filename": "base__env__dev__tum2_icon_dev_512.png",
+    "bytes": 191350,
+    "sha256": "2ca8ad423871697882a36c93419337149f8a9e1909a963c92846b1cff5186441"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/prod/tum2_icon_prod_1024.png",
+    "flat_filename": "base__env__prod__tum2_icon_prod_1024.png",
+    "bytes": 624549,
+    "sha256": "5038adb26ee331553204b60218b13c92dab1bdfbaddac91541c18438489ee56a"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/prod/tum2_icon_prod_192.png",
+    "flat_filename": "base__env__prod__tum2_icon_prod_192.png",
+    "bytes": 26570,
+    "sha256": "cff7414c2118dfa3dc8100b90ca443d81ff995cf8dc89cfd4715970f1fd52a74"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/prod/tum2_icon_prod_512.png",
+    "flat_filename": "base__env__prod__tum2_icon_prod_512.png",
+    "bytes": 191314,
+    "sha256": "0d0961a9b56e2d6c49af1f8b39fe85f48901c60d655403221bb87303c9c8353d"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/staging/tum2_icon_staging_1024.png",
+    "flat_filename": "base__env__staging__tum2_icon_staging_1024.png",
+    "bytes": 618958,
+    "sha256": "a467eefc31acd9c781b55056f438c1a3c7b307400e96c994be051e3d8952c5f7"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/staging/tum2_icon_staging_192.png",
+    "flat_filename": "base__env__staging__tum2_icon_staging_192.png",
+    "bytes": 27505,
+    "sha256": "798946d27a95641d1b027b6e94339c468dd1b86d923e7f7bc11446988a8dd0e0"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "env/staging/tum2_icon_staging_512.png",
+    "flat_filename": "base__env__staging__tum2_icon_staging_512.png",
+    "bytes": 192223,
+    "sha256": "3b801e15c62acc059b29511810f8d1efc442fb0ee976510da336dc0fd26ddfa9"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "flutter/flutter_launcher_icons_dev.yaml",
+    "flat_filename": "base__flutter__flutter_launcher_icons_dev.yaml",
+    "bytes": 267,
+    "sha256": "6869ed4a032d902fbde65d3bd2e900ce6b75f4b9b148d90b9ffd81dc0d4d75ee"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "flutter/flutter_launcher_icons_prod.yaml",
+    "flat_filename": "base__flutter__flutter_launcher_icons_prod.yaml",
+    "bytes": 423,
+    "sha256": "7f69bc799bee52984725a280669f0461a47915e92e297ffd7c834ac083f94ed4"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "flutter/flutter_launcher_icons_staging.yaml",
+    "flat_filename": "base__flutter__flutter_launcher_icons_staging.yaml",
+    "bytes": 275,
+    "sha256": "397b745f05e4cb93d369070dd924ed768617c8200a6b567bbaffe1c92b29b852"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Contents.json",
+    "flat_filename": "base__ios__AppIcon.appiconset__Contents.json",
+    "bytes": 2429,
+    "sha256": "f04e5646f7fe9d3e0df94048db209fffd17206f28237b94302df4e6465b96370"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-1024x1024@1x-ios-marketing.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-1024x1024@1x-ios-marketing.png",
+    "bytes": 624549,
+    "sha256": "5038adb26ee331553204b60218b13c92dab1bdfbaddac91541c18438489ee56a"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-20x20@1x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-20x20@1x-ipad.png",
+    "bytes": 791,
+    "sha256": "b64e7a7245624f47ae23bddebec909061012c0c97b47e82eceb425784b127931"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-20x20@2x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-20x20@2x-ipad.png",
+    "bytes": 2024,
+    "sha256": "5ecfe0c8e7bd309298badd8d02aa2868f0ab7646a9759d33110400642467ba29"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-20x20@2x-iphone.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-20x20@2x-iphone.png",
+    "bytes": 2024,
+    "sha256": "5ecfe0c8e7bd309298badd8d02aa2868f0ab7646a9759d33110400642467ba29"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-20x20@3x-iphone.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-20x20@3x-iphone.png",
+    "bytes": 3497,
+    "sha256": "2a6e7ade121e2d585637b6812be05ea844c82a70822e3fff4d7cebaec0e306c4"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-29x29@1x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-29x29@1x-ipad.png",
+    "bytes": 1311,
+    "sha256": "964129a5a23870946e13a016edf9cdd939166f3185747e9baf724c683c09ee15"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-29x29@2x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-29x29@2x-ipad.png",
+    "bytes": 3375,
+    "sha256": "6edbe21e925721d2edef1eef25d614a04e79a3fd8e9c54d17a1cf7283cee81e7"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-29x29@2x-iphone.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-29x29@2x-iphone.png",
+    "bytes": 3375,
+    "sha256": "6edbe21e925721d2edef1eef25d614a04e79a3fd8e9c54d17a1cf7283cee81e7"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-29x29@3x-iphone.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-29x29@3x-iphone.png",
+    "bytes": 6197,
+    "sha256": "adc38c4e49aa969fe31b0a439bb5efb77daa8dbf4f0b41701b6c59489f4f673d"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-40x40@1x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-40x40@1x-ipad.png",
+    "bytes": 2024,
+    "sha256": "5ecfe0c8e7bd309298badd8d02aa2868f0ab7646a9759d33110400642467ba29"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-40x40@2x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-40x40@2x-ipad.png",
+    "bytes": 5474,
+    "sha256": "0bdbdc7876664301b7763d3b25e0fd572d46a524c1cbfe91c2604e82baad84f6"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-40x40@2x-iphone.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-40x40@2x-iphone.png",
+    "bytes": 5474,
+    "sha256": "0bdbdc7876664301b7763d3b25e0fd572d46a524c1cbfe91c2604e82baad84f6"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-40x40@3x-iphone.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-40x40@3x-iphone.png",
+    "bytes": 10610,
+    "sha256": "05968e26f25ef1eb620d3404495e9ea20e8e6169c0227165137b47b131e93454"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-60x60@2x-iphone.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-60x60@2x-iphone.png",
+    "bytes": 10610,
+    "sha256": "05968e26f25ef1eb620d3404495e9ea20e8e6169c0227165137b47b131e93454"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-60x60@3x-iphone.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-60x60@3x-iphone.png",
+    "bytes": 23118,
+    "sha256": "73aafc17007e1655f4c2c1b4ff78b07beb338c89b933e69f001e2518cc49e31d"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-76x76@1x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-76x76@1x-ipad.png",
+    "bytes": 5051,
+    "sha256": "9a08992e9face3eadbeca280fb7f44288ce65edb0d58862da0b8516503e0df22"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-76x76@2x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-76x76@2x-ipad.png",
+    "bytes": 16618,
+    "sha256": "63b93f50c4aa6489d784a2441dc8246fadedc29d2d83c7592b42b8ccd5ffe909"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-83.5x83.5@2x-ipad.png",
+    "flat_filename": "base__ios__AppIcon.appiconset__Icon-App-83.5x83.5@2x-ipad.png",
+    "bytes": 19936,
+    "sha256": "dcf8622a0e752e671f880e2516ee225095b32fb30e708162235a5f6cd6df69a1"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "master/tum2_icon_master_1024.png",
+    "flat_filename": "base__master__tum2_icon_master_1024.png",
+    "bytes": 624549,
+    "sha256": "5038adb26ee331553204b60218b13c92dab1bdfbaddac91541c18438489ee56a"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "preview/validation_grid.png",
+    "flat_filename": "base__preview__validation_grid.png",
+    "bytes": 95048,
+    "sha256": "7bdfad76393138000cae445d9cbbb0f7c7e0c874f38abf6af085b275726b5586"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "source/logo_source_used_square.png",
+    "flat_filename": "base__source__logo_source_used_square.png",
+    "bytes": 833693,
+    "sha256": "37901462d2e704a43e4b5277af4cd87f1a13c6efd01efcc3802b08c2c5f1e2a6"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "store/app_store_1024.png",
+    "flat_filename": "base__store__app_store_1024.png",
+    "bytes": 624549,
+    "sha256": "5038adb26ee331553204b60218b13c92dab1bdfbaddac91541c18438489ee56a"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "store/play_store_512.png",
+    "flat_filename": "base__store__play_store_512.png",
+    "bytes": 186367,
+    "sha256": "ed86743cff6271d59c4284035f5fe6f3347bd7431290cda76b2aac0391a56895"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/apple-touch-icon-180.png",
+    "flat_filename": "base__web__apple-touch-icon-180.png",
+    "bytes": 23118,
+    "sha256": "73aafc17007e1655f4c2c1b4ff78b07beb338c89b933e69f001e2518cc49e31d"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/apple-touch-icon.png",
+    "flat_filename": "base__web__apple-touch-icon.png",
+    "bytes": 23118,
+    "sha256": "73aafc17007e1655f4c2c1b4ff78b07beb338c89b933e69f001e2518cc49e31d"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/favicon-16.png",
+    "flat_filename": "base__web__favicon-16.png",
+    "bytes": 568,
+    "sha256": "426e497396458b4e2f890ba0ebbc83d0636f0f99f144e13793731dca752c77e6"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/favicon-32.png",
+    "flat_filename": "base__web__favicon-32.png",
+    "bytes": 1456,
+    "sha256": "ec3cd5a8582399acc7faa8b9b797508cd2dd4878394218b5d9f2b555676ac87b"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/favicon-48.png",
+    "flat_filename": "base__web__favicon-48.png",
+    "bytes": 2591,
+    "sha256": "e834bb0e356891c796e7a5ee006d85c26b5bda18f73c23f61f0afea387611950"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/favicon.ico",
+    "flat_filename": "base__web__favicon.ico",
+    "bytes": 590,
+    "sha256": "d439435d574144924167c82618670ff07becb221bacb50dfe7c4a963057c558c"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/manifest-icons/icon-192.png",
+    "flat_filename": "base__web__manifest-icons__icon-192.png",
+    "bytes": 26173,
+    "sha256": "4104c55f11225e0938aec4c480af436f652ffde68a5d61be4bb313026a763cfc"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/manifest-icons/icon-512.png",
+    "flat_filename": "base__web__manifest-icons__icon-512.png",
+    "bytes": 186367,
+    "sha256": "ed86743cff6271d59c4284035f5fe6f3347bd7431290cda76b2aac0391a56895"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/manifest-icons/maskable-192.png",
+    "flat_filename": "base__web__manifest-icons__maskable-192.png",
+    "bytes": 16752,
+    "sha256": "008f23b8f6fc32ab95fde3ada51d0722a86d5fe662f1e79202a7aeba6c84155d"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/manifest-icons/maskable-512.png",
+    "flat_filename": "base__web__manifest-icons__maskable-512.png",
+    "bytes": 124153,
+    "sha256": "749bbc7a30545a29eaf864d64bae6a018e1d0d00052497feff508e88baa78cbb"
+  },
+  {
+    "prefix": "base",
+    "source_zip": "tum2_app_icon_pack_v3_exact_source.zip",
+    "source_path": "web/site.webmanifest",
+    "flat_filename": "base__web__site.webmanifest",
+    "bytes": 699,
+    "sha256": "75513528a66f132e8c36c3894f9841ac440061bf6d89dc44465cf2bdd101f4d8"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "README.md",
+    "flat_filename": "mundialista__README.md",
+    "bytes": 661,
+    "sha256": "7022e2d756c6d5b51d5ebb4373070c51482f710b4861683b6a4789a5ea7d7144"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/adaptive/ic_launcher_background.png",
+    "flat_filename": "mundialista__android__adaptive__ic_launcher_background.png",
+    "bytes": 1172,
+    "sha256": "cc67f3e3b2b5132cd4cc567e2329dc0a9d2169e5181c0354edc359727bae916f"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/adaptive/ic_launcher_foreground.png",
+    "flat_filename": "mundialista__android__adaptive__ic_launcher_foreground.png",
+    "bytes": 112626,
+    "sha256": "51421a900a5839f31dbbe67804df01bbcb7a9a1de31cee75c128b85c3d454301"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/adaptive/ic_launcher_foreground_full_reference.png",
+    "flat_filename": "mundialista__android__adaptive__ic_launcher_foreground_full_reference.png",
+    "bytes": 165071,
+    "sha256": "b1b3bf73aa99ad502828f1fd9ff47426a424b345ebc967848c873468e71fbcfa"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-anydpi-v26__ic_launcher.xml",
+    "bytes": 266,
+    "sha256": "d03d20b2e161527e98cc63433fceead6b4f748e3c4952c2af9bcfcf555fbf7c3"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-anydpi-v26__ic_launcher_round.xml",
+    "bytes": 266,
+    "sha256": "d03d20b2e161527e98cc63433fceead6b4f748e3c4952c2af9bcfcf555fbf7c3"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-hdpi__ic_launcher.png",
+    "bytes": 9016,
+    "sha256": "b0141c3466133768ae9f480e06243ca6b1a82ab65f20e33df28e4494c42af2a5"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-hdpi__ic_launcher_foreground.png",
+    "bytes": 6408,
+    "sha256": "8a8b500a23023e88d5c32218467f34612a649dedf95d8f77e8e7e21824a3fc09"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-hdpi__ic_launcher_round.png",
+    "bytes": 9016,
+    "sha256": "b0141c3466133768ae9f480e06243ca6b1a82ab65f20e33df28e4494c42af2a5"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-mdpi__ic_launcher.png",
+    "bytes": 4576,
+    "sha256": "e5c260dd0dd45328a5dcde36103b8548015e9cf965f74351e842ba73e152f0db"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-mdpi__ic_launcher_foreground.png",
+    "bytes": 3511,
+    "sha256": "a94171290e293ef124eae73d1c678142ea858320daf644290ad48fc0409cbcb9"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-mdpi__ic_launcher_round.png",
+    "bytes": 4576,
+    "sha256": "e5c260dd0dd45328a5dcde36103b8548015e9cf965f74351e842ba73e152f0db"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xhdpi__ic_launcher.png",
+    "bytes": 14779,
+    "sha256": "c9fe1e3045a32fa3015654a1f7f08ea2499a2037f2b6bddf7d2998a6d5d170df"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xhdpi__ic_launcher_foreground.png",
+    "bytes": 10104,
+    "sha256": "7326ee9b948bada941151052e7486eed96140a5cc1fdebae055164b7f1ebe34a"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xhdpi__ic_launcher_round.png",
+    "bytes": 14779,
+    "sha256": "c9fe1e3045a32fa3015654a1f7f08ea2499a2037f2b6bddf7d2998a6d5d170df"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xxhdpi__ic_launcher.png",
+    "bytes": 30170,
+    "sha256": "7dd9a51f167b839f9f329fec4f2a18b458c617e12b79391bf7166d9ec3c130ef"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xxhdpi__ic_launcher_foreground.png",
+    "bytes": 19016,
+    "sha256": "3109a74128fa18aba28aebd96d339f4ea2b7c7021c46ddee698476391a61ae68"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xxhdpi__ic_launcher_round.png",
+    "bytes": 30170,
+    "sha256": "7dd9a51f167b839f9f329fec4f2a18b458c617e12b79391bf7166d9ec3c130ef"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xxxhdpi__ic_launcher.png",
+    "bytes": 50397,
+    "sha256": "6bf2eff6f622cceccf5bcf94c0a10ebfa6c05ee096a7f3df64647da83e891918"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xxxhdpi__ic_launcher_foreground.png",
+    "bytes": 30224,
+    "sha256": "62cd574f056bda61728b3ead4403ed591ec4ccde88d73ccac490130272b4ff17"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png",
+    "flat_filename": "mundialista__android__app__src__main__res__mipmap-xxxhdpi__ic_launcher_round.png",
+    "bytes": 50397,
+    "sha256": "6bf2eff6f622cceccf5bcf94c0a10ebfa6c05ee096a7f3df64647da83e891918"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "android/app/src/main/res/values/colors.xml",
+    "flat_filename": "mundialista__android__app__src__main__res__values__colors.xml",
+    "bytes": 121,
+    "sha256": "1bede145e7ab12526dfa5a1d77ff930836e9148240f76a31790a0266a27a0bf9"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "checksums.json",
+    "flat_filename": "mundialista__checksums.json",
+    "bytes": 12038,
+    "sha256": "81549dd8d8a3f877dfe893d68ec0c7b0a55d61f4ab2df18307945d19d24784b2"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "docs/icon-spec-mundialista.md",
+    "flat_filename": "mundialista__docs__icon-spec-mundialista.md",
+    "bytes": 1402,
+    "sha256": "9708538f73702efe1eaf221d771cd0c5b3c8c5babdf976e9e9197e24fc20c04a"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/dev_promo/tum2_icon_dev_promo_1024.png",
+    "flat_filename": "mundialista__env__dev_promo__tum2_icon_dev_promo_1024.png",
+    "bytes": 1281570,
+    "sha256": "3775a8143ec64e9cf35384ec542d2279966ccaa5c7003f76152fbd229151d073"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/dev_promo/tum2_icon_dev_promo_192.png",
+    "flat_filename": "mundialista__env__dev_promo__tum2_icon_dev_promo_192.png",
+    "bytes": 50956,
+    "sha256": "758dbfa0236435685e2c8205daa5d7a359e47f0577cc0ca60c450e9279e32f49"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/dev_promo/tum2_icon_dev_promo_512.png",
+    "flat_filename": "mundialista__env__dev_promo__tum2_icon_dev_promo_512.png",
+    "bytes": 327780,
+    "sha256": "2a1fc2269dd242af105d8946ca0bc11c0103f8400afb385cbef4878e6dd3ea88"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/prod_promo/tum2_icon_prod_promo_1024.png",
+    "flat_filename": "mundialista__env__prod_promo__tum2_icon_prod_promo_1024.png",
+    "bytes": 1298010,
+    "sha256": "4e1885fec18a0416d41c2c0ac54aca5961a86cd57d843394432847f1dcab54d7"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/prod_promo/tum2_icon_prod_promo_192.png",
+    "flat_filename": "mundialista__env__prod_promo__tum2_icon_prod_promo_192.png",
+    "bytes": 50560,
+    "sha256": "7a1045de4f8b97ff30b66c68ef2f3cda5ee53dc703333a3eda17e84b9f623177"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/prod_promo/tum2_icon_prod_promo_512.png",
+    "flat_filename": "mundialista__env__prod_promo__tum2_icon_prod_promo_512.png",
+    "bytes": 329307,
+    "sha256": "a2044f05c3dca7c9762f471e7e623cae4f839a65fcb3d7d0b6e9d8da5a210134"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/staging_promo/tum2_icon_staging_promo_1024.png",
+    "flat_filename": "mundialista__env__staging_promo__tum2_icon_staging_promo_1024.png",
+    "bytes": 1283394,
+    "sha256": "fb659e7901ff4dfd61da8107eb7bcdbd57b52f3bb6234098fb9577451b8c89a7"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/staging_promo/tum2_icon_staging_promo_192.png",
+    "flat_filename": "mundialista__env__staging_promo__tum2_icon_staging_promo_192.png",
+    "bytes": 51194,
+    "sha256": "5f5db60e415a7d36ba3d7a119571a0753b64fe8634960b75544bddf7ed092269"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "env/staging_promo/tum2_icon_staging_promo_512.png",
+    "flat_filename": "mundialista__env__staging_promo__tum2_icon_staging_promo_512.png",
+    "bytes": 329114,
+    "sha256": "0f3696776d1cfdad20dac4ecb08be514982dd8436ee30ec506fd1917edbef8d9"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "flutter/flutter_launcher_icons_mundialista.yaml",
+    "flat_filename": "mundialista__flutter__flutter_launcher_icons_mundialista.yaml",
+    "bytes": 477,
+    "sha256": "102b7ea077789def95a241a4170954f3c3b26e38a72be5f7fba5b43b53056a96"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Contents.json",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Contents.json",
+    "bytes": 2645,
+    "sha256": "befe42a930af1490a7cc2d894913841f739f0c36538037a723df22a23836399d"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-1024x1024@1x-ios-marketing.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-1024x1024@1x-ios-marketing.png",
+    "bytes": 1298010,
+    "sha256": "4e1885fec18a0416d41c2c0ac54aca5961a86cd57d843394432847f1dcab54d7"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-20x20@1x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-20x20@1x-ipad.png",
+    "bytes": 1036,
+    "sha256": "441ff52452ab6f922f7e95ada1ace537def5e5b64cdba99898d9afd6f72b2e42"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-20x20@2x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-20x20@2x-ipad.png",
+    "bytes": 3281,
+    "sha256": "923cdda9a621bea9b7101d6d8eaa0d219967120fa1afa62ba9bbbcd86c403e64"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-20x20@2x-iphone.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-20x20@2x-iphone.png",
+    "bytes": 3281,
+    "sha256": "923cdda9a621bea9b7101d6d8eaa0d219967120fa1afa62ba9bbbcd86c403e64"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-20x20@3x-iphone.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-20x20@3x-iphone.png",
+    "bytes": 6646,
+    "sha256": "c1a541d460a8b762ca82ec58a07ae243c11b641c7f5ae26c1d14f440cde786c8"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-29x29@1x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-29x29@1x-ipad.png",
+    "bytes": 1933,
+    "sha256": "5ba4e2b411e8bdc81342fb599a59084d2dc0341f6b0231d6ce982e54c25f7545"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-29x29@2x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-29x29@2x-ipad.png",
+    "bytes": 6285,
+    "sha256": "ed9e863230f5a8efa5c716c55557168c97cca8b5c23776de8d4341285d77ff63"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-29x29@2x-iphone.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-29x29@2x-iphone.png",
+    "bytes": 6285,
+    "sha256": "ed9e863230f5a8efa5c716c55557168c97cca8b5c23776de8d4341285d77ff63"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-29x29@3x-iphone.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-29x29@3x-iphone.png",
+    "bytes": 12470,
+    "sha256": "70cc1b7a5420cb75c292434e001d17ff79a6d25490d37e57edd568d00ba184e6"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-40x40@1x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-40x40@1x-ipad.png",
+    "bytes": 3281,
+    "sha256": "923cdda9a621bea9b7101d6d8eaa0d219967120fa1afa62ba9bbbcd86c403e64"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-40x40@2x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-40x40@2x-ipad.png",
+    "bytes": 10764,
+    "sha256": "ce605bc7437cfe7c7a9c7b41cfcc74077d252f5879cd61379e2924a49b07ad0d"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-40x40@2x-iphone.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-40x40@2x-iphone.png",
+    "bytes": 10764,
+    "sha256": "ce605bc7437cfe7c7a9c7b41cfcc74077d252f5879cd61379e2924a49b07ad0d"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-40x40@3x-iphone.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-40x40@3x-iphone.png",
+    "bytes": 21860,
+    "sha256": "22fea1b9efb402836845fdb88ec7d92a86a973eff597a9022e50ae8cafb87b15"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-60x60@2x-iphone.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-60x60@2x-iphone.png",
+    "bytes": 21860,
+    "sha256": "22fea1b9efb402836845fdb88ec7d92a86a973eff597a9022e50ae8cafb87b15"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-60x60@3x-iphone.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-60x60@3x-iphone.png",
+    "bytes": 44914,
+    "sha256": "40548d3be871d6c20e82348107cef0a514b73ef81f8c7227f9d0dd9624fce6fd"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-76x76@1x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-76x76@1x-ipad.png",
+    "bytes": 9879,
+    "sha256": "15822d4b30beeb8e2075e12f39c883da71fc35e01a61e1325ff0e8104857fcdf"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-76x76@2x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-76x76@2x-ipad.png",
+    "bytes": 33247,
+    "sha256": "0d92499911c64eb72be78f5386cbe12c5ae45776b3c3bca71ea629607af0b1ef"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "ios/AppIcon.appiconset/Icon-App-Mundialista-83.5x83.5@2x-ipad.png",
+    "flat_filename": "mundialista__ios__AppIcon.appiconset__Icon-App-Mundialista-83.5x83.5@2x-ipad.png",
+    "bytes": 39261,
+    "sha256": "cde742611b26cec02eb30abbb01926e19f1d5af297ac3ab6c555fb19ff8ee354"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "master/tum2_mundialista_icon_master_1024.png",
+    "flat_filename": "mundialista__master__tum2_mundialista_icon_master_1024.png",
+    "bytes": 1298010,
+    "sha256": "4e1885fec18a0416d41c2c0ac54aca5961a86cd57d843394432847f1dcab54d7"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "preview/validation_grid_mundialista.png",
+    "flat_filename": "mundialista__preview__validation_grid_mundialista.png",
+    "bytes": 161832,
+    "sha256": "7a137970e9b2edb526dfe5fe92d362ac832234d003bab665535e3a3ab0e59af1"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "source/mundialista_source_cropped_used.png",
+    "flat_filename": "mundialista__source__mundialista_source_cropped_used.png",
+    "bytes": 1628570,
+    "sha256": "0dcccc27abe242f8e18004fac9e5c0f6345c89edce373b74444ff145a30b7a1d"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "source/mundialista_source_original.png",
+    "flat_filename": "mundialista__source__mundialista_source_original.png",
+    "bytes": 1800302,
+    "sha256": "c4f6c9e76c4dee5a0161008b4abb95306faff4d11db46ed6cd0ad8a38073694a"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "store/app_store_1024_mundialista.png",
+    "flat_filename": "mundialista__store__app_store_1024_mundialista.png",
+    "bytes": 1298010,
+    "sha256": "4e1885fec18a0416d41c2c0ac54aca5961a86cd57d843394432847f1dcab54d7"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "store/play_store_512_mundialista.png",
+    "flat_filename": "mundialista__store__play_store_512_mundialista.png",
+    "bytes": 325286,
+    "sha256": "91aa2d797149b5b2e94cef61496d54a0185b60150b9904b0533f9975d0ec25cc"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/apple-touch-icon-180.png",
+    "flat_filename": "mundialista__web__apple-touch-icon-180.png",
+    "bytes": 44914,
+    "sha256": "40548d3be871d6c20e82348107cef0a514b73ef81f8c7227f9d0dd9624fce6fd"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/apple-touch-icon.png",
+    "flat_filename": "mundialista__web__apple-touch-icon.png",
+    "bytes": 44914,
+    "sha256": "40548d3be871d6c20e82348107cef0a514b73ef81f8c7227f9d0dd9624fce6fd"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/favicon-16.png",
+    "flat_filename": "mundialista__web__favicon-16.png",
+    "bytes": 737,
+    "sha256": "35bdee662dc1eea4c926093bf10cb3abae62c0494c5356cfd61571e892c78287"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/favicon-32.png",
+    "flat_filename": "mundialista__web__favicon-32.png",
+    "bytes": 2240,
+    "sha256": "3d289d4dee68ea117e01be3ac93d1e37a7a6a60723df0cea2bd70b82025c753e"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/favicon-48.png",
+    "flat_filename": "mundialista__web__favicon-48.png",
+    "bytes": 4576,
+    "sha256": "e5c260dd0dd45328a5dcde36103b8548015e9cf965f74351e842ba73e152f0db"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/favicon.ico",
+    "flat_filename": "mundialista__web__favicon.ico",
+    "bytes": 759,
+    "sha256": "19aa5909dd9c5f70ca18777b63692c2da9c8dce04a9a032a11eca421ae0b18a8"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/manifest-icons/icon-192.png",
+    "flat_filename": "mundialista__web__manifest-icons__icon-192.png",
+    "bytes": 50397,
+    "sha256": "6bf2eff6f622cceccf5bcf94c0a10ebfa6c05ee096a7f3df64647da83e891918"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/manifest-icons/icon-512.png",
+    "flat_filename": "mundialista__web__manifest-icons__icon-512.png",
+    "bytes": 325286,
+    "sha256": "91aa2d797149b5b2e94cef61496d54a0185b60150b9904b0533f9975d0ec25cc"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/manifest-icons/maskable-192.png",
+    "flat_filename": "mundialista__web__manifest-icons__maskable-192.png",
+    "bytes": 31349,
+    "sha256": "ce83a6197b7c3fc8d0085666c718410587695807b283f2059fec28abf0966824"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/manifest-icons/maskable-512.png",
+    "flat_filename": "mundialista__web__manifest-icons__maskable-512.png",
+    "bytes": 194160,
+    "sha256": "809174f9f58874bda72ddd3566c2d11a252dd98644353cc5aa2aab26d424caeb"
+  },
+  {
+    "prefix": "mundialista",
+    "source_zip": "tum2_mundialista_icon_pack.zip",
+    "source_path": "web/site.webmanifest",
+    "flat_filename": "mundialista__web__site.webmanifest",
+    "bytes": 711,
+    "sha256": "391e6e1e675955b42c0021dbbbf3842c5bb50163557633ff19e531d8bcf29240"
+  }
+]

@@ -11,13 +11,11 @@
 - En revisiones y QA de cierre: **no se aceptan** `mock`, `fake`, `stub`, datos hardcodeados de demo ni flujos simulados como sustituto de integración real.
 - Si existe una pantalla con mock temporal, la tarjeta se considera **incompleta** hasta conectar backend real y persistencia real.
 
-## Actualización técnica reciente (2026-04-27)
+## Actualización técnica reciente (2026-04-26)
 
-- **[0015] Hardening seguridad/ciclo de vida (2026-04-28)**: se elimina borrado físico de `merchants` por cliente en `firestore.rules` (solo baja lógica), se agrega callable `requestMerchantInactivation` (owner verificado + App Check + ownership estricto + rate limiting + auditoría de motivo) para pasar a `status=inactive` y `visibilityStatus=suppressed`, se endurece `isOwnerRole()` para bloquear `owner_pending`, y se erradican aliases legacy en runtime para categorías de claim/admin (`merchantClaimEvidencePolicy`, `merchant_claim_evidence_policy.dart`, `adminCategories`).
-- **[0015] Rubros prioritarios MVP**: tarjeta expandida y cerrada como definición de producto en `docs/storycards/0015-rubros-prioritarios.md`; lista canónica cerrada (Farmacias, Kioscos, Almacenes, Veterinarias, Comida al paso, Rotiserías, Gomerías, Panaderías, Confiterías), matriz de señales operativas por rubro y alineación con dependencias 0017/0095/0121. IDs canónicos únicos vigentes: `farmacia`, `kiosco`, `almacen`, `veterinaria`, `comida_al_paso`, `casa_de_comidas`, `gomeria`, `panaderia`, `confiteria` (sin IDs legacy en runtime). Se aplicó hardening móvil en onboarding/search/abierto-ahora con consulta acotada de categorías por IDs MVP (sin scan completo) y sin listeners nuevos.
 - **[0013] Sellos operativos y de confianza costo-eficientes**: backend con `TrustBadgeId` + `computeTrustBadges` + `primaryTrustBadge` + `sortBoost` puro (tope 120), proyección de `scheduleSummary/nextTransitionAt` en `merchant_public`, job `nightlyRefreshOpenStatuses` migrado a query scoped (`nextTransitionAt <= now`, `limit 300`) y mobile con `TrustBadgeChip/TrustBadgeRow` + helper local `resolveOperationalStatus` sin listeners ni writes adicionales.
 - **[0002] Claim principal de marca**: claim primario oficial definido y aplicado en superficies de entrada (`Splash`, `AUTH-03`, onboarding inicial) con centralización en `mobile/lib/core/copy/brand_copy.dart`, test unitario de contrato y documentación en `docs/branding/TuM2-0002-claim-principal.md` + auditoría en `docs/ops/AUDITORIA-TuM2-0002-claim-principal-2026-04-27.md`, sin impacto en backend/Firestore/Functions.
-- **[0029] Revisión de onboarding CUSTOMER**: estado actualizado a `READY_FOR_QA` tras cierre técnico guest-first (AUTH-01/AUTH-02, analytics `auth_onboarding_*` y `auth_splash_*`, ayuda desde perfil, tests automáticos y documentación), usando assets de marca versionados en `mobile/assets/auth01/`.
+- **[0029] Revisión de onboarding CUSTOMER**: tarjeta reabierta en `IN_PROGRESS` para cierre técnico guest-first completo (AUTH-01/AUTH-02, analytics auth_onboarding_*, ayuda desde perfil, tests y documentación), usando assets de marca ya versionados en `mobile/assets/logo/`.
 - **[0029] AUTH-01 assets originales/mundialistas**: integrado pack `mobile/assets/auth01/` y selector por Remote Config para splash (`splash_brand_variant=original|mundialista|worldcup` o `mobile_worldcup_enabled=true`), con fallback seguro a variante original.
 - **[0012] Diseñar app icon**: integración del ícono productivo base en Android + Web/PWA de `mobile`; variante Mundialista versionada como promocional no activa por defecto, con documentación y rollback.
 - **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
@@ -141,7 +139,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0121]** Estrategia cobertura inicial y bootstrap ✅ | Cobertura / Data — estrategia de cobertura y bootstrap con Google Places definida |
 | **[0027]** Definir mapa completo de pantallas ✅ | UX / arquitectura — mapa de pantallas completo definido para todos los roles |
 | **[0028]** Diseñar navegación principal ✅ | UX / arquitectura — navegación principal diseñada con estructura de tabs y flujos |
-| **[0029]** Diseñar onboarding CUSTOMER `READY_FOR_QA` | UX/UI — implementación base cerrada: AUTH-02 navega a Home invitado, splash AUTH-01 con assets original/mundialista por Remote Config, timeout no bloqueante, analytics de onboarding/splash y acceso desde ayuda/perfil |
+| **[0029]** Diseñar onboarding CUSTOMER `IN_PROGRESS` | UX/UI — cierre técnico guest-first en curso: AUTH-02 navega a Home invitado, splash AUTH-01 con copy y timeout no bloqueante, analytics de onboarding y acceso desde ayuda/perfil |
 | **[0030]** Diseñar onboarding OWNER ✅ | UX/UI — flujo completo implementado: draft entry, step1 tipo+nombre, step2 dirección, step3 horarios, step4 confirmación |
 | **[0033]** Diseñar ficha pública de comercio ✅ | UX/UI — HOME-01 Detail diseñado por Stitches: hero imagen, badge ABIERTO, info rows, mapa, acciones, historia y galería |
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
@@ -170,12 +168,6 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ## Cola READY_FOR_QA / QA staging
 
-- `TuM2-0029 — Diseñar onboarding CUSTOMER`
-  - Estado: `READY_FOR_QA`
-  - Ambiente recomendado: `tum2-staging-45c83`
-  - Pendiente: QA manual/E2E de variante de splash por Remote Config (`splash_brand_variant` / `mobile_worldcup_enabled`) y checklist operativo por ambiente.
-  - No pendiente: implementación guest-first, analítica y tests automáticos.
-
 - `TuM2-0064 — Implementar módulo OWNER`
   - Estado: `READY_FOR_QA`
   - Ambiente recomendado: `tum2-staging-45c83`
@@ -184,7 +176,9 @@ El usuario pasa las tarjetas de a una. Estado actual:
 
 ## Cola IN_PROGRESS
 
-- (sin tarjetas activas en esta cola)
+- `TuM2-0029 — Diseñar onboarding CUSTOMER`
+  - Estado: `IN_PROGRESS`
+  - Pendiente: cerrar validación final (`flutter analyze` + suite de tests) y QA manual en staging.
 
 ## Indicador de avance MVP (snapshot 2026-04-08)
 
@@ -220,9 +214,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0014] **Definir tono de microcopy** — P1 — `Branding, UX/UI, MVP` ✅
 
 ### ÉPICA 4: Research funcional y operativo
-- [0015] **Relevar rubros prioritarios** — P0 — `Producto, Operaciones, Fundacional` ✅
-  - Canon MVP cerrado: farmacias, kioscos, almacenes, veterinarias, comida al paso, rotiserías, gomerías, panaderías y confiterías.
-  - Alineado a bootstrap (0121) y rubros de salida (0095); señales base conectadas a 0017.
+- [0015] **Relevar rubros prioritarios** — P0 — `Producto, Operaciones, Fundacional`
+  - Base sugerida: farmacias, kioscos, almacenes, veterinarias
 - [0016] **Relevar caso farmacias de turno** — P0 — `Producto, Operaciones, Data, Fundacional`
 - [0017] **Relevar señales operativas por rubro** — P0 — `Producto, Data, Operaciones, Fundacional`
 - [0018] **Relevar flujo real del dueño** — P1 — `Producto, UX/UI, Operaciones, Fundacional`
@@ -240,8 +233,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 6: UX / arquitectura de pantallas
 - [0027] **Definir mapa completo de pantallas** — P0 — `UX/UI, Producto, Fundacional` ✅
 - [0028] **Diseñar navegación principal** — P0 — `UX/UI, Mobile, Fundacional` ✅
-- [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP` `READY_FOR_QA`
-  - Línea de cierre: implementación guest-first cerrada; pendiente QA manual en staging.
+- [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP` `IN_PROGRESS`
+  - Línea de cierre: guest-first + analytics + ayuda + pruebas.
 - [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP` ✅
 - [0032] **Diseñar pantalla Mapa** — P1 — `UX/UI, MVP`
@@ -443,7 +436,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0051 CI/CD mínimo
 
 ### Fase E — Expansión MVP+
-- TuM2-0029 (`READY_FOR_QA`) / 0032 / 0034 / 0041
+- TuM2-0029 (`IN_PROGRESS`) / 0032 / 0034 / 0041
 - TuM2-0122 ✅ (completado adelantado)
 - TuM2-0055 / 0059 / 0062 / 0063 / 0069 (TuM2-0057 ✅ completado adelantado)
 - TuM2-0076
@@ -522,7 +515,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Claramente Post-MVP:** TuM2-0026, 0108, 0109, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117, 0118, 0119, 0120
 
-**MVP+ / opcionales si entra tiempo:** TuM2-0029 (`READY_FOR_QA`), 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107, 0134 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
+**MVP+ / opcionales si entra tiempo:** TuM2-0029 (`IN_PROGRESS`), 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107, 0134 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
 
 ---
 
@@ -575,7 +568,7 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - [0082] Impacto documental sincronizado para 0035/0100/0101 y seguimiento explícito de dependencias 0035/0056/0057/0061/0100/0101/0083.
 - [0082] Alineación canónica 0082↔0083 (2026-04-27): deprecados/no emitidos `map_recenter_tapped`, `map_search_this_area_tapped` y `claim_evidence_uploaded`; prioridad de señal territorial (`entity_zone_id`) sin IDs directos en analytics.
 - [0056] Implementar búsqueda de comercios: estado final DONE (cerrada el 2026-04-07).
-- [0056] Mobile quedó recompuesto y compilable: modelos/repositorios de búsqueda, notifier con ranking y filtros MVP incluyendo panadería/confitería, rutas de búsqueda activas y analytics safe.
+- [0056] Mobile quedó recompuesto y compilable: modelos/repositorios de búsqueda, notifier con ranking y filtros MVP, exclusión de panadería/confitería, rutas de búsqueda activas y analytics safe.
 - [0056] Se agregó cobertura unitaria en Flutter para SearchNotifier (inicialización, normalización, filtros open-now, ranking, y consistencia lista/mapa).
 - [0056] Se aplicó integración visual de pantallas search según `stitch_tum2.zip` (inicio, loading, lista, mapa y vacío enriquecido).
 - [0056] Validación local: analyze focalizado en search/router/auth PASS; tests auth/router/search PASS.

@@ -169,6 +169,7 @@ final isFirstLaunchProvider = FutureProvider<bool>((ref) async {
 /// Marca el onboarding como visto. Llamar desde AUTH-02 al salir.
 Future<void> markOnboardingSeen() async {
   final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool(_kOnboardingSeenKey) == true) return;
   await prefs.setBool(_kOnboardingSeenKey, true);
 }
 

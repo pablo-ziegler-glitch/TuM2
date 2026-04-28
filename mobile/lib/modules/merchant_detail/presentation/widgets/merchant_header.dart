@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/providers/feature_flags_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../merchant_badges/domain/trust_badges.dart';
 import '../../../merchant_badges/widgets/merchant_badge_widgets.dart';
+import '../../../merchant_badges/widgets/trust_badge_widgets.dart';
 import '../../domain/merchant_detail_view_data.dart';
 
-class MerchantHeader extends StatelessWidget {
+class MerchantHeader extends ConsumerWidget {
   const MerchantHeader({
     super.key,
     required this.merchant,
@@ -20,7 +24,14 @@ class MerchantHeader extends StatelessWidget {
   final bool isDutyVariant;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trustBadgesEnabled =
+        ref.watch(trustBadgesEnabledProvider).valueOrNull ?? false;
+    final trustBadgesDetailEnabled =
+        ref.watch(trustBadgesDetailEnabledProvider).valueOrNull ?? false;
+    final showTrustBadges = trustBadgesEnabled && trustBadgesDetailEnabled;
+    final trustBadges = _trustBadgesForHeader(merchant);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.merchantSurfaceLowest,
@@ -55,6 +66,14 @@ class MerchantHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
+                if (showTrustBadges && trustBadges.isNotEmpty) ...[
+                  TrustBadgeRow(
+                    badges: trustBadges,
+                    maxVisible: 3,
+                    compact: false,
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -136,6 +155,17 @@ class MerchantHeader extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  List<TrustBadgeId> _trustBadgesForHeader(MerchantPublicViewData merchant) {
+    final ordered = <TrustBadgeId>[];
+    if (merchant.primaryTrustBadge != null) {
+      ordered.add(merchant.primaryTrustBadge!);
+    }
+    for (final badge in merchant.badges) {
+      if (!ordered.contains(badge)) ordered.add(badge);
+    }
+    return ordered;
   }
 }
 

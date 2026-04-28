@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/analytics/auth_analytics.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -11,42 +13,90 @@ import '../../../core/widgets/primary_button.dart';
 ///
 /// Pantalla de bienvenida para primer uso.
 /// Cada slide tiene su propio color de acento: primary, secondary, tertiary.
-class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+class OnboardingScreen extends ConsumerStatefulWidget {
+  const OnboardingScreen({
+    super.key,
+    this.source = 'first_launch',
+  });
+
+  final String source;
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _controller = PageController();
   int _currentPage = 0;
+  bool _hasLoggedStart = false;
 
   static const _slides = [
     _SlideData(
+      id: 'open_now',
       title: 'Encontrá comercios abiertos ahora en tu cuadra',
       subtitle:
-          'Kioscos, almacenes, panaderías y más — sabés al instante si están abiertos.',
+          'Kioscos, almacenes, panaderías y comercios de tu zona, claros y a mano.',
       icon: Icons.location_on_rounded,
       accentColor: AppColors.primary500,
       bgColor: AppColors.primary50,
     ),
     _SlideData(
+      id: 'pharmacy_duty',
       title: 'Farmacias de turno al instante',
-      subtitle: 'Sin llamar a nadie. Sabés cuál está de guardia esta noche.',
+      subtitle:
+          'Cuando necesitás resolver rápido, ves qué farmacia está de guardia cerca.',
       icon: Icons.local_pharmacy_outlined,
       accentColor: AppColors.secondary500,
       bgColor: AppColors.secondary50,
     ),
     _SlideData(
-      title: 'Seguí tus comercios favoritos',
+      id: 'places_near',
+      title: 'Tené tus lugares de siempre más cerca',
       subtitle:
-          'Recibí alertas cuando abren, cambian sus horarios o publican novedades.',
+          'Guardá los lugares que usás seguido y volvé a encontrarlos más fácil.',
       icon: Icons.favorite_border_rounded,
       accentColor: AppColors.tertiary500,
       bgColor: AppColors.tertiary50,
     ),
   ];
+
+  String get _source {
+    final raw = widget.source.trim();
+    if (raw == 'profile_help') return raw;
+    if (raw == 'manual') return raw;
+    return 'first_launch';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _logOnboardingStart();
+    _logSlideViewed(0);
+  }
+
+  void _logOnboardingStart() {
+    if (_hasLoggedStart) return;
+    _hasLoggedStart = true;
+    AuthAnalytics.logOnboardingStarted(
+      source: _source,
+      totalSlides: _slides.length,
+    ).ignore();
+  }
+
+  void _logSlideViewed(int index) {
+    AuthAnalytics.logOnboardingSlideViewed(
+      slideIndex: index,
+      slideId: _slides[index].id,
+      totalSlides: _slides.length,
+      source: _source,
+    ).ignore();
+  }
+
+  void _onPageChanged(int index) {
+    if (_currentPage == index) return;
+    setState(() => _currentPage = index);
+    _logSlideViewed(index);
+  }
 
   void _next() {
     if (_currentPage < _slides.length - 1) {
@@ -55,12 +105,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      _continueAsGuest();
+      _completeAsGuest();
     }
   }
 
-  Future<void> _continueAsGuest() async {
+  Future<void> _completeAsGuest() async {
+    final current = _slides[_currentPage];
+    AuthAnalytics.logOnboardingCompleted(
+      slideIndex: _currentPage,
+      slideId: current.id,
+      totalSlides: _slides.length,
+      source: _source,
+    ).ignore();
     await markOnboardingSeen();
+    ref.invalidate(isFirstLaunchProvider);
+    if (mounted) context.go(AppRoutes.home);
+  }
+
+  Future<void> _skipAsGuest() async {
+    final current = _slides[_currentPage];
+    AuthAnalytics.logOnboardingSkipped(
+      slideIndex: _currentPage,
+      slideId: current.id,
+      totalSlides: _slides.length,
+      source: _source,
+    ).ignore();
+    await markOnboardingSeen();
+    ref.invalidate(isFirstLaunchProvider);
     if (mounted) context.go(AppRoutes.home);
   }
 
@@ -80,13 +151,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Botón "Saltar" (top right)
+            // Botón "Omitir" (top right)
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: _continueAsGuest,
+                onPressed: _skipAsGuest,
                 child: Text(
-                  'Saltar',
+                  'Omitir',
                   style: AppTextStyles.labelSm.copyWith(
                     color: AppColors.neutral600,
                   ),
@@ -99,7 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: PageView.builder(
                 controller: _controller,
                 itemCount: _slides.length,
-                onPageChanged: (i) => setState(() => _currentPage = i),
+                onPageChanged: _onPageChanged,
                 itemBuilder: (context, index) {
                   return _OnboardingSlide(data: _slides[index]);
                 },
@@ -132,7 +203,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: PrimaryButton(
-                label: isLastPage ? 'Empezar →' : 'Siguiente →',
+                label: isLastPage ? 'Empezar' : 'Siguiente',
                 onPressed: _next,
                 backgroundColor: currentSlide.accentColor,
               ),
@@ -149,6 +220,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 /// Datos inmutables por slide.
 class _SlideData {
   const _SlideData({
+    required this.id,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -156,6 +228,7 @@ class _SlideData {
     required this.bgColor,
   });
 
+  final String id;
   final String title;
   final String subtitle;
   final IconData icon;

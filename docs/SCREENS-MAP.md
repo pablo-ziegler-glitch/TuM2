@@ -1,6 +1,8 @@
-# TuM2 — Mapa completo de pantallas y flujos v1
+# TuM2 — Mapa completo de pantallas y flujos v1.1
 
-Define todas las pantallas de la app mobile, sus relaciones y los flujos principales por segmento.
+Define las pantallas mobile de TuM2, sus relaciones, visibilidad por segmento y reglas de navegación para el MVP.
+
+> Decisión de producto vigente: TuM2 usa una experiencia **guest-first**. En el MVP no se fuerza login para descubrir comercios, ver farmacias de turno, buscar, abrir mapas ni consultar fichas públicas. El login se solicita **a demanda**, solo cuando el usuario intenta una acción protegida o personalizada.
 
 ---
 
@@ -8,402 +10,525 @@ Define todas las pantallas de la app mobile, sus relaciones y los flujos princip
 
 | Segmento | Contexto de uso | Rol en Firebase |
 |----------|----------------|-----------------|
-| CUSTOMER | Vecino que busca comercios | `customer` |
-| OWNER    | Dueño o encargado de un comercio | `owner` |
-| ADMIN    | Equipo TuM2 con acceso de moderación | `admin` |
+| INVITADO | Vecino sin sesión que necesita resolver rápido | Sin sesión |
+| CUSTOMER | Vecino autenticado que busca, guarda o participa | `customer` |
+| OWNER | Dueño o encargado de un comercio aprobado | `owner` |
+| OWNER PENDING | Usuario con claim/reclamo de comercio en revisión | `owner` + `owner_pending=true` |
+| ADMIN | Equipo TuM2 con acceso de moderación | `admin` / `super_admin` |
+
+### Principios de navegación
+
+- El vecino debe poder abrir TuM2 y resolver sin registrarse.
+- El onboarding CUSTOMER no bloquea el acceso al contenido público.
+- El login aparece contextualizado cuando aporta valor o seguridad.
+- Las rutas públicas no deben depender de claims ni lecturas privadas.
+- Las rutas OWNER/ADMIN siempre requieren sesión y rol autorizado.
+- El estado `owner_pending` no habilita operación OWNER plena.
 
 ---
 
-## 2. Árbol de pantallas
+## 2. Rubros MVP canónicos
 
-```
+Los rubros visibles del MVP son:
+
+1. Farmacias
+2. Kioscos
+3. Almacenes
+4. Veterinarias
+5. Tiendas de comida al paso
+6. Casas de comida / Rotiserías
+7. Gomerías
+8. Panaderías
+9. Confiterías
+
+Estos rubros pueden aparecer en onboarding, búsqueda, filtros, categorías rápidas, fichas públicas y documentación de producto.
+
+---
+
+## 3. Árbol de pantallas
+
+```text
 TuM2 App
-├── AUTH (sin sesión)
+├── AUTH / ENTRY
 │   ├── AUTH-01  Splash / Loading
-│   ├── AUTH-02  Onboarding CUSTOMER (carrusel 3 slides)
-│   ├── AUTH-03  Login / Registro (email + Google)
-│   └── AUTH-04  Verificación de email (magic link / OTP)
+│   ├── AUTH-02  Onboarding CUSTOMER (carrusel 3 slides, salteable)
+│   ├── AUTH-03  Login / Registro contextual (email magic link + Google)
+│   ├── AUTH-04  Verificación de email (magic link)
+│   └── AUTH-05  Micro-step displayName (solo si aplica)
 │
-├── CUSTOMER (tab bar principal)
+├── CUSTOMER / INVITADO (tab bar principal)
 │   ├── TAB: Inicio
-│   │   ├── HOME-01  Home (feed zonal)
+│   │   ├── HOME-01  Home (feed zonal público)
 │   │   ├── HOME-02  Abierto ahora (listado filtrado)
-│   │   └── HOME-03  Farmacias de turno (listado + mapa mini)
+│   │   └── HOME-03  Farmacias de turno (listado + detalle)
 │   │
 │   ├── TAB: Buscar
 │   │   ├── SEARCH-01  Buscar (input + categorías rápidas)
 │   │   ├── SEARCH-02  Resultados de búsqueda (listado)
-│   │   └── SEARCH-03  Mapa (mapa full con pins de comercios)
+│   │   ├── SEARCH-03  Mapa (mapa full con pins de comercios)
+│   │   ├── SEARCH-FARMACIAS  Especialidad Farmacias
+│   │   └── SEARCH-UBICACION  Fallback de ubicación / selección manual
 │   │
-│   ├── TAB: Guardado  [MVP+]
-│   │   └── FAV-01  Favoritos y comercios seguidos
+│   ├── TAB: Perfil
+│   │   ├── PROFILE-01  Mi perfil / entrada a sesión
+│   │   ├── PROFILE-02  Configuración y notificaciones
+│   │   ├── PROFILE-HELP  Ayuda / Cómo funciona TuM2
+│   │   └── PROFILE-03  Propuestas y votos [MVP+]
 │   │
-│   └── TAB: Perfil
-│       ├── PROFILE-01  Mi perfil CUSTOMER
-│       ├── PROFILE-02  Configuración y notificaciones
-│       └── PROFILE-03  Propuestas y votos  [MVP+]
+│   └── GUARDADO [MVP+]
+│       └── FAV-01  Favoritos y comercios seguidos
+│
+├── CLAIM / RECLAMO DE COMERCIO
+│   ├── CLAIM-01  Intro de reclamo
+│   ├── CLAIM-02  Selección de comercio
+│   ├── CLAIM-03  Datos del solicitante
+│   ├── CLAIM-04  Evidencia
+│   ├── CLAIM-05  Consentimiento
+│   ├── CLAIM-06  Éxito de envío
+│   └── CLAIM-07  Estado del reclamo
 │
 ├── OWNER (módulo separado, accesible desde Perfil o deep link)
+│   ├── OWNER-RESOLVE  Resolver contexto OWNER / multi-merchant
 │   ├── OWNER-01  Panel "Mi comercio" (dashboard resumen)
 │   ├── OWNER-02  Perfil del comercio (edición de datos)
 │   ├── OWNER-03  Productos (listado)
-│   │   ├── OWNER-04  Alta de producto (formulario)
-│   │   └── OWNER-05  Edición de producto (formulario)
-│   ├── OWNER-06  Horarios y señales operativas
-│   │   ├── OWNER-07  Edición de horarios regulares
-│   │   └── OWNER-08  Señal operativa especial (modal)
+│   │   ├── OWNER-04  Alta de producto
+│   │   └── OWNER-05  Edición de producto
+│   ├── OWNER-06  Horarios
+│   ├── OWNER-08  Avisos de hoy / señales operativas
 │   └── OWNER-09  Turnos de farmacia
-│       ├── OWNER-10  Ver calendario de turnos
+│       ├── OWNER-10  Calendario de turnos
 │       └── OWNER-11  Cargar / confirmar turno
 │
-│   (OWNER-12 Carga masiva: reservado Post-MVP)
-│
-├── DETALLE (accesibles desde múltiples contextos)
+├── DETALLE (públicas, accesibles desde múltiples contextos)
 │   ├── DETAIL-01  Ficha pública de comercio
-│   │   └── DETAIL-02  Ficha de producto (bottom sheet / pantalla)
-│   └── DETAIL-03  Perfil de onboarding OWNER (registro de comercio)
-│       ├── ONBOARDING-OWNER-01  Tipo y nombre del comercio
-│       ├── ONBOARDING-OWNER-02  Dirección y zona
-│       ├── ONBOARDING-OWNER-03  Horarios iniciales
-│       └── ONBOARDING-OWNER-04  Confirmación y activación
+│   └── DETAIL-02  Ficha pública de producto
 │
 └── ADMIN (solo rol admin, acceso por deep link o perfil)
-    ├── ADMIN-01  Panel de control (métricas rápidas)
-    ├── ADMIN-02  Listado de comercios (moderación)
-    ├── ADMIN-03  Detalle de comercio (revisión + acciones)
-    └── ADMIN-04  Listado de señales reportadas
+    ├── ADMIN-01  Panel de control
+    ├── ADMIN-02  Listado de comercios
+    ├── ADMIN-03  Detalle de comercio
+    ├── ADMIN-04  Señales reportadas
+    └── ADMIN-CLAIMS  Revisión manual de claims
 ```
 
 ---
 
-## 3. Fichas por pantalla
+## 4. Fichas por pantalla
 
 ### AUTH-01 — Splash / Loading
-- **Propósito:** inicializar Firebase Auth, detectar sesión activa.
-- **Salida:** → HOME-01 si hay sesión válida, → AUTH-02 si es primer uso, → AUTH-03 si hay sesión caducada.
-- **Datos:** ninguno (local).
+
+- **Propósito:** inicializar la app, resolver sesión Firebase Auth, forzar refresh de token cuando hay usuario y decidir entrada inicial.
+- **Tipo:** pantalla técnica + primera impresión de marca.
+- **Salida sin sesión, primer uso:** → AUTH-02.
+- **Salida sin sesión, usuario recurrente:** → HOME-01 en modo invitado.
+- **Salida con sesión CUSTOMER:** → HOME-01.
+- **Salida con sesión OWNER:** → OWNER-RESOLVE o HOME-01 según contexto y guards.
+- **Salida con sesión OWNER PENDING:** → CLAIM-07 u OWNER-01 variante pendiente, según estado resumido.
+- **Salida con sesión ADMIN:** → HOME-01, con entrada admin visible desde perfil.
+- **Timeout/offline:** mostrar feedback amable y permitir continuar en modo invitado si no hay sesión confirmada.
+- **Datos:** Auth local/Firebase token. No debe leer colecciones públicas ni hacer queries amplias.
+- **Costo:** 0 Firestore reads para invitado; token refresh para sesión activa; lectura de resumen de usuario solo si hay sesión.
+- **Microcopy:** `Lo que necesitás, en tu zona.` + `Preparando tu zona...`.
+- **Branding variante:** logo `original`/`mundialista` controlado por Remote Config (`splash_brand_variant` o `mobile_worldcup_enabled`).
 
 ### AUTH-02 — Onboarding CUSTOMER
-- **Propósito:** explicar el valor de TuM2 en 3 slides antes del registro.
-- **Slides sugeridos:**
-  1. "Encontrá comercios abiertos ahora en tu cuadra"
-  2. "Farmacias de turno al instante"
-  3. "Seguí tus comercios favoritos"
-- **Acción CTA:** "Empezar" → AUTH-03.
-- **Skip:** posible, va directo a AUTH-03.
 
-### AUTH-03 — Login / Registro
-- **Propósito:** autenticación unificada (CUSTOMER y OWNER usan la misma entrada).
-- **Métodos:** email + magic link, Google Sign-In.
-- **Flujo OWNER:** si email está en `pending_owners`, redirigir a DETAIL-03 (onboarding de comercio).
-- **Salida:** → HOME-01.
+- **Propósito:** explicar el valor de TuM2 en 3 slides rápidos antes de entrar al home, sin bloquear la utilidad inmediata.
+- **Regla crítica:** debe ser salteable desde el primer slide con botón `Omitir` visible y accesible.
+- **Slides MVP:**
+  1. `Encontrá comercios abiertos ahora en tu cuadra`
+  2. `Farmacias de turno al instante`
+  3. `Tené tus lugares de siempre más cerca` (copy conservador mientras favoritos/seguimiento no estén activos para todos)
+- **CTA último slide:** `Empezar` → HOME-01 en modo invitado.
+- **Skip:** `Omitir` → HOME-01 en modo invitado.
+- **Persistencia:** guardar `onboarding_seen=true` en SharedPreferences.
+- **Acceso posterior:** PROFILE-HELP → `Cómo funciona TuM2` puede abrir el onboarding aunque ya esté visto.
+- **Permisos:** no pedir permisos durante onboarding. Solo explicar que la ubicación sirve para mostrar comercios cercanos y que se puede elegir zona manualmente.
+- **Analytics:** `auth_onboarding_started`, `auth_onboarding_skipped`, `auth_onboarding_completed`, opcional `auth_onboarding_slide_viewed`.
+- **Costo:** sin Firestore, sin Storage, sin Functions.
+
+### AUTH-03 — Login / Registro contextual
+
+- **Propósito:** autenticar al usuario cuando intenta una acción que requiere identidad.
+- **Métodos:** email magic link + Google Sign-In.
+- **No se muestra obligatoriamente después del onboarding.**
+- **Entradas típicas:**
+  - tap en Perfil sin sesión,
+  - reclamar comercio,
+  - seguir/guardar comercio,
+  - gestionar favoritos,
+  - acceder a OWNER,
+  - acceder a ADMIN,
+  - acción futura que requiera identidad o auditoría.
+- **Salida CUSTOMER:** volver a la ruta pendiente si es permitida; si no, HOME-01.
+- **Salida OWNER:** OWNER-RESOLVE.
+- **Salida OWNER PENDING:** CLAIM-07 / estado del reclamo.
+- **Salida ADMIN:** ruta pendiente admin si corresponde; si no, HOME-01.
+- **Regla auth:** post-login siempre debe ejecutar `getIdTokenResult(forceRefresh: true)` para claims actualizados.
 
 ### AUTH-04 — Verificación de email
-- **Propósito:** confirmar email en flujo magic link.
-- **Estado:** pantalla de espera + deep link callback.
+
+- **Propósito:** procesar magic link y resolver casos same-device / cross-device.
+- **Salida exitosa:** ruta pendiente o HOME-01.
+- **Salida con error:** AUTH-03 con error claro y opción de reenviar link.
+
+### AUTH-05 — Micro-step displayName
+
+- **Propósito:** pedir nombre visible solo cuando un usuario autenticado por magic link no tiene `displayName`.
+- **Regla:** debe poder omitirse sin bloquear descubrimiento público.
+- **Salida:** ruta pendiente o HOME-01.
 
 ---
 
-### HOME-01 — Home (feed zonal)
+## 5. Pantallas públicas CUSTOMER / INVITADO
+
+### HOME-01 — Home (feed zonal público)
+
 - **Propósito:** mostrar valor en menos de 5 segundos.
+- **Disponible sin sesión:** sí.
 - **Bloques UI:**
-  - Barra de zona activa (con opción de cambiar zona).
-  - Quick actions: Abierto ahora, Farmacias de turno, Kioscos cerca, Gomerías cerca.
-  - Sección "Farmacias de turno hoy" (si hay turnos activos).
-  - Feed principal: listado de comercios de la zona (`merchant_public`).
-- **Ordenamiento:** `sortBoost desc` → `isOpenNow desc` → distancia.
-- **Fallback zona vacía:** CTA "Sugerir un comercio" + resultados `review_pending` con badge.
-- **Salidas:** → DETAIL-01, → HOME-02, → HOME-03, → SEARCH-01.
+  - Barra de zona activa con opción de cambiar zona.
+  - Quick actions: Abierto ahora, Farmacias de turno, Kioscos cerca, Panaderías cerca, Gomerías cerca.
+  - Sección `Farmacias de turno hoy` si hay turnos activos.
+  - Feed principal de comercios visibles de la zona desde `merchant_public`.
+- **Ordenamiento:** `sortBoost desc` → `isOpenNow desc` → distancia si está disponible.
+- **Fallback zona vacía:** CTA `Sugerir un comercio` y estados vacíos claros.
+- **Salidas públicas:** DETAIL-01, HOME-02, HOME-03, SEARCH-01.
+- **Salidas protegidas:** guardar/seguir/reclamar → AUTH-03 si no hay sesión.
 
-### HOME-02 — Abierto ahora ✅ diseñado e implementado
-- **Propósito:** filtrar solo comercios con `isOpenNow = true` en la zona.
-- **Fuente:** `merchant_public` con filtro `isOpenNow == true`.
-- **UI implementada:**
-  - Header: zona activa ("PALERMO") + título "Abierto ahora" + chip "En vivo" con indicador verde pulsante.
-  - Barra de estado: ícono storefront + contador de resultados + hora actual.
-  - Filtro por categoría: chips horizontales animados (Todos / Farmacias / Kioscos / Almacenes / Veterinarias / Comida al paso / Rotiserías / Gomerías).
-  - Lista de comercios: `_CommerceCard` con thumbnail, nombre, tipo·zona, distancia, horario de cierre, rating, botón filled/outline.
-  - Estado vacío: ícono + mensaje + CTA "Ver todos los rubros".
-  - Barra inferior fija "Ver en el mapa" → SEARCH-03.
-- **Archivo:** `modules/home/screens/abierto_ahora_screen.dart`
-- **Salida:** → DETAIL-01, → SEARCH-03 (mapa).
+### HOME-02 — Abierto ahora
 
-### HOME-03 — Farmacias de turno ✅ diseñado e implementado
-- **Propósito:** ver qué farmacia está de guardia hoy y cómo llegar.
-- **Fuente:** `merchant_public` filtrado `isOnDutyToday == true` + colección `pharmacy_duties`.
-- **UI implementada:**
-  - Header: fecha formateada en español (ej: "MIÉRCOLES 24 DE MAR") + badge "HOY" verde.
-  - Meta row: zona activa + cantidad de farmacias de turno.
-  - Hero card farmacia activa: fondo azul oscuro, badge "ACTIVA AHORA" con punto pulsante, rating, nombre, dirección/horarios/distancia, botón "Cómo llegar" + ícono teléfono.
-  - Sección "Resto del día": header con contador + lista `_PharmacyListItem` (ícono, nombre, dirección, horario, distancia, chevron).
-  - Disclaimer: caja tertiary50 con ícono info y texto sobre actualización de turnos.
-- **Archivo:** `modules/home/screens/farmacias_turno_screen.dart`
-- **Salida:** → DETAIL-01, → mapa nativo (llamada / cómo llegar).
+- **Propósito:** filtrar comercios con `isOpenNow=true` en la zona.
+- **Disponible sin sesión:** sí.
+- **Fuente:** `merchant_public` con query acotada por `zoneId`, `visibilityStatus` y/o `isOpenNow`.
+- **Filtros de categoría MVP:** Todos, Farmacias, Kioscos, Almacenes, Veterinarias, Comida al paso, Rotiserías, Gomerías, Panaderías, Confiterías.
+- **Salida:** DETAIL-01, SEARCH-03.
 
----
+### HOME-03 — Farmacias de turno
 
-### SEARCH-01 — Buscar ✅ diseñado e implementado
-- **Propósito:** descubrimiento activo por texto o categoría.
-- **Estados:**
-  1. **Initial** — header TuM2, barra tappable, accesos rápidos (Farmacias de turno / Kioscos 24h / Cerca de ti / Mi zona), sugerencias para ti (hero card + grid + lista).
-  2. **Focused** — búsquedas recientes + BORRAR ALL, explorar categorías (grid íconos), barrios populares.
-  3. **Typing** — autocompletado filtrado por query, tendencias del barrio (carousel).
-- **Archivos:** `modules/search/screens/search_screen.dart`, `modules/search/widgets/zone_selector_sheet.dart`, `modules/search/widgets/search_filters_sheet.dart`
-- **Salida:** → SEARCH-02, → SEARCH-03, → SEARCH-farmacias.
+- **Propósito:** ver rápidamente qué farmacia está de guardia y cómo llegar.
+- **Disponible sin sesión:** sí.
+- **Fuente:** `pharmacy_duties` publicada + hidratación de `merchant_public`.
+- **Regla UX:** mostrar disclaimer de actualización operativa y permitir reportar problema según alcance del módulo.
+- **Salida:** DETAIL-01 / Pharmacy detail / mapa nativo / llamada.
 
-### SEARCH-02 — Resultados de búsqueda ✅ diseñado e implementado
-- **Fuente:** `merchant_public` filtrado por query/categoría (client-side en MVP).
-- **Estados:** loading (skeletons) / results (lista) / openNow / verified / empty / error.
-- **Barra inferior:** "Vista en mapa" → SEARCH-03.
-- **Archivo:** `modules/search/screens/search_results_screen.dart`
-- **Salida:** → DETAIL-01, → SEARCH-03.
+### SEARCH-01 — Buscar
 
-### SEARCH-FARMACIAS — Especialidad Farmacias ✅ diseñado e implementado
-- **Propósito:** vista dedicada a farmacias con énfasis en turno activo.
-- **Bloques:** hero farmacia de turno (CTAs: Cómo llegar / Llamar), filtros (De Turno / Abierto / 24hs), grid 2×2 farmacias cercanas, sección confianza.
-- **Archivo:** `modules/search/screens/pharmacy_results_screen.dart`
+- **Propósito:** descubrimiento activo por texto, categoría o intención.
+- **Disponible sin sesión:** sí.
+- **Estados:** initial, focused, typing.
+- **Categorías rápidas MVP:** Farmacias, Kioscos, Almacenes, Veterinarias, Comida al paso, Rotiserías, Gomerías, Panaderías, Confiterías.
+- **Salida:** SEARCH-02, SEARCH-03, SEARCH-FARMACIAS, SEARCH-UBICACION.
 
-### SEARCH-UBICACION — Fallback de ubicación ✅ diseñado e implementado
-- **Propósito:** cuando GPS no disponible o denegado. Selección manual de zona.
-- **Bloques:** input manual, lista sugerencias, FAQ zona, mapa interactivo, "Explorar toda la ciudad".
-- **Archivo:** `modules/search/screens/location_fallback_screen.dart`
+### SEARCH-02 — Resultados de búsqueda
 
-### SEARCH-03 — Mapa ✅ implementado (Google Maps + marker system)
-- **Propósito:** ver comercios de la zona en mapa interactivo.
-- **Fuente:** misma query de SEARCH-02 o HOME-01 según contexto de entrada.
-- **UI/estado operativo implementado:**
-  - Markers con resolución de prioridad: `guardia > open24h > open > closed > default`.
-  - Variantes visuales seleccionadas (`selected*`) para foco de comercio sin alterar estado de negocio.
-  - Z-index consistente: guardia por encima del resto y markers seleccionados por encima de no seleccionados.
-  - Clustering por grilla para densidad alta (más de 20 comercios visibles) con tap para zoom in automático.
-  - Cache de bitmaps por `visualType + pixelRatio` para evitar regeneración en cada rebuild.
-  - Fallback web para `BitmapDescriptor` cuando no aplica render custom.
-- **Salida:** → DETAIL-01 desde bottom sheet.
+- **Disponible sin sesión:** sí.
+- **Fuente:** `merchant_public` scoped por zona, con filtrado/ranking según implementación MVP.
+- **Estados:** loading, results, openNow, verified, empty, error.
+- **Salida:** DETAIL-01, SEARCH-03.
 
----
+### SEARCH-03 — Mapa
+
+- **Disponible sin sesión:** sí.
+- **Propósito:** visualizar comercios en mapa.
+- **Fuente:** misma fuente pública que búsqueda/home.
+- **Permisos:** pedir ubicación solo cuando el usuario usa funciones de cercanía; siempre ofrecer selección manual de zona.
+- **Salida:** DETAIL-01 desde bottom sheet.
 
 ### DETAIL-01 — Ficha pública de comercio
-- **Propósito:** toda la información útil de un comercio en una pantalla.
-- **Secciones:**
-  - Header: nombre, categoría, estado (abierto/cerrado/turno), dirección, distancia.
-  - Horarios: tabla de días + señal operativa activa si existe.
-  - Productos destacados (si hay, máx 6 ítems).
-  - Acciones rápidas: llamar, cómo llegar, compartir, seguir.
-  - Sobre el comercio: descripción, redes sociales.
-- **Fuente:** `merchant_public/{merchantId}` + `products/{merchantId}`.
-- **Salida:** → DETAIL-02 (producto), → mapa nativo, → teléfono nativo.
 
-### DETAIL-02 — Ficha de producto
-- **Propósito:** detalle de un producto específico.
-- **Presentación:** bottom sheet deslizable o pantalla completa según contexto.
-- **Datos:** nombre, descripción, precio, disponibilidad, foto.
-- **Fuente:** `products/{merchantId}/{productId}`.
+- **Disponible sin sesión:** sí.
+- **Propósito:** mostrar información útil de un comercio.
+- **Fuente:** `merchant_public/{merchantId}` + productos públicos si aplica.
+- **Acciones públicas:** llamar, cómo llegar, compartir.
+- **Acciones protegidas:** seguir, guardar, reclamar comercio, reportes sensibles.
+
+### DETAIL-02 — Ficha pública de producto
+
+- **Disponible sin sesión:** sí.
+- **Propósito:** mostrar detalle de producto publicado.
+- **Fuente:** producto público asociado al comercio.
 
 ---
 
-### OWNER-01 — Panel "Mi comercio"
-- **Propósito:** dashboard operativo del dueño.
-- **Bloques:**
-  - Estado del comercio ahora (abierto / cerrado / turno).
-  - Señal operativa activa (si la hay).
-  - Accesos rápidos: editar horario, agregar señal, ver productos.
-  - Alertas: si falta completar datos del perfil.
-- **Fuente:** `merchants/{merchantId}` (lectura directa, rol owner).
-- **Salida:** → OWNER-02, OWNER-03, OWNER-06, OWNER-09.
+## 6. Perfil, ayuda y login a demanda
 
-### OWNER-02 — Perfil del comercio (edición)
-- **Campos:** nombre, dirección, teléfono, descripción, categorías, redes sociales, logo/foto.
-- **Validación:** dirección obligatoria, nombre obligatorio.
-- **Guardado:** actualiza `merchants/{merchantId}` + trigger recalcula `merchant_public`.
+### PROFILE-01 — Mi perfil / Entrada a sesión
 
-### OWNER-03 — Productos (listado)
-- **Lista:** todos los productos del comercio con estado (activo/inactivo).
-- **Acciones:** agregar (+), editar, archivar.
-- **Fuente:** `products/{merchantId}`.
-- **Salida:** → OWNER-04 (alta), → OWNER-05 (edición).
+- **Sin sesión:** mostrar entrada simple para iniciar sesión y explicar beneficios concretos: guardar comercios, reclamar comercio, gestionar perfil y recibir futuras alertas.
+- **Con sesión CUSTOMER:** mostrar datos básicos, reclamo de comercio, ayuda, configuración y cerrar sesión.
+- **Con OWNER:** mostrar entrada a Mi comercio.
+- **Con ADMIN:** mostrar entrada a Admin.
 
-### OWNER-04 — Alta de producto
-- **Campos:** nombre, descripción, precio, categoría, foto, disponibilidad.
-- **Guardado:** crea `products/{merchantId}/{productId}`.
+### PROFILE-HELP — Ayuda / Cómo funciona TuM2
 
-### OWNER-05 — Edición de producto
-- **Mismos campos que OWNER-04**, precargados.
-- **Acción adicional:** archivar (soft delete).
-
-### OWNER-06 — Horarios y señales operativas
-- **Secciones:**
-  - Horarios regulares por día (lunes a domingo).
-  - Señal operativa activa actual (si existe).
-  - Historial de señales recientes.
-- **Acciones:** editar horarios → OWNER-07, agregar señal → OWNER-08.
-
-### OWNER-07 — Edición de horarios regulares
-- **UI:** selector de horario por día + opción "cerrado ese día".
-- **Guardado:** actualiza `schedule/{merchantId}` + trigger recalcula `isOpenNow`.
-
-### OWNER-08 — Señal operativa especial (modal)
-- **Propósito:** indicar estado temporal (vacaciones, cierre por feriado, demora, etc.).
-- **Campos:** tipo de señal, mensaje corto (max 80 chars), fecha/hora inicio, fecha/hora fin (opcional).
-- **Tipos de señal:** `vacation`, `temporary_closure`, `delay`, `special_hours`, `custom`.
-- **Guardado:** crea `operative_signals/{merchantId}/{signalId}`.
-
-### OWNER-09 — Turnos de farmacia
-- **Solo visible si** `merchant.categoryTags` incluye `pharmacy`.
-- **Secciones:** próximos turnos, historial, estado de confirmación.
-
-### OWNER-10 — Ver calendario de turnos
-- **UI:** calendario mensual con días de turno marcados.
-- **Fuente:** 1 query mensual privada por `merchantId` + rango de fechas acotado en `pharmacy_duties` (sin listener realtime permanente).
-- **Acciones:** seleccionar día, abrir alta rápida o edición de turno existente, activar multiselección mensual.
-
-### OWNER-11 — Cargar / confirmar turno
-- **Flujo feliz:** seleccionar fecha(s) → configurar horario → publicar.
-- **Flujo edición:** abrir `/owner/pharmacy-duties/:dutyId/edit` → actualizar/eliminar.
-- **Backend:** callable batch `upsertPharmacyDutiesBatch` con validaciones de ownership, farmacia, formato, conflictos y no-op writes.
-- **Validación:** conflicto horario/ownership/rubro farmacia server-side + feedback de conflicto en UI.
-
-### OWNER-12 — Carga masiva de turnos
-- **Estado:** Post-MVP (deshabilitado en runtime).
-- **Nota:** fuera de alcance de TuM2-0068; requiere backend de importación dedicado.
+- **Propósito:** permitir revisar onboarding y mensajes de ayuda sin resetear la app.
+- **Disponible sin sesión:** recomendado sí, si se expone desde una entrada pública; desde PROFILE puede requerir navegar por tab de perfil.
+- **Contenido mínimo:**
+  - Qué es TuM2.
+  - Cómo se usa sin registrarse.
+  - Para qué sirve iniciar sesión.
+  - Por qué se puede pedir ubicación.
+  - Cómo reclamar un comercio.
+- **Acción:** `Ver bienvenida de TuM2` → AUTH-02 en modo ayuda (`source=help`, sin sobrescribir `onboarding_seen`).
 
 ---
 
-### DETAIL-03 — Onboarding OWNER (registro de comercio)
-Flujo multi-paso para registrar un comercio nuevo.
+## 7. CLAIM / Reclamo de comercio
 
-#### ONBOARDING-OWNER-01 — Tipo y nombre
-- Nombre comercial, tipo/rubro principal.
-
-#### ONBOARDING-OWNER-02 — Dirección y zona
-- Dirección con autocompletado (Google Places).
-- Asignación automática de `zoneId`.
-
-#### ONBOARDING-OWNER-03 — Horarios iniciales
-- Horarios típicos de apertura/cierre por día.
-- Puede saltearse con "Completar después".
-
-#### ONBOARDING-OWNER-04 — Confirmación y activación
-- Resumen de datos ingresados.
-- CTA: "Publicar mi comercio" → crea `merchants/{merchantId}` con `visibilityStatus: review_pending`.
-- Mensaje: "Tu comercio será visible una vez revisado" (o visible inmediato si auto-approve activo).
+- **Disponible sin sesión:** no para envío; sí puede existir intro pública.
+- **Regla:** al tocar `Reclamar este comercio`, si no hay sesión → AUTH-03 con ruta pendiente.
+- **Identidad:** email del claim = email autenticado actual.
+- **Teléfono:** opcional sin verificación en MVP.
+- **Estados visibles:** draft, submitted, under_review, needs_more_info, approved, rejected, conflict_detected, duplicate_claim.
+- **Salida post envío:** CLAIM-07 estado del reclamo.
+- **Seguridad:** datos sensibles protegidos, masking en Admin, reveal temporal y auditado.
 
 ---
 
-### ADMIN-01 — Panel de control
-- Métricas: nuevos comercios pendientes, señales reportadas, votos recientes.
-- Accesos rápidos a flujos de moderación.
+## 8. OWNER
 
-### ADMIN-02 — Listado de comercios
-- Filtros: zona, estado, categoría, fecha de alta.
-- Acciones masivas: aprobar, rechazar, marcar revisión.
+### OWNER-RESOLVE
 
-### ADMIN-03 — Detalle de comercio (revisión)
-- Vista completa del comercio + historial de cambios.
-- Acciones: aprobar (`visible`), rechazar (`rejected`), pedir corrección.
+- **Propósito:** resolver contexto owner, multi-merchant, owner_pending o restricciones.
+- **Regla:** no permitir acceso OWNER pleno sin rol aprobado.
 
-### ADMIN-04 — Señales reportadas
-- Listado de `operative_signals` o datos reportados por usuarios.
-- Acciones: validar, eliminar, notificar al owner.
+### OWNER-01 — Panel Mi comercio
 
----
+- **Disponible sin sesión:** no.
+- **Disponible CUSTOMER:** no.
+- **Disponible OWNER PENDING:** variante limitada de estado de claim y próximos pasos.
+- **Disponible OWNER:** sí, con acciones operativas.
+- **Bloques:** estado actual, horarios, avisos de hoy, productos, turnos de farmacia cuando corresponda.
 
-## 4. Deep links
+### OWNER-06 — Horarios
 
-| Deep link | Pantalla destino |
-|-----------|-----------------|
-| `tum2://comercio/{merchantId}` | DETAIL-01 |
-| `tum2://producto/{merchantId}/{productId}` | DETAIL-02 |
-| `tum2://farmacias-turno/{zoneId}` | HOME-03 |
-| `tum2://abierto-ahora/{zoneId}` | HOME-02 |
-| `tum2://owner/comercio/{merchantId}` | OWNER-01 |
-| `tum2://owner/turno` | OWNER-09 |
-| `tum2://admin` | ADMIN-01 |
+- **Fuente:** configuración privada del comercio.
+- **Regla:** escritura privada; proyección pública vía Cloud Functions.
 
----
+### OWNER-08 — Avisos de hoy / señales operativas
 
-## 5. Estados de visibilidad por segmento
+- **Fuente:** `merchant_operational_signals/{merchantId}`.
+- **Regla:** cliente no escribe `merchant_public`.
 
-| Pantalla | Sin sesión | CUSTOMER | OWNER | ADMIN |
-|----------|-----------|----------|-------|-------|
-| HOME-01 | ✅ | ✅ | ✅ | ✅ |
-| HOME-02 | ✅ | ✅ | ✅ | ✅ |
-| HOME-03 | ✅ | ✅ | ✅ | ✅ |
-| SEARCH-01/02/03 | ✅ | ✅ | ✅ | ✅ |
-| DETAIL-01 | ✅ | ✅ | ✅ | ✅ |
-| DETAIL-02 | ✅ | ✅ | ✅ | ✅ |
-| FAV-01 | ❌ (pide login) | ✅ | ✅ | ✅ |
-| PROFILE-01 | ❌ | ✅ | ✅ | ✅ |
-| OWNER-* | ❌ | ❌ | ✅ | ✅ |
-| DETAIL-03 | ❌ (solo al registrarse) | ❌ | ✅ | ✅ |
-| ADMIN-* | ❌ | ❌ | ❌ | ✅ |
+### OWNER-09/10/11 — Turnos de farmacia
+
+- **Visible solo para farmacia OWNER habilitada.**
+- **Regla:** validaciones server-side y proyección pública por backend.
 
 ---
 
-## 6. Flujos principales end-to-end
+## 9. ADMIN
 
-### Flujo 1: CUSTOMER busca farmacia de turno
-```
-HOME-01 → tap "Farmacias de turno" → HOME-03 → tap farmacia → DETAIL-01 → tap "Cómo llegar"
+- **Disponible sin sesión:** no.
+- **Disponible CUSTOMER/OWNER:** no.
+- **Disponible ADMIN/SUPER_ADMIN:** sí.
+- **Entrada:** perfil, deep link o URL interna según plataforma.
+- **Módulos MVP:** listado de comercios, importación de datasets, revisión de señales/reportes, revisión manual de claims.
+
+---
+
+## 10. Deep links
+
+| Deep link | Pantalla destino | Sesión requerida |
+|-----------|------------------|------------------|
+| `tum2://comercio/{merchantId}` | DETAIL-01 | No |
+| `tum2://producto/{merchantId}/{productId}` | DETAIL-02 | No |
+| `tum2://farmacias-turno/{zoneId}` | HOME-03 | No |
+| `tum2://abierto-ahora/{zoneId}` | HOME-02 | No |
+| `tum2://claim/{merchantId}` | CLAIM-01/AUTH-03 contextual | Sí para enviar |
+| `tum2://owner` | OWNER-RESOLVE | Sí |
+| `tum2://owner/comercio/{merchantId}` | OWNER-01 | Sí + OWNER |
+| `tum2://owner/turno` | OWNER-09 | Sí + OWNER farmacia |
+| `tum2://admin` | ADMIN-01 | Sí + ADMIN |
+
+---
+
+## 11. Estados de visibilidad por segmento
+
+| Pantalla | Invitado | CUSTOMER | OWNER PENDING | OWNER | ADMIN |
+|----------|----------|----------|---------------|-------|-------|
+| AUTH-01 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| AUTH-02 | ✅ | ✅ desde ayuda | ✅ desde ayuda | ✅ desde ayuda | ✅ desde ayuda |
+| AUTH-03 | ✅ contextual | ✅ si reauth | ✅ si reauth | ✅ si reauth | ✅ si reauth |
+| HOME-01 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| HOME-02 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| HOME-03 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SEARCH-01/02/03 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DETAIL-01 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DETAIL-02 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| PROFILE-01 | Entrada a login | ✅ | ✅ | ✅ | ✅ |
+| PROFILE-HELP | ✅ recomendado | ✅ | ✅ | ✅ | ✅ |
+| CLAIM-* | Intro sí / envío no | ✅ | ✅ estado propio | ✅ si aplica | ✅ revisión admin separada |
+| FAV-01 | ❌ pide login | ✅ | ✅ | ✅ | ✅ |
+| OWNER-* | ❌ pide login | ❌ | ✅ limitado | ✅ | ✅ si rol admin permitido |
+| ADMIN-* | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+---
+
+## 12. Flujos principales end-to-end
+
+### Flujo 1: Primer uso guest-first
+
+```text
+AUTH-01 Splash → AUTH-02 Onboarding → Empezar/Omitir → HOME-01 modo invitado
 ```
 
-### Flujo 2: CUSTOMER busca almacén abierto
-```
-HOME-01 → tap "Abierto ahora" → HOME-02 (filtrado) → tap comercio → DETAIL-01
-```
-o
-```
-HOME-01 → tap Buscar tab → SEARCH-01 → tap "Almacenes" → SEARCH-02 → tap comercio → DETAIL-01
+### Flujo 2: Usuario recurrente sin sesión
+
+```text
+AUTH-01 Splash → HOME-01 modo invitado
 ```
 
-### Flujo 3: OWNER activa señal de vacaciones
-```
-OWNER-01 → tap "Agregar señal" → OWNER-08 (modal) → selecciona "Vacaciones" + fechas → Guardar → vuelve a OWNER-01 con señal activa visible
+### Flujo 3: Login a demanda desde acción protegida
+
+```text
+DETAIL-01 → tap "Reclamar este comercio" → AUTH-03 → AUTH-04 si magic link → CLAIM-01/CLAIM-02
 ```
 
-### Flujo 4: OWNER carga turno de farmacia
-```
-OWNER-01 → tap "Turnos" → OWNER-09 → OWNER-10 (calendario) → selecciona fecha → OWNER-11 → Confirmar → vuelve a OWNER-10 con día marcado
+### Flujo 4: CUSTOMER busca farmacia de turno
+
+```text
+HOME-01 → Farmacias de turno → HOME-03 → farmacia → DETAIL-01 / Cómo llegar
 ```
 
-### Flujo 6: OWNER carga turnos en lote para su red
-```
-OWNER-12 queda reservado para una fase posterior con backend de importación.
+### Flujo 5: CUSTOMER busca comercio abierto
+
+```text
+HOME-01 → Abierto ahora → HOME-02 → comercio → DETAIL-01
 ```
 
-### Flujo 5: OWNER nuevo se registra
-```
-AUTH-03 → (email detectado como owner pendiente) → DETAIL-03 → ONBOARDING-OWNER-01 → 02 → 03 → 04 → OWNER-01
+O:
+
+```text
+HOME-01 → Buscar → SEARCH-01 → categoría/query → SEARCH-02 → comercio → DETAIL-01
 ```
 
-### Flujo 6: CUSTOMER nuevo descubre app
-```
-AUTH-01 (splash) → AUTH-02 (onboarding 3 slides) → AUTH-03 (registro) → HOME-01
+### Flujo 6: CUSTOMER consulta mapa sin sesión
+
+```text
+SEARCH-01/SEARCH-02 → Ver en mapa → SEARCH-03 → marker/bottom sheet → DETAIL-01
 ```
 
-### Flujo 7: ADMIN aprueba comercio nuevo
+### Flujo 7: Usuario revisa onboarding desde ayuda
+
+```text
+PROFILE-01/PROFILE-HELP → Cómo funciona TuM2 → AUTH-02 source=help → volver a HOME-01 o Perfil
 ```
-ADMIN-01 → badge "2 pendientes" → ADMIN-02 (filtro: pendientes) → tap comercio → ADMIN-03 → tap "Aprobar" → vuelve a ADMIN-02
+
+### Flujo 8: OWNER aprobado entra a Mi comercio
+
+```text
+AUTH-03 → post-login forceRefresh → OWNER-RESOLVE → OWNER-01
+```
+
+### Flujo 9: OWNER PENDING consulta estado
+
+```text
+AUTH-03 → post-login forceRefresh → CLAIM-07 / OWNER-01 variante pendiente
+```
+
+### Flujo 10: ADMIN entra a panel
+
+```text
+AUTH-03 → post-login forceRefresh → PROFILE-01 → Panel de administración → ADMIN-01
 ```
 
 ---
 
-## 7. Pantallas MVP vs Post-MVP
+## 13. Pantallas MVP vs Post-MVP
 
 ### En MVP
-- AUTH-01, AUTH-02, AUTH-03, AUTH-04
-- HOME-01, HOME-02, HOME-03
-- SEARCH-01, SEARCH-02, SEARCH-03
-- DETAIL-01, DETAIL-02
-- DETAIL-03 + ONBOARDING-OWNER-01 a 04
-- OWNER-01 a 11
-- ADMIN-01 a 04
-- PROFILE-01, PROFILE-02
 
-### Post-MVP (MVP+)
-- FAV-01 — Favoritos y seguidos (TuM2-0062, 0063)
-- PROFILE-03 — Propuestas y votos (TuM2-0069)
-- Módulo de propuestas completo (TuM2-0041)
+- AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05 si aplica.
+- HOME-01, HOME-02, HOME-03.
+- SEARCH-01, SEARCH-02, SEARCH-03, SEARCH-FARMACIAS, SEARCH-UBICACION.
+- DETAIL-01, DETAIL-02.
+- PROFILE-01, PROFILE-HELP, PROFILE-02 básico.
+- CLAIM-01 a CLAIM-07 si el dominio claim entra en la fase MVP activa.
+- OWNER-RESOLVE, OWNER-01, OWNER-03 a OWNER-11 según rubro/capacidad.
+- ADMIN-01 a ADMIN-04 y ADMIN-CLAIMS según fase activa.
+
+### Post-MVP / MVP+
+
+- FAV-01 — Favoritos y seguidos si no entra en MVP funcional.
+- PROFILE-03 — Propuestas y votos.
+- Módulo completo de propuestas y votos.
+- Rankings, reputación avanzada y monetización.
 
 ---
 
-*Documento generado para TuM2-0027. Ver NAVIGATION.md para la arquitectura de navegación y stacks.*
+## 14. Guardrails técnicos
+
+- `merchant_public` es la única fuente pública para listados/fichas públicas y nunca se escribe desde cliente.
+- No usar login como requisito para discovery público.
+- No pedir ubicación en splash ni onboarding.
+- Ubicación debe tener fallback manual de zona.
+- Onboarding usa SharedPreferences (`onboarding_seen`) y no Firestore.
+- Splash no debe abrir listeners costosos.
+- Login debe preservar ruta pendiente cuando la acción protegida lo dispara.
+- Acciones OWNER/ADMIN deben pasar por guards de rol y claims actualizados.
+- Custom claims solo se actualizan vía Cloud Functions Admin SDK.
+- Toda pantalla pública debe tolerar sesión nula.
+
+---
+
+## 15. Analytics mínimos asociados
+
+### Onboarding
+
+- `auth_onboarding_started`
+- `auth_onboarding_slide_viewed`
+- `auth_onboarding_skipped`
+- `auth_onboarding_completed`
+
+Parámetros mínimos:
+
+- `slide_index`
+- `slide_id`
+- `source`
+- `result`
+
+### Login contextual
+
+- `auth_login_prompt_shown`
+- `auth_login_started`
+- `auth_magic_link_sent`
+- `auth_magic_link_verified`
+- `auth_google_sign_in`
+
+Parámetros mínimos:
+
+- `entry_point`
+- `pending_route_type`
+- `source_screen`
+
+### Discovery público
+
+- `home_viewed`
+- `search_started`
+- `search_result_opened`
+- `merchant_detail_opened`
+- `pharmacy_duty_viewed`
+
+---
+
+## 16. Checklist de consistencia para cierre
+
+- [ ] AUTH-02 no redirige automáticamente a AUTH-03.
+- [ ] El primer uso puede terminar en HOME-01 sin sesión.
+- [ ] El usuario recurrente sin sesión entra directo a HOME-01.
+- [ ] Login se dispara solo por acciones protegidas.
+- [ ] Perfil sin sesión funciona como entrada clara a login, no como bloqueo genérico.
+- [ ] Ayuda permite volver a ver la bienvenida.
+- [ ] Panaderías y Confiterías figuran como rubros MVP.
+- [ ] Rubros MVP están alineados entre Home, Search, filtros, docs y analytics.
+- [ ] Onboarding persiste `onboarding_seen` localmente.
+- [ ] Analytics de onboarding existen.
+- [ ] No hay Firestore reads extra por onboarding.
+- [ ] Splash no bloquea discovery público ante fallas no críticas.
+
+---
+
+*Documento actualizado para reflejar estrategia guest-first del MVP y login a demanda. Ver NAVIGATION.md para arquitectura de navegación y guards.*

@@ -1,7 +1,16 @@
 import '../../../core/analytics/analytics_runtime.dart';
 
 abstract class OwnerScheduleAnalytics {
-  static Future<void> logScreenView() => _safeLog('owner_schedule_screen_view');
+  static Future<void> logScreenView({
+    required String merchantId,
+  }) =>
+      _safeLog(
+        'owner_schedule_viewed',
+        parameters: {
+          'merchantId': merchantId,
+          'source_screen': 'owner_schedule',
+        },
+      );
 
   static Future<void> logModeSelected({
     required String dayKey,
@@ -18,26 +27,64 @@ abstract class OwnerScheduleAnalytics {
   static Future<void> logApplyWeekdaysTemplate() =>
       _safeLog('owner_schedule_apply_weekdays_template');
 
-  static Future<void> logAddException({
-    required String exceptionKind,
+  static Future<void> logEditStarted({
+    required String merchantId,
   }) =>
       _safeLog(
-        'owner_schedule_add_exception',
+        'owner_schedule_edit_started',
         parameters: {
-          'exception_kind': exceptionKind,
+          'merchantId': merchantId,
+          'source_screen': 'owner_schedule',
         },
       );
 
-  static Future<void> logSaveSuccess() =>
-      _safeLog('owner_schedule_save_success');
+  static Future<void> logAddException({
+    required String merchantId,
+    required String exceptionKind,
+  }) =>
+      _safeLog(
+        'owner_schedule_exception_created',
+        parameters: {
+          'merchantId': merchantId,
+          'exception_kind': exceptionKind,
+          'source_screen': 'owner_schedule',
+        },
+      );
+
+  static Future<void> logDeleteException({
+    required String merchantId,
+    required String exceptionKind,
+  }) =>
+      _safeLog(
+        'owner_schedule_exception_deleted',
+        parameters: {
+          'merchantId': merchantId,
+          'exception_kind': exceptionKind,
+          'source_screen': 'owner_schedule',
+        },
+      );
+
+  static Future<void> logSaveSuccess({
+    required String merchantId,
+  }) =>
+      _safeLog(
+        'owner_schedule_saved',
+        parameters: {
+          'merchantId': merchantId,
+          'source_screen': 'owner_schedule',
+        },
+      );
 
   static Future<void> logSaveError({
+    required String merchantId,
     required String reason,
   }) =>
       _safeLog(
-        'owner_schedule_save_error',
+        'owner_schedule_save_failed',
         parameters: {
+          'merchantId': merchantId,
           'reason': reason,
+          'source_screen': 'owner_schedule',
         },
       );
 

@@ -13,6 +13,22 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function extractProjectionRelevantSignalShape(signals?: OperationalSignals): Record<string, unknown> {
+  const raw = (signals ?? {}) as Record<string, unknown>;
+  return {
+    scheduleSummary: raw["scheduleSummary"] ?? null,
+    nextOpenAt: toMillis(raw["nextOpenAt"]),
+    nextCloseAt: toMillis(raw["nextCloseAt"]),
+    nextTransitionAt: toMillis(raw["nextTransitionAt"]),
+    isOpenNowSnapshot: raw["isOpenNowSnapshot"] === true,
+    snapshotComputedAt: toMillis(raw["snapshotComputedAt"]),
+    pharmacyDutyStatus:
+      typeof raw["pharmacyDutyStatus"] === "string"
+        ? String(raw["pharmacyDutyStatus"]).trim().toLowerCase()
+        : null,
+  };
+}
+
 function toMillis(value: unknown): number | null {
   if (
     value &&
@@ -52,6 +68,8 @@ export const onSignalsWriteSyncPublic = onDocumentWritten(
     const resolvedAfter = resolveOperationalPublicState(afterSignals);
     const diffBefore = normalizeOperationalPublicStateForDiff(resolvedBefore);
     const diffAfter = normalizeOperationalPublicStateForDiff(resolvedAfter);
+    const projectionRelevantBefore = extractProjectionRelevantSignalShape(beforeSignals);
+    const projectionRelevantAfter = extractProjectionRelevantSignalShape(afterSignals);
     const nowMs = Date.now();
     let effectiveAfterSignals = afterSignals;
 
@@ -95,7 +113,10 @@ export const onSignalsWriteSyncPublic = onDocumentWritten(
       }
     }
 
-    const skipWrite = stableStringify(diffBefore) === stableStringify(diffAfter);
+    const skipWrite =
+      stableStringify(diffBefore) === stableStringify(diffAfter) &&
+      stableStringify(projectionRelevantBefore) ===
+        stableStringify(projectionRelevantAfter);
     if (skipWrite) {
       const logPayload = {
         trigger: "onSignalsWriteSyncPublic",

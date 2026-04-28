@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/auth/auth_notifier.dart';
+import '../../../core/auth/auth_state.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/theme/app_colors.dart';
@@ -23,7 +25,7 @@ class OwnerScheduleScreen extends ConsumerStatefulWidget {
 }
 
 class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
-  final _repository = OwnerScheduleRepository();
+  OwnerScheduleRepository? _repository;
 
   bool _isInitialLoading = false;
   bool _isSaving = false;
@@ -47,6 +49,11 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authNotifierProvider).authState;
+    if (authState is AuthAuthenticated && authState.ownerPending) {
+      return _buildPendingBlockedScaffold();
+    }
+
     final merchantIdAsync = ref.watch(ownerMerchantIdProvider);
     final scheduleFeatureEnabledAsync =
         ref.watch(ownerScheduleEditorEnabledProvider);
@@ -90,7 +97,8 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                     icon: const Icon(Icons.arrow_back),
                     color: AppColors.primary500,
                   ),
-                  title: const Text('Horarios', style: AppTextStyles.headingSm),
+                  title: const Text('Tus horarios',
+                      style: AppTextStyles.headingSm),
                   actions: [
                     IconButton(
                       onPressed: () => _showHelp(context),
@@ -134,7 +142,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
-        title: const Text('Horarios', style: AppTextStyles.headingSm),
+        title: const Text('Tus horarios', style: AppTextStyles.headingSm),
       ),
       body: const Center(child: CircularProgressIndicator()),
     );
@@ -144,7 +152,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
-        title: const Text('Horarios', style: AppTextStyles.headingSm),
+        title: const Text('Tus horarios', style: AppTextStyles.headingSm),
       ),
       body: Center(
         child: Padding(
@@ -163,7 +171,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg,
       appBar: AppBar(
-        title: const Text('Horarios', style: AppTextStyles.headingSm),
+        title: const Text('Tus horarios', style: AppTextStyles.headingSm),
       ),
       body: const Center(
         child: Padding(
@@ -180,6 +188,42 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
               Text(
                 'El editor de horarios está deshabilitado temporalmente.',
                 style: AppTextStyles.bodyMd,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Scaffold _buildPendingBlockedScaffold() {
+    return Scaffold(
+      backgroundColor: AppColors.scaffoldBg,
+      appBar: AppBar(
+        title: const Text('Tus horarios', style: AppTextStyles.headingSm),
+      ),
+      body: const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.hourglass_top_rounded,
+                size: 40,
+                color: AppColors.neutral600,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Tu comercio está en revisión',
+                style: AppTextStyles.headingSm,
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Cuando se apruebe, vas a poder editar horarios y avisos operativos.',
+                style: AppTextStyles.bodySm,
                 textAlign: TextAlign.center,
               ),
             ],
@@ -222,6 +266,16 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          'Tus horarios',
+          style: AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Cargá tu horario habitual. Si un día cambia, podés agregar una excepción.',
+          style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
+        ),
+        const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -245,14 +299,10 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Horarios de atención',
-                style: AppTextStyles.headingMd,
-                textAlign: TextAlign.center,
-              ),
+              const Text('Tus horarios', style: AppTextStyles.headingMd),
               const SizedBox(height: 8),
               Text(
-                'Todavía no cargaste tus horarios.',
+                'Todavía no cargaste horarios.',
                 style:
                     AppTextStyles.bodyMd.copyWith(color: AppColors.neutral700),
                 textAlign: TextAlign.center,
@@ -262,6 +312,12 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    final merchantId = _loadedMerchantId;
+                    if (merchantId != null) {
+                      unawaited(OwnerScheduleAnalytics.logEditStarted(
+                        merchantId: merchantId,
+                      ));
+                    }
                     setState(() {
                       _weeklyEditorEnabled = true;
                       _feedbackMessage = null;
@@ -281,7 +337,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Tus vecinos verán este horario en el perfil público.',
+                'Así los Vecinos saben cuándo encontrarte abierto.',
                 style: AppTextStyles.bodyXs,
                 textAlign: TextAlign.center,
               ),
@@ -297,7 +353,12 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Definí cuándo está abierto tu comercio',
+          'Tus horarios',
+          style: AppTextStyles.headingMd.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Cargá tu horario habitual. Si un día cambia, podés agregar una excepción.',
           style: AppTextStyles.bodyMd.copyWith(color: AppColors.neutral700),
         ),
         const SizedBox(height: 12),
@@ -382,6 +443,7 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
               _buildModeChoice(
                   day, DayScheduleMode.continuous, 'Horario corrido'),
               _buildModeChoice(day, DayScheduleMode.split, 'Horario cortado'),
+              _build24hModeChoice(day),
             ],
           ),
           if (day.mode != DayScheduleMode.closed) ...[
@@ -454,6 +516,28 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
         color: selected ? AppColors.primary300 : AppColors.neutral200,
       ),
       onSelected: (_) => _updateDayMode(day.dayKey, mode),
+    );
+  }
+
+  Widget _build24hModeChoice(DayScheduleDraft day) {
+    final selected = isContinuous24h(
+      mode: day.mode,
+      firstOpen: day.firstOpen,
+      firstClose: day.firstClose,
+      secondOpen: day.secondOpen,
+      secondClose: day.secondClose,
+    );
+    return ChoiceChip(
+      label: const Text('Abierto 24 hs'),
+      selected: selected,
+      selectedColor: AppColors.primary100,
+      labelStyle: AppTextStyles.labelSm.copyWith(
+        color: selected ? AppColors.primary700 : AppColors.neutral700,
+      ),
+      side: BorderSide(
+        color: selected ? AppColors.primary300 : AppColors.neutral200,
+      ),
+      onSelected: (_) => _setDay24h(day.dayKey),
     );
   }
 
@@ -535,11 +619,10 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Cierres temporales y feriados',
-            style: AppTextStyles.headingMd),
+        const Text('Excepciones', style: AppTextStyles.headingMd),
         const SizedBox(height: 6),
         Text(
-          'Agregalo acá para avisar a tus vecinos.',
+          'Usalas para cambios puntuales sin modificar tu horario habitual.',
           style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
         ),
         const SizedBox(height: 12),
@@ -584,23 +667,23 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Sin cierres cargados',
+            'No tenés excepciones cargadas.',
             style: AppTextStyles.headingSm,
           ),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _addTemporaryClosure,
+              onPressed: _addSpecialDate,
               icon: const Icon(Icons.add_circle),
-              label: const Text('Agregar cierre temporal'),
+              label: const Text('Agregar excepción'),
             ),
           ),
           const SizedBox(height: 8),
           TextButton.icon(
-            onPressed: _addSpecialDate,
-            icon: const Icon(Icons.event),
-            label: const Text('Agregar fecha especial'),
+            onPressed: _addTemporaryClosure,
+            icon: const Icon(Icons.beach_access),
+            label: const Text('Agregar cierre por rango'),
           ),
         ],
       ),
@@ -760,6 +843,11 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Los avisos activos tienen prioridad sobre el horario habitual.',
+              style: AppTextStyles.bodyXs.copyWith(color: AppColors.neutral700),
+            ),
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
@@ -803,10 +891,11 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
       _feedbackIsError = false;
     });
     try {
-      final bundle = await _repository.fetchSchedule(merchantId);
+      final repository = _repository ??= OwnerScheduleRepository();
+      final bundle = await repository.fetchSchedule(merchantId);
       if (!mounted) return;
       if (!_viewLogged) {
-        unawaited(OwnerScheduleAnalytics.logScreenView());
+        unawaited(OwnerScheduleAnalytics.logScreenView(merchantId: merchantId));
         _viewLogged = true;
       }
       final hasWeekly =
@@ -935,12 +1024,37 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
     });
   }
 
+  void _setDay24h(String dayKey) {
+    unawaited(OwnerScheduleAnalytics.logModeSelected(
+      dayKey: dayKey,
+      mode: 'open_24h',
+    ));
+    setState(() {
+      _feedbackMessage = null;
+      _hasUnsavedChanges = true;
+      _weeklyDraft = _weeklyDraft.map((day) {
+        if (day.dayKey != dayKey) return day;
+        return day.copyWith(
+          mode: DayScheduleMode.continuous,
+          firstOpen: '00:00',
+          firstClose: '23:59',
+          clearSecondOpen: true,
+          clearSecondClose: true,
+        );
+      }).toList(growable: false);
+    });
+  }
+
   Future<void> _addSpecialDate() async {
     final created = await _showExceptionSheet();
     if (created == null) return;
-    unawaited(OwnerScheduleAnalytics.logAddException(
-      exceptionKind: 'special_date',
-    ));
+    final merchantId = _loadedMerchantId;
+    if (merchantId != null) {
+      unawaited(OwnerScheduleAnalytics.logAddException(
+        merchantId: merchantId,
+        exceptionKind: 'special_date',
+      ));
+    }
     setState(() {
       _hasUnsavedChanges = true;
       _feedbackMessage = null;
@@ -973,6 +1087,13 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
   }
 
   void _removeException(ScheduleExceptionDraft exception) {
+    final merchantId = _loadedMerchantId;
+    if (merchantId != null) {
+      unawaited(OwnerScheduleAnalytics.logDeleteException(
+        merchantId: merchantId,
+        exceptionKind: 'special_date',
+      ));
+    }
     setState(() {
       _hasUnsavedChanges = true;
       _deletedExceptionIds.add(exception.id);
@@ -985,9 +1106,13 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
   Future<void> _addTemporaryClosure() async {
     final created = await _showTemporaryClosureSheet();
     if (created == null) return;
-    unawaited(OwnerScheduleAnalytics.logAddException(
-      exceptionKind: 'temporary_closure',
-    ));
+    final merchantId = _loadedMerchantId;
+    if (merchantId != null) {
+      unawaited(OwnerScheduleAnalytics.logAddException(
+        merchantId: merchantId,
+        exceptionKind: 'temporary_closure',
+      ));
+    }
     setState(() {
       _hasUnsavedChanges = true;
       _feedbackMessage = null;
@@ -1010,6 +1135,13 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
   }
 
   void _removeTemporaryClosure(TemporaryClosureDraft closure) {
+    final merchantId = _loadedMerchantId;
+    if (merchantId != null) {
+      unawaited(OwnerScheduleAnalytics.logDeleteException(
+        merchantId: merchantId,
+        exceptionKind: 'temporary_closure',
+      ));
+    }
     setState(() {
       _hasUnsavedChanges = true;
       _deletedClosureIds.add(closure.id);
@@ -1029,7 +1161,8 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
       _feedbackMessage = null;
     });
     try {
-      await _repository.saveSchedule(
+      final repository = _repository ??= OwnerScheduleRepository();
+      await repository.saveSchedule(
         merchantId: merchantId,
         uid: uid,
         payload: OwnerScheduleSavePayload(
@@ -1052,16 +1185,19 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
         _feedbackIsError = false;
         _feedbackMessage = 'Horarios guardados.';
       });
-      unawaited(OwnerScheduleAnalytics.logSaveSuccess());
+      unawaited(OwnerScheduleAnalytics.logSaveSuccess(merchantId: merchantId));
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isSaving = false;
         _feedbackIsError = true;
-        _feedbackMessage = 'No se pudo guardar. Revisá tu conexión.';
+        _feedbackMessage =
+            'No pudimos guardar los cambios. Revisá tu conexión y probá de nuevo.';
       });
-      unawaited(
-          OwnerScheduleAnalytics.logSaveError(reason: 'network_or_write'));
+      unawaited(OwnerScheduleAnalytics.logSaveError(
+        merchantId: merchantId,
+        reason: 'network_or_write',
+      ));
     }
   }
 
@@ -1114,12 +1250,12 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.event_available),
-              title: const Text('Agregar fecha especial'),
+              title: const Text('Agregar excepción por fecha'),
               onTap: () => Navigator.of(context).pop('special'),
             ),
             ListTile(
               leading: const Icon(Icons.beach_access),
-              title: const Text('Agregar cierre temporal'),
+              title: const Text('Agregar cierre por rango'),
               onTap: () => Navigator.of(context).pop('closure'),
             ),
           ],
@@ -1215,8 +1351,8 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                 children: [
                   Text(
                     initial == null
-                        ? 'Agregar fecha especial'
-                        : 'Editar fecha especial',
+                        ? 'Agregar excepción por fecha'
+                        : 'Editar excepción por fecha',
                     style: AppTextStyles.headingMd,
                   ),
                   const SizedBox(height: 12),
@@ -1410,8 +1546,8 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
                 children: [
                   Text(
                     initial == null
-                        ? 'Agregar cierre temporal'
-                        : 'Editar cierre temporal',
+                        ? 'Agregar cierre por rango'
+                        : 'Editar cierre por rango',
                     style: AppTextStyles.headingMd,
                   ),
                   const SizedBox(height: 12),
@@ -1514,8 +1650,9 @@ class _OwnerScheduleScreenState extends ConsumerState<OwnerScheduleScreen> {
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Cambios sin guardar'),
-            content:
-                const Text('Tenés cambios sin guardar. ¿Querés salir igual?'),
+            content: const Text(
+              'Tenés cambios sin guardar.\nSi salís ahora, se van a perder.',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),

@@ -29,8 +29,23 @@ export interface MerchantOperationalSignalsDocument {
   isOpenNow?: boolean;
   todayScheduleLabel?: string;
   hasPharmacyDutyToday?: boolean;
+  pharmacyDutyStatus?: 'published' | 'scheduled' | 'cancelled' | null;
   hasScheduleConfigured?: boolean;
   closesAt?: string | null;
   opensNextAt?: string | null;
+  scheduleSummary?: {
+    timezone: string;
+    todayWindows: Array<{
+      opensAtLocalMinutes: number;
+      closesAtLocalMinutes: number;
+    }>;
+    hasSchedule: boolean;
+    scheduleLastUpdatedAt?: Timestamp;
+    lastVerifiedAt?: Timestamp;
+  };
+  nextOpenAt?: Timestamp | null;
+  nextCloseAt?: Timestamp | null;
+  nextTransitionAt?: Timestamp | null;
+  isOpenNowSnapshot?: boolean;
+  snapshotComputedAt?: Timestamp | null;
 }
-

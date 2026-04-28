@@ -3,6 +3,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../merchant_badges/domain/trust_badges.dart';
+import '../../../merchant_badges/widgets/trust_badge_widgets.dart';
 import '../../models/merchant_search_item.dart';
 import 'map_controller.dart';
 import 'map_state.dart';
@@ -17,6 +19,7 @@ class SearchGoogleMapView extends StatefulWidget {
     required this.onListTap,
     required this.onRecenterTap,
     required this.onSearchThisAreaTap,
+    required this.showTrustBadges,
   });
 
   final List<MerchantSearchItem> merchants;
@@ -26,6 +29,7 @@ class SearchGoogleMapView extends StatefulWidget {
   final VoidCallback onListTap;
   final VoidCallback onRecenterTap;
   final VoidCallback onSearchThisAreaTap;
+  final bool showTrustBadges;
 
   @override
   State<SearchGoogleMapView> createState() => _SearchGoogleMapViewState();
@@ -133,6 +137,7 @@ class _SearchGoogleMapViewState extends State<SearchGoogleMapView> {
             bottom: 16,
             child: _SelectedMerchantCard(
               merchant: selected,
+              showTrustBadges: widget.showTrustBadges,
               onOpenTap: () => widget.onMerchantOpen(selected.merchantId),
             ),
           ),
@@ -207,14 +212,17 @@ class _SearchGoogleMapViewState extends State<SearchGoogleMapView> {
 class _SelectedMerchantCard extends StatelessWidget {
   const _SelectedMerchantCard({
     required this.merchant,
+    required this.showTrustBadges,
     required this.onOpenTap,
   });
 
   final MerchantSearchItem merchant;
+  final bool showTrustBadges;
   final VoidCallback onOpenTap;
 
   @override
   Widget build(BuildContext context) {
+    final trustBadges = _trustBadgesForCard(merchant);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -253,6 +261,14 @@ class _SelectedMerchantCard extends StatelessWidget {
                       color: AppColors.neutral700,
                     ),
                   ),
+                  if (showTrustBadges && trustBadges.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    TrustBadgeRow(
+                      badges: trustBadges,
+                      maxVisible: 1,
+                      compact: true,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -265,5 +281,16 @@ class _SelectedMerchantCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<TrustBadgeId> _trustBadgesForCard(MerchantSearchItem item) {
+    final ordered = <TrustBadgeId>[];
+    if (item.primaryTrustBadge != null) {
+      ordered.add(item.primaryTrustBadge!);
+    }
+    for (final badge in item.badges) {
+      if (!ordered.contains(badge)) ordered.add(badge);
+    }
+    return ordered;
   }
 }

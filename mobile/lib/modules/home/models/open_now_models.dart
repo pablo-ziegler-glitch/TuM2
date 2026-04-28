@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/catalog/zones_catalog_models.dart';
+import '../../merchant_badges/domain/trust_badges.dart';
 
 class OpenNowZone {
   const OpenNowZone({
@@ -75,6 +76,14 @@ class OpenNowMerchant {
     this.operationalSignalMessage,
     this.operationalStatusLabel,
     this.manualOverrideMode = 'none',
+    this.badges = const [],
+    this.primaryTrustBadge,
+    this.scheduleSummary,
+    this.nextOpenAt,
+    this.nextCloseAt,
+    this.nextTransitionAt,
+    this.isOpenNowSnapshot,
+    this.snapshotComputedAt,
     this.publicStatusLabel,
     this.is24h,
     this.twentyFourHourCooldownUntil,
@@ -103,6 +112,14 @@ class OpenNowMerchant {
   final String? operationalSignalMessage;
   final String? operationalStatusLabel;
   final String manualOverrideMode;
+  final List<TrustBadgeId> badges;
+  final TrustBadgeId? primaryTrustBadge;
+  final MerchantScheduleSummary? scheduleSummary;
+  final DateTime? nextOpenAt;
+  final DateTime? nextCloseAt;
+  final DateTime? nextTransitionAt;
+  final bool? isOpenNowSnapshot;
+  final DateTime? snapshotComputedAt;
   final String? publicStatusLabel;
   final bool? is24h;
   final DateTime? twentyFourHourCooldownUntil;
@@ -168,6 +185,14 @@ class OpenNowMerchant {
       operationalSignalMessage: operationalSignalMessage,
       operationalStatusLabel: operationalStatusLabel,
       manualOverrideMode: manualOverrideMode,
+      badges: badges,
+      primaryTrustBadge: primaryTrustBadge,
+      scheduleSummary: scheduleSummary,
+      nextOpenAt: nextOpenAt,
+      nextCloseAt: nextCloseAt,
+      nextTransitionAt: nextTransitionAt,
+      isOpenNowSnapshot: isOpenNowSnapshot,
+      snapshotComputedAt: snapshotComputedAt,
       publicStatusLabel: publicStatusLabel,
       is24h: is24h,
       twentyFourHourCooldownUntil: twentyFourHourCooldownUntil,
@@ -223,6 +248,20 @@ class OpenNowMerchant {
           (data['operationalStatusLabel'] as String?)?.trim(),
       manualOverrideMode:
           (data['manualOverrideMode'] as String?)?.trim() ?? 'none',
+      badges: parseTrustBadges(data['badges']),
+      primaryTrustBadge: TrustBadgeId.fromValue(
+        (data['primaryTrustBadge'] as String?) ?? '',
+      ),
+      scheduleSummary: data['scheduleSummary'] is Map
+          ? MerchantScheduleSummary.fromMap(
+              Map<String, dynamic>.from(data['scheduleSummary'] as Map),
+            )
+          : null,
+      nextOpenAt: _asDateTime(data['nextOpenAt']),
+      nextCloseAt: _asDateTime(data['nextCloseAt']),
+      nextTransitionAt: _asDateTime(data['nextTransitionAt']),
+      isOpenNowSnapshot: data['isOpenNowSnapshot'] as bool?,
+      snapshotComputedAt: _asDateTime(data['snapshotComputedAt']),
       publicStatusLabel: (data['publicStatusLabel'] as String?)?.trim(),
       is24h: data['is24h'] as bool?,
       twentyFourHourCooldownUntil:

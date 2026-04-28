@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers/feature_flags_provider.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -32,6 +33,10 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(searchNotifierProvider);
     final notifier = ref.read(searchNotifierProvider.notifier);
+    final trustBadgesEnabled =
+        ref.watch(trustBadgesEnabledProvider).valueOrNull ?? false;
+    final trustBadgesSearchEnabled =
+        ref.watch(trustBadgesSearchEnabledProvider).valueOrNull ?? false;
     final selectedMerchantId = _selectedMerchantId ?? state.selectedMerchantId;
 
     String zoneName = 'Tu zona';
@@ -128,6 +133,8 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
                       },
                       onRecenterTap: notifier.logMapRecenterTapped,
                       onSearchThisAreaTap: notifier.logMapSearchThisAreaTapped,
+                      showTrustBadges:
+                          trustBadgesEnabled && trustBadgesSearchEnabled,
                     ),
             ),
           ],

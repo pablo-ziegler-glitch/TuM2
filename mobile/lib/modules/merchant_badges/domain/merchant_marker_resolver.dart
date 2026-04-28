@@ -3,6 +3,7 @@ import '../../search/map/cluster/map_cluster_model.dart';
 import '../../search/map/marker/map_marker_type.dart';
 import '../../search/map/marker/map_marker_visual_type.dart';
 import 'merchant_badge_resolver.dart';
+import 'operational_status_resolver.dart';
 import 'merchant_visual_models.dart';
 
 class MerchantMarkerResolver {
@@ -144,11 +145,24 @@ class MerchantVisualStateMapper {
   const MerchantVisualStateMapper._();
 
   static MerchantVisualState fromSearchItem(MerchantSearchItem item) {
+    final resolvedOperational = resolveOperationalStatus(
+      now: DateTime.now(),
+      merchant: MerchantOperationalProjection(
+        scheduleSummary: item.scheduleSummary,
+        nextOpenAt: item.nextOpenAt,
+        nextCloseAt: item.nextCloseAt,
+        nextTransitionAt: item.nextTransitionAt,
+        hasOperationalSignal: item.hasOperationalSignal,
+        operationalSignalType: item.operationalSignalType,
+        operationalStatusLabel: item.operationalStatusLabel,
+      ),
+    );
+
     return MerchantVisualState(
       visibility: _visibility(item.visibilityStatus),
       lifecycle: MerchantLifecycleState.active,
       confidence: _confidence(item.verificationStatus),
-      opening: _opening(item.isOpenNow),
+      opening: _opening(item.isOpenNow, resolvedOperational.type),
       guardState: _guardState(item),
       operationalSignal: _operational(item.operationalSignalType),
       show24hBadge: item.is24h == true,
@@ -157,7 +171,8 @@ class MerchantVisualStateMapper {
       categoryLabel:
           item.categoryLabel.trim().isEmpty ? null : item.categoryLabel.trim(),
       claimState: null,
-      hasSufficientScheduleInfo: item.openStatusLabel.trim().isNotEmpty,
+      hasSufficientScheduleInfo: item.scheduleSummary?.hasSchedule == true ||
+          item.openStatusLabel.trim().isNotEmpty,
       manualOverrideMode: item.manualOverrideMode,
       informational: item.manualOverrideMode == 'informational',
     );
@@ -193,7 +208,20 @@ class MerchantVisualStateMapper {
     }
   }
 
-  static MerchantOpeningState _opening(bool? isOpenNow) {
+  static MerchantOpeningState _opening(
+    bool? isOpenNow,
+    ResolvedOperationalStatusType resolvedType,
+  ) {
+    if (resolvedType == ResolvedOperationalStatusType.openNow ||
+        resolvedType == ResolvedOperationalStatusType.closingSoon) {
+      return MerchantOpeningState.openNow;
+    }
+    if (resolvedType == ResolvedOperationalStatusType.closedNow ||
+        resolvedType == ResolvedOperationalStatusType.openingSoon ||
+        resolvedType == ResolvedOperationalStatusType.temporaryClosed ||
+        resolvedType == ResolvedOperationalStatusType.vacation) {
+      return MerchantOpeningState.closed;
+    }
     if (isOpenNow == true) return MerchantOpeningState.openNow;
     if (isOpenNow == false) return MerchantOpeningState.closed;
     return MerchantOpeningState.noInfo;

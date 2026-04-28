@@ -12,6 +12,7 @@
 ### Estado real de ejecución (auditoría 2026-04-26)
 
 - Fuente canónica de estado: `CLAUDE.md` (regla obligatoria del repo).
+- TuM2-0015 cerrada como definición canónica de rubros MVP: 9 rubros cerrados con inclusión explícita de panaderías/confiterías.
 - Snapshot global backlog: **137** tarjetas = **52 DONE**, **13 IN_PROGRESS**, **72 TODO**.
 - Abiertas por prioridad: **P0=34**, **P1=29**, **P2=17**, **P3=5**.
 - Claims (P0) es el frente principal activo: 0125, 0126, 0127, 0128, 0129, 0130, 0133.

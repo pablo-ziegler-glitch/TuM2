@@ -9,18 +9,20 @@ import { applyUserAccessClaims } from "../lib/accessClaims";
 const db = () => getFirestore();
 
 function canonicalCategoryId(raw: string): string {
-  const normalized = raw.trim().toLowerCase();
-  if (normalized === "vet" || normalized === "veterinary") return "veterinaria";
-  if (normalized === "pharmacy") return "farmacia";
-  if (normalized === "kiosk") return "kiosco";
-  if (normalized === "grocery") return "almacen";
-  if (normalized === "supermarket") return "supermercado";
-  if (normalized === "prepared_food") return "casa_de_comidas";
-  if (normalized === "fast_food") return "comida_al_paso";
-  if (normalized === "tire_shop") return "gomeria";
-  if (normalized === "other") return "otro";
-  return normalized;
+  return raw.trim().toLowerCase();
 }
+
+const ALLOWED_CANONICAL_CATEGORY_IDS = new Set<string>([
+  "farmacia",
+  "kiosco",
+  "almacen",
+  "veterinaria",
+  "comida_al_paso",
+  "casa_de_comidas",
+  "gomeria",
+  "panaderia",
+  "confiteria",
+]);
 
 interface OnboardingOwnerSubmitRequest {
   draftMerchantId: string;
@@ -113,19 +115,16 @@ export const onboardingOwnerSubmit = onCall(
     }
 
     const normalizedCategoryId = canonicalCategoryId(step1.categoryId);
+    if (!ALLOWED_CANONICAL_CATEGORY_IDS.has(normalizedCategoryId)) {
+      throw new HttpsError(
+        "invalid-argument",
+        `La categoría '${normalizedCategoryId}' no es canónica MVP.`
+      );
+    }
 
-    // Validate categoryId exists in 'categories' collection.
-    // Compatibilidad temporal: aceptar 'vet' legacy si aún no corrió la migración.
-    const [canonicalCategorySnap, legacyCategorySnap] = await Promise.all([
-      db().doc(`categories/${normalizedCategoryId}`).get(),
-      normalizedCategoryId === step1.categoryId
-        ? Promise.resolve(null)
-        : db().doc(`categories/${step1.categoryId}`).get(),
-    ]);
-    const hasCategory =
-      canonicalCategorySnap.exists ||
-      (legacyCategorySnap != null && legacyCategorySnap.exists);
-    if (!hasCategory) {
+    // Validate categoryId exists in canonical categories collection.
+    const canonicalCategorySnap = await db().doc(`categories/${normalizedCategoryId}`).get();
+    if (!canonicalCategorySnap.exists) {
       throw new HttpsError(
         "invalid-argument",
         `La categoría '${normalizedCategoryId}' no existe.`

@@ -21,6 +21,12 @@ El MVP de TuM2 cubre **una zona piloto** con **rubros prioritarios**, con el obj
 5. Tiendas de comida al paso
 6. Casas de comida / Rotiserías
 7. Gomerías
+8. Panaderías
+9. Confiterías
+
+**Nota de canon técnico (TuM2-0015):** el runtime usa únicamente IDs canónicos (`farmacia`, `kiosco`, `almacen`, `veterinaria`, `comida_al_paso`, `casa_de_comidas`, `gomeria`, `panaderia`, `confiteria`) con lista funcional MVP cerrada en 9 rubros.
+
+**IDs canónicos de producto (0015):** `farmacia`, `kiosco`, `almacen`, `veterinaria`, `comida_al_paso`, `casa_de_comidas`, `gomeria`, `panaderia`, `confiteria`.
 
 ---
 
@@ -81,7 +87,7 @@ Un OWNER mantiene **todas** las capacidades de CUSTOMER más su panel operativo.
 |----|---------|-----------|-------|
 | F-C20 | Registro con email + magic link | P0 | Firebase Auth |
 | F-C21 | Registro con Google Sign-In | P0 | Firebase Auth |
-| F-C22 | Onboarding de 3 slides | P0 | AUTH-02 |
+| F-C22 | Onboarding de 3 slides guest-first | P0 | AUTH-02 → HOME-01 invitado (`Omitir`/`Empezar`) |
 | F-C23 | Perfil básico (nombre, email) | P1 | PROFILE-01 |
 | F-C24 | Configuración de notificaciones | P1 | PROFILE-02 |
 | F-C25 | Favoritos y seguir comercio | P2 | MVP+ |

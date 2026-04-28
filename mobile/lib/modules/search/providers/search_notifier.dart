@@ -16,12 +16,16 @@ const _kSearchRealDataEnabled =
     bool.fromEnvironment('SEARCH_REAL_DATA_ENABLED', defaultValue: true);
 const _kProviderKeepAliveTtl = Duration(minutes: 5);
 
-const _kExcludedCategoryTokens = <String>{
+const _kAllowedMvpCategoryTokens = <String>{
+  'farmacia',
+  'kiosco',
+  'almacen',
+  'veterinaria',
+  'comida_al_paso',
+  'casa_de_comidas',
+  'gomeria',
   'panaderia',
-  'panadería',
   'confiteria',
-  'confitería',
-  'bakery',
 };
 
 const _kVerificationRank = <String, int>{
@@ -595,7 +599,7 @@ class SearchNotifier extends StateNotifier<SearchState> {
       final categoryTokens = _normalizeAndTokenize(
         '${item.categoryId} ${item.categoryLabel}',
       ).toSet();
-      return !_kExcludedCategoryTokens.any(categoryTokens.contains);
+      return categoryTokens.any(_kAllowedMvpCategoryTokens.contains);
     }).toList(growable: false);
   }
 

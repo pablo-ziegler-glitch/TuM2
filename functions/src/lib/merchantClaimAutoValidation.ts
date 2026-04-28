@@ -133,11 +133,11 @@ function resolveReviewQueuePriority(params: {
 }
 
 function isSensitiveCategory(categoryId: string): boolean {
-  return categoryId === "pharmacy" || categoryId === "veterinary";
+  return categoryId === "farmacia" || categoryId === "veterinaria";
 }
 
 function isFoodStandCategory(categoryId: string): boolean {
-  return categoryId === "fast_food";
+  return categoryId === "comida_al_paso";
 }
 
 export function evaluateMerchantClaimAutoValidation(
@@ -202,12 +202,12 @@ export function evaluateMerchantClaimAutoValidation(
     );
   }
 
-  if (normalizedCategoryId === "pharmacy" && !hasRegulatoryDocument) {
+  if (normalizedCategoryId === "farmacia" && !hasRegulatoryDocument) {
     missingReasons.push("missing_category_required_evidence");
     missingEvidenceTypes.push("regulatory_document");
   }
   if (
-    normalizedCategoryId === "veterinary" &&
+    normalizedCategoryId === "veterinaria" &&
     !evidenceKinds.has("reinforced_relationship_evidence")
   ) {
     missingReasons.push("missing_category_required_evidence");

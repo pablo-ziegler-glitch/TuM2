@@ -5,30 +5,39 @@ const admin = require("firebase-admin");
 const DEFAULT_PAGE_SIZE = 400;
 const BATCH_LIMIT = 450;
 const CLAIM_ALLOWED_CATEGORY_IDS = new Set([
-  "pharmacy",
-  "kiosk",
+  "farmacia",
+  "kiosco",
   "almacen",
-  "veterinary",
-  "fast_food",
+  "veterinaria",
+  "comida_al_paso",
   "casa_de_comidas",
   "gomeria",
+  "panaderia",
+  "confiteria",
 ]);
 
 const CATEGORY_ALIASES = {
-  farmacia: "pharmacy",
-  drugstore: "pharmacy",
-  kiosco: "kiosk",
+  farmacia: "farmacia",
+  pharmacy: "farmacia",
+  drugstore: "farmacia",
+  kiosco: "kiosco",
+  kiosk: "kiosco",
   grocery: "almacen",
+  grocery_stores: "almacen",
   store: "almacen",
-  veterinary: "veterinary",
-  veterinaria: "veterinary",
-  vet: "veterinary",
-  comida_al_paso: "fast_food",
-  comida_rapida: "fast_food",
+  veterinary: "veterinaria",
+  veterinaria: "veterinaria",
+  vet: "veterinaria",
+  comida_al_paso: "comida_al_paso",
+  fast_food: "comida_al_paso",
+  food_on_the_go: "comida_al_paso",
+  comida_rapida: "comida_al_paso",
   prepared_food: "casa_de_comidas",
   rotiseria: "casa_de_comidas",
-  house_food: "casa_de_comidas",
   tire_shop: "gomeria",
+  bakery: "panaderia",
+  "panadería": "panaderia",
+  confitería: "confiteria",
 };
 
 function parseArgs(argv) {

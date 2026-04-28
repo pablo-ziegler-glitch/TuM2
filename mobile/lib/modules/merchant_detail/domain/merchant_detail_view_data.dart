@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../merchant_badges/domain/trust_badges.dart';
 import '../../merchant_badges/domain/merchant_visual_models.dart';
 
 @immutable
@@ -29,6 +30,14 @@ class MerchantPublicViewData {
     required this.manualOverrideMode,
     required this.publicStatusLabel,
     required this.is24h,
+    required this.badges,
+    required this.primaryTrustBadge,
+    required this.scheduleSummary,
+    required this.nextOpenAt,
+    required this.nextCloseAt,
+    required this.nextTransitionAt,
+    required this.isOpenNowSnapshot,
+    required this.snapshotComputedAt,
   });
 
   final String merchantId;
@@ -55,11 +64,19 @@ class MerchantPublicViewData {
   final String manualOverrideMode;
   final String? publicStatusLabel;
   final bool? is24h;
+  final List<TrustBadgeId> badges;
+  final TrustBadgeId? primaryTrustBadge;
+  final MerchantScheduleSummary? scheduleSummary;
+  final DateTime? nextOpenAt;
+  final DateTime? nextCloseAt;
+  final DateTime? nextTransitionAt;
+  final bool? isOpenNowSnapshot;
+  final DateTime? snapshotComputedAt;
 
   bool get hasPhone => (phonePrimary ?? '').trim().isNotEmpty;
   bool get isPharmacyCategory {
     final normalized = categoryId.trim().toLowerCase();
-    return normalized == 'pharmacy' || normalized == 'farmacia';
+    return normalized == 'farmacia';
   }
 }
 

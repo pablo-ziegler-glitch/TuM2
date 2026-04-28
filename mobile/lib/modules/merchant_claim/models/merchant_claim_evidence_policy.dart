@@ -2,13 +2,15 @@ import 'merchant_claim_models.dart';
 
 const kMerchantClaimEvidencePolicyVersion = '2026-04-19.v1';
 const kClaimAllowedCategoryIds = <String>{
-  'pharmacy',
-  'kiosk',
+  'farmacia',
+  'kiosco',
   'almacen',
-  'veterinary',
-  'fast_food',
+  'veterinaria',
+  'comida_al_paso',
   'casa_de_comidas',
   'gomeria',
+  'panaderia',
+  'confiteria',
 };
 
 class MerchantClaimEvidencePolicy {
@@ -89,28 +91,12 @@ class MerchantClaimEvidencePolicy {
 }
 
 const _generalCategoryIds = <String>{
-  'kiosk',
   'kiosco',
   'almacen',
-  'rotiseria',
   'casa_de_comidas',
-  'casa_comidas',
-  'comercio_general',
-  'house_food',
-  'food_house',
   'gomeria',
-  'tire_shop',
-};
-
-const _categoryAliases = <String, String>{
-  'farmacia': 'pharmacy',
-  'veterinary': 'veterinary',
-  'veterinaria': 'veterinary',
-  'vet': 'veterinary',
-  'comida_al_paso': 'fast_food',
-  'comida_rapida': 'fast_food',
-  'kiosk': 'kiosk',
-  'kiosco': 'kiosk',
+  'panaderia',
+  'confiteria',
 };
 
 const _generalPolicy = MerchantClaimEvidencePolicy(
@@ -156,8 +142,8 @@ const _fallbackPolicy = MerchantClaimEvidencePolicy(
 );
 
 const _policyByCategory = <String, MerchantClaimEvidencePolicy>{
-  'pharmacy': MerchantClaimEvidencePolicy(
-    categoryId: 'pharmacy',
+  'farmacia': MerchantClaimEvidencePolicy(
+    categoryId: 'farmacia',
     policyVersion: kMerchantClaimEvidencePolicyVersion,
     strictnessLevel: 'regulated_strict',
     primaryVisualAcceptedKinds: [MerchantClaimEvidenceKind.storefrontPhoto],
@@ -174,8 +160,8 @@ const _policyByCategory = <String, MerchantClaimEvidencePolicy>{
     supportsMobileOrInformalOperation: false,
     manualReviewTriggers: ['sensitive_category_requires_manual_review'],
   ),
-  'veterinary': MerchantClaimEvidencePolicy(
-    categoryId: 'veterinary',
+  'veterinaria': MerchantClaimEvidencePolicy(
+    categoryId: 'veterinaria',
     policyVersion: kMerchantClaimEvidencePolicyVersion,
     strictnessLevel: 'reinforced_intermediate',
     primaryVisualAcceptedKinds: [MerchantClaimEvidenceKind.storefrontPhoto],
@@ -193,8 +179,8 @@ const _policyByCategory = <String, MerchantClaimEvidencePolicy>{
     supportsMobileOrInformalOperation: false,
     manualReviewTriggers: ['sensitive_category_requires_manual_review'],
   ),
-  'fast_food': MerchantClaimEvidencePolicy(
-    categoryId: 'fast_food',
+  'comida_al_paso': MerchantClaimEvidencePolicy(
+    categoryId: 'comida_al_paso',
     policyVersion: kMerchantClaimEvidencePolicyVersion,
     strictnessLevel: 'flexible_contextual',
     primaryVisualAcceptedKinds: [
@@ -225,7 +211,7 @@ MerchantClaimEvidencePolicy resolveMerchantClaimEvidencePolicy(
   String? categoryId,
 ) {
   final raw = (categoryId ?? '').trim().toLowerCase();
-  final normalized = _categoryAliases[raw] ?? raw;
+  final normalized = raw;
   if (_policyByCategory.containsKey(normalized)) {
     return _policyByCategory[normalized]!;
   }
@@ -235,6 +221,5 @@ MerchantClaimEvidencePolicy resolveMerchantClaimEvidencePolicy(
 
 bool isAllowedMerchantClaimCategoryId(String? categoryId) {
   final raw = (categoryId ?? '').trim().toLowerCase();
-  final normalized = _categoryAliases[raw] ?? raw;
-  return kClaimAllowedCategoryIds.contains(normalized);
+  return kClaimAllowedCategoryIds.contains(raw);
 }

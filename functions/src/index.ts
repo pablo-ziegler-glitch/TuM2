@@ -11,6 +11,7 @@ export { onUserDelete } from "./triggers/onUserDelete";
 // ─── Auth Callables ────────────────────────────────────────────────────────
 
 export { assignOwnerRole } from "./callables/assignOwnerRole";
+export { requestMerchantInactivation } from "./callables/requestMerchantInactivation";
 
 // ─── Firestore Triggers ────────────────────────────────────────────────────
 

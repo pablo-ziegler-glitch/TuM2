@@ -8,27 +8,32 @@ import {
   resolveClaimEvidencePolicy,
 } from "../merchantClaimEvidencePolicy";
 
-test("policy resolver devuelve strict para pharmacy", () => {
-  const policy = resolveClaimEvidencePolicy("pharmacy");
+test("policy resolver devuelve strict para farmacia", () => {
+  const policy = resolveClaimEvidencePolicy("farmacia");
   assert.equal(policy.policyVersion, CLAIM_EVIDENCE_POLICY_VERSION);
   assert.equal(policy.strictnessLevel, "regulated_strict");
   assert.deepEqual(policy.requiredAdditionalEvidence, ["regulatory_document"]);
 });
 
-test("aliases legacy en español mapean a policy canónica", () => {
+test("categorías canónicas resuelven policy canónica", () => {
   const farmacia = resolveClaimEvidencePolicy("farmacia");
   const veterinaria = resolveClaimEvidencePolicy("veterinaria");
   const comidaAlPaso = resolveClaimEvidencePolicy("comida_al_paso");
-  assert.equal(farmacia.categoryId, "pharmacy");
-  assert.equal(veterinaria.categoryId, "veterinary");
-  assert.equal(comidaAlPaso.categoryId, "fast_food");
+  assert.equal(farmacia.categoryId, "farmacia");
+  assert.equal(veterinaria.categoryId, "veterinaria");
+  assert.equal(comidaAlPaso.categoryId, "comida_al_paso");
 });
 
 test("categorías no MVP quedan fuera de allowlist de claims", () => {
-  assert.equal(normalizeClaimCategoryId("panaderia"), "unsupported_non_mvp");
-  assert.equal(normalizeClaimCategoryId("cafeteria"), "unsupported_non_mvp");
-  assert.equal(isAllowedClaimCategoryId("unsupported_non_mvp"), false);
-  assert.equal(isAllowedClaimCategoryId("pharmacy"), true);
+  assert.equal(normalizeClaimCategoryId("panaderia"), "panaderia");
+  assert.equal(normalizeClaimCategoryId("bakery"), "bakery");
+  assert.equal(normalizeClaimCategoryId("confiteria"), "confiteria");
+  assert.equal(normalizeClaimCategoryId("cafeteria"), "cafeteria");
+  assert.equal(isAllowedClaimCategoryId("bakery"), false);
+  assert.equal(isAllowedClaimCategoryId("cafeteria"), false);
+  assert.equal(isAllowedClaimCategoryId("panaderia"), true);
+  assert.equal(isAllowedClaimCategoryId("confiteria"), true);
+  assert.equal(isAllowedClaimCategoryId("farmacia"), true);
 });
 
 test("fallback policy evita auto-aprobación implícita para categoría desconocida", () => {
@@ -41,9 +46,9 @@ test("fallback policy evita auto-aprobación implícita para categoría desconoc
   assert.ok(evaluation.manualReviewReasons.includes("fallback_category_policy_applied"));
 });
 
-test("fast_food acepta combinación flexible operacional + alternativa", () => {
+test("comida_al_paso acepta combinación flexible operacional + alternativa", () => {
   const evaluation = evaluateEvidenceAgainstPolicy({
-    categoryId: "fast_food",
+    categoryId: "comida_al_paso",
     evidenceKinds: new Set([
       "operational_point_photo",
       "alternative_relationship_evidence",
@@ -53,9 +58,9 @@ test("fast_food acepta combinación flexible operacional + alternativa", () => {
   assert.equal(evaluation.missingEvidenceTypes.length, 0);
 });
 
-test("veterinary exige evidencia reforzada específica", () => {
+test("veterinaria exige evidencia reforzada específica", () => {
   const evaluation = evaluateEvidenceAgainstPolicy({
-    categoryId: "veterinary",
+    categoryId: "veterinaria",
     evidenceKinds: new Set(["storefront_photo", "ownership_document"]),
   });
   assert.equal(evaluation.requiredEvidenceSatisfied, false);

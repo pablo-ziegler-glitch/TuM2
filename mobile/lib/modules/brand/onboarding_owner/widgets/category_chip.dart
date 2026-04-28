@@ -13,15 +13,25 @@ class CategoryOption {
 
 const kCategories = [
   CategoryOption(
-      id: 'farmacia', label: 'Farmacia', icon: Icons.local_pharmacy_outlined),
-  CategoryOption(id: 'kiosco', label: 'Kiosco', icon: Icons.store_outlined),
+      id: 'farmacia', label: 'Farmacias', icon: Icons.local_pharmacy_outlined),
+  CategoryOption(id: 'kiosco', label: 'Kioscos', icon: Icons.store_outlined),
   CategoryOption(
-      id: 'almacen', label: 'Almacén', icon: Icons.shopping_basket_outlined),
+      id: 'almacen', label: 'Almacenes', icon: Icons.shopping_basket_outlined),
   CategoryOption(
-      id: 'veterinaria', label: 'Veterinaria', icon: Icons.pets_outlined),
+      id: 'veterinaria', label: 'Veterinarias', icon: Icons.pets_outlined),
   CategoryOption(
-      id: 'panaderia', label: 'Panadería', icon: Icons.bakery_dining_outlined),
-  CategoryOption(id: 'otro', label: 'Otro', icon: Icons.more_horiz),
+      id: 'comida_al_paso',
+      label: 'Comida al paso',
+      icon: Icons.fastfood_outlined),
+  CategoryOption(
+      id: 'casa_de_comidas',
+      label: 'Rotiserías',
+      icon: Icons.restaurant_outlined),
+  CategoryOption(id: 'gomeria', label: 'Gomerías', icon: Icons.build_outlined),
+  CategoryOption(
+      id: 'panaderia', label: 'Panaderías', icon: Icons.bakery_dining_outlined),
+  CategoryOption(
+      id: 'confiteria', label: 'Confiterías', icon: Icons.local_cafe_outlined),
 ];
 
 class CategoryGrid extends StatelessWidget {

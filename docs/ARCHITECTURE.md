@@ -112,6 +112,13 @@ merchants/{id}          →  Cloud Function trigger  →  merchant_public/{id}
 
 **Importante:** `merchant_public` nunca se escribe directamente desde cliente. Solo Cloud Functions tienen permiso.
 
+### Scope de rubros MVP (TuM2-0015)
+
+- Lista cerrada MVP: Farmacias, Kioscos, Almacenes, Veterinarias, Comida al paso, Rotiserías, Gomerías, Panaderías y Confiterías.
+- Canon producto: `pharmacies`, `kiosks`, `grocery_stores`, `veterinaries`, `food_on_the_go`, `rotisseries`, `tire_shops`, `bakeries`, `confectioneries`.
+- Runtime: los rubros MVP usan únicamente IDs canónicos; no se aceptan aliases legacy en serving.
+- Onboarding OWNER y filtros públicos deben aplicar allowlist MVP y no leer catálogo completo cuando no sea necesario.
+
 ---
 
 ## 5. Modelo de estados de comercio (3 ejes)
@@ -137,12 +144,18 @@ archived             suppressed              claimed
 **sortBoost por nivel de verificación:**
 | Nivel | Boost |
 |-------|-------|
-| verified | 100 |
+| verified | 100 (base) |
 | validated | 90 |
-| claimed | 80 |
+| claimed | 85 |
 | referential | 70 |
-| community_submitted | 40 |
-| unverified | 20 |
+| community_submitted | 50 |
+| unverified | 30 |
+
+Bonificaciones de confianza:
+- `schedule_verified`: `+10`
+- `schedule_updated`: `+5`
+- `duty_loaded`: `+15` (solo contexto farmacia)
+- Tope canónico: `120`
 
 ---
 
@@ -167,7 +180,7 @@ functions/src/
 │   ├── reports.ts        — Suprimir comercio si supera umbral de reportes
 │   └── externalPlaces.ts — Normalizar datos de Google Places al ingestar
 ├── jobs/                 — Tareas programadas y callables admin
-│   ├── refreshOpenStatuses.ts  — Nightly: recalcula isOpenNow en todos
+│   ├── refreshOpenStatuses.ts  — Nightly scoped por nextTransitionAt (sin full scan)
 │   ├── refreshDuties.ts        — Nightly: actualiza hasPharmacyDutyToday
 │   └── bootstrap.ts            — Callable admin: seed de zona desde Google Places
 ├── coverage/             — Métricas de cobertura por zona
@@ -175,8 +188,8 @@ functions/src/
 ├── admin/                — Callables de administración
 │   └── rebuildPublic.ts  — Reconstruir todas las proyecciones merchant_public
 └── lib/                  — Utilidades internas
-    ├── projection.ts     — computeSortBoost(), computeMerchantPublicProjection()
-    ├── schedules.ts      — Parsing de horarios, isOpenNow
+    ├── projection.ts     — computeTrustBadges(), computeSortBoost(), computeMerchantPublicProjection()
+    ├── schedules.ts      — Parsing de horarios, isOpenNow, nextTransitionAt
     ├── normalizeCategory.ts
     ├── dedupe.ts         — Detección de duplicados en seeds externos
     ├── scoring.ts        — Confidence scoring para datos externos
@@ -187,10 +200,13 @@ functions/src/
 
 | Campo | Colección | Quién lo calcula | Cuándo |
 |-------|-----------|-----------------|--------|
-| `isOpenNow` | merchant_public | schedules.ts trigger + nightly job | Cambio de horario / señal / cada noche |
+| `isOpenNow` | merchant_public | schedules.ts trigger + signals.ts sync | Cambio de horario / señal |
+| `scheduleSummary` | merchant_public | schedules.ts trigger + projection.ts | Cambio de horario |
+| `nextOpenAt` / `nextCloseAt` / `nextTransitionAt` | merchant_public | schedules.ts trigger + projection.ts | Cambio de horario |
 | `hasPharmacyDutyToday` | merchant_public | duties.ts trigger + nightly job | Cambio de turno / cada noche |
-| `sortBoost` | merchant_public | projection.ts | Cambio de verificación |
-| `badges` | merchant_public | projection.ts | Cambio de datos del comercio |
+| `sortBoost` | merchant_public | projection.ts (backend-only) | Cambio de verificación/horario/turno |
+| `badges` / `primaryTrustBadge` | merchant_public | projection.ts (backend-only) | Cambio de datos del comercio |
+| `isOpenNowSnapshot` / `snapshotComputedAt` | merchant_public | schedules.ts + projection.ts | Evento real de horario |
 | `searchKeywords` | merchant_public | projection.ts | Cambio de nombre/categoría |
 
 ---

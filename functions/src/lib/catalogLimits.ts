@@ -33,14 +33,7 @@ const DEFAULT_PRODUCT_LIMIT = 100;
 const MIN_PRODUCT_LIMIT = 1;
 const MAX_PRODUCT_LIMIT = 100000;
 
-const FORBIDDEN_CATEGORY_IDS = new Set<string>([
-  "bakery",
-  "panaderia",
-  "panadería",
-  "confiteria",
-  "confitería",
-  "bakery_confiteria",
-]);
+const FORBIDDEN_CATEGORY_IDS = new Set<string>(["bakery_confiteria"]);
 
 function toSafeInt(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;

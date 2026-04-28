@@ -6,6 +6,17 @@ enum SplashBrandVariant {
   worldcup,
 }
 
+SplashBrandVariant resolveSplashBrandVariant({
+  required String rawVariant,
+  required bool worldcupEnabled,
+}) {
+  final normalizedVariant = rawVariant.trim().toLowerCase();
+  final isWorldcup = worldcupEnabled ||
+      normalizedVariant == 'mundialista' ||
+      normalizedVariant == 'worldcup';
+  return isWorldcup ? SplashBrandVariant.worldcup : SplashBrandVariant.original;
+}
+
 final firebaseRemoteConfigProvider = Provider<FirebaseRemoteConfig>((ref) {
   return FirebaseRemoteConfig.instance;
 });
@@ -255,15 +266,12 @@ final splashBrandVariantProvider =
     });
     await remoteConfig.fetchAndActivate();
 
-    final rawVariant =
-        remoteConfig.getString('splash_brand_variant').trim().toLowerCase();
+    final rawVariant = remoteConfig.getString('splash_brand_variant');
     final worldcupEnabled = remoteConfig.getBool('mobile_worldcup_enabled');
-    final isWorldcup = worldcupEnabled ||
-        rawVariant == 'mundialista' ||
-        rawVariant == 'worldcup';
-    return isWorldcup
-        ? SplashBrandVariant.worldcup
-        : SplashBrandVariant.original;
+    return resolveSplashBrandVariant(
+      rawVariant: rawVariant,
+      worldcupEnabled: worldcupEnabled,
+    );
   } catch (_) {
     return SplashBrandVariant.original;
   }

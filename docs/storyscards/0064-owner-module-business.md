@@ -245,26 +245,6 @@ Evitar:
 - “Panel bloqueado”
 - copy técnico interno de permisos.
 
-### OWNER-01 — Horarios y Avisos de hoy
-- Horarios = atención habitual del comercio.
-- Avisos de hoy = cambios temporales del día (vacaciones, cerrado temporalmente, abre más tarde).
-- No usar “señales operativas” como label principal en UI OWNER-01.
-- Microcopy canónico Horarios:
-  - Título: “Horarios”
-  - Subtítulo: “Definí cuándo atendés normalmente.”
-  - CTA: “Editar horarios”
-- Microcopy canónico Avisos de hoy sin aviso activo:
-  - Título: “Avisos de hoy”
-  - Subtítulo: “Informá si cerrás, abrís más tarde o estás de vacaciones.”
-  - CTA: “Avisar cambio”
-- Con aviso activo:
-  - Mostrar tipo visible: “De vacaciones” | “Cerrado temporalmente” | “Abre más tarde”
-  - Mostrar acción clara: “Desactivar aviso” o entrada equivalente de gestión.
-- Estado operativo visible en OWNER-01 debe informar fuente:
-  - “Fuente: horario habitual”
-  - “Fuente: aviso activo”
-  - “Fuente: horarios no disponibles”
-
 ## 28. datos impactados
 - estado resuelto de acceso (Auth),
 - flag `owner_pending`,

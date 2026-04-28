@@ -134,8 +134,7 @@ void main() {
     expect(find.text('Acceso no permitido'), findsOneWidget);
   });
 
-  testWidgets(
-      'muestra estado abierto por horario habitual y cards Horarios/Avisos sin aviso activo',
+  testWidgets('renderiza dashboard con estado operativo y quick actions',
       (tester) async {
     final merchant = buildMerchant();
     await pumpDashboard(
@@ -154,52 +153,7 @@ void main() {
     );
 
     expect(find.text('Abierto ahora'), findsOneWidget);
-    expect(
-      find.text(
-          'Fuente: horario habitual. Los vecinos ven tu comercio como abierto.'),
-      findsOneWidget,
-    );
-    expect(find.text('Horarios'), findsOneWidget);
-    expect(find.text('Definí cuándo atendés normalmente.'), findsOneWidget);
-    expect(find.text('Editar horarios'), findsAtLeastNWidgets(1));
-    expect(find.text('Avisos de hoy'), findsOneWidget);
-    expect(
-      find.text('Informá si cerrás, abrís más tarde o estás de vacaciones.'),
-      findsOneWidget,
-    );
-    expect(find.text('Avisar cambio'), findsOneWidget);
-    expect(find.text('Revisar perfil'), findsAtLeastNWidgets(1));
-  });
-
-  testWidgets('muestra aviso activo con tipo visible y acción de desactivar',
-      (tester) async {
-    final merchant = buildMerchant();
-    await pumpDashboard(
-      tester,
-      authState: AuthAuthenticated(user: fakeUser, role: 'owner'),
-      merchantLoader: (ref) async => OwnerMerchantResolution(
-        primaryMerchant: merchant,
-        allMerchants: [merchant],
-      ),
-      signalLoader: (ref, merchantId) async => OwnerOperationalSignal.empty(
-        merchantId: merchantId,
-        ownerUserId: 'owner-1',
-      ).copyWith(
-        signalType: OperationalSignalType.vacation,
-        isActive: true,
-        forceClosed: true,
-        message: 'Volvemos el lunes.',
-      ),
-    );
-
-    expect(find.text('Aviso activo: De vacaciones'), findsOneWidget);
-    expect(
-      find.text('Fuente: aviso activo. Volvemos el lunes.'),
-      findsOneWidget,
-    );
-    expect(find.text('Avisos de hoy'), findsOneWidget);
-    expect(find.text('De vacaciones'), findsOneWidget);
-    expect(find.text('Desactivar aviso'), findsOneWidget);
+    expect(find.text('Revisar perfil'), findsOneWidget);
   });
 
   testWidgets('owner restringido muestra bloqueo explícito', (tester) async {

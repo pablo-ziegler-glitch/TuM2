@@ -20,10 +20,6 @@ Por eso 0101 debe cubrir que:
 - puede haber conflicto o disputa,
 - OWNER solo se habilita por backend autorizado.
 
-Alineación analytics (0082, 2026-04-27):
-- El tracking de producto para MVP usa señal agregada/territorial y no IDs directos de entidad/usuario.
-- No se usa analytics para identificar titularidad individual ni para decisiones automáticas de grants OWNER.
-
 ## 3. Problema que resuelve
 - Evita que el usuario interprete claim como derecho adquirido.
 - Da respaldo para pedir más info, rechazar o escalar.

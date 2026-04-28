@@ -7,7 +7,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/admin_theme_mode.dart';
 import '../core/theme/app_text_styles.dart';
 
-const _worldcupLogoCropPath = 'assets/worldcup/app_icon/favicon-48.png';
+const _worldcupLogoCropPath = 'assets/worldcup/logo/logo_worldcup_crop.png';
 
 /// Shell de administración con sidebar fijo y área de contenido.
 /// Estructura: sidebar 220px oscuro + content area blanca.
@@ -317,8 +317,6 @@ class _TopBar extends StatelessWidget {
           const SizedBox(width: 16),
           _ThemeToggleButton(controller: theme),
           const SizedBox(width: 8),
-          _WorldcupModeInfoButton(controller: theme),
-          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.notifications_none_outlined),
             color: AppColors.neutral600,
@@ -421,68 +419,6 @@ class _ThemeToggleButton extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
       ),
-    );
-  }
-}
-
-class _WorldcupModeInfoButton extends StatelessWidget {
-  const _WorldcupModeInfoButton({required this.controller});
-
-  final AdminThemeController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final isWorldcup = controller.isWorldcup;
-    return OutlinedButton.icon(
-      onPressed: () => _showWorldcupModeHelpDialog(context),
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(
-          color: isWorldcup ? const Color(0xFF1D4ED8) : AppColors.neutral300,
-        ),
-        foregroundColor:
-            isWorldcup ? const Color(0xFF1D4ED8) : AppColors.neutral700,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        minimumSize: const Size(0, 0),
-      ),
-      icon: const Icon(Icons.info_outline, size: 15),
-      label: Text(
-        'Impacto completo',
-        style: AppTextStyles.bodyXs.copyWith(fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-
-  void _showWorldcupModeHelpDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Modo Mundialista: alcance y operación'),
-          content: SingleChildScrollView(
-            child: Text(
-              'Límite técnico importante:\n'
-              'El toggle de Admin cambia branding del portal y assets web/in-app. '
-              'No puede cambiar el launcher icon nativo ya instalado en Android/iOS.\n\n'
-              'Para impacto completo en launcher icon (campaña mundialista):\n'
-              '1. Ejecutar en mobile: dart run flutter_launcher_icons -f flutter_launcher_icons_mundialista.yaml\n'
-              '2. Generar nuevos builds/release (Android/iOS/Web según canal).\n'
-              '3. Publicar la release promocional.\n\n'
-              'Rollback a identidad base:\n'
-              '1. Ejecutar en mobile: dart run flutter_launcher_icons -f flutter_launcher_icons_base.yaml\n'
-              '2. Regenerar builds/release.\n'
-              '3. Publicar release normal base.\n\n'
-              'Nota: Remote Config / config admin no cambia iconos nativos instalados.',
-              style: AppTextStyles.bodySm.copyWith(color: AppColors.neutral700),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        );
-      },
     );
   }
 }

@@ -3,19 +3,17 @@ import {
   MerchantDoc,
   MerchantPublicDoc,
   OperationalSignals,
-  ScheduleSummary,
-  TrustBadgeId,
   VerificationStatus,
 } from "./types";
 import { resolveOperationalPublicState } from "./operationalSignals";
 
 const VERIFICATION_BOOST: Record<VerificationStatus, number> = {
-  unverified: 30,
-  community_submitted: 50,
-  referential: 70,
-  claimed: 85,
-  validated: 90,
-  verified: 100,
+  verified: 40,
+  validated: 35,
+  claimed: 25,
+  community_submitted: 8,
+  referential: 5,
+  unverified: 0,
 };
 
 const TOKEN_STOPWORDS = new Set([
@@ -67,158 +65,26 @@ const HONORIFIC_EQUIVALENTS: Record<string, string[]> = {
  * Computes the sortBoost score for a merchant.
  * Higher = appears earlier in zone listings.
  */
-export function computeSortBoost(
-  merchant: MerchantDoc,
-  badges: TrustBadgeId[] = [],
-  {
-    pharmacyContext = false,
-  }: {
-    pharmacyContext?: boolean;
-  } = {}
-): number {
-  let total = VERIFICATION_BOOST[merchant.verificationStatus] ?? 30;
-  const badgeSet = new Set(badges);
+export function computeSortBoost(merchant: MerchantDoc): number {
+  let boost = 0;
 
-  if (badgeSet.has("schedule_verified")) total += 10;
-  if (badgeSet.has("schedule_updated")) total += 5;
-  if (pharmacyContext && badgeSet.has("duty_loaded")) total += 15;
+  // Verification tier
+  boost += VERIFICATION_BOOST[merchant.verificationStatus] ?? 0;
 
-  return Math.min(total, 120);
-}
+  // Completeness
+  boost += (merchant.completenessScore ?? 0) * 0.3;
 
-const PRIMARY_TRUST_BADGE_PRIORITY: TrustBadgeId[] = [
-  "duty_loaded",
-  "schedule_verified",
-  "verified_merchant",
-  "claimed_by_owner",
-  "validated_info",
-  "schedule_updated",
-  "community_info",
-  "visible_in_tum2",
-];
-
-function toTimestamp(value: unknown): Timestamp | null {
-  if (
-    value &&
-    typeof value === "object" &&
-    "toMillis" in (value as Record<string, unknown>) &&
-    typeof (value as { toMillis?: unknown }).toMillis === "function"
-  ) {
-    return Timestamp.fromMillis((value as { toMillis: () => number }).toMillis());
-  }
-  if (value instanceof Date) return Timestamp.fromDate(value);
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Timestamp.fromMillis(value);
-  }
-  return null;
-}
-
-function ageDays(value: unknown): number | null {
-  const ts = toTimestamp(value);
-  if (!ts) return null;
-  return (Date.now() - ts.toMillis()) / (1000 * 60 * 60 * 24);
-}
-
-function safeScheduleSummary(signals?: OperationalSignals): ScheduleSummary | null {
-  const raw = (signals as Record<string, unknown> | undefined)?.["scheduleSummary"];
-  if (!raw || typeof raw !== "object") return null;
-  const data = raw as Record<string, unknown>;
-  const windowsRaw = Array.isArray(data["todayWindows"]) ? data["todayWindows"] : [];
-  const todayWindows = windowsRaw
-    .map((window) => {
-      if (!window || typeof window !== "object") return null;
-      const windowData = window as Record<string, unknown>;
-      const opens = windowData["opensAtLocalMinutes"];
-      const closes = windowData["closesAtLocalMinutes"];
-      if (typeof opens !== "number" || typeof closes !== "number") return null;
-      return {
-        opensAtLocalMinutes: Math.max(0, Math.min(1439, Math.round(opens))),
-        closesAtLocalMinutes: Math.max(0, Math.min(1439, Math.round(closes))),
-      };
-    })
-    .filter((window): window is { opensAtLocalMinutes: number; closesAtLocalMinutes: number } => window != null);
-
-  const output: ScheduleSummary = {
-    timezone:
-      typeof data["timezone"] === "string" && data["timezone"].trim().length > 0
-        ? (data["timezone"] as string).trim()
-        : "America/Argentina/Buenos_Aires",
-    todayWindows,
-    hasSchedule: data["hasSchedule"] === true,
-  };
-  const scheduleLastUpdatedAt = toTimestamp(data["scheduleLastUpdatedAt"]);
-  if (scheduleLastUpdatedAt) output.scheduleLastUpdatedAt = scheduleLastUpdatedAt;
-  const lastVerifiedAt = toTimestamp(data["lastVerifiedAt"]);
-  if (lastVerifiedAt) output.lastVerifiedAt = lastVerifiedAt;
-  return output;
-}
-
-export function computeTrustBadges(
-  merchant: MerchantDoc,
-  signals?: OperationalSignals
-): TrustBadgeId[] {
-  const badges: TrustBadgeId[] = [];
-  const categoryId = resolveCategoryId(merchant).toLowerCase();
-  const scheduleSummary = safeScheduleSummary(signals);
-  const scheduleLastUpdatedDays = ageDays(scheduleSummary?.scheduleLastUpdatedAt);
-  const lastVerifiedAt = scheduleSummary?.lastVerifiedAt ?? merchant.lastVerifiedAt;
-  const lastVerifiedAgeDays = ageDays(lastVerifiedAt);
-  const verification = merchant.verificationStatus;
-  const sourceType = merchant.sourceType;
-  const signalMap = (signals ?? {}) as Record<string, unknown>;
-  const isOnDutyToday =
-    signalMap["hasPharmacyDutyToday"] === true || signalMap["isOnDutyToday"] === true;
-  const pharmacyDutyStatus =
-    typeof signalMap["pharmacyDutyStatus"] === "string"
-      ? String(signalMap["pharmacyDutyStatus"]).trim().toLowerCase()
-      : "";
-
-  const lifecycleStatus = (merchant.status ?? "active").trim().toLowerCase();
-  if (lifecycleStatus === "active" && merchant.visibilityStatus === "visible") {
-    badges.push("visible_in_tum2");
-  }
-  if (scheduleLastUpdatedDays != null && scheduleLastUpdatedDays <= 30) {
-    badges.push("schedule_updated");
-  }
-  if (
-    (verification === "claimed" || verification === "validated" || verification === "verified") &&
-    scheduleSummary?.hasSchedule === true &&
-    lastVerifiedAgeDays != null &&
-    lastVerifiedAgeDays <= 45
-  ) {
-    badges.push("schedule_verified");
-  }
-  if (
-    categoryId === "pharmacy" &&
-    isOnDutyToday &&
-    pharmacyDutyStatus === "published"
-  ) {
-    badges.push("duty_loaded");
-  }
-  if (sourceType === "community_suggested" || verification === "community_submitted") {
-    badges.push("community_info");
-  }
-  if (verification === "claimed" && merchant.ownerUserId) {
-    badges.push("claimed_by_owner");
-  }
-  if (verification === "validated") {
-    badges.push("validated_info");
-  }
-  if (verification === "verified" && lastVerifiedAt) {
-    badges.push("verified_merchant");
+  // Recent activity bonus (within last 30 days)
+  if (merchant.lastActivityAt) {
+    const msAgo =
+      Date.now() - merchant.lastActivityAt.toMillis();
+    const daysAgo = msAgo / (1000 * 60 * 60 * 24);
+    if (daysAgo < 30) {
+      boost += Math.max(0, 10 - daysAgo / 3);
+    }
   }
 
-  return badges;
-}
-
-export function computePrimaryTrustBadge(
-  badges: TrustBadgeId[]
-): TrustBadgeId | undefined {
-  const set = new Set(badges);
-  for (const candidate of PRIMARY_TRUST_BADGE_PRIORITY) {
-    if (set.has(candidate)) return candidate;
-  }
-  return undefined;
+  return Math.round(boost * 10) / 10;
 }
 
 function normalizeText(input: string): string {
@@ -369,20 +235,9 @@ export function computeMerchantPublicProjection(
   merchant: MerchantDoc,
   signals?: OperationalSignals
 ): Omit<MerchantPublicDoc, "syncedAt"> {
+  const sortBoost = computeSortBoost(merchant);
   const categoryId = resolveCategoryId(merchant);
   const zoneId = resolveZoneId(merchant);
-  const trustBadges = computeTrustBadges(merchant, signals);
-  const primaryTrustBadge = computePrimaryTrustBadge(trustBadges);
-  const sortBoost = computeSortBoost(merchant, trustBadges, {
-    pharmacyContext: categoryId.toLowerCase() === "pharmacy",
-  });
-  const signalMap = (signals ?? {}) as Record<string, unknown>;
-  const scheduleSummary = safeScheduleSummary(signals);
-  const nextOpenAt = toTimestamp(signalMap["nextOpenAt"]);
-  const nextCloseAt = toTimestamp(signalMap["nextCloseAt"]);
-  const nextTransitionAt = toTimestamp(signalMap["nextTransitionAt"]);
-  const snapshotComputedAt = toTimestamp(signalMap["snapshotComputedAt"]);
-  const isOpenNowSnapshot = signalMap["isOpenNowSnapshot"] === true;
 
   const projection: Omit<MerchantPublicDoc, "syncedAt"> = {
     merchantId: merchant.merchantId,
@@ -393,8 +248,6 @@ export function computeMerchantPublicProjection(
     zoneId: zoneId,
     verificationStatus: merchant.verificationStatus,
     visibilityStatus: merchant.visibilityStatus,
-    badges: trustBadges,
-    primaryTrustBadge,
     sortBoost,
     searchKeywords: buildSearchKeywords(merchant),
   };
@@ -404,15 +257,8 @@ export function computeMerchantPublicProjection(
 
   const resolvedOperational = resolveOperationalPublicState(signals);
   projection.isOpenNow = resolvedOperational.isOpenNow;
-  projection.isOpenNowSnapshot = isOpenNowSnapshot;
-  if (snapshotComputedAt) projection.snapshotComputedAt = snapshotComputedAt;
   projection.todayScheduleLabel = resolvedOperational.todayScheduleLabel;
-  if (scheduleSummary) projection.scheduleSummary = scheduleSummary;
-  if (nextOpenAt) projection.nextOpenAt = nextOpenAt;
-  if (nextCloseAt) projection.nextCloseAt = nextCloseAt;
-  if (nextTransitionAt) projection.nextTransitionAt = nextTransitionAt;
   projection.hasPharmacyDutyToday = resolvedOperational.hasPharmacyDutyToday;
-  projection.isOnDutyToday = resolvedOperational.hasPharmacyDutyToday;
   projection.hasOperationalSignal = resolvedOperational.hasOperationalSignal;
   projection.operationalSignalType = resolvedOperational.operationalSignalType;
   projection.operationalSignalMessage = resolvedOperational.operationalSignalMessage;

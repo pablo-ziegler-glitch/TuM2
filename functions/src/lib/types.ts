@@ -14,23 +14,7 @@ export type VisibilityStatus =
   | "suppressed"
   | "review_pending";
 
-export type SourceType =
-  | "owner_created"
-  | "external_seed"
-  | "community"
-  | "community_suggested"
-  | "user_submitted"
-  | "admin_created";
-
-export type TrustBadgeId =
-  | "visible_in_tum2"
-  | "schedule_updated"
-  | "schedule_verified"
-  | "duty_loaded"
-  | "community_info"
-  | "claimed_by_owner"
-  | "validated_info"
-  | "verified_merchant";
+export type SourceType = "owner_created" | "external_seed" | "community";
 
 export interface WeeklyScheduleEntry {
   open: string;  // "HH:MM"
@@ -75,13 +59,6 @@ export interface OperationalSignals {
   acceptsWhatsappOrders?: boolean;
   openNowManualOverride?: boolean;
   hasPharmacyDutyToday?: boolean;
-  pharmacyDutyStatus?: "published" | "scheduled" | "cancelled" | null;
-  scheduleSummary?: ScheduleSummary;
-  nextOpenAt?: FirebaseFirestore.Timestamp | null;
-  nextCloseAt?: FirebaseFirestore.Timestamp | null;
-  nextTransitionAt?: FirebaseFirestore.Timestamp | null;
-  isOpenNowSnapshot?: boolean;
-  snapshotComputedAt?: FirebaseFirestore.Timestamp | null;
   is24h?: boolean;
   twentyFourHourStrikeCount?: number;
   twentyFourHourCooldownUntil?: FirebaseFirestore.Timestamp | null;
@@ -96,7 +73,6 @@ export interface MerchantDoc {
   category: string;
   categoryId?: string;
   zone: string;
-  status?: "draft" | "active" | "inactive" | "archived" | string;
   address?: string;
   lat?: number;
   lng?: number;
@@ -108,7 +84,6 @@ export interface MerchantDoc {
   visibilityStatus: VisibilityStatus;
   sourceType: SourceType;
   ownerUserId?: string;
-  lastVerifiedAt?: FirebaseFirestore.Timestamp;
   isPharmacy?: boolean;
   completenessScore?: number;
   lastActivityAt?: FirebaseFirestore.Timestamp;
@@ -116,19 +91,6 @@ export interface MerchantDoc {
   is24h?: boolean;
   createdAt?: FirebaseFirestore.Timestamp;
   updatedAt?: FirebaseFirestore.Timestamp;
-}
-
-export interface ScheduleSummaryWindow {
-  opensAtLocalMinutes: number;
-  closesAtLocalMinutes: number;
-}
-
-export interface ScheduleSummary {
-  timezone: string;
-  todayWindows: ScheduleSummaryWindow[];
-  hasSchedule: boolean;
-  scheduleLastUpdatedAt?: FirebaseFirestore.Timestamp;
-  lastVerifiedAt?: FirebaseFirestore.Timestamp;
 }
 
 export interface MerchantProductDoc {
@@ -207,15 +169,7 @@ export interface MerchantPublicDoc {
   address?: string;
   verificationStatus: VerificationStatus;
   visibilityStatus: VisibilityStatus;
-  badges: TrustBadgeId[];
-  primaryTrustBadge?: TrustBadgeId;
   isOpenNow?: boolean;
-  isOpenNowSnapshot?: boolean;
-  snapshotComputedAt?: FirebaseFirestore.Timestamp;
-  scheduleSummary?: ScheduleSummary;
-  nextOpenAt?: FirebaseFirestore.Timestamp;
-  nextCloseAt?: FirebaseFirestore.Timestamp;
-  nextTransitionAt?: FirebaseFirestore.Timestamp;
   hasOperationalSignal?: boolean;
   operationalSignalType?: "none" | "vacation" | "temporary_closure" | "delay";
   operationalSignalMessage?: string | null;

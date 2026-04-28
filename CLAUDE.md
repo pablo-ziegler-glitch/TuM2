@@ -118,7 +118,6 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0007]** Mantener actualizado ARCHITECTURE.md ✅ | Documentación maestra — ARCHITECTURE.md actualizado y vigente |
 | **[0010]** Definir identidad visual base ✅ | Branding — paleta y tokens base definidos (color system inicial TuM2) |
 | **[0011]** Diseñar logo principal ✅ | Branding — sistema de logo y assets SVG base versionados (`design/branding_v1.json`, `mobile/assets/branding/*`) |
-| **[0012]** Diseñar app icon ✅ | Branding / Mobile / Web — app icon productivo base integrado en Android/Web/PWA; variante Mundialista versionada como asset promocional eventual no activa por defecto; documentación en `docs/branding/APP_ICON.md` y `docs/branding/APP_ICON_MUNDIALISTA.md` |
 | **[0014]** Definir tono de microcopy ✅ | Branding / UX/UI — guía de microcopy MVP Fase 3 documentada en docs/TuM2-0014-MICROCOPY.md |
 | **[0019]** Diseñar modelo de usuarios ✅ | Modelo de datos — modelo de usuarios definido con roles y atributos |
 | **[0020]** Diseñar modelo de comercios ✅ | Modelo de datos — modelo de comercios definido con campos públicos y operativos |
@@ -209,7 +208,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 3: Branding de TuM2
 - [0010] **Definir identidad visual base** — P0 — `Branding, UX/UI, Fundacional` ✅
 - [0011] **Diseñar logo principal** — P0 — `Branding, Fundacional` ✅
-- [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional` ✅
+- [0012] **Diseñar app icon** — P0 — `Branding, Mobile, Web, Fundacional`
 - [0013] **Definir sistema de sellos** — P1 — `Branding, Producto, MVP`
 - [0014] **Definir tono de microcopy** — P1 — `Branding, UX/UI, MVP` ✅
 
@@ -302,7 +301,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - [0081] **Implementar revisión de señales operativas reportadas** — P1 — `Admin, Operaciones, MVP`
 
 ### ÉPICA 11: Analytics
-- [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `READY_FOR_QA`
+- [0082] **Definir eventos analytics** — P0 — `Analytics, Producto, MVP` `IN_PROGRESS`
 - [0083] **Implementar tracking base** — P0 — `Analytics, Mobile, Web, MVP` `READY_FOR_QA`
 - [0084] **Crear dashboard MVP** — P1 — `Analytics, MVP`
 - [0085] **Medir activación OWNER** — P1 — `Analytics, Operaciones, MVP`
@@ -555,18 +554,15 @@ Sincronización documental aplicada (storycards, 2026-04-15):
 - En cada avance de tarjeta, actualizar siempre `docs/storyscards/<tarjeta>.md` y `CLAUDE.md` con estado real.
 
 ## Registro operativo reciente
-- [0012] App icon productivo integrado desde pack exact-source aprobado, con assets Android/Web/PWA y validación por tamaños.
-- [0012] Variante Mundialista versionada como asset promocional eventual con exactamente 3 estrellas, no activa por defecto y documentada con activación/rollback.
 - [0082] Redefinición técnica aplicada (2026-04-22): contrato canónico en `docs/storyscards/0082-analytics-technical.md` con bootstrap geolocalizado, taxonomía oficial MVP, reglas de no-PII/query crudo/coordenadas finas y política de copy desacoplada (`Me sirvió`/`Messirve` -> mismo evento).
 - [0082] Implementación base en mobile: `AnalyticsService` único con sanitización, validación de buckets/enums, dedupe, gating por ambiente (`prod` real / dev-staging debug sanitizado), gating de consentimiento web y cola offline restringida a eventos críticos permitidos.
 - [0082] Integraciones cruzadas: 0056/0057/0061/0083 cableadas a nueva taxonomía (`search_performed`, `category_filtered`, `nearby_bootstrap_*`, `map_*`, `operator_call_click`, `directions_opened`, `pharmacy_duty_feedback_*`, `report_*`, `claim_*`) priorizando `entity_zone_id` para acciones sobre entidad.
 - [0082] Hardening de seguridad analytics (2026-04-23): allowlist estricta de eventos/parámetros, bloqueo por fragmentos sensibles en keys/values, bloqueo de URLs y descarte por defecto de payload fuera de contrato para reducir superficie de exfiltración.
 - [0082] Migración legacy complementaria (2026-04-23): wrappers de auth/onboarding/open-now/owner/claim migrados a `AnalyticsService` central; `firebase_analytics` directo queda encapsulado en backend único.
-- [0082] Hardening adicional (2026-04-23): bloqueo explícito de identificadores directos en payload (snake_case + camelCase: `merchant_id/merchantId`, `product_id/productId`, `merchant_ref/merchantRef`, `user_id/userId`, `uid`, `device_id/deviceId`, `session_id/sessionId`) y test unitario dedicado.
+- [0082] Hardening adicional (2026-04-23): bloqueo explícito de identificadores directos en payload (`merchant_id`, `product_id`, `merchant_ref`, `user_id`, `uid`, `device_id`, `session_id`) y test unitario dedicado.
 - [0082] Cobertura adicional de acciones core en detalle de farmacia (`operator_call_click`, `directions_opened`) sin listeners ni lecturas extra.
 - [0082] Merchant Detail migrado a capa segura: acciones core pasan por `AnalyticsService` y se elimina emisión de `merchant_id` en payload analytics.
 - [0082] Impacto documental sincronizado para 0035/0100/0101 y seguimiento explícito de dependencias 0035/0056/0057/0061/0100/0101/0083.
-- [0082] Alineación canónica 0082↔0083 (2026-04-27): deprecados/no emitidos `map_recenter_tapped`, `map_search_this_area_tapped` y `claim_evidence_uploaded`; prioridad de señal territorial (`entity_zone_id`) sin IDs directos en analytics.
 - [0056] Implementar búsqueda de comercios: estado final DONE (cerrada el 2026-04-07).
 - [0056] Mobile quedó recompuesto y compilable: modelos/repositorios de búsqueda, notifier con ranking y filtros MVP, exclusión de panadería/confitería, rutas de búsqueda activas y analytics safe.
 - [0056] Se agregó cobertura unitaria en Flutter para SearchNotifier (inicialización, normalización, filtros open-now, ranking, y consistencia lista/mapa).

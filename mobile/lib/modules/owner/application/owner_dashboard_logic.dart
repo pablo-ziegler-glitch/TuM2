@@ -40,19 +40,6 @@ class OwnerOperationalSummary {
   final bool isSpecialCondition;
 }
 
-String ownerOperationalSignalLabel(OperationalSignalType type) {
-  switch (type) {
-    case OperationalSignalType.vacation:
-      return 'De vacaciones';
-    case OperationalSignalType.temporaryClosure:
-      return 'Cerrado temporalmente';
-    case OperationalSignalType.delay:
-      return 'Abre más tarde';
-    case OperationalSignalType.none:
-      return 'Sin señal activa';
-  }
-}
-
 OwnerOperationalSummary resolveOperationalSummary({
   required OwnerMerchantSummary merchant,
   required OwnerOperationalSignal? signal,
@@ -80,11 +67,8 @@ OwnerOperationalSummary resolveOperationalSummary({
     if (activeSignal.forceClosed) {
       final detail = (activeSignal.message ?? '').trim();
       return OwnerOperationalSummary(
-        title:
-            'Aviso activo: ${ownerOperationalSignalLabel(activeSignal.signalType)}',
-        subtitle: detail.isEmpty
-            ? 'Fuente: aviso activo. Los vecinos ven este aviso en tu comercio.'
-            : 'Fuente: aviso activo. $detail',
+        title: 'Cerrado por condición especial',
+        subtitle: detail.isEmpty ? activeSignal.signalType.publicLabel : detail,
         isUnknown: false,
         isSpecialCondition: true,
       );
@@ -92,10 +76,8 @@ OwnerOperationalSummary resolveOperationalSummary({
     if (activeSignal.signalType == OperationalSignalType.delay) {
       final detail = (activeSignal.message ?? '').trim();
       return OwnerOperationalSummary(
-        title: 'Aviso activo: Abre más tarde',
-        subtitle: detail.isEmpty
-            ? 'Fuente: aviso activo. Informaste una demora para hoy.'
-            : 'Fuente: aviso activo. $detail',
+        title: 'Horario con demora',
+        subtitle: detail.isEmpty ? 'Informaste una demora para hoy.' : detail,
         isUnknown: false,
         isSpecialCondition: true,
       );
@@ -106,9 +88,8 @@ OwnerOperationalSummary resolveOperationalSummary({
     final detail = (signal?.todayScheduleLabel ?? '').trim();
     return OwnerOperationalSummary(
       title: 'Abierto ahora',
-      subtitle: detail.isEmpty
-          ? 'Fuente: horario habitual. Los vecinos ven tu comercio como abierto.'
-          : 'Fuente: horario habitual. $detail',
+      subtitle:
+          detail.isEmpty ? 'Los vecinos ven tu comercio como abierto.' : detail,
       isUnknown: false,
       isSpecialCondition: false,
     );
@@ -118,9 +99,8 @@ OwnerOperationalSummary resolveOperationalSummary({
     final detail = (signal?.todayScheduleLabel ?? '').trim();
     return OwnerOperationalSummary(
       title: 'Cerrado ahora',
-      subtitle: detail.isEmpty
-          ? 'Fuente: horario habitual. En este momento figura como cerrado.'
-          : 'Fuente: horario habitual. $detail',
+      subtitle:
+          detail.isEmpty ? 'En este momento figura como cerrado.' : detail,
       isUnknown: false,
       isSpecialCondition: false,
     );
@@ -128,8 +108,7 @@ OwnerOperationalSummary resolveOperationalSummary({
 
   return const OwnerOperationalSummary(
     title: 'Estado no disponible',
-    subtitle:
-        'Fuente: horarios no disponibles. No pudimos confirmar si está abierto o cerrado ahora.',
+    subtitle: 'No pudimos confirmar si está abierto o cerrado ahora.',
     isUnknown: true,
     isSpecialCondition: false,
   );
@@ -256,7 +235,8 @@ List<OwnerDashboardAlert> buildOwnerDashboardAlerts({
       alert: const OwnerDashboardAlert(
         id: 'open_state_unknown',
         title: 'No pudimos determinar el estado actual',
-        message: 'Revisá Avisos de hoy y horarios para mantenerlo actualizado.',
+        message:
+            'Revisá señal operativa y horarios para mantenerlo actualizado.',
         severity: OwnerDashboardAlertSeverity.info,
       )
     ));

@@ -14,7 +14,9 @@ SplashBrandVariant resolveSplashBrandVariant({
   final isWorldcup = worldcupEnabled ||
       normalizedVariant == 'mundialista' ||
       normalizedVariant == 'worldcup';
-  return isWorldcup ? SplashBrandVariant.worldcup : SplashBrandVariant.original;
+  return isWorldcup
+      ? SplashBrandVariant.worldcup
+      : SplashBrandVariant.original;
 }
 
 final firebaseRemoteConfigProvider = Provider<FirebaseRemoteConfig>((ref) {

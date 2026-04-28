@@ -7,14 +7,11 @@ import type {
 } from './merchant_operational_signals';
 
 export type MerchantBadge =
-  | 'visible_in_tum2'
-  | 'schedule_updated'
-  | 'schedule_verified'
-  | 'duty_loaded'
-  | 'community_info'
-  | 'claimed_by_owner'
-  | 'validated_info'
-  | 'verified_merchant';
+  | 'verified'
+  | 'referential'
+  | 'pending_validation'
+  | 'claimed'
+  | 'pharmacy_on_duty';
 
 export interface OperationalSignalsSnapshot {
   signalType?: MerchantOperationalSignalType;
@@ -26,19 +23,6 @@ export interface OperationalSignalsSnapshot {
   operationalStatusLabel?: string | null;
   temporaryClosed?: boolean;
   [key: string]: boolean | string | null | undefined;
-}
-
-export interface ScheduleSummaryWindow {
-  opensAtLocalMinutes: number;
-  closesAtLocalMinutes: number;
-}
-
-export interface ScheduleSummary {
-  timezone: string;
-  todayWindows: ScheduleSummaryWindow[];
-  hasSchedule: boolean;
-  scheduleLastUpdatedAt?: Timestamp;
-  lastVerifiedAt?: Timestamp;
 }
 
 /**
@@ -64,15 +48,8 @@ export interface MerchantPublicDocument {
   verificationStatus: MerchantVerificationStatus;
   visibilityStatus: MerchantVisibilityStatus;
   badges: MerchantBadge[];
-  primaryTrustBadge?: MerchantBadge;
   /** null when schedule info is unavailable or unverified */
   isOpenNow: boolean | null;
-  isOpenNowSnapshot?: boolean;
-  snapshotComputedAt?: Timestamp;
-  scheduleSummary?: ScheduleSummary;
-  nextOpenAt?: Timestamp;
-  nextCloseAt?: Timestamp;
-  nextTransitionAt?: Timestamp;
   hasOperationalSignal?: boolean;
   operationalSignalType?: MerchantOperationalSignalType;
   operationalSignalMessage?: string | null;

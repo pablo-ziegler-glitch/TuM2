@@ -54,14 +54,6 @@
       ]
     },
     {
-      "collectionGroup": "merchant_public",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "visibilityStatus", "order": "ASCENDING" },
-        { "fieldPath": "nextTransitionAt", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "pharmacy_duties",
       "queryScope": "COLLECTION",
       "fields": [

@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../merchant_badges/domain/trust_badges.dart';
-
 class MerchantSearchItem {
   final String merchantId;
   final String name;
@@ -25,14 +23,6 @@ class MerchantSearchItem {
   final String? operationalSignalMessage;
   final String? operationalStatusLabel;
   final String manualOverrideMode;
-  final List<TrustBadgeId> badges;
-  final TrustBadgeId? primaryTrustBadge;
-  final MerchantScheduleSummary? scheduleSummary;
-  final DateTime? nextOpenAt;
-  final DateTime? nextCloseAt;
-  final DateTime? nextTransitionAt;
-  final bool? isOpenNowSnapshot;
-  final DateTime? snapshotComputedAt;
   final double sortBoost;
   final List<String> searchKeywords;
   final double? distanceMeters;
@@ -60,14 +50,6 @@ class MerchantSearchItem {
     this.operationalSignalMessage,
     this.operationalStatusLabel,
     this.manualOverrideMode = 'none',
-    this.badges = const [],
-    this.primaryTrustBadge,
-    this.scheduleSummary,
-    this.nextOpenAt,
-    this.nextCloseAt,
-    this.nextTransitionAt,
-    this.isOpenNowSnapshot,
-    this.snapshotComputedAt,
     required this.sortBoost,
     required this.searchKeywords,
     this.distanceMeters,
@@ -86,14 +68,6 @@ class MerchantSearchItem {
     String? operationalSignalMessage,
     String? operationalStatusLabel,
     String? manualOverrideMode,
-    List<TrustBadgeId>? badges,
-    TrustBadgeId? primaryTrustBadge,
-    MerchantScheduleSummary? scheduleSummary,
-    DateTime? nextOpenAt,
-    DateTime? nextCloseAt,
-    DateTime? nextTransitionAt,
-    bool? isOpenNowSnapshot,
-    DateTime? snapshotComputedAt,
   }) {
     return MerchantSearchItem(
       merchantId: merchantId,
@@ -123,14 +97,6 @@ class MerchantSearchItem {
       operationalStatusLabel:
           operationalStatusLabel ?? this.operationalStatusLabel,
       manualOverrideMode: manualOverrideMode ?? this.manualOverrideMode,
-      badges: badges ?? this.badges,
-      primaryTrustBadge: primaryTrustBadge ?? this.primaryTrustBadge,
-      scheduleSummary: scheduleSummary ?? this.scheduleSummary,
-      nextOpenAt: nextOpenAt ?? this.nextOpenAt,
-      nextCloseAt: nextCloseAt ?? this.nextCloseAt,
-      nextTransitionAt: nextTransitionAt ?? this.nextTransitionAt,
-      isOpenNowSnapshot: isOpenNowSnapshot ?? this.isOpenNowSnapshot,
-      snapshotComputedAt: snapshotComputedAt ?? this.snapshotComputedAt,
       sortBoost: sortBoost,
       searchKeywords: searchKeywords,
       distanceMeters:
@@ -178,20 +144,6 @@ class MerchantSearchItem {
       operationalSignalMessage: data['operationalSignalMessage'] as String?,
       operationalStatusLabel: data['operationalStatusLabel'] as String?,
       manualOverrideMode: (data['manualOverrideMode'] as String?) ?? 'none',
-      badges: parseTrustBadges(data['badges']),
-      primaryTrustBadge: TrustBadgeId.fromValue(
-        (data['primaryTrustBadge'] as String?) ?? '',
-      ),
-      scheduleSummary: data['scheduleSummary'] is Map
-          ? MerchantScheduleSummary.fromMap(
-              Map<String, dynamic>.from(data['scheduleSummary'] as Map),
-            )
-          : null,
-      nextOpenAt: _dateTimeValue(data['nextOpenAt']),
-      nextCloseAt: _dateTimeValue(data['nextCloseAt']),
-      nextTransitionAt: _dateTimeValue(data['nextTransitionAt']),
-      isOpenNowSnapshot: data['isOpenNowSnapshot'] as bool?,
-      snapshotComputedAt: _dateTimeValue(data['snapshotComputedAt']),
       sortBoost: (data['sortBoost'] as num?)?.toDouble() ?? 0,
       searchKeywords: rawKeywords.map((e) => e.toString()).toList(),
     );

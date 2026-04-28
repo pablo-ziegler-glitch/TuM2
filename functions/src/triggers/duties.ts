@@ -119,16 +119,7 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
 
         const currentHasDutyToday = signalSnap.exists
           && signalSnap.data()?.["hasPharmacyDutyToday"] === true;
-        const currentDutyStatusRaw = signalSnap.exists
-          ? signalSnap.data()?.["pharmacyDutyStatus"]
-          : null;
-        const currentDutyStatus = typeof currentDutyStatusRaw === "string"
-          ? currentDutyStatusRaw
-          : null;
-        const nextDutyStatus = hasDutyToday ? "published" : null;
-        const signalNeedsUpdate =
-          currentHasDutyToday !== hasDutyToday ||
-          currentDutyStatus !== nextDutyStatus;
+        const signalNeedsUpdate = currentHasDutyToday !== hasDutyToday;
 
         const nextConfidence = bestDuty?.confidenceLevel ?? null;
         const nextPublicStatus = bestDuty?.publicStatusLabel ?? null;
@@ -149,7 +140,6 @@ export const onPharmacyDutyWriteSyncMerchant = onDocumentWritten(
             signalRef.set(
               {
                 hasPharmacyDutyToday: hasDutyToday,
-                pharmacyDutyStatus: nextDutyStatus,
                 updatedAt: FieldValue.serverTimestamp(),
               },
               { merge: true }

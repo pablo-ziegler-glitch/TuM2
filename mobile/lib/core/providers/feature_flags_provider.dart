@@ -176,6 +176,69 @@ final merchantClaimFlowEnabledProvider = FutureProvider<bool>((ref) async {
   }
 });
 
+Future<bool> _resolveFeatureFlag({
+  required FirebaseRemoteConfig remoteConfig,
+  required String key,
+  required bool safeDefault,
+  Map<String, Object> defaults = const {},
+}) async {
+  try {
+    await remoteConfig.setConfigSettings(
+      RemoteConfigSettings(
+        fetchTimeout: const Duration(seconds: 8),
+        minimumFetchInterval: const Duration(minutes: 30),
+      ),
+    );
+    await remoteConfig.setDefaults(<String, Object>{
+      key: safeDefault,
+      ...defaults,
+    });
+    await remoteConfig.fetchAndActivate();
+    return remoteConfig.getBool(key);
+  } catch (_) {
+    return safeDefault;
+  }
+}
+
+final trustBadgesEnabledProvider = FutureProvider<bool>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  return _resolveFeatureFlag(
+    remoteConfig: remoteConfig,
+    key: 'trust_badges_enabled',
+    safeDefault: false,
+  );
+});
+
+final trustBadgesDetailEnabledProvider = FutureProvider<bool>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  return _resolveFeatureFlag(
+    remoteConfig: remoteConfig,
+    key: 'trust_badges_detail_enabled',
+    safeDefault: false,
+    defaults: const {'trust_badges_enabled': false},
+  );
+});
+
+final trustBadgesSearchEnabledProvider = FutureProvider<bool>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  return _resolveFeatureFlag(
+    remoteConfig: remoteConfig,
+    key: 'trust_badges_search_enabled',
+    safeDefault: false,
+    defaults: const {'trust_badges_enabled': false},
+  );
+});
+
+final clientOpenStatusResolutionEnabledProvider =
+    FutureProvider<bool>((ref) async {
+  final remoteConfig = ref.watch(firebaseRemoteConfigProvider);
+  return _resolveFeatureFlag(
+    remoteConfig: remoteConfig,
+    key: 'client_open_status_resolution_enabled',
+    safeDefault: true,
+  );
+});
+
 final splashBrandVariantProvider =
     FutureProvider<SplashBrandVariant>((ref) async {
   final remoteConfig = ref.watch(firebaseRemoteConfigProvider);

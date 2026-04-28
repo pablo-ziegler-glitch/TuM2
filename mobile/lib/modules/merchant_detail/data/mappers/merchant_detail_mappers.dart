@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../merchant_badges/domain/merchant_badge_resolver.dart';
 import '../../../merchant_badges/domain/merchant_visual_models.dart';
+import '../../../merchant_badges/domain/trust_badges.dart';
 import '../../../merchant_badges/widgets/merchant_badge_widgets.dart';
 import '../../domain/merchant_detail_view_data.dart';
 import '../dtos/merchant_detail_dto.dart';
@@ -110,6 +111,20 @@ MerchantPublicViewData mapCoreDtoToViewData(MerchantCoreDto dto) {
     publicStatusLabel:
         _nonEmptyOrNull(_stringValue(dto.data['publicStatusLabel'])),
     is24h: _boolValue(dto.data['is24h']),
+    badges: parseTrustBadges(dto.data['badges']),
+    primaryTrustBadge: TrustBadgeId.fromValue(
+      _stringValue(dto.data['primaryTrustBadge']),
+    ),
+    scheduleSummary: dto.data['scheduleSummary'] is Map
+        ? MerchantScheduleSummary.fromMap(
+            Map<String, dynamic>.from(dto.data['scheduleSummary'] as Map),
+          )
+        : null,
+    nextOpenAt: _dateTimeValue(dto.data['nextOpenAt']),
+    nextCloseAt: _dateTimeValue(dto.data['nextCloseAt']),
+    nextTransitionAt: _dateTimeValue(dto.data['nextTransitionAt']),
+    isOpenNowSnapshot: _boolValue(dto.data['isOpenNowSnapshot']),
+    snapshotComputedAt: _dateTimeValue(dto.data['snapshotComputedAt']),
   );
 }
 

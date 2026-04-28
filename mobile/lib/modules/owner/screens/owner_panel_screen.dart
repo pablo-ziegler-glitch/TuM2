@@ -15,6 +15,7 @@ import '../../merchant_claim/application/merchant_claim_flow_controller.dart';
 import '../../merchant_claim/models/merchant_claim_models.dart';
 import '../analytics/owner_dashboard_analytics.dart';
 import '../application/owner_dashboard_logic.dart';
+import '../models/operational_signals.dart';
 import '../models/owner_merchant_summary.dart';
 import '../providers/owner_providers.dart';
 
@@ -284,13 +285,13 @@ class _AdminOwnerDashboard extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         const _AdminOwnerActionCard(
-          title: 'Editar Horarios',
+          title: 'Editar horarios',
           route: AppRoutes.ownerSchedules,
           icon: Icons.schedule_outlined,
         ),
         const SizedBox(height: 10),
         const _AdminOwnerActionCard(
-          title: 'Señales Operativas',
+          title: 'Avisos de hoy',
           route: AppRoutes.ownerSignals,
           icon: Icons.campaign_outlined,
         ),
@@ -806,6 +807,7 @@ class _OwnerDashboardBody extends ConsumerWidget {
         const SizedBox(height: 14),
         _OwnerQuickActions(
           merchant: merchant,
+          signal: signal,
           showProductsAction: ownerProductsEnabled,
           onActionTap: (actionId) {
             unawaited(
@@ -1290,22 +1292,29 @@ class _StatusRow extends StatelessWidget {
 class _OwnerQuickActions extends StatelessWidget {
   const _OwnerQuickActions({
     required this.merchant,
+    required this.signal,
     required this.showProductsAction,
     required this.onActionTap,
   });
 
   final OwnerMerchantSummary merchant;
+  final OwnerOperationalSignal? signal;
   final bool showProductsAction;
   final void Function(String actionId) onActionTap;
 
   @override
   Widget build(BuildContext context) {
+    final hasActiveSignal = signal?.hasActiveSignal == true;
+    final signalTypeLabel = signal == null
+        ? ownerOperationalSignalLabel(OperationalSignalType.none)
+        : ownerOperationalSignalLabel(signal!.signalType);
     final actions = <_OwnerAction>[
       if (showProductsAction)
         const _OwnerAction(
           id: 'products',
           label: 'Mi catálogo',
           subtitle: 'Productos y disponibilidad',
+          ctaLabel: 'Gestionar productos',
           icon: Icons.inventory_2_outlined,
           route: AppRoutes.ownerProducts,
         ),
@@ -1317,11 +1326,13 @@ class _OwnerQuickActions extends StatelessWidget {
         icon: Icons.schedule_outlined,
         route: AppRoutes.ownerSchedules,
       ),
-      const _OwnerAction(
+      _OwnerAction(
         id: 'signals',
         label: 'Avisos de hoy',
-        subtitle: 'Informá si cerrás, abrís más tarde o estás de vacaciones.',
-        ctaLabel: 'Avisar cambio',
+        subtitle: hasActiveSignal
+            ? signalTypeLabel
+            : 'Informá si cerrás, abrís más tarde o estás de vacaciones.',
+        ctaLabel: hasActiveSignal ? 'Desactivar aviso' : 'Avisar cambio',
         icon: Icons.campaign_outlined,
         route: AppRoutes.ownerSignals,
       ),
@@ -1329,6 +1340,7 @@ class _OwnerQuickActions extends StatelessWidget {
         id: 'profile_status',
         label: 'Revisar perfil',
         subtitle: 'Estado del comercio',
+        ctaLabel: 'Revisar perfil',
         icon: Icons.fact_check_outlined,
         route: AppRoutes.ownerEdit,
       ),

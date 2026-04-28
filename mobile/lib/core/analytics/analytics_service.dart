@@ -213,7 +213,6 @@ class AnalyticsService {
     // Canonical 0083
     'zoneId',
     'categoryId',
-    'merchantId',
     'action_type',
     'role',
     'platform',
@@ -302,6 +301,18 @@ class AnalyticsService {
   };
 
   static const Set<String> _blockedParameterKeys = {
+    'merchantId',
+    'productId',
+    'merchantRef',
+    'userId',
+    'deviceId',
+    'sessionId',
+    'searchQuery',
+    'queryText',
+    'freeText',
+    'attachmentUrl',
+    'fileName',
+    'rawCoordinates',
     'merchant_id',
     'product_id',
     'merchant_ref',

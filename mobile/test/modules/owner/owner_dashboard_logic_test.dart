@@ -50,7 +50,7 @@ void main() {
       expect(summary.isUnknown, isFalse);
     });
 
-    test('prioriza condición especial cuando hay forceClosed activo', () {
+    test('prioriza aviso activo cuando hay forceClosed activo', () {
       final summary = resolveOperationalSummary(
         merchant: buildMerchant(),
         signal: OwnerOperationalSignal.empty(
@@ -64,7 +64,9 @@ void main() {
         ),
       );
 
-      expect(summary.title, 'Cerrado por condición especial');
+      expect(summary.title, 'Aviso activo: Cerrado temporalmente');
+      expect(
+          summary.subtitle, 'Fuente: aviso activo. Cerrado por mantenimiento');
       expect(summary.isSpecialCondition, isTrue);
     });
 

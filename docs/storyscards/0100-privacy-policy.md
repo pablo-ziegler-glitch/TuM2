@@ -27,6 +27,11 @@ La política debe reflejar decisiones de producto ya cerradas:
 - masking por defecto en Admin y reveal controlado/auditado,
 - uso de fingerprints/hashes derivados para seguridad.
 
+Alineación analytics (0082, 2026-04-27):
+- Telemetría funcional sin PII ni query cruda.
+- Sin identificadores directos de entidad/usuario en payload analytics (`merchantId`, `productId`, `userId`, `deviceId`).
+- Prioridad territorial por zona (`active_zone_id`/`entity_zone_id`) y buckets agregados.
+
 ## 3. Problema que resuelve
 - Evita desalineación entre producto real y documento legal.
 - Evita zonas grises sobre acceso interno a datos sensibles.

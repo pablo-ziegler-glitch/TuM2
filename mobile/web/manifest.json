@@ -1,11 +1,11 @@
 {
-    "name": "tum2",
-    "short_name": "tum2",
+    "name": "TuM2",
+    "short_name": "TuM2",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0F766E",
+    "theme_color": "#0F766E",
+    "description": "TuM2 — Lo que necesitás, en tu zona.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

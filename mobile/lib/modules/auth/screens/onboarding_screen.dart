@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/copy/brand_copy.dart';
 import '../../../core/providers/auth_providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -24,9 +25,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _slides = [
     _SlideData(
-      title: 'Encontrá comercios abiertos ahora en tu cuadra',
-      subtitle:
-          'Kioscos, almacenes, panaderías y más — sabés al instante si están abiertos.',
+      title: BrandCopy.primaryClaim,
+      subtitle: BrandCopy.onboardingInitialSubtitle,
       icon: Icons.location_on_rounded,
       accentColor: AppColors.primary500,
       bgColor: AppColors.primary50,

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_notifier.dart';
 import '../../../core/auth/auth_state.dart';
+import '../../../core/copy/brand_copy.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 
@@ -78,6 +79,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 color: AppColors.primary500,
                 fontSize: 40,
                 fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              BrandCopy.primaryClaim,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySm.copyWith(
+                color: AppColors.neutral700,
               ),
             ),
             const SizedBox(height: 32),

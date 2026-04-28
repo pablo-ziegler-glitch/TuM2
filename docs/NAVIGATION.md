@@ -10,8 +10,8 @@ La app usa un modelo de navegación en capas:
 
 ```
 Root Navigator
-├── AuthStack          (sin sesión activa)
-└── AppNavigator       (con sesión activa)
+├── AuthStack          (splash + onboarding + login contextual)
+└── AppNavigator       (con o sin sesión según ruta)
     ├── CustomerTabs   (tab bar principal, rol customer / owner / admin)
     ├── OwnerStack     (modal stack para módulo owner)
     ├── AdminStack     (modal stack para módulo admin)
@@ -32,13 +32,13 @@ AuthStack (Stack Navigator)
 └── EmailVerification  → AUTH-04
 ```
 
-**Regla:** si la sesión Firebase es válida al iniciar, el Root Navigator salta directamente a AppNavigator sin pasar por AuthStack.
+**Regla guest-first:** si no hay sesión, el usuario puede ir a AppNavigator en modo invitado después de splash/onboarding. Login solo se presenta al intentar rutas protegidas.
 
 ---
 
 ## 3. AppNavigator — Tab bar principal (CustomerTabs)
 
-Tab bar visible solo para usuarios con sesión. Tabs presentes en MVP:
+Tab bar disponible en modo invitado y autenticado. Tabs presentes en MVP:
 
 | Tab | Ícono | Pantalla raíz | ID |
 |-----|-------|---------------|----|
@@ -172,7 +172,7 @@ SharedScreens
 ### Guards de navegación
 - Rutas del OwnerStack: verifican `role == owner || role == admin` en el navigator.
 - Rutas del AdminStack: verifican `role == admin`.
-- Si un deep link apunta a una ruta protegida sin rol, redirige a AUTH-03.
+- Si un deep link apunta a una ruta protegida sin rol/sesión, redirige a AUTH-03 (login contextual).
 
 ---
 
@@ -222,7 +222,7 @@ SharedScreens
     [Sin sesión]           [Sesión válida]
          │                       │
          ▼                       ▼
-   AUTH-02 → AUTH-03       HOME-01 (tab Inicio)
+   AUTH-02 → HOME-01       HOME-01 (tab Inicio)
          │
          ▼
    HOME-01 (tab Inicio)

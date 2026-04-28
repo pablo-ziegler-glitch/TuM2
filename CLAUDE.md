@@ -15,7 +15,8 @@
 
 - **[0013] Sellos operativos y de confianza costo-eficientes**: backend con `TrustBadgeId` + `computeTrustBadges` + `primaryTrustBadge` + `sortBoost` puro (tope 120), proyección de `scheduleSummary/nextTransitionAt` en `merchant_public`, job `nightlyRefreshOpenStatuses` migrado a query scoped (`nextTransitionAt <= now`, `limit 300`) y mobile con `TrustBadgeChip/TrustBadgeRow` + helper local `resolveOperationalStatus` sin listeners ni writes adicionales.
 - **[0002] Claim principal de marca**: claim primario oficial definido y aplicado en superficies de entrada (`Splash`, `AUTH-03`, onboarding inicial) con centralización en `mobile/lib/core/copy/brand_copy.dart`, test unitario de contrato y documentación en `docs/branding/TuM2-0002-claim-principal.md` + auditoría en `docs/ops/AUDITORIA-TuM2-0002-claim-principal-2026-04-27.md`, sin impacto en backend/Firestore/Functions.
-- **[0029] Revisión de onboarding CUSTOMER**: hallazgo de gap visual en AUTH-01 (`Splash`) por ausencia de asset de marca dedicado; estado de tarjeta degradado a `BUGFIX_REQUIRED` hasta definir/generar/integrar imagen de splash y validar responsive/contraste. Evidencia: `docs/ops/REVISION-TuM2-0029-onboarding-customer-2026-04-27.md`.
+- **[0029] Revisión de onboarding CUSTOMER**: tarjeta reabierta en `IN_PROGRESS` para cierre técnico guest-first completo (AUTH-01/AUTH-02, analytics auth_onboarding_*, ayuda desde perfil, tests y documentación), usando assets de marca ya versionados en `mobile/assets/logo/`.
+- **[0029] AUTH-01 assets originales/mundialistas**: integrado pack `mobile/assets/auth01/` y selector por Remote Config para splash (`splash_brand_variant=original|mundialista|worldcup` o `mobile_worldcup_enabled=true`), con fallback seguro a variante original.
 - **[0012] Diseñar app icon**: integración del ícono productivo base en Android + Web/PWA de `mobile`; variante Mundialista versionada como promocional no activa por defecto, con documentación y rollback.
 - **[0038] Flujo de carga de productos (Producto/UX)**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
 - **[0065] Alta/edición de productos OWNER**: estado real confirmado en `READY_FOR_QA` (implementación base cerrada; pendiente QA formal).
@@ -137,7 +138,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 | **[0121]** Estrategia cobertura inicial y bootstrap ✅ | Cobertura / Data — estrategia de cobertura y bootstrap con Google Places definida |
 | **[0027]** Definir mapa completo de pantallas ✅ | UX / arquitectura — mapa de pantallas completo definido para todos los roles |
 | **[0028]** Diseñar navegación principal ✅ | UX / arquitectura — navegación principal diseñada con estructura de tabs y flujos |
-| **[0029]** Diseñar onboarding CUSTOMER `BUGFIX_REQUIRED` | UX/UI — stack AUTH operativo, pero pendiente cerrar splash con asset visual de marca (hoy solo wordmark+spinner); requiere fix de diseño y validación de layout/accesibilidad |
+| **[0029]** Diseñar onboarding CUSTOMER `IN_PROGRESS` | UX/UI — cierre técnico guest-first en curso: AUTH-02 navega a Home invitado, splash AUTH-01 con copy y timeout no bloqueante, analytics de onboarding y acceso desde ayuda/perfil |
 | **[0030]** Diseñar onboarding OWNER ✅ | UX/UI — flujo completo implementado: draft entry, step1 tipo+nombre, step2 dirección, step3 horarios, step4 confirmación |
 | **[0033]** Diseñar ficha pública de comercio ✅ | UX/UI — HOME-01 Detail diseñado por Stitches: hero imagen, badge ABIERTO, info rows, mapa, acciones, historia y galería |
 | **[0037]** Diseñar panel Mi comercio ✅ | UX/UI — OWNER-01 diseñado por Stitches: estado actual, acciones rápidas 2×2, banner advertencia, banner promocional |
@@ -172,12 +173,11 @@ El usuario pasa las tarjetas de a una. Estado actual:
   - Pendiente: QA E2E claim/admin/owner con roles reales, validación de permisos y costo Firestore.
   - No pendiente: implementación base de UX/transiciones/guards.
 
-## Cola BUGFIX_REQUIRED
+## Cola IN_PROGRESS
 
 - `TuM2-0029 — Diseñar onboarding CUSTOMER`
-  - Estado: `BUGFIX_REQUIRED`
-  - Hallazgo: `AUTH-01 Splash` sin imagen de marca dedicada.
-  - Pendiente: generar asset de splash, integrarlo en `mobile/lib/modules/auth/screens/splash_screen.dart`, y validar responsive + contraste.
+  - Estado: `IN_PROGRESS`
+  - Pendiente: cerrar validación final (`flutter analyze` + suite de tests) y QA manual en staging.
 
 ## Indicador de avance MVP (snapshot 2026-04-08)
 
@@ -232,8 +232,8 @@ El usuario pasa las tarjetas de a una. Estado actual:
 ### ÉPICA 6: UX / arquitectura de pantallas
 - [0027] **Definir mapa completo de pantallas** — P0 — `UX/UI, Producto, Fundacional` ✅
 - [0028] **Diseñar navegación principal** — P0 — `UX/UI, Mobile, Fundacional` ✅
-- [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP` `BUGFIX_REQUIRED`
-  - Gap abierto: faltante de asset visual de splash (revisión 2026-04-27).
+- [0029] **Diseñar onboarding CUSTOMER** — P1 — `UX/UI, MVP` `IN_PROGRESS`
+  - Línea de cierre: guest-first + analytics + ayuda + pruebas.
 - [0030] **Diseñar onboarding OWNER** — P0 — `UX/UI, Operaciones, MVP` ✅
 - [0031] **Diseñar pantalla Buscar** — P0 — `UX/UI, MVP` ✅
 - [0032] **Diseñar pantalla Mapa** — P1 — `UX/UI, MVP`
@@ -435,7 +435,7 @@ El usuario pasa las tarjetas de a una. Estado actual:
 - TuM2-0051 CI/CD mínimo
 
 ### Fase E — Expansión MVP+
-- TuM2-0029 (`BUGFIX_REQUIRED`) / 0032 / 0034 / 0041
+- TuM2-0029 (`IN_PROGRESS`) / 0032 / 0034 / 0041
 - TuM2-0122 ✅ (completado adelantado)
 - TuM2-0055 / 0059 / 0062 / 0063 / 0069 (TuM2-0057 ✅ completado adelantado)
 - TuM2-0076
@@ -514,7 +514,7 @@ Estos dan mucha claridad o valor con relativamente poco costo:
 
 **Claramente Post-MVP:** TuM2-0026, 0108, 0109, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117, 0118, 0119, 0120
 
-**MVP+ / opcionales si entra tiempo:** TuM2-0029 (`BUGFIX_REQUIRED`), 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107, 0134 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
+**MVP+ / opcionales si entra tiempo:** TuM2-0029 (`IN_PROGRESS`), 0032, 0034, 0041, 0055, 0059, 0062, 0063, 0069, 0073, 0076, 0077 a 0081, 0084, 0085, 0086, 0105, 0106, 0107, 0134 (TuM2-0047 ✅ y TuM2-0057 ✅ cerradas)
 
 ---
 

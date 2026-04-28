@@ -156,7 +156,9 @@ List<RouteBase> _buildRoutes() {
     ),
     GoRoute(
       path: AppRoutes.onboarding,
-      builder: (_, __) => const OnboardingScreen(),
+      builder: (_, state) => OnboardingScreen(
+        source: state.uri.queryParameters['source'] ?? 'first_launch',
+      ),
     ),
     GoRoute(
       path: AppRoutes.emailVerification,

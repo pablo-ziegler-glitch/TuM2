@@ -27,6 +27,13 @@ void main() {
     test('onboarding es público', () {
       expect(RouterGuards.isPublicPath(AppRoutes.onboarding), isTrue);
     });
+    test('onboarding con source=profile_help sigue siendo público', () {
+      expect(
+        RouterGuards.isPublicPath(
+            '${AppRoutes.onboarding}?source=profile_help'),
+        isTrue,
+      );
+    });
     test('email-verification es público', () {
       expect(RouterGuards.isPublicPath(AppRoutes.emailVerification), isTrue);
     });

@@ -80,17 +80,21 @@ TuM2 App
 
 ### AUTH-01 — Splash / Loading
 - **Propósito:** inicializar Firebase Auth, detectar sesión activa.
-- **Salida:** → HOME-01 si hay sesión válida, → AUTH-02 si es primer uso, → AUTH-03 si hay sesión caducada.
+- **Salida:** → HOME-01 si hay sesión válida, → AUTH-02 si es primer uso invitado, → HOME-01 invitado si es usuario recurrente sin sesión.
 - **Datos:** ninguno (local).
+- **Microcopy:** `Lo que necesitás, en tu zona.` + `Preparando tu zona...`.
+- **Branding variante:** logo `original`/`mundialista` controlado por Remote Config (`splash_brand_variant` o `mobile_worldcup_enabled`).
 
 ### AUTH-02 — Onboarding CUSTOMER
-- **Propósito:** explicar el valor de TuM2 en 3 slides antes del registro.
+- **Propósito:** explicar el valor de TuM2 en 3 slides sin bloquear el modo invitado.
 - **Slides sugeridos:**
   1. "Encontrá comercios abiertos ahora en tu cuadra"
   2. "Farmacias de turno al instante"
-  3. "Seguí tus comercios favoritos"
-- **Acción CTA:** "Empezar" → AUTH-03.
-- **Skip:** posible, va directo a AUTH-03.
+  3. "Tené tus lugares de siempre más cerca" (copy conservador hasta habilitar favoritos)
+- **Acción CTA:** "Empezar" → HOME-01 invitado.
+- **Skip:** "Omitir" visible desde slide 1 → HOME-01 invitado.
+- **Persistencia:** `onboarding_seen=true` en `SharedPreferences`.
+- **Analytics:** `auth_onboarding_started`, `auth_onboarding_slide_viewed`, `auth_onboarding_skipped`, `auth_onboarding_completed`.
 
 ### AUTH-03 — Login / Registro
 - **Propósito:** autenticación unificada (CUSTOMER y OWNER usan la misma entrada).
@@ -377,7 +381,7 @@ AUTH-03 → (email detectado como owner pendiente) → DETAIL-03 → ONBOARDING-
 
 ### Flujo 6: CUSTOMER nuevo descubre app
 ```
-AUTH-01 (splash) → AUTH-02 (onboarding 3 slides) → AUTH-03 (registro) → HOME-01
+AUTH-01 (splash) → AUTH-02 (onboarding 3 slides) → HOME-01 invitado
 ```
 
 ### Flujo 7: ADMIN aprueba comercio nuevo
